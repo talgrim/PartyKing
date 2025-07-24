@@ -12,6 +12,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PartyKing.Infrastructure", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PartyKing.Persistence", "PartyKing.Persistence\PartyKing.Persistence.csproj", "{09A86869-2C0B-49C1-A8E2-1408F11FF3BC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PartyKing.Application", "PartyKing.Application\PartyKing.Application.csproj", "{082CA2B7-8AF0-435C-8438-2DF073AA4B63}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -42,5 +44,9 @@ Global
 		{09A86869-2C0B-49C1-A8E2-1408F11FF3BC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{09A86869-2C0B-49C1-A8E2-1408F11FF3BC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{09A86869-2C0B-49C1-A8E2-1408F11FF3BC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{082CA2B7-8AF0-435C-8438-2DF073AA4B63}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{082CA2B7-8AF0-435C-8438-2DF073AA4B63}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{082CA2B7-8AF0-435C-8438-2DF073AA4B63}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{082CA2B7-8AF0-435C-8438-2DF073AA4B63}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

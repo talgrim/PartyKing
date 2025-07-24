@@ -12,6 +12,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\PartyKing.Domain\PartyKing.Domain.csproj" />
+      <ProjectReference Include="..\PartyKing.Persistence\PartyKing.Persistence.csproj" />
     </ItemGroup>
 
 </Project>
