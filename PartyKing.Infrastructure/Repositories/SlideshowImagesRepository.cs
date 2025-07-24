@@ -38,7 +38,7 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
 
         if (!_currentImageId.HasValue)
         {
-            result = context.Images.MinBy(x => x.Id);
+            result = await context.Images.OrderBy(x => x.Id).FirstOrDefaultAsync(cancellationToken);
         }
         else
         {
