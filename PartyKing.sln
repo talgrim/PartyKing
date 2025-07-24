@@ -2,6 +2,10 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PartyKing.API", "PartyKing.API\PartyKing.API.csproj", "{895151BF-13EA-44F3-B2C6-E9AFD448BA59}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PartyKing.AppHost", "PartyKing.AppHost\PartyKing.AppHost.csproj", "{15787014-F9AA-42A1-9970-DC4892950E43}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PartyKing.ServiceDefaults", "PartyKing.ServiceDefaults\PartyKing.ServiceDefaults.csproj", "{C346EE15-EF81-4B53-9BF1-E3231C9466D5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +16,13 @@ Global
 		{895151BF-13EA-44F3-B2C6-E9AFD448BA59}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{895151BF-13EA-44F3-B2C6-E9AFD448BA59}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{895151BF-13EA-44F3-B2C6-E9AFD448BA59}.Release|Any CPU.Build.0 = Release|Any CPU
+		{15787014-F9AA-42A1-9970-DC4892950E43}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{15787014-F9AA-42A1-9970-DC4892950E43}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{15787014-F9AA-42A1-9970-DC4892950E43}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{15787014-F9AA-42A1-9970-DC4892950E43}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C346EE15-EF81-4B53-9BF1-E3231C9466D5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C346EE15-EF81-4B53-9BF1-E3231C9466D5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C346EE15-EF81-4B53-9BF1-E3231C9466D5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C346EE15-EF81-4B53-9BF1-E3231C9466D5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
