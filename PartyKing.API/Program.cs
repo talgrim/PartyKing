@@ -1,22 +1,43 @@
 using PartyKing.API;
+using PartyKing.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.AddServiceDefaults();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.RegisterServices();
+
+builder.Services.AddCors(options => options.AddPolicy("CorsPolicy", policy =>
+{
+    policy
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .SetIsOriginAllowed(_ => true)
+        .AllowCredentials();
+}));
+
+builder.Services.AddControllers();
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+app.MapDefaultEndpoints();
+
+app
+    .UseHttpsRedirection()
+    .UseRouting()
+    .UseCors("CorsPolicy")
+    .UseExceptionHandler("/error");
+
+app.MapControllers();
+
+await app.Services.MigrateDb();
 
 app.Run();

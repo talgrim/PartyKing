@@ -13,17 +13,18 @@ public static class DependencyInjection
         services.RegisterRepositories();
     }
 
+    public static async Task MigrateDb(this IServiceProvider services)
+    {
+        await using var scope = services.CreateAsyncScope();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<WriterDbContext>>();
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        await dbContext.Database.MigrateAsync();
+    }
+
     private static void RegisterDatabase(this IServiceCollection services)
     {
-        services.AddPooledDbContextFactory<WriterDbContext>(options =>
-            {
-                options.UseSqlite();
-            })
-            .AddPooledDbContextFactory<ReaderDbContext>(options =>
-            {
-                options.UseSqlite()
-                    .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
-            });
+        services.AddDbContextFactory<WriterDbContext>();
+        services.AddDbContextFactory<ReaderDbContext>();
     }
 
     private static void RegisterRepositories(this IServiceCollection services)
