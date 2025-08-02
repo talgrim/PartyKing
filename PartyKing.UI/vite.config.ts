@@ -1,13 +1,20 @@
 /// <reference types="vitest" />
-import { defineConfig, splitVendorChunkPlugin } from 'vite';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tsConfigPaths from 'vite-tsconfig-paths';
+import tailwindcss from '@tailwindcss/vite';
+
 
 // https://vitejs.dev/config/
 // eslint-disable-next-line import/no-default-export
 export default defineConfig({
-  server: { port: 2137 },
-  plugins: [tsConfigPaths(), react(), splitVendorChunkPlugin()],
+  server: { 
+    port: 2137,
+    watch: {
+      usePolling: true // Fix for HMR between WSL2 and windows
+    }
+  },
+  plugins: [tailwindcss(), tsConfigPaths(), react()],
   build: {
     sourcemap: true,
   },
