@@ -18,6 +18,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\PartyKing.Application\PartyKing.Application.csproj" />
+      <ProjectReference Include="..\PartyKing.Contract\PartyKing.Contract.csproj" />
       <ProjectReference Include="..\PartyKing.ServiceDefaults\PartyKing.ServiceDefaults.csproj" />
     </ItemGroup>
 

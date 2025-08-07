@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Options;
 using PartyKing.API.Configuration;
+using PartyKing.Contract.V1.Slideshow;
 
 namespace PartyKing.API.Controllers;
 
@@ -97,5 +98,13 @@ public abstract class CoreController : ControllerBase
     protected string GetContentRoot()
     {
         return _webHostEnvironment.ContentRootPath;
+    }
+
+    protected ImageDataDto[] GetUploadedImages()
+    {
+        var content = _webHostEnvironment.WebRootFileProvider.GetDirectoryContents(
+            SlideshowSettings.UploadedPhotosDirectory);
+
+        return content.Select(x => new ImageDataDto{Path = x.PhysicalPath, FileName = x.Name}).ToArray();
     }
 }

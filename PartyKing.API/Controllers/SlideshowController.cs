@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using PartyKing.API.Configuration;
 using PartyKing.Application.Slideshow.Services;
+using PartyKing.Contract.V1.Slideshow;
 using PartyKing.Domain.Enums;
 
 namespace PartyKing.API.Controllers;
@@ -30,7 +31,7 @@ public class SlideshowController : CoreController
         }
     }
 
-    [HttpPut("UploadPhoto")]
+    [HttpPut("upload-photo")]
     public async Task<IActionResult> UploadPhoto([Required] IFormFile[] files, CancellationToken cancellationToken)
     {
         try
@@ -45,7 +46,8 @@ public class SlideshowController : CoreController
         }
     }
 
-    [HttpGet("GetPhoto")]
+    [HttpGet("get-photo")]
+    [ProducesResponseType<SlideshowImageDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetPhoto(CancellationToken cancellationToken)
     {
         var result = await _slideshowService.GetImageAsync(cancellationToken);
@@ -77,6 +79,18 @@ public class SlideshowController : CoreController
 
         _logger.LogInformation("Returning photo {FilePath} ({ContentType})", contentPath, contentType);
 
-        return Ok(contentPath);
+        return Ok(new SlideshowImageDto
+        {
+            ImageUrl = contentPath,
+            ContentType = contentType,
+            FileName = result.ImageUrl
+        });
+    }
+
+    [HttpGet("get-all")]
+    [ProducesResponseType<IEnumerable<ImageDataDto>>(StatusCodes.Status200OK)]
+    public IActionResult GetAll()
+    {
+        return Ok(GetUploadedImages());
     }
 }
