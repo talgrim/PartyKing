@@ -58,7 +58,7 @@ public class SlideshowController : CoreController
             return NoContent();
         }
 
-        var rootPath = GetPhysicalRoot();
+        var rootPath = string.Empty;
 
         switch (result.ImageSource)
         {

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.FileProviders;
 using PartyKing.API;
 using PartyKing.Infrastructure;
 
@@ -34,7 +35,8 @@ app
     .UseHttpsRedirection()
     .UseRouting()
     .UseCors("CorsPolicy")
-    .UseExceptionHandler("/error");
+    .UseExceptionHandler("/error")
+    .UseStaticFiles();
 
 app.MapControllers();
 
