@@ -13,14 +13,17 @@ public class SlideshowImage
     {
         ImageUrl = writeModel.ImageUrl;
         ContentType = writeModel.ContentType;
+        DeleteAfterPresentation = writeModel.DeleteAfterPresentation;
     }
 
     public Guid Id { get; set; } = Guid.CreateVersion7();
+    public string ImageName { get; set; }
     public string ImageUrl { get; set; }
     public string ContentType { get; set; }
+    public bool DeleteAfterPresentation { get; set; }
 
     public SlideshowImageReadModel ToReadModel(SlideshowImageSource source)
     {
-        return new SlideshowImageReadModel(ImageUrl, ContentType, source);
+        return new SlideshowImageReadModel(ImageName, ImageUrl, ContentType, source, DeleteAfterPresentation);
     }
 }
