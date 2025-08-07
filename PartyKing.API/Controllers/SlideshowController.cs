@@ -10,15 +10,18 @@ namespace PartyKing.API.Controllers;
 public class SlideshowController : CoreController
 {
     private readonly ISlideshowService _slideshowService;
+    private readonly ILogger<SlideshowController> _logger;
 
     public SlideshowController(
         IHttpContextAccessor httpContextAccessor,
         ISlideshowService slideshowService,
         IOptions<SlideshowSettings> slideshowSettingsOptions,
-        IWebHostEnvironment webHostEnvironment)
+        IWebHostEnvironment webHostEnvironment,
+        ILogger<SlideshowController> logger)
         : base(httpContextAccessor, slideshowSettingsOptions, webHostEnvironment)
     {
         _slideshowService = slideshowService;
+        _logger = logger;
 
         if (!_slideshowService.IsInitialized())
         {
@@ -49,10 +52,11 @@ public class SlideshowController : CoreController
 
         if (result is null)
         {
+            _logger.LogWarning("No image found to display");
             return NoContent();
         }
 
-        var rootPath = GetContentRoot();
+        var rootPath = GetPhysicalRoot();
 
         switch (result.ImageSource)
         {
@@ -68,6 +72,11 @@ public class SlideshowController : CoreController
                 throw new ArgumentOutOfRangeException();
         }
 
-        return Content(Path.Combine(rootPath, result.ImageUrl), result.ContentType);
+        var contentPath = Path.Combine(rootPath, result.ImageUrl);
+        var contentType = result.ContentType;
+
+        _logger.LogInformation("Returning photo {FilePath} ({ContentType})", contentPath, contentType);
+
+        return Ok(contentPath);
     }
 }
