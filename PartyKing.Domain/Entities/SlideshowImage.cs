@@ -11,7 +11,8 @@ public class SlideshowImage
 
     public SlideshowImage(SlideshowImageWriteModel writeModel)
     {
-        ImageUrl = writeModel.ImageUrl;
+        ImageName = writeModel.ImageName;
+        ImageUrl = writeModel.GetFullPath();
         ContentType = writeModel.ContentType;
         DeleteAfterPresentation = writeModel.DeleteAfterPresentation;
     }

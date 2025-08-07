@@ -1,6 +1,6 @@
 ﻿namespace PartyKing.Domain.Models.Slideshow;
 
-public record SlideshowImageWriteModel(string ImageUrl, string ContentType, Stream Data, string RootPath)
+public record SlideshowImageWriteModel(string ImageName, string ContentType, Stream Data, string Path, bool DeleteAfterPresentation)
 {
-    public string GetFullPath() => Path.Combine(RootPath, ImageUrl);
+    public string GetFullPath() => System.IO.Path.Combine(Path, ImageName);
 }
