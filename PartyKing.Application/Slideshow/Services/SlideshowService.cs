@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Http;
-using PartyKing.Application.Slideshow.Helpers;
 using PartyKing.Application.System;
 using PartyKing.Domain.Models.Slideshow;
 using PartyKing.Infrastructure.Repositories;
@@ -8,7 +7,9 @@ namespace PartyKing.Application.Slideshow.Services;
 
 public interface ISlideshowService
 {
-    Task UploadImageAsync(IFormFile file, CancellationToken cancellationToken);
+    bool IsInitialized();
+    void UpdateSettings(bool autoRepeat, string placeholdersPath);
+    Task UploadImageAsync(IFormFile file, string root, CancellationToken cancellationToken);
     Task<SlideshowImageReadModel?> GetImageAsync(CancellationToken cancellationToken);
 }
 
@@ -25,7 +26,17 @@ public class SlideshowService : ISlideshowService
         _imagesRepository = imagesRepository;
     }
 
-    public async Task UploadImageAsync(IFormFile file, CancellationToken cancellationToken)
+    public bool IsInitialized()
+    {
+        return _imagesRepository.IsInitialized;
+    }
+
+    public void UpdateSettings(bool autoRepeat, string placeholdersPath)
+    {
+        _imagesRepository.UpdateSettings(autoRepeat, placeholdersPath);
+    }
+
+    public async Task UploadImageAsync(IFormFile file, string root, CancellationToken cancellationToken)
     {
         await using var content = file.OpenReadStream();
 
@@ -35,12 +46,7 @@ public class SlideshowService : ISlideshowService
 
         SlideshowImageWriteModel CreateModel()
         {
-            return new SlideshowImageWriteModel
-            {
-                ImageUrl = file.FileName,
-                ContentType = file.ContentType,
-                Data = content
-            };
+            return new SlideshowImageWriteModel(file.FileName, file.ContentType, content, root);
         }
     }
 

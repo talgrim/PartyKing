@@ -1,4 +1,5 @@
-﻿using PartyKing.Domain.Models.Slideshow;
+﻿using PartyKing.Domain.Enums;
+using PartyKing.Domain.Models.Slideshow;
 
 namespace PartyKing.Domain.Entities;
 
@@ -18,12 +19,8 @@ public class SlideshowImage
     public string ImageUrl { get; set; }
     public string ContentType { get; set; }
 
-    public SlideshowImageReadModel ToReadModel()
+    public SlideshowImageReadModel ToReadModel(SlideshowImageSource source)
     {
-        return new SlideshowImageReadModel
-        {
-            ImageUrl = ImageUrl,
-            ContentType = ContentType
-        };
+        return new SlideshowImageReadModel(ImageUrl, ContentType, source);
     }
 }

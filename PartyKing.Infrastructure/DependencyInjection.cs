@@ -1,7 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using PartyKing.Infrastructure.Configuration;
 using PartyKing.Infrastructure.Repositories;
 using PartyKing.Persistence.Database;
 
@@ -9,10 +7,10 @@ namespace PartyKing.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static void RegisterInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static void RegisterInfrastructure(this IServiceCollection services)
     {
         services.RegisterDatabase();
-        services.RegisterRepositories(configuration);
+        services.RegisterRepositories();
     }
 
     public static async Task MigrateDb(this IServiceProvider services)
@@ -29,9 +27,8 @@ public static class DependencyInjection
         services.AddDbContextFactory<ReaderDbContext>();
     }
 
-    private static void RegisterRepositories(this IServiceCollection services, IConfiguration configuration)
+    private static void RegisterRepositories(this IServiceCollection services)
     {
-        services.Configure<SlideshowSettings>(configuration.GetSection(SlideshowSettings.SectionName));
         services.AddSingleton<ISlideshowImagesRepository, SlideshowImagesRepository>();
     }
 }

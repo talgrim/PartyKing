@@ -1,7 +1,5 @@
-﻿namespace PartyKing.Domain.Models.Slideshow;
+﻿using PartyKing.Domain.Enums;
 
-public class SlideshowImageReadModel
-{
-    public string ImageUrl { get; set; } = null!;
-    public string ContentType { get; set; } = null!;
-}
+namespace PartyKing.Domain.Models.Slideshow;
+
+public record SlideshowImageReadModel(string ImageUrl, string ContentType, SlideshowImageSource ImageSource);

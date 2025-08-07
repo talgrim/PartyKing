@@ -1,6 +1,6 @@
-﻿namespace PartyKing.Infrastructure.Configuration;
+﻿namespace PartyKing.API.Configuration;
 
-internal class SlideshowSettings
+public class SlideshowSettings
 {
     internal const string SectionName = "SlideshowSettings";
 
