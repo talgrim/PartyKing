@@ -10,7 +10,7 @@ namespace PartyKing.Infrastructure.Repositories;
 public interface ISlideshowImagesRepository
 {
     bool IsInitialized { get; }
-    void UpdateSettings(bool autoRepeat, string placeholdersPath);
+    void UpdateSettings(bool autoRepeat, string rootPath, string placeholdersPath);
     Task AddSlideshowImageAsync(SlideshowImageWriteModel slideshowImage, CancellationToken cancellationToken);
     Task<SlideshowImageReadModel?> GetSlideshowImageAsync(CancellationToken cancellationToken);
 }
@@ -27,6 +27,8 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
 
     private bool _autoRepeat;
     private PlaceholdersCollection _placeholders = null!;
+    private string _rootPath = null!;
+    private string _placeholdersPath = null!;
 
     public bool IsInitialized { get; private set; }
 
@@ -40,17 +42,26 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
         _logger = logger;
     }
 
-    public void UpdateSettings(bool autoRepeat, string placeholdersPath)
+    public void UpdateSettings(bool autoRepeat, string rootPath, string placeholdersPath)
     {
         _autoRepeat = autoRepeat;
-        var allFiles = Directory.GetFiles(placeholdersPath, ImagesMask, SearchOption.AllDirectories);
+        _rootPath = rootPath;
+        _placeholdersPath = placeholdersPath;
 
-        _placeholders = new PlaceholdersCollection(allFiles.Select(x => x[placeholdersPath.Length..]).ToList());
+        var allFiles = Directory.GetFiles(
+            Path.Combine(_rootPath, _placeholdersPath),
+            ImagesMask,
+            SearchOption.AllDirectories);
+
+        _placeholders = new PlaceholdersCollection(allFiles.Select(x => x[rootPath.Length..]).ToList());
 
         IsInitialized = true;
 
-        _logger.LogInformation("Initialized settings. AutoRepeat: {AutoRepeat}, Placeholders loaded: {Count}",
+        _logger.LogInformation(
+            "Initialized settings. AutoRepeat: {AutoRepeat}, Root path: {Root}, Placeholders path: {Placeholders}, Placeholders loaded: {Count}",
             _autoRepeat,
+            rootPath,
+            _placeholdersPath,
             _placeholders.Placeholders.Count);
     }
 
@@ -78,6 +89,14 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
         }
         else
         {
+            var images = context.Images.OrderBy(x => x.Id);
+            var currentPhoto = images.First(x => x.Id == _currentUploadedImageId.Value);
+            if (currentPhoto.DeleteAfterPresentation)
+            {
+                DeletePhotoFile(currentPhoto);
+                context.Images.Remove(currentPhoto);
+            }
+
             result = await context.Images.FirstOrDefaultAsync(x => x.Id > _currentUploadedImageId.Value, cancellationToken);
 
             if (result is null)
@@ -101,15 +120,28 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
         return result;
     }
 
+    private void DeletePhotoFile(SlideshowImage currentPhoto)
+    {
+        _logger.LogInformation("Deleting photo {FileName} after presentation", currentPhoto.ImageName);
+        try
+        {
+            File.Delete(Path.Combine(_rootPath, currentPhoto.ImageUrl));
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to delete photo {FileName} after presentation", currentPhoto.ImageName);
+        }
+    }
+
     private SlideshowImageReadModel GetPlaceholderImage()
     {
-        var imageUrl = _placeholders.GetNext();
+        var (fileName, url) = _placeholders.GetNext();
 
-        return new SlideshowImageReadModel(imageUrl, GetContentType(), SlideshowImageSource.Placeholder);
+        return SlideshowImageReadModel.Placeholder(fileName, url, GetContentType());
 
         string GetContentType()
         {
-            var extension = Path.GetExtension(imageUrl);
+            var extension = Path.GetExtension(fileName);
             return extension switch
             {
                 ".png" => "image/png",
@@ -132,7 +164,7 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
     private async Task AddImageDataToDbAsync(SlideshowImageWriteModel slideshowImage, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Adding image data to database. FileName: {FileName}, Content Type: {ContentType}",
-            slideshowImage.ImageUrl,
+            slideshowImage.ImageName,
             slideshowImage.ContentType);
 
         try
@@ -145,7 +177,7 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to add image data to database. FileName: {FileName}", slideshowImage.ImageUrl);
+            _logger.LogError(ex, "Failed to add image data to database. FileName: {FileName}", slideshowImage.ImageName);
         }
     }
 
@@ -178,14 +210,16 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
     {
         private int _counter;
 
-        public string GetNext()
+        public (string FileName, string Url) GetNext()
         {
             var result = Placeholders[_counter++];
             if (_counter >= Placeholders.Count)
             {
                 _counter = 0;
             }
-            return result;
+
+            var fileName = Path.GetFileName(result);
+            return (fileName, result);
         }
     }
 }

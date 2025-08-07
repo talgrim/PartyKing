@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using PartyKing.API.Configuration;
+using PartyKing.Application.Configuration;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Contract.V1.Slideshow;
 using PartyKing.Domain.Enums;
@@ -26,18 +26,16 @@ public class SlideshowController : CoreController
 
         if (!_slideshowService.IsInitialized())
         {
-            var placeholderPath = Path.Combine(GetPhysicalRoot(), SlideshowSettings.PlaceholderPhotosDirectory);
-            _slideshowService.UpdateSettings(false, placeholderPath);
+            _slideshowService.UpdateSettings(false, GetPhysicalRoot());
         }
     }
 
     [HttpPut("upload-photo")]
-    public async Task<IActionResult> UploadPhoto([Required] IFormFile[] files, CancellationToken cancellationToken)
+    public async Task<IActionResult> UploadPhoto([Required] IFormFile[] files, bool deleteAfterPresentation, CancellationToken cancellationToken)
     {
         try
         {
-            var root = Path.Combine(GetPhysicalRoot(), SlideshowSettings.UploadedPhotosDirectory);
-            await _slideshowService.UploadImagesAsync(files, root, cancellationToken);
+            await _slideshowService.UploadImagesAsync(files, deleteAfterPresentation, cancellationToken);
             return Ok();
         }
         catch (Exception e)
@@ -81,9 +79,11 @@ public class SlideshowController : CoreController
 
         return Ok(new SlideshowImageDto
         {
+            ImageName = result.ImageName,
             ImageUrl = contentPath,
             ContentType = contentType,
-            FileName = result.ImageUrl
+            FileName = result.ImageUrl,
+            DeleteAfterPresentation = result.DeleteAfterPresentation
         });
     }
 
@@ -92,5 +92,12 @@ public class SlideshowController : CoreController
     public IActionResult GetAll()
     {
         return Ok(GetUploadedImages());
+    }
+
+    [HttpGet("get-configuration")]
+    [ProducesResponseType<SlideshowSettings>(StatusCodes.Status200OK)]
+    public IActionResult GetConfiguration()
+    {
+        return Ok(SlideshowSettings);
     }
 }

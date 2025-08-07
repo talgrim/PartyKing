@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
+using PartyKing.Application.Configuration;
 using PartyKing.Application.System;
 using PartyKing.Domain.Models.Slideshow;
 using PartyKing.Infrastructure.Repositories;
@@ -8,8 +10,8 @@ namespace PartyKing.Application.Slideshow.Services;
 public interface ISlideshowService
 {
     bool IsInitialized();
-    void UpdateSettings(bool autoRepeat, string placeholdersPath);
-    Task UploadImagesAsync(IFormFile[] files, string root, CancellationToken cancellationToken);
+    void UpdateSettings(bool autoRepeat, string rootPath);
+    Task UploadImagesAsync(IFormFile[] files, bool deleteAfterPresentation, CancellationToken cancellationToken);
     Task<SlideshowImageReadModel?> GetImageAsync(CancellationToken cancellationToken);
 }
 
@@ -17,13 +19,16 @@ public class SlideshowService : ISlideshowService
 {
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ISlideshowImagesRepository _imagesRepository;
+    private readonly SlideshowSettings _slideshowSettings;
 
     public SlideshowService(
         IDateTimeProvider dateTimeProvider,
-        ISlideshowImagesRepository imagesRepository)
+        ISlideshowImagesRepository imagesRepository,
+        IOptions<SlideshowSettings> slideshowSettingsOptions)
     {
         _dateTimeProvider = dateTimeProvider;
         _imagesRepository = imagesRepository;
+        _slideshowSettings = slideshowSettingsOptions.Value;
     }
 
     public bool IsInitialized()
@@ -31,14 +36,20 @@ public class SlideshowService : ISlideshowService
         return _imagesRepository.IsInitialized;
     }
 
-    public void UpdateSettings(bool autoRepeat, string placeholdersPath)
+    public void UpdateSettings(bool autoRepeat, string rootPath)
     {
-        _imagesRepository.UpdateSettings(autoRepeat, placeholdersPath);
+        _imagesRepository.UpdateSettings(autoRepeat, rootPath, _slideshowSettings.PlaceholderPhotosDirectory);
     }
 
-    public async Task UploadImagesAsync(IFormFile[] files, string root, CancellationToken cancellationToken)
+    public async Task UploadImagesAsync(
+        IFormFile[] files,
+        bool deleteAfterPresentation,
+        CancellationToken cancellationToken)
     {
-        await Parallel.ForEachAsync(files, cancellationToken, async (file, stoppingToken) => await UploadImageAsync(file, root, stoppingToken));
+        await Parallel.ForEachAsync(
+            files,
+            cancellationToken,
+            async (file, stoppingToken) => await UploadImageAsync(file, deleteAfterPresentation, stoppingToken));
     }
 
     public Task<SlideshowImageReadModel?> GetImageAsync(CancellationToken cancellationToken)
@@ -46,7 +57,10 @@ public class SlideshowService : ISlideshowService
         return _imagesRepository.GetSlideshowImageAsync(cancellationToken);
     }
 
-    private async Task UploadImageAsync(IFormFile file, string root, CancellationToken cancellationToken)
+    private async Task UploadImageAsync(
+        IFormFile file,
+        bool deleteAfterPresentation,
+        CancellationToken cancellationToken)
     {
         await using var content = file.OpenReadStream();
 
@@ -56,7 +70,12 @@ public class SlideshowService : ISlideshowService
 
         SlideshowImageWriteModel CreateModel()
         {
-            return new SlideshowImageWriteModel(file.FileName, file.ContentType, content, root);
+            return new SlideshowImageWriteModel(
+                file.FileName,
+                file.ContentType,
+                content,
+                _slideshowSettings.UploadedPhotosDirectory,
+                deleteAfterPresentation);
         }
     }
 }

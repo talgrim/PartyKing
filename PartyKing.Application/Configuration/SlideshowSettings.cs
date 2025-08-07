@@ -1,4 +1,4 @@
-﻿namespace PartyKing.API.Configuration;
+﻿namespace PartyKing.Application.Configuration;
 
 public class SlideshowSettings
 {

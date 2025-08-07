@@ -3,7 +3,7 @@ using ErrorOr;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Options;
-using PartyKing.API.Configuration;
+using PartyKing.Application.Configuration;
 using PartyKing.Contract.V1.Slideshow;
 
 namespace PartyKing.API.Controllers;
@@ -93,11 +93,6 @@ public abstract class CoreController : ControllerBase
         }
 
         return result;
-    }
-
-    protected string GetContentRoot()
-    {
-        return _webHostEnvironment.ContentRootPath;
     }
 
     protected ImageDataDto[] GetUploadedImages()
