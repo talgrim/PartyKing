@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using PartyKing.Domain.Entities;
 using PartyKing.Domain.Enums;
 using PartyKing.Domain.Models.Slideshow;
@@ -18,6 +19,7 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
 {
     private readonly IDbContextFactory<ReaderDbContext> _readerFactory;
     private readonly IDbContextFactory<WriterDbContext> _writerFactory;
+    private readonly ILogger<SlideshowImagesRepository> _logger;
 
     private const string ImagesMask = "*.png|*.jpg|*.gif|*.bmp|*.jpeg";
 
@@ -30,10 +32,12 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
 
     public SlideshowImagesRepository(
         IDbContextFactory<ReaderDbContext> readerFactory,
-        IDbContextFactory<WriterDbContext> writerFactory)
+        IDbContextFactory<WriterDbContext> writerFactory,
+        ILogger<SlideshowImagesRepository> logger)
     {
         _readerFactory = readerFactory;
         _writerFactory = writerFactory;
+        _logger = logger;
     }
 
     public void UpdateSettings(bool autoRepeat, string placeholdersPath)
@@ -44,6 +48,10 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
         _placeholders = new PlaceholdersCollection(allFiles.Select(x => x[placeholdersPath.Length..]).ToList());
 
         IsInitialized = true;
+
+        _logger.LogInformation("Initialized settings. AutoRepeat: {AutoRepeat}, Placeholders loaded: {Count}",
+            _autoRepeat,
+            _placeholders.Placeholders.Count);
     }
 
     public async Task AddSlideshowImageAsync(SlideshowImageWriteModel slideshowImage, CancellationToken cancellationToken)
@@ -56,12 +64,7 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
     {
         var result = await GetUploadedImageAsync(cancellationToken);
 
-        if (result is not null)
-        {
-            return result.ToReadModel(SlideshowImageSource.Uploaded);
-        }
-
-        return GetPlaceholderImage();
+        return result?.ToReadModel(SlideshowImageSource.Uploaded) ?? GetPlaceholderImage();
     }
 
     private async Task<SlideshowImage?> GetUploadedImageAsync(CancellationToken cancellationToken)
@@ -79,7 +82,15 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
 
             if (result is null)
             {
-                result = await GetFirstImageAsync(context, cancellationToken);
+                if (_autoRepeat)
+                {
+                    _logger.LogInformation("Reached the end of uploaded images. Repeating from begin");
+                    result = await GetFirstImageAsync(context, cancellationToken);   
+                }
+                else
+                {
+                    _logger.LogDebug("Auto repeat is off and last uploaded image was already viewed");
+                }
             }
             else
             {
@@ -111,9 +122,7 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
         }
     }
 
-    private async Task<SlideshowImage?> GetFirstImageAsync(
-        ReaderDbContext context,
-        CancellationToken cancellationToken)
+    private async Task<SlideshowImage?> GetFirstImageAsync(ReaderDbContext context, CancellationToken cancellationToken)
     {
         var result = await context.Images.OrderBy(x => x.Id).FirstOrDefaultAsync(cancellationToken);
         _currentUploadedImageId = result?.Id;
@@ -122,21 +131,47 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
 
     private async Task AddImageDataToDbAsync(SlideshowImageWriteModel slideshowImage, CancellationToken cancellationToken)
     {
-        await using var context = await _writerFactory.CreateDbContextAsync(cancellationToken);
+        _logger.LogInformation("Adding image data to database. FileName: {FileName}, Content Type: {ContentType}",
+            slideshowImage.ImageUrl,
+            slideshowImage.ContentType);
 
-        await context.Images.AddAsync(new SlideshowImage(slideshowImage), cancellationToken);
+        try
+        {
+            await using var context = await _writerFactory.CreateDbContextAsync(cancellationToken);
 
-        await context.SaveChangesAsync(cancellationToken);
+            await context.Images.AddAsync(new SlideshowImage(slideshowImage), cancellationToken);
+
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to add image data to database. FileName: {FileName}", slideshowImage.ImageUrl);
+        }
     }
 
-    private static async Task SaveImageToFileAsync(
+    private async Task SaveImageToFileAsync(
         SlideshowImageWriteModel slideshowImage,
         CancellationToken cancellationToken)
     {
-        var fileStream = File.Create(slideshowImage.GetFullPath());
-        slideshowImage.Data.Seek(0, SeekOrigin.Begin);
-        await slideshowImage.Data.CopyToAsync(fileStream, cancellationToken);
-        fileStream.Close();
+        var filePath = slideshowImage.GetFullPath();
+        _logger.LogInformation("Saving image to file: {FilePath}", filePath);
+
+        FileStream? fileStream = null;
+        try
+        {
+            fileStream = File.Create(filePath);
+            slideshowImage.Data.Seek(0, SeekOrigin.Begin);
+            await slideshowImage.Data.CopyToAsync(fileStream, cancellationToken);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to save image to file: {FilePath}", filePath);
+        }
+        finally
+        {
+            fileStream?.Close();
+        }
+
     }
 
     private record PlaceholdersCollection(IReadOnlyList<string> Placeholders)
