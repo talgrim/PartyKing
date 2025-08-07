@@ -9,6 +9,15 @@ public class SlideshowImage
     {
     }
 
+    public SlideshowImage(Guid id, string name, string url, string contentType)
+    {
+        Id = id;
+        ImageName = name;
+        ImageUrl = url;
+        ContentType = contentType;
+        DeleteAfterPresentation = false;
+    }
+
     public SlideshowImage(SlideshowImageWriteModel writeModel)
     {
         ImageName = writeModel.ImageName;
