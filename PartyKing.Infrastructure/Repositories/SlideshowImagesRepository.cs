@@ -38,13 +38,30 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
 
         if (!_currentImageId.HasValue)
         {
-            result = await context.Images.OrderBy(x => x.Id).FirstOrDefaultAsync(cancellationToken);
+            result = await GetFirstImageAsync(context, cancellationToken);
         }
         else
         {
             result = await context.Images.FirstOrDefaultAsync(x => x.Id > _currentImageId.Value, cancellationToken);
+
+            if (result is null)
+            {
+                result = await GetFirstImageAsync(context, cancellationToken);
+            }
+            else
+            {
+                _currentImageId = result.Id;
+            }
         }
 
+        return result;
+    }
+
+    private async Task<SlideshowImage?> GetFirstImageAsync(
+        ReaderDbContext context,
+        CancellationToken cancellationToken)
+    {
+        var result = await context.Images.OrderBy(x => x.Id).FirstOrDefaultAsync(cancellationToken);
         _currentImageId = result?.Id;
         return result;
     }
