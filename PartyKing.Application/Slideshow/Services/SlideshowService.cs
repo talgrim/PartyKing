@@ -9,7 +9,7 @@ public interface ISlideshowService
 {
     bool IsInitialized();
     void UpdateSettings(bool autoRepeat, string placeholdersPath);
-    Task UploadImageAsync(IFormFile file, string root, CancellationToken cancellationToken);
+    Task UploadImagesAsync(IFormFile[] files, string root, CancellationToken cancellationToken);
     Task<SlideshowImageReadModel?> GetImageAsync(CancellationToken cancellationToken);
 }
 
@@ -36,7 +36,17 @@ public class SlideshowService : ISlideshowService
         _imagesRepository.UpdateSettings(autoRepeat, placeholdersPath);
     }
 
-    public async Task UploadImageAsync(IFormFile file, string root, CancellationToken cancellationToken)
+    public async Task UploadImagesAsync(IFormFile[] files, string root, CancellationToken cancellationToken)
+    {
+        await Parallel.ForEachAsync(files, cancellationToken, async (file, stoppingToken) => await UploadImageAsync(file, root, stoppingToken));
+    }
+
+    public Task<SlideshowImageReadModel?> GetImageAsync(CancellationToken cancellationToken)
+    {
+        return _imagesRepository.GetSlideshowImageAsync(cancellationToken);
+    }
+
+    private async Task UploadImageAsync(IFormFile file, string root, CancellationToken cancellationToken)
     {
         await using var content = file.OpenReadStream();
 
@@ -48,10 +58,5 @@ public class SlideshowService : ISlideshowService
         {
             return new SlideshowImageWriteModel(file.FileName, file.ContentType, content, root);
         }
-    }
-
-    public Task<SlideshowImageReadModel?> GetImageAsync(CancellationToken cancellationToken)
-    {
-        return _imagesRepository.GetSlideshowImageAsync(cancellationToken);
     }
 }

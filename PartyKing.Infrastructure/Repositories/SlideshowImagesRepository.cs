@@ -16,7 +16,8 @@ public interface ISlideshowImagesRepository
 
 internal class SlideshowImagesRepository : ISlideshowImagesRepository
 {
-    private readonly IDbContextFactory<ReaderDbContext> _dbContextFactory;
+    private readonly IDbContextFactory<ReaderDbContext> _readerFactory;
+    private readonly IDbContextFactory<WriterDbContext> _writerFactory;
 
     private const string ImagesMask = "*.png|*.jpg|*.gif|*.bmp|*.jpeg";
 
@@ -27,9 +28,12 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
 
     public bool IsInitialized { get; private set; }
 
-    public SlideshowImagesRepository(IDbContextFactory<ReaderDbContext> dbContextFactory)
+    public SlideshowImagesRepository(
+        IDbContextFactory<ReaderDbContext> readerFactory,
+        IDbContextFactory<WriterDbContext> writerFactory)
     {
-        _dbContextFactory = dbContextFactory;
+        _readerFactory = readerFactory;
+        _writerFactory = writerFactory;
     }
 
     public void UpdateSettings(bool autoRepeat, string placeholdersPath)
@@ -50,9 +54,7 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
 
     public async Task<SlideshowImageReadModel?> GetSlideshowImageAsync(CancellationToken cancellationToken)
     {
-        SlideshowImage? result;
-
-        result = await GetUploadedImageAsync(cancellationToken);
+        var result = await GetUploadedImageAsync(cancellationToken);
 
         if (result is not null)
         {
@@ -64,7 +66,7 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
 
     private async Task<SlideshowImage?> GetUploadedImageAsync(CancellationToken cancellationToken)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var context = await _readerFactory.CreateDbContextAsync(cancellationToken);
 
         SlideshowImage? result;
         if (!_currentUploadedImageId.HasValue)
@@ -120,7 +122,7 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
 
     private async Task AddImageDataToDbAsync(SlideshowImageWriteModel slideshowImage, CancellationToken cancellationToken)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var context = await _writerFactory.CreateDbContextAsync(cancellationToken);
 
         await context.Images.AddAsync(new SlideshowImage(slideshowImage), cancellationToken);
 

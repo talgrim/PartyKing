@@ -28,12 +28,12 @@ public class SlideshowController : CoreController
     }
 
     [HttpPut("UploadPhoto")]
-    public async Task<IActionResult> UploadPhoto([Required] IFormFile file, CancellationToken cancellationToken)
+    public async Task<IActionResult> UploadPhoto([Required] IFormFile[] files, CancellationToken cancellationToken)
     {
         try
         {
             var root = Path.Combine(GetPhysicalRoot(), SlideshowSettings.UploadedPhotosDirectory);
-            await _slideshowService.UploadImageAsync(file, root, cancellationToken);
+            await _slideshowService.UploadImagesAsync(files, root, cancellationToken);
             return Ok();
         }
         catch (Exception e)
