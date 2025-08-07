@@ -1,13 +1,16 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using PartyKing.Domain.Entities;
 using PartyKing.Domain.Models.Slideshow;
+using PartyKing.Infrastructure.Configuration;
 using PartyKing.Persistence.Database;
 
 namespace PartyKing.Infrastructure.Repositories;
 
 public interface ISlideshowImagesRepository
 {
-    Task AddSlideshowImageAsync(SlideshowImage slideshowImage, CancellationToken cancellationToken);
-    Task<SlideshowImage?> GetSlideshowImageAsync(CancellationToken cancellationToken);
+    Task AddSlideshowImageAsync(SlideshowImageWriteModel slideshowImage, CancellationToken cancellationToken);
+    Task<SlideshowImageReadModel?> GetSlideshowImageAsync(CancellationToken cancellationToken);
 }
 
 internal class SlideshowImagesRepository : ISlideshowImagesRepository
@@ -15,26 +18,27 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
     private readonly IDbContextFactory<ReaderDbContext> _dbContextFactory;
 
     private Guid? _currentImageId;
+    private readonly SlideshowSettings _slideshowSettings;
 
-    public SlideshowImagesRepository(IDbContextFactory<ReaderDbContext> dbContextFactory)
+    public SlideshowImagesRepository(
+        IOptions<SlideshowSettings> slideshowSettingsOptions,
+        IDbContextFactory<ReaderDbContext> dbContextFactory)
     {
         _dbContextFactory = dbContextFactory;
+        _slideshowSettings = slideshowSettingsOptions.Value;
     }
 
-    public async Task AddSlideshowImageAsync(SlideshowImage slideshowImage, CancellationToken cancellationToken)
+    public async Task AddSlideshowImageAsync(SlideshowImageWriteModel slideshowImage, CancellationToken cancellationToken)
+    {
+        await AddImageDataToDbAsync(slideshowImage, cancellationToken);
+        await SaveImageToFileAsync(slideshowImage, cancellationToken);
+    }
+
+    public async Task<SlideshowImageReadModel?> GetSlideshowImageAsync(CancellationToken cancellationToken)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
 
-        await context.Images.AddAsync(slideshowImage, cancellationToken);
-
-        await context.SaveChangesAsync(cancellationToken);
-    }
-
-    public async Task<SlideshowImage?> GetSlideshowImageAsync(CancellationToken cancellationToken)
-    {
-        await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-
-        SlideshowImage? result;
+        SlideshowImageWriteModel? result;
 
         if (!_currentImageId.HasValue)
         {
@@ -57,12 +61,29 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
         return result;
     }
 
-    private async Task<SlideshowImage?> GetFirstImageAsync(
+    private async Task<SlideshowImageWriteModel?> GetFirstImageAsync(
         ReaderDbContext context,
         CancellationToken cancellationToken)
     {
         var result = await context.Images.OrderBy(x => x.Id).FirstOrDefaultAsync(cancellationToken);
         _currentImageId = result?.Id;
         return result;
+    }
+
+    private async Task AddImageDataToDbAsync(SlideshowImageWriteModel slideshowImage, CancellationToken cancellationToken)
+    {
+        await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        await context.Images.AddAsync(new SlideshowImage(slideshowImage), cancellationToken);
+
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task SaveImageToFileAsync(SlideshowImageWriteModel slideshowImage, CancellationToken cancellationToken)
+    {
+        var fileStream = File.Create(Path.Combine(_slideshowSettings.UploadedPhotosDirectory, slideshowImage.ImageUrl));
+        slideshowImage.Data.Seek(0, SeekOrigin.Begin);
+        await slideshowImage.Data.CopyToAsync(fileStream, cancellationToken);
+        fileStream.Close();
     }
 }

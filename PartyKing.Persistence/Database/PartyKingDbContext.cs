@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using PartyKing.Domain.Entities;
 using PartyKing.Domain.Models.Slideshow;
 
 namespace PartyKing.Persistence.Database;

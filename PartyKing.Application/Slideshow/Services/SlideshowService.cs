@@ -9,7 +9,7 @@ namespace PartyKing.Application.Slideshow.Services;
 public interface ISlideshowService
 {
     Task UploadImageAsync(IFormFile file, CancellationToken cancellationToken);
-    Task<SlideshowImage?> GetImageAsync(CancellationToken cancellationToken);
+    Task<SlideshowImageReadModel?> GetImageAsync(CancellationToken cancellationToken);
 }
 
 public class SlideshowService : ISlideshowService
@@ -27,25 +27,24 @@ public class SlideshowService : ISlideshowService
 
     public async Task UploadImageAsync(IFormFile file, CancellationToken cancellationToken)
     {
-        var imageData = await ImageDataHelper.PrepareImageDataAsync(file);
+        await using var content = file.OpenReadStream();
 
-        await _imagesRepository.AddSlideshowImageAsync(CreateImage(), cancellationToken);
+        await _imagesRepository.AddSlideshowImageAsync(CreateModel(), cancellationToken);
 
         return;
 
-        SlideshowImage CreateImage()
+        SlideshowImageWriteModel CreateModel()
         {
-            return new SlideshowImage
+            return new SlideshowImageWriteModel
             {
-                Id = Guid.CreateVersion7(_dateTimeProvider.UtcNow),
-                ImageData = imageData.ImageData,
                 ImageUrl = file.FileName,
                 ContentType = file.ContentType,
+                Data = content
             };
         }
     }
 
-    public Task<SlideshowImage?> GetImageAsync(CancellationToken cancellationToken)
+    public Task<SlideshowImageReadModel?> GetImageAsync(CancellationToken cancellationToken)
     {
         return _imagesRepository.GetSlideshowImageAsync(cancellationToken);
     }
