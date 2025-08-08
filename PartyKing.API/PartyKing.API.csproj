@@ -11,13 +11,14 @@
 
     <ItemGroup>
         <PackageReference Include="ErrorOr" Version="2.0.1" />
-        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.7"/>
-        <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.0" />
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="7.0.0" />
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.8" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.8" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.3" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\PartyKing.Application\PartyKing.Application.csproj" />
+      <ProjectReference Include="..\PartyKing.Contract\PartyKing.Contract.csproj" />
       <ProjectReference Include="..\PartyKing.ServiceDefaults\PartyKing.ServiceDefaults.csproj" />
     </ItemGroup>
 
