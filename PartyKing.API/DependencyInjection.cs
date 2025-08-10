@@ -5,10 +5,10 @@ namespace PartyKing.API;
 
 public static class DependencyInjection
 {
-    public static void RegisterServices(this IServiceCollection services)
+    public static void RegisterServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddHttpContextAccessor();
-        services.RegisterApplication();
+        services.RegisterApplication(configuration);
         services.RegisterInfrastructure();
     }
 }

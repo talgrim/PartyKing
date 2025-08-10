@@ -1,3 +1,4 @@
+using Microsoft.Extensions.FileProviders;
 using PartyKing.API;
 using PartyKing.Infrastructure;
 
@@ -6,7 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.RegisterServices();
+builder.Services.RegisterServices(builder.Configuration);
 
 builder.Services.AddCors(options => options.AddPolicy("CorsPolicy", policy =>
 {
@@ -34,7 +35,8 @@ app
     .UseHttpsRedirection()
     .UseRouting()
     .UseCors("CorsPolicy")
-    .UseExceptionHandler("/error");
+    .UseExceptionHandler("/error")
+    .UseStaticFiles();
 
 app.MapControllers();
 
