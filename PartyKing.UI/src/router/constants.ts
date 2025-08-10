@@ -3,5 +3,6 @@ export const ROUTE_PATHS = {
   CALLBACK: '/callback',
   LOGIN: '/login',
   SLIDESHOW: '/slideshow',
-  IMAGE_UPLOADER: '/image-upload'
+  IMAGE_UPLOADER: '/image-upload',
+  MUSIC: '/music'
 };
