@@ -1,8 +1,9 @@
-import { ChangeEvent, ReactNode, useRef, useState } from "react"
+import React, { ChangeEvent, ReactNode, useRef, useState } from "react"
 import { axios } from "../service/request";
 import envVariables from "@/envVariables";
 import { Alert, Backdrop, LinearProgress } from '@mui/material';
 import { makeUrlWithParams } from "@/service/fetcher/apiService";
+import { UploadedImagePreview } from "@/components/UploadedImagePreview";
 
 const API_URL = makeUrlWithParams(`${envVariables.apiUrl}/upload-photo`);
 
@@ -84,13 +85,13 @@ export const ImageUploader = (): ReactNode => {
                 </button>
             }
             
-            {files.map((file: File): ReactNode => {
-                return (
-                    <div className="p-4 rounded-xl bg-neutral-800 text-neutral-400" key={file.name}>
-                        <p>Name: <strong>{file.name}</strong></p>
-                        <p>Size: <strong>{ Math.round(file.size / 1024)}</strong> KB</p>
-                    </div>
-            )})}
+            <div className="grid grid-cols-3 gap-3">
+                {files.map((file: File): ReactNode => {
+                    return (
+                        <UploadedImagePreview className="" image={file} key={file.name}/>
+                    )
+                })}
+            </div>
         </div>
     )
 }
