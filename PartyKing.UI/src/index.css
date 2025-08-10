@@ -13,3 +13,21 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+.photos-slideshow .splide {
+  max-height: 100vh;
+  height: 100%;
+}
+.photos-slideshow .splide__track {
+  height: 100%;
+}
+.splide__slide {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.splide__slide img {
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center
+}
