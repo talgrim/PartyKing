@@ -1,6 +1,6 @@
 import useSWR from 'swr';
 import { Splide, SplideSlide, Options } from '@splidejs/react-splide';
-import {fetchFromApi, makeUrlWithParams} from "@/service/fetcher/apiService";
+import {fetchFromApi} from "@/service/fetcher/apiService";
 import {ApiError} from "@/service/ApiError";
 import '@splidejs/react-splide/css';
 import { Backdrop, CircularProgress } from '@mui/material';
@@ -9,7 +9,7 @@ import envVariables from "@/envVariables";
 
 type ApiImage = {
   fileName: string,
-  path: string,
+  path: string
 }
 
 const SliderConfig: Options  = {
