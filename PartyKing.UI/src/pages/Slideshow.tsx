@@ -1,14 +1,15 @@
 import useSWR from 'swr';
 import { Splide, SplideSlide, Options } from '@splidejs/react-splide';
-import {fetchFromApi} from "@/service/fetcher/apiService";
+import {fetchFromApi, makeUrlWithParams} from "@/service/fetcher/apiService";
 import {ApiError} from "@/service/ApiError";
 import '@splidejs/react-splide/css';
 import { Backdrop, CircularProgress } from '@mui/material';
 import { ReactNode } from 'react';
+import envVariables from "@/envVariables";
 
 type ApiImage = {
   fileName: string,
-  path: string
+  path: string,
 }
 
 const SliderConfig: Options  = {
@@ -22,6 +23,8 @@ const SliderConfig: Options  = {
   arrows: false,
   pagination: false
 }
+
+const API_URL = envVariables.apiUrl;
 
 export const Slideshow = () => {
   const {data, isLoading, error} = useSWR<string, ApiError>(
@@ -55,7 +58,7 @@ export const Slideshow = () => {
           {data && data.map((image: ApiImage): ReactNode => {
               return (
                 <SplideSlide key={image.fileName}>
-                  <img src={image.path} />
+                  <img src={`${API_URL}/${image.path}`} />
                 </SplideSlide>
               )
             })
