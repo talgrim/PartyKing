@@ -100,6 +100,7 @@ public abstract class CoreController : ControllerBase
         var content = _webHostEnvironment.WebRootFileProvider.GetDirectoryContents(
             SlideshowSettings.UploadedPhotosDirectory);
 
-        return content.Select(x => new ImageDataDto{Path = x.PhysicalPath, FileName = x.Name}).ToArray();
+        return content.Select(x => new ImageDataDto
+            { Path = Path.Combine(SlideshowSettings.UploadedPhotosDirectory, x.Name), FileName = x.Name }).ToArray();
     }
 }
