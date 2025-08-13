@@ -56,35 +56,7 @@ public class SlideshowController : CoreController
             return NoContent();
         }
 
-        var rootPath = string.Empty;
-
-        switch (result.ImageSource)
-        {
-            case SlideshowImageSource.Placeholder:
-                rootPath = Path.Combine(rootPath, SlideshowSettings.PlaceholderPhotosDirectory);
-                break;
-
-            case SlideshowImageSource.Uploaded:
-                rootPath = Path.Combine(rootPath, SlideshowSettings.UploadedPhotosDirectory);
-                break;
-
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
-
-        var contentPath = Path.Combine(rootPath, result.ImageUrl);
-        var contentType = result.ContentType;
-
-        _logger.LogInformation("Returning photo {FilePath} ({ContentType})", contentPath, contentType);
-
-        return Ok(new SlideshowImageDto
-        {
-            ImageName = result.ImageName,
-            ImageUrl = contentPath,
-            ContentType = contentType,
-            FileName = result.ImageUrl,
-            DeleteAfterPresentation = result.DeleteAfterPresentation
-        });
+        return Ok(result);
     }
 
     [HttpGet("get-all")]

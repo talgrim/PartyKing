@@ -2,9 +2,6 @@
 
 public class SlideshowImageDto
 {
-    public required string ImageName { get; set; }
-    public required string ImageUrl { get; set; }
-    public required string ContentType { get; set; }
     public required string FileName { get; set; }
-    public required bool DeleteAfterPresentation { get; set; }
+    public required DateTimeOffset ExpirationDate { get; set; }
 }

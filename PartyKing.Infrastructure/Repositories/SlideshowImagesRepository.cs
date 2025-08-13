@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using PartyKing.Domain.Entities;
 using PartyKing.Domain.Enums;
 using PartyKing.Domain.Models.Slideshow;
+using PartyKing.Infrastructure.Results;
 using PartyKing.Persistence.Database;
 
 namespace PartyKing.Infrastructure.Repositories;
@@ -12,7 +13,8 @@ public interface ISlideshowImagesRepository
     bool IsInitialized { get; }
     void UpdateSettings(bool autoRepeat, string rootPath, string placeholdersPath);
     Task AddSlideshowImageAsync(SlideshowImageWriteModel slideshowImage, CancellationToken cancellationToken);
-    Task<SlideshowImageReadModel?> GetSlideshowImageAsync(CancellationToken cancellationToken);
+    Task<SlideshowImageReadResult> GetSlideshowImageAsync(Guid? currentId, CancellationToken cancellationToken);
+    Task DeleteImageAsync(SlideshowImageReadResult image, CancellationToken cancellationToken);
 }
 
 internal class SlideshowImagesRepository : ISlideshowImagesRepository
@@ -21,9 +23,7 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
     private readonly IDbContextFactory<WriterDbContext> _writerFactory;
     private readonly ILogger<SlideshowImagesRepository> _logger;
 
-    private const string ImagesMask = "*.png|*.jpg|*.gif|*.bmp|*.jpeg";
-
-    private Guid? _currentUploadedImageId;
+    private static readonly string[] ImagesExtensions = [".png", ".jpg", ".gif", ".bmp", ".jpeg"];
 
     private bool _autoRepeat;
     private PlaceholdersCollection _placeholders = null!;
@@ -49,11 +49,15 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
         _placeholdersPath = placeholdersPath;
 
         var allFiles = Directory.GetFiles(
-            Path.Combine(_rootPath, _placeholdersPath),
-            ImagesMask,
-            SearchOption.AllDirectories);
+                Path.Combine(_rootPath, _placeholdersPath),
+                "*.*",
+                SearchOption.AllDirectories);
 
-        _placeholders = new PlaceholdersCollection(allFiles.Select(x => x[rootPath.Length..]).ToList());
+        var imageFiles = allFiles
+            .Where(x => ImagesExtensions.Contains(Path.GetExtension(x), StringComparer.OrdinalIgnoreCase))
+            .ToList();
+
+        _placeholders = new PlaceholdersCollection(imageFiles.Select(x => x[rootPath.Length..]).ToList());
 
         IsInitialized = true;
 
@@ -71,56 +75,54 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
         await SaveImageToFileAsync(slideshowImage, cancellationToken);
     }
 
-    public async Task<SlideshowImageReadModel?> GetSlideshowImageAsync(CancellationToken cancellationToken)
+    public async Task<SlideshowImageReadResult> GetSlideshowImageAsync(Guid? currentId, CancellationToken cancellationToken)
     {
-        var result = await GetUploadedImageAsync(cancellationToken);
+        var result = await GetUploadedImageAsync(currentId, cancellationToken);
 
-        return result?.ToReadModel(SlideshowImageSource.Uploaded) ?? GetPlaceholderImage();
+        var data = result?.ToReadModel(SlideshowImageSource.Uploaded) ?? GetPlaceholderImage();
+
+        return new SlideshowImageReadResult(result?.Id ?? currentId, data);
     }
 
-    private async Task<SlideshowImage?> GetUploadedImageAsync(CancellationToken cancellationToken)
+    public async Task DeleteImageAsync(SlideshowImageReadResult image, CancellationToken cancellationToken)
+    {
+        DeletePhotoFile(image.Data!);
+
+        await using var context = await _writerFactory.CreateDbContextAsync(cancellationToken);
+
+        var dbImage = await context.Images.FirstOrDefaultAsync(x => x.Id == image.ImageId, cancellationToken);
+        if(dbImage is not null)
+        {
+            context.Remove(dbImage);
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task<SlideshowImage?> GetUploadedImageAsync(Guid? currentId, CancellationToken cancellationToken)
     {
         await using var context = await _readerFactory.CreateDbContextAsync(cancellationToken);
 
-        SlideshowImage? result;
-        if (!_currentUploadedImageId.HasValue)
-        {
-            result = await GetFirstImageAsync(context, cancellationToken);
-        }
-        else
-        {
-            var images = context.Images.OrderBy(x => x.Id);
-            var currentPhoto = images.First(x => x.Id == _currentUploadedImageId.Value);
-            if (currentPhoto.DeleteAfterPresentation)
-            {
-                DeletePhotoFile(currentPhoto);
-                context.Images.Remove(currentPhoto);
-            }
+        var result = await context.Images.OrderBy(x => x.Id)
+            .FirstOrDefaultAsync(x => x.Id > currentId, cancellationToken);
 
-            result = await context.Images.FirstOrDefaultAsync(x => x.Id > _currentUploadedImageId.Value, cancellationToken);
-
-            if (result is null)
-            {
-                if (_autoRepeat)
-                {
-                    _logger.LogInformation("Reached the end of uploaded images. Repeating from begin");
-                    result = await GetFirstImageAsync(context, cancellationToken);   
-                }
-                else
-                {
-                    _logger.LogDebug("Auto repeat is off and last uploaded image was already viewed");
-                }
-            }
-            else
-            {
-                _currentUploadedImageId = result.Id;
-            }
+        if (result is not null)
+        {
+            return result;
         }
+
+        if (currentId.HasValue && _autoRepeat)
+        {
+            _logger.LogInformation("Reached the end of uploaded images. Repeating from begin");
+            return await GetUploadedImageAsync(null, cancellationToken);
+        }
+
+        _logger.LogDebug("Auto repeat is off and last uploaded image was already viewed");
 
         return result;
     }
 
-    private void DeletePhotoFile(SlideshowImage currentPhoto)
+    private void DeletePhotoFile(SlideshowImageReadModel currentPhoto)
     {
         _logger.LogInformation("Deleting photo {FileName} after presentation", currentPhoto.ImageName);
         try
@@ -152,13 +154,6 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
                 _ => "image/jpeg",
             };
         }
-    }
-
-    private async Task<SlideshowImage?> GetFirstImageAsync(ReaderDbContext context, CancellationToken cancellationToken)
-    {
-        var result = await context.Images.OrderBy(x => x.Id).FirstOrDefaultAsync(cancellationToken);
-        _currentUploadedImageId = result?.Id;
-        return result;
     }
 
     private async Task AddImageDataToDbAsync(SlideshowImageWriteModel slideshowImage, CancellationToken cancellationToken)
@@ -210,9 +205,9 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
     {
         private int _counter;
 
-        public (string FileName, string Url) GetNext()
+        public (string? FileName, string? Url) GetNext()
         {
-            var result = Placeholders[_counter++];
+            var result = Placeholders.ElementAtOrDefault(_counter++);
             if (_counter >= Placeholders.Count)
             {
                 _counter = 0;

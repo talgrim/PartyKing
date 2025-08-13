@@ -6,10 +6,11 @@ import '@splidejs/react-splide/css';
 import { Backdrop, CircularProgress } from '@mui/material';
 import { ReactNode } from 'react';
 import envVariables from "@/envVariables";
+import {Slide} from "@/pages/Slideshow/Slide";
 
-type ApiImage = {
+export type ApiImage = {
   fileName: string,
-  path: string
+  expirationDate: Date
 }
 
 const SliderConfig: Options  = {
@@ -24,30 +25,35 @@ const SliderConfig: Options  = {
   pagination: false
 }
 
-const API_URL = envVariables.apiUrl;
-
 export const Slideshow = () => {
-  const {data, isLoading, error} = useSWR<string, ApiError>(
+  const {data, isLoading, error} = useSWR<ApiImage, ApiError>(
     {
-      endpoint: '/get-all',
+      endpoint: '/get-photo',
     },
     fetchFromApi,
     {
       revalidateOnFocus: false,
+      refreshInterval: 5000,
     },
   );
-    
+
   console.log(data);
   if (isLoading) return (
     <Backdrop open>
     <CircularProgress />
     </Backdrop>
   )
-  
+
   if (error) {
     console.log(error);
   }
-  
+
+  if(!data) return (
+    <Backdrop open>
+      <CircularProgress />
+    </Backdrop>
+  )
+
   return (
     <div className="grid grid-cols-12">
       <div className="photos-slideshow col-span-8">
@@ -55,14 +61,7 @@ export const Slideshow = () => {
           options={ SliderConfig }
           aria-labelledby="dynamic-slides-example-heading"
         >
-          {data && data.map((image: ApiImage): ReactNode => {
-              return (
-                <SplideSlide key={image.fileName}>
-                  <img src={`${API_URL}/${image.path}`} />
-                </SplideSlide>
-              )
-            })
-          }
+          <Slide {...data}/>
         </Splide>
       </div>
     </div>

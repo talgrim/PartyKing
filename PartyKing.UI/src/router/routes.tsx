@@ -4,7 +4,7 @@ import {App} from "@/App";
 import {Callback} from "@/pages/Callback";
 import {Login} from "@/pages/Login";
 import {Home} from "@/pages/Home";
-import { Slideshow } from '@/pages/Slideshow';
+import { Slideshow } from '@/pages/Slideshow/Slideshow';
 import { ImageUploader } from '@/pages/ImageUploader';
 import { Music } from '@/pages/Music';
 
