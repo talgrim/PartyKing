@@ -28,6 +28,8 @@ code {
 }
 .splide__slide img {
   max-height: 100%;
-  object-fit: contain;
-  object-position: center
+  object-fit: fill;
+  object-position: center;
+  height: 336px;
+  width: 588px;
 }
