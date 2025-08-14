@@ -20,9 +20,11 @@ const SliderConfig: Options  = {
   autoplay: true,
   drag: false,
   height: '100%',
+  width: '100%',
   cover: false,
   arrows: false,
-  pagination: false
+  pagination: false,
+  waitForTransition: true
 }
 
 export const Slideshow = () => {

@@ -19,7 +19,7 @@ public class QueueController : CoreController
 
     public QueueController(
         IHttpContextAccessor httpContextAccessor,
-        IOptions<SlideshowSettings> slideshowSettingsOptions,
+        IOptions<SlideshowConfiguration> slideshowSettingsOptions,
         IWebHostEnvironment webHostEnvironment)
         : base(httpContextAccessor, slideshowSettingsOptions, webHostEnvironment)
     {

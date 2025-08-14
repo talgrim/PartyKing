@@ -1,6 +1,6 @@
 ﻿namespace PartyKing.Application.Configuration;
 
-public class SlideshowSettings
+public class SlideshowConfiguration
 {
     internal const string SectionName = "SlideshowSettings";
 

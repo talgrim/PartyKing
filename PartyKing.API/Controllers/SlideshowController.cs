@@ -2,9 +2,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using PartyKing.Application.Configuration;
+using PartyKing.Application.Mappings;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Contract.V1.Slideshow;
-using PartyKing.Domain.Enums;
 
 namespace PartyKing.API.Controllers;
 
@@ -16,7 +16,7 @@ public class SlideshowController : CoreController
     public SlideshowController(
         IHttpContextAccessor httpContextAccessor,
         ISlideshowService slideshowService,
-        IOptions<SlideshowSettings> slideshowSettingsOptions,
+        IOptions<SlideshowConfiguration> slideshowSettingsOptions,
         IWebHostEnvironment webHostEnvironment,
         ILogger<SlideshowController> logger)
         : base(httpContextAccessor, slideshowSettingsOptions, webHostEnvironment)
@@ -26,7 +26,7 @@ public class SlideshowController : CoreController
 
         if (!_slideshowService.IsInitialized())
         {
-            _slideshowService.UpdateSettings(false, GetPhysicalRoot());
+            _ = _slideshowService.InitializeAsync(GetPhysicalRoot(), CancellationToken.None);
         }
     }
 
@@ -67,9 +67,19 @@ public class SlideshowController : CoreController
     }
 
     [HttpGet("get-configuration")]
-    [ProducesResponseType<SlideshowSettings>(StatusCodes.Status200OK)]
+    [ProducesResponseType<SlideshowConfiguration>(StatusCodes.Status200OK)]
     public IActionResult GetConfiguration()
     {
-        return Ok(SlideshowSettings);
+        return Ok(SlideshowConfiguration);
+    }
+
+    [HttpPost("update-configuration")]
+    public async Task<IActionResult> UpdateConfiguration(
+        [FromBody] SlideshowSettingsDto settings,
+        CancellationToken cancellationToken)
+    {
+        var mappedSettings = settings.ToDomain(SlideshowConfiguration.SlideTime);
+        await _slideshowService.UpdateSettingsAsync(mappedSettings, cancellationToken);
+        return Ok();
     }
 }
