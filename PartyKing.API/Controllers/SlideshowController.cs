@@ -72,4 +72,11 @@ public class SlideshowController : CoreController
     {
         return Ok(SlideshowSettings);
     }
+
+    [HttpPost("update-configuration")]
+    public IActionResult UpdateConfigurationAsync(bool autoPlay, TimeSpan? slideTime)
+    {
+        _slideshowService.UpdateSettings(autoPlay, GetPhysicalRoot(), slideTime);
+        return Ok();
+    }
 }
