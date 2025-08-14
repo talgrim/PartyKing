@@ -91,7 +91,7 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
         await using var context = await _writerFactory.CreateDbContextAsync(cancellationToken);
 
         var dbImage = await context.Images.FirstOrDefaultAsync(x => x.Id == image.ImageId, cancellationToken);
-        if(dbImage is not null)
+        if (dbImage is not null)
         {
             context.Remove(dbImage);
         }
@@ -103,8 +103,9 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
     {
         await using var context = await _readerFactory.CreateDbContextAsync(cancellationToken);
 
-        var result = await context.Images.OrderBy(x => x.Id)
-            .FirstOrDefaultAsync(x => x.Id > currentId, cancellationToken);
+        var result = await context.Images
+            .OrderBy(x => x.Id)
+            .FirstOrDefaultAsync(x => x.Id > (currentId ?? Guid.Empty), cancellationToken);
 
         if (result is not null)
         {
