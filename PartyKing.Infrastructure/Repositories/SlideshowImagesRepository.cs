@@ -204,7 +204,7 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
         FileStream? fileStream = null;
         try
         {
-            fileStream = File.Create(filePath);
+            fileStream = File.Create(Path.Combine(_rootPath, filePath));
             slideshowImage.Data.Seek(0, SeekOrigin.Begin);
             await slideshowImage.Data.CopyToAsync(fileStream, cancellationToken);
         }
