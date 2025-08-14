@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using PartyKing.Application.Configuration;
 using PartyKing.Application.System;
 using PartyKing.Contract.V1.Slideshow;
+using PartyKing.Domain.Entities;
 using PartyKing.Domain.Models.Slideshow;
 using PartyKing.Infrastructure.Repositories;
 using PartyKing.Infrastructure.Results;
@@ -12,7 +13,8 @@ namespace PartyKing.Application.Slideshow.Services;
 public interface ISlideshowService
 {
     bool IsInitialized();
-    void UpdateSettings(bool autoRepeat, string rootPath, TimeSpan? slideTime = null);
+    Task InitializeAsync(string rootPath, CancellationToken cancellationToken);
+    Task UpdateSettingsAsync(SlideshowSettings settings, CancellationToken cancellationToken);
     Task UploadImagesAsync(IFormFile[] files, bool deleteAfterPresentation, CancellationToken cancellationToken);
     Task<SlideshowImageDto?> GetImageAsync(CancellationToken cancellationToken);
 }
@@ -21,9 +23,7 @@ public class SlideshowService : ISlideshowService
 {
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ISlideshowImagesRepository _imagesRepository;
-    private readonly SlideshowSettings _slideshowSettings;
-
-    private TimeSpan _slideTime;
+    private readonly SlideshowConfiguration _slideshowConfiguration;
 
     private SlideshowImageReadResult? _currentImage;
     private DateTimeOffset? _currentImageExpiration;
@@ -31,12 +31,11 @@ public class SlideshowService : ISlideshowService
     public SlideshowService(
         IDateTimeProvider dateTimeProvider,
         ISlideshowImagesRepository imagesRepository,
-        IOptions<SlideshowSettings> slideshowSettingsOptions)
+        IOptions<SlideshowConfiguration> slideshowSettingsOptions)
     {
         _dateTimeProvider = dateTimeProvider;
         _imagesRepository = imagesRepository;
-        _slideshowSettings = slideshowSettingsOptions.Value;
-        _slideTime = _slideshowSettings.SlideTime;
+        _slideshowConfiguration = slideshowSettingsOptions.Value;
     }
 
     public bool IsInitialized()
@@ -44,14 +43,17 @@ public class SlideshowService : ISlideshowService
         return _imagesRepository.IsInitialized;
     }
 
-    public void UpdateSettings(bool autoRepeat, string rootPath, TimeSpan? slideTime = null)
+    public Task InitializeAsync(string rootPath, CancellationToken cancellationToken)
     {
-        if (slideTime is not null)
-        {
-            _slideTime = slideTime.Value;
-        }
+        return _imagesRepository.InitializeAsync(
+            rootPath,
+            _slideshowConfiguration.PlaceholderPhotosDirectory,
+            cancellationToken);
+    }
 
-        _imagesRepository.UpdateSettings(autoRepeat, rootPath, _slideshowSettings.PlaceholderPhotosDirectory);
+    public Task UpdateSettingsAsync(SlideshowSettings settings, CancellationToken cancellationToken)
+    {
+        return _imagesRepository.UpdateSettingsAsync(settings, cancellationToken);
     }
 
     public async Task UploadImagesAsync(
@@ -106,14 +108,14 @@ public class SlideshowService : ISlideshowService
                 file.FileName,
                 file.ContentType,
                 content,
-                _slideshowSettings.UploadedPhotosDirectory,
+                _slideshowConfiguration.UploadedPhotosDirectory,
                 deleteAfterPresentation);
         }
     }
 
     private async Task RefreshCurrentImageAsync(CancellationToken cancellationToken)
     {
-        _currentImageExpiration = _dateTimeProvider.UtcNow.Add(_slideTime);
+        _currentImageExpiration = _dateTimeProvider.UtcNow.Add(_imagesRepository.SlideTime);
 
         var newImage = await _imagesRepository.GetSlideshowImageAsync(_currentImage?.ImageId, cancellationToken);
 

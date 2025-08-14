@@ -14,15 +14,15 @@ public abstract class CoreController : ControllerBase
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IWebHostEnvironment _webHostEnvironment;
 
-    protected SlideshowSettings SlideshowSettings { get; }
+    protected SlideshowConfiguration SlideshowConfiguration { get; }
 
     protected CoreController(
         IHttpContextAccessor httpContextAccessor,
-        IOptions<SlideshowSettings> slideshowSettingsOptions,
+        IOptions<SlideshowConfiguration> slideshowSettingsOptions,
         IWebHostEnvironment webHostEnvironment)
     {
         _httpContextAccessor = httpContextAccessor;
-        SlideshowSettings = slideshowSettingsOptions.Value;
+        SlideshowConfiguration = slideshowSettingsOptions.Value;
         _webHostEnvironment = webHostEnvironment;
     }
 
@@ -98,9 +98,9 @@ public abstract class CoreController : ControllerBase
     protected ImageDataDto[] GetUploadedImages()
     {
         var content = _webHostEnvironment.WebRootFileProvider.GetDirectoryContents(
-            SlideshowSettings.UploadedPhotosDirectory);
+            SlideshowConfiguration.UploadedPhotosDirectory);
 
         return content.Select(x => new ImageDataDto
-            { Path = Path.Combine(SlideshowSettings.UploadedPhotosDirectory, x.Name), FileName = x.Name }).ToArray();
+            { Path = Path.Combine(SlideshowConfiguration.UploadedPhotosDirectory, x.Name), FileName = x.Name }).ToArray();
     }
 }

@@ -37,4 +37,5 @@ public class PartyKingDbContextBase : DbContext
     }
 
     public DbSet<SlideshowImage> Images { get; set; } = null!;
+    public DbSet<SlideshowSettings> SlideshowSettings { get; set; } = null!;
 }

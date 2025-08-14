@@ -31,6 +31,7 @@ public class SlideshowImage
     public string ImageUrl { get; set; }
     public string ContentType { get; set; }
     public bool DeleteAfterPresentation { get; set; }
+    public bool WasPresented { get; set; }
 
     public SlideshowImageReadModel ToReadModel(SlideshowImageSource source)
     {
