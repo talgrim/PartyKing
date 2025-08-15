@@ -1,52 +1,129 @@
 ﻿using Microsoft.AspNetCore.Http;
-using PartyKing.Application.Slideshow.Helpers;
+using Microsoft.Extensions.Options;
+using PartyKing.Application.Configuration;
 using PartyKing.Application.System;
+using PartyKing.Contract.V1.Slideshow;
+using PartyKing.Domain.Entities;
 using PartyKing.Domain.Models.Slideshow;
 using PartyKing.Infrastructure.Repositories;
+using PartyKing.Infrastructure.Results;
 
 namespace PartyKing.Application.Slideshow.Services;
 
 public interface ISlideshowService
 {
-    Task UploadImageAsync(IFormFile file, CancellationToken cancellationToken);
-    Task<SlideshowImage?> GetImageAsync(CancellationToken cancellationToken);
+    bool IsInitialized();
+    Task InitializeAsync(string rootPath, CancellationToken cancellationToken);
+    Task UpdateSettingsAsync(SlideshowSettings settings, CancellationToken cancellationToken);
+    Task UploadImagesAsync(IFormFile[] files, bool deleteAfterPresentation, CancellationToken cancellationToken);
+    Task<SlideshowImageDto?> GetImageAsync(CancellationToken cancellationToken);
 }
 
 public class SlideshowService : ISlideshowService
 {
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ISlideshowImagesRepository _imagesRepository;
+    private readonly SlideshowConfiguration _slideshowConfiguration;
+
+    private SlideshowImageReadResult? _currentImage;
+    private DateTimeOffset? _currentImageExpiration;
 
     public SlideshowService(
         IDateTimeProvider dateTimeProvider,
-        ISlideshowImagesRepository imagesRepository)
+        ISlideshowImagesRepository imagesRepository,
+        IOptions<SlideshowConfiguration> slideshowSettingsOptions)
     {
         _dateTimeProvider = dateTimeProvider;
         _imagesRepository = imagesRepository;
+        _slideshowConfiguration = slideshowSettingsOptions.Value;
     }
 
-    public async Task UploadImageAsync(IFormFile file, CancellationToken cancellationToken)
+    public bool IsInitialized()
     {
-        var imageData = await ImageDataHelper.PrepareImageDataAsync(file);
+        return _imagesRepository.IsInitialized;
+    }
 
-        await _imagesRepository.AddSlideshowImageAsync(CreateImage(), cancellationToken);
+    public Task InitializeAsync(string rootPath, CancellationToken cancellationToken)
+    {
+        return _imagesRepository.InitializeAsync(
+            rootPath,
+            _slideshowConfiguration.PlaceholderPhotosDirectory,
+            cancellationToken);
+    }
 
-        return;
+    public Task UpdateSettingsAsync(SlideshowSettings settings, CancellationToken cancellationToken)
+    {
+        return _imagesRepository.UpdateSettingsAsync(settings, cancellationToken);
+    }
 
-        SlideshowImage CreateImage()
+    public async Task UploadImagesAsync(
+        IFormFile[] files,
+        bool deleteAfterPresentation,
+        CancellationToken cancellationToken)
+    {
+        await Parallel.ForEachAsync(
+            files,
+            cancellationToken,
+            async (file, stoppingToken) => await UploadImageAsync(file, deleteAfterPresentation, stoppingToken));
+    }
+
+    public async Task<SlideshowImageDto?> GetImageAsync(CancellationToken cancellationToken)
+    {
+        if (!_currentImageExpiration.HasValue || _currentImageExpiration < _dateTimeProvider.UtcNow)
         {
-            return new SlideshowImage
+            if (_currentImage is not null && _currentImage.Data!.DeleteAfterPresentation)
             {
-                Id = Guid.CreateVersion7(_dateTimeProvider.UtcNow),
-                ImageData = imageData.ImageData,
-                ImageUrl = file.FileName,
-                ContentType = file.ContentType,
+                await _imagesRepository.DeleteImageAsync(_currentImage, cancellationToken);
+            }
+
+            await RefreshCurrentImageAsync(cancellationToken);
+        }
+
+        return MapToContract();
+
+        SlideshowImageDto MapToContract()
+        {
+            return new SlideshowImageDto
+            {
+                FileName = _currentImage!.Data!.ImageUrl,
+                ExpirationDate = _currentImageExpiration!.Value
             };
         }
     }
 
-    public Task<SlideshowImage?> GetImageAsync(CancellationToken cancellationToken)
+    private async Task UploadImageAsync(
+        IFormFile file,
+        bool deleteAfterPresentation,
+        CancellationToken cancellationToken)
     {
-        return _imagesRepository.GetSlideshowImageAsync(cancellationToken);
+        await using var content = file.OpenReadStream();
+
+        await _imagesRepository.AddSlideshowImageAsync(CreateModel(), cancellationToken);
+
+        return;
+
+        SlideshowImageWriteModel CreateModel()
+        {
+            return new SlideshowImageWriteModel(
+                file.FileName,
+                file.ContentType,
+                content,
+                _slideshowConfiguration.UploadedPhotosDirectory,
+                deleteAfterPresentation);
+        }
+    }
+
+    private async Task RefreshCurrentImageAsync(CancellationToken cancellationToken)
+    {
+        _currentImageExpiration = _dateTimeProvider.UtcNow.Add(_imagesRepository.SlideTime);
+
+        var newImage = await _imagesRepository.GetSlideshowImageAsync(_currentImage?.ImageId, cancellationToken);
+
+        if (!newImage.IsOk)
+        {
+            return;
+        }
+
+        _currentImage = newImage;
     }
 }

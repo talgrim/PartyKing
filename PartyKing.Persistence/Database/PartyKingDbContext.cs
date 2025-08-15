@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using PartyKing.Domain.Entities;
 using PartyKing.Domain.Models.Slideshow;
 
 namespace PartyKing.Persistence.Database;
@@ -30,5 +31,11 @@ public class PartyKingDbContextBase : DbContext
         optionsBuilder.UseSqlite("Data Source=PartyKing.db");
     }
 
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(PartyKingDbContextBase).Assembly);
+    }
+
     public DbSet<SlideshowImage> Images { get; set; } = null!;
+    public DbSet<SlideshowSettings> SlideshowSettings { get; set; } = null!;
 }

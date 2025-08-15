@@ -2,6 +2,9 @@
 using ErrorOr;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.Extensions.Options;
+using PartyKing.Application.Configuration;
+using PartyKing.Contract.V1.Slideshow;
 
 namespace PartyKing.API.Controllers;
 
@@ -9,10 +12,18 @@ namespace PartyKing.API.Controllers;
 public abstract class CoreController : ControllerBase
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IWebHostEnvironment _webHostEnvironment;
 
-    protected CoreController(IHttpContextAccessor httpContextAccessor)
+    protected SlideshowConfiguration SlideshowConfiguration { get; }
+
+    protected CoreController(
+        IHttpContextAccessor httpContextAccessor,
+        IOptions<SlideshowConfiguration> slideshowSettingsOptions,
+        IWebHostEnvironment webHostEnvironment)
     {
         _httpContextAccessor = httpContextAccessor;
+        SlideshowConfiguration = slideshowSettingsOptions.Value;
+        _webHostEnvironment = webHostEnvironment;
     }
 
     protected HttpContext GetContext()
@@ -71,5 +82,25 @@ public abstract class CoreController : ControllerBase
         }
 
         return ValidationProblem(modelStateDictionary);
+    }
+
+    protected string GetPhysicalRoot()
+    {
+        var result = _webHostEnvironment.WebRootPath;
+        if (!Directory.Exists(result))
+        {
+            Directory.CreateDirectory(result);
+        }
+
+        return result;
+    }
+
+    protected ImageDataDto[] GetUploadedImages()
+    {
+        var content = _webHostEnvironment.WebRootFileProvider.GetDirectoryContents(
+            SlideshowConfiguration.UploadedPhotosDirectory);
+
+        return content.Select(x => new ImageDataDto
+            { Path = Path.Combine(SlideshowConfiguration.UploadedPhotosDirectory, x.Name), FileName = x.Name }).ToArray();
     }
 }
