@@ -16,6 +16,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PartyKing.Application", "Pa
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PartyKing.Contract", "PartyKing.Contract\PartyKing.Contract.csproj", "{4FB21D54-1EF0-4CEF-94D5-DF7FBCD02D0C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PartyKing.Infrastructure.Spotify", "PartyKing.Infrastructure.Spotify\PartyKing.Infrastructure.Spotify.csproj", "{2C46B392-D68F-4FEC-BFFA-37EEA0BA910C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -54,5 +56,9 @@ Global
 		{4FB21D54-1EF0-4CEF-94D5-DF7FBCD02D0C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4FB21D54-1EF0-4CEF-94D5-DF7FBCD02D0C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4FB21D54-1EF0-4CEF-94D5-DF7FBCD02D0C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2C46B392-D68F-4FEC-BFFA-37EEA0BA910C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2C46B392-D68F-4FEC-BFFA-37EEA0BA910C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2C46B392-D68F-4FEC-BFFA-37EEA0BA910C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2C46B392-D68F-4FEC-BFFA-37EEA0BA910C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
