@@ -7,7 +7,7 @@ public interface ISpotifyClientFactory
     ISpotifyClient CreateClient(string accessToken);
 }
 
-public class SpotifyClientFactory : ISpotifyClientFactory
+internal class SpotifyClientFactory : ISpotifyClientFactory
 {
     public ISpotifyClient CreateClient(string accessToken)
     {
