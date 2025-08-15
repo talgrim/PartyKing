@@ -12,6 +12,8 @@ public class SlideshowController : CoreController
 {
     private readonly ISlideshowService _slideshowService;
     private readonly ILogger<SlideshowController> _logger;
+    private readonly IWebHostEnvironment _webHostEnvironment;
+    private readonly SlideshowConfiguration _slideshowSettings;
 
     public SlideshowController(
         IHttpContextAccessor httpContextAccessor,
@@ -19,9 +21,11 @@ public class SlideshowController : CoreController
         IOptions<SlideshowConfiguration> slideshowSettingsOptions,
         IWebHostEnvironment webHostEnvironment,
         ILogger<SlideshowController> logger)
-        : base(httpContextAccessor, slideshowSettingsOptions, webHostEnvironment)
+        : base(httpContextAccessor)
     {
         _slideshowService = slideshowService;
+        _slideshowSettings = slideshowSettingsOptions.Value;
+        _webHostEnvironment = webHostEnvironment;
         _logger = logger;
 
         if (!_slideshowService.IsInitialized())
@@ -70,7 +74,7 @@ public class SlideshowController : CoreController
     [ProducesResponseType<SlideshowConfiguration>(StatusCodes.Status200OK)]
     public IActionResult GetConfiguration()
     {
-        return Ok(SlideshowConfiguration);
+        return Ok(_slideshowSettings);
     }
 
     [HttpPost("update-configuration")]
@@ -78,8 +82,28 @@ public class SlideshowController : CoreController
         [FromBody] SlideshowSettingsDto settings,
         CancellationToken cancellationToken)
     {
-        var mappedSettings = settings.ToDomain(SlideshowConfiguration.SlideTime);
+        var mappedSettings = settings.ToDomain(_slideshowSettings.SlideTime);
         await _slideshowService.UpdateSettingsAsync(mappedSettings, cancellationToken);
         return Ok();
+    }
+
+    private string GetPhysicalRoot()
+    {
+        var result = _webHostEnvironment.WebRootPath;
+        if (!Directory.Exists(result))
+        {
+            Directory.CreateDirectory(result);
+        }
+
+        return result;
+    }
+
+    private ImageDataDto[] GetUploadedImages()
+    {
+        var content = _webHostEnvironment.WebRootFileProvider.GetDirectoryContents(
+            _slideshowSettings.UploadedPhotosDirectory);
+
+        return content.Select(x => new ImageDataDto
+            { Path = Path.Combine(_slideshowSettings.UploadedPhotosDirectory, x.Name), FileName = x.Name }).ToArray();
     }
 }

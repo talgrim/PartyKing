@@ -17,11 +17,7 @@ public class QueueController : CoreController
         ("https://www.youtube.com/watch?v=zWq65etOM-M", "You are a Pirate Limewire")
     ];
 
-    public QueueController(
-        IHttpContextAccessor httpContextAccessor,
-        IOptions<SlideshowConfiguration> slideshowSettingsOptions,
-        IWebHostEnvironment webHostEnvironment)
-        : base(httpContextAccessor, slideshowSettingsOptions, webHostEnvironment)
+    public QueueController(IHttpContextAccessor httpContextAccessor) : base(httpContextAccessor)
     {
     }
 
