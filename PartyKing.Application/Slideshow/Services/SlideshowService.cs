@@ -19,7 +19,7 @@ public interface ISlideshowService
     Task<SlideshowImageDto?> GetImageAsync(CancellationToken cancellationToken);
 }
 
-public class SlideshowService : ISlideshowService
+internal class SlideshowService : ISlideshowService
 {
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ISlideshowImagesRepository _imagesRepository;

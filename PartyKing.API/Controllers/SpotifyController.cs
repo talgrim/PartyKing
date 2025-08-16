@@ -1,6 +1,5 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PartyKing.API.Authentication;
+using PartyKing.API.Authorization;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Contract.V1.Spotify;
 
@@ -37,7 +36,7 @@ public class SpotifyController : CoreController
     }
 
     [HttpGet]
-    [Authorize(Policies.AuthenticatedUser)]
+    [AuthorizeByCookie]
     [Route("currently-playing")]
     [ProducesResponseType<string>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetCurrentlyPlaying(CancellationToken cancellationToken)
