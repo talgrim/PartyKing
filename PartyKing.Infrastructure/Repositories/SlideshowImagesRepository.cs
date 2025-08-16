@@ -82,8 +82,8 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
 
     public async Task AddSlideshowImageAsync(SlideshowImageWriteModel slideshowImage, CancellationToken cancellationToken)
     {
-        await AddImageDataToDbAsync(slideshowImage, cancellationToken);
-        await SaveImageToFileAsync(slideshowImage, cancellationToken);
+        var imageName = await AddImageDataToDbAsync(slideshowImage, cancellationToken);
+        await SaveImageToFileAsync(imageName, slideshowImage, cancellationToken);
     }
 
     public async Task<SlideshowImageReadResult> GetSlideshowImageAsync(Guid? currentId, CancellationToken cancellationToken)
@@ -174,31 +174,35 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
         }
     }
 
-    private async Task AddImageDataToDbAsync(SlideshowImageWriteModel slideshowImage, CancellationToken cancellationToken)
+    private async Task<string> AddImageDataToDbAsync(SlideshowImageWriteModel slideshowImage, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Adding image data to database. FileName: {FileName}, Content Type: {ContentType}",
-            slideshowImage.ImageName,
+            slideshowImage.Extension,
             slideshowImage.ContentType);
 
+        var image = new SlideshowImage(slideshowImage);
         try
         {
             await using var context = await _writerFactory.CreateDbContextAsync(cancellationToken);
 
-            await context.Images.AddAsync(new SlideshowImage(slideshowImage), cancellationToken);
+            await context.Images.AddAsync(image, cancellationToken);
 
             await context.SaveChangesAsync(cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to add image data to database. FileName: {FileName}", slideshowImage.ImageName);
+            _logger.LogError(ex, "Failed to add image data to database. FileName: {FileName}", slideshowImage.Extension);
         }
+
+        return image.ImageName;
     }
 
     private async Task SaveImageToFileAsync(
+        string imageName,
         SlideshowImageWriteModel slideshowImage,
         CancellationToken cancellationToken)
     {
-        var filePath = slideshowImage.GetFullPath();
+        var filePath = slideshowImage.GetFullPath(imageName);
         _logger.LogInformation("Saving image to file: {FilePath}", filePath);
 
         FileStream? fileStream = null;

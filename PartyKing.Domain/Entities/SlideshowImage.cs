@@ -20,8 +20,8 @@ public class SlideshowImage
 
     public SlideshowImage(SlideshowImageWriteModel writeModel)
     {
-        ImageName = writeModel.ImageName;
-        ImageUrl = writeModel.GetFullPath();
+        ImageName = $"{Id}{writeModel.Extension}";
+        ImageUrl = writeModel.GetFullPath(ImageName);
         ContentType = writeModel.ContentType;
         DeleteAfterPresentation = writeModel.DeleteAfterPresentation;
     }
