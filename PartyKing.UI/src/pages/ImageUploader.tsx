@@ -10,7 +10,7 @@ const API_URL = makeUrlWithParams(`${envVariables.apiUrl}/upload-photo`);
 type UploadStatus = 'waiting' | 'uploading' | 'success' | 'error';
 
 export const ImageUploader = (): ReactNode => {
-    const [files, setFiles] = useState<Blob[]>([]);
+    const [files, setFiles] = useState<File[]>([]);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploadStatus, setUploadStatus] = useState<UploadStatus>('waiting');
     const fileInput = useRef(null);
@@ -27,7 +27,7 @@ export const ImageUploader = (): ReactNode => {
         setUploadStatus('uploading');
 
         try {
-            const mappedFiles = files.map((file) => new File([file], file.type))
+            const mappedFiles = files.map((file) => new File([file], file.name));
             const formData = new FormData();
             for(let i = 0; i < mappedFiles.length; i++) {
                 formData.append('files', mappedFiles[i]);
