@@ -30,7 +30,7 @@ public class SlideshowController : CoreController
         }
     }
 
-    [HttpPut("upload-photo")]
+    [HttpPut("upload-photo/{deleteAfterPresentation:bool}")]
     public async Task<IActionResult> UploadPhoto([Required] IFormFile[] files, bool deleteAfterPresentation, CancellationToken cancellationToken)
     {
         try
