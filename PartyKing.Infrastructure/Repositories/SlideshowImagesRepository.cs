@@ -234,7 +234,13 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
     private async Task MarkImageAsPresentedAsync(Guid currentId, CancellationToken cancellationToken)
     {
         await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
-        var currentImage = await dbContext.Images.FirstAsync(x => x.Id == currentId, cancellationToken);
+
+        var currentImage = await dbContext.Images.FirstOrDefaultAsync(x => x.Id == currentId, cancellationToken);
+        if (currentImage is null)
+        {
+            return;
+        }
+
         currentImage.WasPresented = true;
         await dbContext.SaveChangesAsync(cancellationToken);
     }
