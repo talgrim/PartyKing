@@ -79,7 +79,7 @@ export const ImageUploader = (): ReactNode => {
 
             { uploadStatus === 'success' &&
                 <Alert variant="filled" severity="success">
-                    File Uploaded
+                    Pliki wrzucone
                 </Alert>
             }
 

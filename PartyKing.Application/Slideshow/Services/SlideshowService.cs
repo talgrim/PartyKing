@@ -105,7 +105,7 @@ public class SlideshowService : ISlideshowService
         SlideshowImageWriteModel CreateModel()
         {
             return new SlideshowImageWriteModel(
-                file.FileName,
+                Path.GetExtension(file.FileName),
                 file.ContentType,
                 content,
                 _slideshowConfiguration.UploadedPhotosDirectory,
