@@ -58,7 +58,7 @@ export const Slideshow = () => {
 
   return (
     <div className="grid grid-cols-12">
-      <div className="photos-slideshow col-span-8">
+      <div className="photos-slideshow">
         <Splide
           options={ SliderConfig }
           aria-labelledby="dynamic-slides-example-heading"

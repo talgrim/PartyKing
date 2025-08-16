@@ -10,6 +10,7 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   server: { 
     port: 2137,
+    host: "0.0.0.0",
     watch: {
       usePolling: true // Fix for HMR between WSL2 and windows
     }

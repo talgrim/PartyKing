@@ -14,18 +14,29 @@ code {
     monospace;
 }
 
+.photos-slideshow {
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  height: 336px;
+  width: 588px;
+}
+
 .photos-slideshow .splide {
   max-height: 100vh;
   height: 100%;
 }
+
 .photos-slideshow .splide__track {
   height: 100%;
 }
+
 .splide__slide {
   display: flex;
   justify-content: center;
   align-items: center;
 }
+
 .splide__slide img {
   max-height: 100%;
   object-fit: contain;
