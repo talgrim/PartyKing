@@ -29,6 +29,6 @@ public static class DependencyInjection
 
     private static void RegisterSpotify(this IServiceCollection services)
     {
-        services.AddSingleton<ISpotifyService, SpotifyService>();
+        services.AddScoped<ISpotifyService, SpotifyService>();
     }
 }

@@ -17,7 +17,7 @@ public interface ISpotifyService
     Task<string> GetCurrentlyPlayingAsync(string accessToken, CancellationToken cancellationToken);
 }
 
-public class SpotifyService : ISpotifyService
+internal class SpotifyService : ISpotifyService
 {
     private readonly ISpotifyIntegrationClient _spotifyClient;
     private readonly IHttpContextAccessor _httpContextAccessor;

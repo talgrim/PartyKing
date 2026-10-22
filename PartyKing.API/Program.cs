@@ -35,6 +35,8 @@ app
     .UseHttpsRedirection()
     .UseRouting()
     .UseCors("CorsPolicy")
+    .UseAuthentication()
+    .UseAuthorization()
     .UseExceptionHandler("/error")
     .UseStaticFiles();
 
