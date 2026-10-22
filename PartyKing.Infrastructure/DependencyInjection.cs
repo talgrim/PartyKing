@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using PartyKing.Infrastructure.Authorization;
 using PartyKing.Infrastructure.Repositories;
 using PartyKing.Persistence.Database;
 
@@ -11,6 +12,7 @@ public static class DependencyInjection
     {
         services.RegisterDatabase();
         services.RegisterRepositories();
+        services.AddAuthorization();
     }
 
     public static async Task MigrateDb(this IServiceProvider services)
@@ -30,5 +32,11 @@ public static class DependencyInjection
     private static void RegisterRepositories(this IServiceCollection services)
     {
         services.AddSingleton<ISlideshowImagesRepository, SlideshowImagesRepository>();
+        services.AddSingleton<ISpotifyProfilesRepository, SpotifyProfilesRepository>();
+    }
+
+    private static void AddAuthorization(this IServiceCollection services)
+    {
+        services.AddSingleton<ICookieAuthorizationHandler, CookieAuthorizationHandler>();
     }
 }

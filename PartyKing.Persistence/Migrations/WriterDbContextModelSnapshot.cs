@@ -246,6 +246,23 @@ namespace PartyKing.Persistence.Migrations
                             StartFromBeginning = false
                         });
                 });
+
+            modelBuilder.Entity("PartyKing.Domain.Entities.SpotifyProfile", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RefreshToken")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RefreshToken")
+                        .IsUnique();
+
+                    b.ToTable("SpotifyProfiles");
+                });
 #pragma warning restore 612, 618
         }
     }
