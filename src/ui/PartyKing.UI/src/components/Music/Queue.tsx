@@ -6,8 +6,6 @@ import { SongDto, SpotifyTrackDto } from '@/service/endpoints/queue/types';
 
 type Props = {
   sessionId: string;
-  /** Id of the song that is playing right now; it is shown separately from the "up next" list. */
-  currentSongId?: number;
 };
 
 type RowState = { status: 'adding' } | { status: 'failed'; error: string };
@@ -15,7 +13,7 @@ type RowState = { status: 'adding' } | { status: 'failed'; error: string };
 const errorMessage = (error: unknown) =>
   (error as { message?: string })?.message || 'Something went wrong';
 
-export const Queue = ({ sessionId, currentSongId }: Props): ReactNode => {
+export const Queue = ({ sessionId }: Props): ReactNode => {
   const [input, setInput] = useState('');
   const [results, setResults] = useState<SpotifyTrackDto[]>([]);
   const [busy, setBusy] = useState(false);
@@ -29,7 +27,8 @@ export const Queue = ({ sessionId, currentSongId }: Props): ReactNode => {
     refreshInterval: 3000,
   });
 
-  const upNext = (queue ?? []).filter((song) => song.id !== currentSongId);
+  // The server leaves the song that is playing out of the queue
+  const upNext = queue ?? [];
   // A Spotify queue item stores the track uri as its url, so this marks tracks that are still waiting in the queue.
   const queuedUrls = new Set(upNext.map((song) => song.url));
 

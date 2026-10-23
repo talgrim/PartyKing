@@ -1,16 +1,27 @@
 import { ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import useSWR from 'swr';
+import { AdminPlayerControls } from '@/components/Music/AdminPlayerControls';
+import { HostPlayer } from '@/components/Music/HostPlayer';
+import { NowPlayingCard } from '@/components/Music/NowPlayingCard';
 import { Queue } from '@/components/Music/Queue';
 import { SessionHeader } from '@/components/Music/SessionHeader';
 import { PageNavigation } from '@/components/common/PageNavigation';
 import { ROUTE_PATHS } from '@/router/constants';
 import { HTTP_STATUS_CODE } from '@/service/constants';
+import { useNowPlaying } from '@/service/endpoints/player/useNowPlaying';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
+import { useViewerRole } from '@/service/endpoints/sessions/useViewerRole';
 
-/** Guest page of a session: anyone can search for or paste songs and add them to its queue. No login needed. */
+/**
+ * Page of a session. Anyone sees what is playing and can search for or paste songs to add to the queue, no login
+ * needed. The host also gets the player, and an admin the controls to pause and skip.
+ */
 export const MusicQueue = (): ReactNode => {
   const { sessionId = '' } = useParams();
+
+  const { isHost, isAdmin } = useViewerRole(sessionId);
+  const { data: nowPlaying, mutate: refreshNowPlaying } = useNowPlaying(sessionId);
 
   const { data: session, error } = useSWR(['session', sessionId], () => sessionsApi.getSession(sessionId), {
     refreshInterval: 10000,
@@ -42,7 +53,17 @@ export const MusicQueue = (): ReactNode => {
 
         {session && (
           <>
-            <SessionHeader session={session} />
+            <SessionHeader session={session} isHost={isHost} />
+            <NowPlayingCard nowPlaying={nowPlaying} />
+            {/* An admin who is also the host plays the music themselves, so only the host's player is shown. */}
+            {isHost && <HostPlayer sessionId={session.id} isAdmin={isAdmin} />}
+            {!isHost && isAdmin && (
+              <AdminPlayerControls
+                sessionId={session.id}
+                nowPlaying={nowPlaying}
+                onChanged={() => void refreshNowPlaying()}
+              />
+            )}
             <h2 className="px-2 pt-4 text-xl text-slate-200">Add a song to the queue</h2>
             <Queue sessionId={session.id} />
           </>

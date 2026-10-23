@@ -5,7 +5,6 @@ import {Callback} from "@/pages/Callback";
 import {Home} from "@/pages/Home";
 import { Slideshow } from '@/pages/Slideshow/Slideshow';
 import { ImageUploader } from '@/pages/ImageUploader';
-import { Music } from '@/pages/Music';
 import { MusicQueue } from '@/pages/MusicQueue';
 import { Admin } from '@/pages/Admin/Admin';
 
@@ -20,7 +19,6 @@ export const routes: RouteObject[] = [
       {path: ROUTE_PATHS.IMAGE_UPLOADER, element: <ImageUploader/>},
       {path: ROUTE_PATHS.ADMIN, element: <Admin/>},
       {path: ROUTE_PATHS.SESSION, element: <MusicQueue/>},
-      {path: ROUTE_PATHS.SESSION_MUSIC, element: <Music/>},
     ],
   },
 ];

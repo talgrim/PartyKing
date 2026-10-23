@@ -1,15 +1,15 @@
 import { ReactNode, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { sessionMusicPath } from '@/router/constants';
 import { SessionDto } from '@/service/endpoints/sessions/types';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 
 type Props = {
   session: SessionDto;
+  /** The visitor is logged in as this session's host. */
+  isHost: boolean;
 };
 
 /** Session name and code, plus either who the host is or the login that makes the visitor the host. */
-export const SessionHeader = ({ session }: Props): ReactNode => {
+export const SessionHeader = ({ session, isHost }: Props): ReactNode => {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,9 +34,16 @@ export const SessionHeader = ({ session }: Props): ReactNode => {
         {session.hasHost ? (
           <div className="flex items-center gap-3">
             <span>Current Host: {session.hostName}</span>
-            <Link to={sessionMusicPath(session.id)} className="text-sm text-amber-500 underline">
-              Open the player
-            </Link>
+            {/* The host whose login expired gets back in here; anyone else is turned away after Spotify. */}
+            {!isHost && (
+              <button
+                onClick={loginAsHost}
+                disabled={busy}
+                className="text-sm text-amber-500 underline cursor-pointer disabled:opacity-50"
+              >
+                I'm the host
+              </button>
+            )}
           </div>
         ) : (
           <button

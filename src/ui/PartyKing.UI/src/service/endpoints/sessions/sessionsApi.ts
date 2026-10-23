@@ -1,5 +1,5 @@
 import { axios } from '@/service/request';
-import { SessionDto, UserDto } from './types';
+import { SessionDto, UserDto, ViewerRoleDto } from './types';
 
 // The axios response interceptor unwraps `response.data`, so these resolve to the payload itself.
 const unwrap = <T>(promise: Promise<unknown>) => promise as Promise<T>;
@@ -9,6 +9,10 @@ export const sessionsApi = {
 
   getSession: (sessionId: string) =>
     unwrap<SessionDto>(axios.get(`/sessions/${sessionId}`)),
+
+  /** What the logged-in visitor (host or admin, if any) may do in the session. */
+  getViewerRole: (sessionId: string) =>
+    unwrap<ViewerRoleDto>(axios.get(`/sessions/${sessionId}/me`, { withCredentials: true })),
 
   /** Spotify login URL that makes the caller the host of the session (or logs the current host in again). */
   createHostLoginUrl: (sessionId: string) =>

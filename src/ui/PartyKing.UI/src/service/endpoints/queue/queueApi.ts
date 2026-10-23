@@ -15,10 +15,14 @@ export const queueApi = {
 
   /**
    * Host only. Marks the current song as played and starts the next; rejects with status 404 when the queue is
-   * empty and 403 when the logged-in account is not the host of the session.
+   * empty and 403 when the logged-in account is not the host of the session. `currentSongId` is the song the player
+   * thinks is playing: when an admin has skipped it meanwhile nothing advances and the song really playing is
+   * returned.
    */
-  next: (sessionId: string) =>
-    unwrap<SongDto>(axios.post(`/sessions/${sessionId}/songs/next`, null, withCredentials)),
+  next: (sessionId: string, currentSongId?: number) =>
+    unwrap<SongDto>(
+      axios.post(`/sessions/${sessionId}/songs/next`, null, { ...withCredentials, params: { currentSongId } }),
+    ),
 
   searchSpotify: (sessionId: string, query: string) =>
     unwrap<SpotifyTrackDto[]>(
