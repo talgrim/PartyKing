@@ -304,7 +304,7 @@ SQLite, plik `PartyKing.db` tworzony w katalogu roboczym procesu API
 
 - Migracje (`src/api/PartyKing.Persistence/Migrations`) są **stosowane automatycznie przy starcie API**
   przez `app.Services.MigrateDb()` — nie trzeba nic robić ręcznie.
-- Dane startowe: domyślny wiersz ustawień slideshow (`SlideTime` = 20 s, `AutoRepeat` i `StartFromBeginning` wyłączone).
+- Ustawienia slideshow: wiersz powstaje dopiero przy pierwszej zmianie ustawień sesji; do tego czasu obowiązują wartości domyślne (`SlideTime` z `appsettings.json`, `AutoRepeat` włączone, `StartFromBeginning` wyłączone).
 - Aby zacząć od czystej bazy, wystarczy usunąć plik `PartyKing.db` i zrestartować API.
 
 Dodanie nowej migracji (z katalogu `src/api`; wymaga `dotnet tool install --global dotnet-ef`) — ponieważ w projekcie
@@ -409,20 +409,20 @@ curl -O "$API/Images/Uploaded/<id sesji>/01988512-f059-73dd-ae67-29b2edf9f268.jp
 ```
 
 Gdy sesja nie ma żadnego zdjęcia do pokazania (nic nie wrzucono albo wszystkie zostały już wyświetlone,
-a `AutoRepeat` i `StartFromBeginning` są wyłączone), endpoint zwraca `204 No Content`,
+a `AutoRepeat` i `StartFromBeginning` zostały wyłączone), endpoint zwraca `204 No Content`,
 a strona slideshow pokazuje „No photos yet".
 
 #### `GET /admin/sessions/{sessionId}/slideshow-settings`
 
 Wymaga zalogowanego admina (hasło sesji nie jest potrzebne). Zwraca ustawienia slideshow sesji;
-sesja, która nic nie zmieniała, ma wartości domyślne (czas slajdu z `appsettings.json`).
+sesja, która nic nie zmieniała, ma wartości domyślne (czas slajdu z `appsettings.json`, `autoRepeat` włączone, `startFromBeginning` wyłączone).
 
 ```bash
 curl -b admin-cookies.txt "$API/admin/sessions/$SESSION/slideshow-settings"
 ```
 
 ```json
-{ "autoRepeat": false, "startFromBeginning": false, "slideTime": "00:00:05" }
+{ "autoRepeat": true, "startFromBeginning": false, "slideTime": "00:00:05" }
 ```
 
 #### `PUT /admin/sessions/{sessionId}/slideshow-settings`
