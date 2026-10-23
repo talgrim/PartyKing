@@ -1,7 +1,9 @@
+using System.Diagnostics;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
+using PartyKing.API.Metrics;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Infrastructure.Authorization;
 
@@ -10,6 +12,7 @@ namespace PartyKing.API.Authentication.Cookie;
 public class AdminCookieAuthenticationHandler : AuthenticationHandler<CookieAuthenticationOptions>
 {
     private readonly ICookieAuthorizationHandler _cookieAuthorizationHandler;
+    private readonly AuthorizationMetrics _metrics;
     private readonly IAdminService _adminService;
 
     public AdminCookieAuthenticationHandler(
@@ -17,14 +20,26 @@ public class AdminCookieAuthenticationHandler : AuthenticationHandler<CookieAuth
         ILoggerFactory logger,
         UrlEncoder encoder,
         ICookieAuthorizationHandler cookieAuthorizationHandler,
-        IAdminService adminService)
+        IAdminService adminService,
+        AuthorizationMetrics metrics)
         : base(options, logger, encoder)
     {
+        _metrics = metrics;
         _cookieAuthorizationHandler = cookieAuthorizationHandler;
         _adminService = adminService;
     }
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
+    {
+        var startTimestamp = Stopwatch.GetTimestamp();
+        var result = await AuthenticateAsync();
+        var durationMs = Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds;
+        _metrics.RecordDuration(Scheme.Name, durationMs, result.Succeeded);
+
+        return result;
+    }
+
+    private async Task<AuthenticateResult> AuthenticateAsync()
     {
         if (!_cookieAuthorizationHandler.TryReadAdminId(Request, out var adminId))
         {

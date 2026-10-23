@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PartyKing.Infrastructure.Authorization;
+using PartyKing.Infrastructure.Metrics;
 using PartyKing.Infrastructure.Repositories;
 using PartyKing.Persistence.Database;
 
@@ -31,12 +32,32 @@ public static class DependencyInjection
 
     private static void RegisterRepositories(this IServiceCollection services)
     {
-        services.AddSingleton<ISlideshowImagesRepository, SlideshowImagesRepository>();
-        services.AddSingleton<ISpotifyProfilesRepository, SpotifyProfilesRepository>();
-        services.AddSingleton<IQueueRepository, QueueRepository>();
-        services.AddSingleton<ISessionsRepository, SessionsRepository>();
-        services.AddSingleton<IOAuthStatesRepository, OAuthStatesRepository>();
-        services.AddSingleton<IAdminAccountsRepository, AdminAccountsRepository>();
+        services.AddSingleton<RepositoryMetrics>();
+        services.AddMetered<ISlideshowImagesRepository, SlideshowImagesRepository>(
+            (inner, metrics) => new MeteredSlideshowImagesRepository(inner, metrics));
+        services.AddMetered<ISpotifyProfilesRepository, SpotifyProfilesRepository>(
+            (inner, metrics) => new MeteredSpotifyProfilesRepository(inner, metrics));
+        services.AddMetered<IQueueRepository, QueueRepository>(
+            (inner, metrics) => new MeteredQueueRepository(inner, metrics));
+        services.AddMetered<ISessionsRepository, SessionsRepository>(
+            (inner, metrics) => new MeteredSessionsRepository(inner, metrics));
+        services.AddMetered<IOAuthStatesRepository, OAuthStatesRepository>(
+            (inner, metrics) => new MeteredOAuthStatesRepository(inner, metrics));
+        services.AddMetered<IAdminAccountsRepository, AdminAccountsRepository>(
+            (inner, metrics) => new MeteredAdminAccountsRepository(inner, metrics));
+    }
+
+    // Repositories hold state, so the implementation stays a singleton and the decorator wraps that one instance
+    private static void AddMetered<TService, TImplementation>(
+        this IServiceCollection services,
+        Func<TService, RepositoryMetrics, TService> decorate)
+        where TService : class
+        where TImplementation : class, TService
+    {
+        services.AddSingleton<TImplementation>();
+        services.AddSingleton(provider => decorate(
+            provider.GetRequiredService<TImplementation>(),
+            provider.GetRequiredService<RepositoryMetrics>()));
     }
 
     private static void AddAuthorization(this IServiceCollection services)
