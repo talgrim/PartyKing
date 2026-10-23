@@ -22,7 +22,6 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    globalSetup: ['./testGlobalSetup.ts'],
     setupFiles: ['./testSetup.ts', '@vitest/web-worker'],
     deps: {
       inline: ['vitest-canvas-mock'],

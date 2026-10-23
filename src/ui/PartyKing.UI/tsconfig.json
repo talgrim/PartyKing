@@ -28,7 +28,7 @@
       "@e2e/*": ["e2e/*"]
     },
     "plugins": [{ "name": "typescript-plugin-css-modules" }],
-    "types": ["vitest/globals"]
+    "types": ["vitest/globals", "@testing-library/jest-dom/vitest"]
   },
   // vite.config.ts is left out: it needs package "exports" resolution, which is turned off above.
   "include": ["src"]
