@@ -7,10 +7,12 @@ type PlayerProps = {
     mute: boolean,
     paused?: boolean,
     // Fired when playback is paused or resumed, including through the player's own controls.
-    onPausedChange?: (paused: boolean) => void
+    onPausedChange?: (paused: boolean) => void,
+    // Fired when YouTube refuses to play the video, e.g. the owner disabled embedding (code 101 or 150).
+    onError?: (code: number | undefined) => void
 }
 
-export const YoutubePlayer = ({songUrl, mute, paused = false, onPausedChange, onEnded}: PlayerProps) => {
+export const YoutubePlayer = ({songUrl, mute, paused = false, onPausedChange, onEnded, onError}: PlayerProps) => {
     const player = useRef(null);
 
     return (
@@ -28,6 +30,7 @@ export const YoutubePlayer = ({songUrl, mute, paused = false, onPausedChange, on
             onPlay={() => onPausedChange?.(false)}
             onPause={() => onPausedChange?.(true)}
             onEnded={onEnded}
+            onError={(event) => onError?.((event.target as { error?: { code?: number } } | null)?.error?.code)}
             style={{ 
                 width: '100%',
                 height: 'auto'

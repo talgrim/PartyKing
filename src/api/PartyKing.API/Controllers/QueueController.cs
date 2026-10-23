@@ -38,14 +38,18 @@ public class QueueController : CoreController
 
     /// <summary>
     /// Marks the current song as played and starts the next one. Only the session's host may call it.
-    /// 404 when the queue is empty.
+    /// 404 when the queue is empty. <paramref name="currentSongId"/> is the song the player thinks is playing (none
+    /// when omitted); if an admin has skipped it meanwhile, nothing advances and the song that is playing is returned.
     /// </summary>
     [HttpPost("sessions/{sessionId:guid}/songs/next")]
     [AuthorizeByCookie]
     [ProducesResponseType<SongDataDto>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetNext(Guid sessionId, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetNext(
+        Guid sessionId,
+        [FromQuery] int? currentSongId,
+        CancellationToken cancellationToken)
     {
-        var result = await _queueService.GetNextAsync(sessionId, GetProfileId(), cancellationToken);
+        var result = await _queueService.GetNextAsync(sessionId, GetProfileId(), currentSongId, cancellationToken);
 
         return result.Match(Ok, Problem);
     }

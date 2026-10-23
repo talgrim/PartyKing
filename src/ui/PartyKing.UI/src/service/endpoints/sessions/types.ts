@@ -9,6 +9,13 @@ export type SessionDto = {
   hasHost: boolean;
 };
 
+// Mirrors PartyKing.Contract.V1.Sessions.ViewerRoleDto
+export type ViewerRoleDto = {
+  /** Logged in as the host of this session. */
+  isHost: boolean;
+  isAdmin: boolean;
+};
+
 export type UserDto = {
   id: string;
   accessToken: string;

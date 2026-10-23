@@ -51,9 +51,6 @@ internal class SpotifyIntegrationClient : ISpotifyIntegrationClient
         {
             Scope = Scope,
             State = state,
-#if DEBUG
-            ShowDialog = true
-#endif
         };
 
         return loginRequest.ToUri();

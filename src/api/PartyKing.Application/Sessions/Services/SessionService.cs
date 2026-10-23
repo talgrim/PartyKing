@@ -10,6 +10,13 @@ public interface ISessionService
 {
     Task<IReadOnlyList<SessionDto>> GetAllAsync(CancellationToken cancellationToken);
     Task<ErrorOr<SessionDto>> GetAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>What the viewer may do in the session; <paramref name="profileId"/> is the logged-in host, if any.</summary>
+    Task<ErrorOr<ViewerRoleDto>> GetViewerRoleAsync(
+        Guid id,
+        string? profileId,
+        bool isAdmin,
+        CancellationToken cancellationToken);
     Task<ErrorOr<SessionDto>> CreateAsync(string? name, CancellationToken cancellationToken);
     Task<ErrorOr<Success>> RenameAsync(Guid id, string? name, CancellationToken cancellationToken);
     Task<ErrorOr<Success>> DeleteAsync(Guid id, CancellationToken cancellationToken);
@@ -42,6 +49,24 @@ internal class SessionService : ISessionService
         var session = await _sessionsRepository.GetAsync(id, cancellationToken);
 
         return session is null ? NotFound() : ToDto(session);
+    }
+
+    public async Task<ErrorOr<ViewerRoleDto>> GetViewerRoleAsync(
+        Guid id,
+        string? profileId,
+        bool isAdmin,
+        CancellationToken cancellationToken)
+    {
+        var session = await _sessionsRepository.GetAsync(id, cancellationToken);
+
+        if (session is null)
+        {
+            return NotFound();
+        }
+
+        var isHost = profileId is not null && session.HostProfileId == profileId;
+
+        return new ViewerRoleDto(isHost, isAdmin);
     }
 
     public async Task<ErrorOr<SessionDto>> CreateAsync(string? name, CancellationToken cancellationToken)

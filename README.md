@@ -43,12 +43,14 @@ Backend to .NET 9 (ASP.NET Core) zorkiestrowany przez .NET Aspire, frontend to S
 ### Kolejka muzyki
 
 - Jedna wspólna kolejka (YouTube + Spotify), trzymana w bazie SQLite — przeżywa restart serwera.
-- Goście wchodzą na `/music-queue` (bez logowania) i dodają utwory przez **wyszukiwanie w Spotify**
-  albo **wklejenie linku** (link/URI utworu ze Spotify lub adres YouTube). Poniżej widzą listę
-  „następne w kolejce".
-- Gospodarz loguje się kontem Spotify (wymagany **Premium**) i otwiera `/music`: strona odtwarza
-  kolejkę — utwory ze Spotify przez Web Playback SDK, utwory z YouTube przez odtwarzacz YouTube —
-  i automatycznie przechodzi do następnego utworu.
+- Goście wchodzą na stronę sesji `/s/<id>` (bez logowania), widzą co aktualnie gra (okładka, wykonawca,
+  tytuł, czy jest pauza) i dodają utwory przez **wyszukiwanie w Spotify** albo **wklejenie linku**
+  (link/URI utworu ze Spotify lub adres YouTube). Poniżej widzą listę „następne w kolejce".
+- Gospodarz loguje się kontem Spotify (wymagany **Premium**) i wraca na tę samą stronę sesji, na której
+  pojawia się odtwarzacz: odtwarza kolejkę — utwory ze Spotify przez Web Playback SDK, utwory z YouTube
+  przez odtwarzacz YouTube — i automatycznie przechodzi do następnego utworu. Przyciski Play/Pause
+  i Następny utwór widzą tylko gospodarz i admin (admin steruje przez serwer, o ile odtwarzacz gospodarza
+  jest połączony).
 - Jest jedno konto gospodarza; goście nigdy nie logują się do Spotify. Backend używa tokena
   gospodarza do wyszukiwania i pobierania danych utworów w imieniu gości.
 
@@ -129,12 +131,13 @@ Backend jest podzielony na warstwy w stylu Clean Architecture (projekty w `src/a
 | `PartyKing.Application` | `SlideshowService`, `QueueService`, `SpotifyService`, `HostTokenProvider`, konfiguracja, mapowania |
 | `PartyKing.Infrastructure` | Repozytoria (zdjęcia, kolejka, profile Spotify) — baza danych + operacje na plikach |
 | `PartyKing.Infrastructure.Spotify` | Klient Spotify Web API (logowanie, wyszukiwanie, pobieranie utworu) |
+| `PartyKing.Infrastructure.Youtube` | Klient oEmbed YouTube (tytuł, autor, miniatura; sprawdzenie, czy film można osadzić) |
 | `PartyKing.Persistence` | `DbContext`, konfiguracje encji, migracje, dane startowe |
 | `PartyKing.Domain` | Encje, enumy, modele read/write |
 | `PartyKing.Application.Tests` | Testy jednostkowe (xUnit) |
 | `PartyKing.UI` | SPA w React (osobny projekt npm w `src/ui`, poza `.sln`) |
 
-Kierunek zależności: `API → Application → Infrastructure (+ Infrastructure.Spotify) → Persistence → Domain`,
+Kierunek zależności: `API → Application → Infrastructure (+ Infrastructure.Spotify, Infrastructure.Youtube) → Persistence → Domain`,
 przy czym `Contract` jest używany przez `API` i `Application`.
 
 W warstwie danych odczyt jest rozdzielony od zapisu — istnieją dwa konteksty,
@@ -146,9 +149,8 @@ Strony frontendu (`src/ui/PartyKing.UI/src/pages`):
 |---|---|---|
 | `/slideshow` | `Slideshow` | Ekran prezentacyjny — to okno pokazuje się na telewizorze / ekranie LED |
 | `/image-upload` | `ImageUploader` | Wysyłanie zdjęć z podglądem miniatur i paskiem postępu |
-| `/music-queue` | `MusicQueue` | Dla gości: wyszukiwanie / wklejanie linku i lista kolejki (bez logowania) |
-| `/music` | `Music` | Dla gospodarza: odtwarzacz (Spotify + YouTube) z automatycznym przechodzeniem dalej |
-| `/login`, `/callback` | `Login`, `Callback` | Logowanie gospodarza do Spotify; po zalogowaniu przekierowanie na `/music` |
+| `/s/:sessionId` | `MusicQueue` | Strona sesji: co gra, wyszukiwanie / wklejanie linku i lista kolejki (bez logowania); dla gospodarza dodatkowo odtwarzacz (Spotify + YouTube), dla admina przyciski sterowania |
+| `/callback` | `Callback` | Powrót ze Spotify po zalogowaniu gospodarza; potem przekierowanie na stronę sesji |
 | `/` | `Home` | Ekran startowy |
 
 Na stronach slideshow, wysyłania zdjęć i kolejki są przyciski nawigacji między nimi.
@@ -226,8 +228,7 @@ czyli bez Swaggera i bez endpointów `/health` i `/alive`.
 |---|---|
 | `http://<host-ui>:2137/slideshow` | Ekran prezentacyjny |
 | `http://<host-ui>:2137/image-upload` | Strona do wrzucania zdjęć (ten link dajesz gościom) |
-| `http://<host-ui>:2137/music-queue` | Kolejka muzyki dla gości (drugi link dla gości) |
-| `http://127.0.0.1:2137/login` | Logowanie gospodarza do Spotify, potem `/music` z odtwarzaczem |
+| `http://<host-ui>:2137/s/<id>` | Strona sesji z kolejką muzyki dla gości (drugi link dla gości); gospodarz loguje się tu przez „Log in as host with Spotify" |
 | `http://<host-api>/swagger` | Swagger UI (tylko w Development) |
 | `https://localhost:17218` | Dashboard Aspire (wariant A) |
 
@@ -262,7 +263,7 @@ wykluczony z repozytorium:
 ```
 
 `RedirectUri` musi być dokładnie taki sam jak adres dodany w ustawieniach aplikacji w Dashboardzie
-Spotify. Używa `127.0.0.1`, więc gospodarz musi logować się przez `http://127.0.0.1:2137/login`
+Spotify. Używa `127.0.0.1`, więc gospodarz musi logować się przez `http://127.0.0.1:2137/...`
 (nie `localhost`). Pierwsze zapisane konto Spotify jest traktowane jako konto gospodarza.
 
 ### Ustawienia slideshow
@@ -435,8 +436,9 @@ curl -X POST "$API/queue/songs" \
   -d '{ "input": "https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC" }'
 ```
 
-`input` to link lub URI utworu ze Spotify (`spotify:track:...`) albo adres YouTube
-(`youtube.com`, `m.`, `music.`, `youtu.be`). Odpowiedź `200 OK`:
+`input` to link lub URI utworu ze Spotify (`spotify:track:...`) albo adres pojedynczego filmu
+z YouTube (`youtube.com/watch?v=`, `/shorts/`, `/embed/`, `/live/`, `m.`, `music.`, `youtu.be`);
+playlisty, kanały i wyniki wyszukiwania są odrzucane. Odpowiedź `200 OK`:
 
 ```json
 {
@@ -450,8 +452,11 @@ curl -X POST "$API/queue/songs" \
 }
 ```
 
-`source` to enum serializowany jako liczba: `0` = Spotify, `1` = YouTube. Dla YouTube `name`
-to na razie sam adres. Błędy: `400` (nierozpoznane wejście), `404` (nie ma takiego utworu),
+`source` to enum serializowany jako liczba: `0` = Spotify, `1` = YouTube. Dla YouTube `url`
+to znormalizowany adres `https://www.youtube.com/watch?v=<id>`, a `name`, `artists` i `albumArtUrl`
+to tytuł, autor i miniatura z oEmbed (gdy YouTube nie odpowiada, `name` to sam adres). Błędy: `400`
+(nierozpoznane wejście albo właściciel filmu zablokował odtwarzanie poza YouTube), `404` (nie ma
+takiego utworu lub filmu),
 `401` (sesja gospodarza wygasła — musi zalogować się ponownie).
 
 #### `GET /queue/songs`
@@ -501,10 +506,16 @@ frontendu znajduje się w `vite.config.ts`.
 ## Znane ograniczenia
 
 - **Odtwarzanie ze Spotify wymaga konta Premium** gospodarza i jest odtwarzane tylko w przeglądarce
-  na stronie `/music` (trzeba kliknąć „Start", żeby przeglądarka pozwoliła na dźwięk).
+  na stronie sesji `/s/<id>` (trzeba kliknąć „Start", żeby przeglądarka pozwoliła na dźwięk).
 - Gospodarz to pierwszy zapisany profil Spotify; nie ma wyboru ani wylogowania gospodarza.
   Gdy refresh token wygaśnie, gospodarz musi zalogować się ponownie.
-- Utwory z YouTube są w kolejce tytułowane samym adresem (brak pobierania tytułu).
+- Filmów z wyłączonym osadzaniem (błąd YouTube 101/150) nie da się odtworzyć w aplikacji. Są
+  odrzucane przy dodawaniu do kolejki; jeśli mimo to trafią do odtwarzacza, są pomijane, a
+  powód widać w logu błędów pod odtwarzaczem (widocznym tylko dla admina). Pomijanie kończy się po
+  dwóch niepowodzeniach z rzędu — wtedy trzeba kliknąć „Next song".
+- YouTube nie odtwarza osadzonych filmów (błąd 150), gdy strona jest otwarta z adresu IP, np.
+  `127.0.0.1`; z `localhost` działa. Logowanie do Spotify wymaga `127.0.0.1`, więc lokalnie utwory
+  z YouTube nie zagrają — problem znika po wdrożeniu aplikacji pod prawdziwą domeną.
 - Strona gości nie pokazuje, który utwór aktualnie gra — API tego nie udostępnia.
 - **Adres API jest zahardkodowany** w dwóch miejscach (patrz [Konfiguracja](#konfiguracja))
   zamiast być czytany ze zmiennych środowiskowych.

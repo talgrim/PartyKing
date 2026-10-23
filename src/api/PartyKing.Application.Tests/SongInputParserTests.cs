@@ -58,12 +58,34 @@ public class SongInputParserTests
     [InlineData("https://music.youtube.com/watch?v=dQw4w9WgXcQ")]
     [InlineData("https://youtu.be/dQw4w9WgXcQ")]
     [InlineData("https://WWW.YouTube.com/watch?v=dQw4w9WgXcQ")]
-    public void Parse_YoutubeUrl_ReturnsYoutubeInput(string input)
+    [InlineData("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42s&list=PL123")]
+    [InlineData("https://www.youtube.com/watch?list=PL123&v=dQw4w9WgXcQ")]
+    [InlineData("https://youtu.be/dQw4w9WgXcQ?si=abcdef")]
+    [InlineData("https://www.youtube.com/shorts/dQw4w9WgXcQ")]
+    [InlineData("https://www.youtube.com/embed/dQw4w9WgXcQ")]
+    [InlineData("https://www.youtube.com/live/dQw4w9WgXcQ?feature=share")]
+    public void Parse_YoutubeVideoUrl_ReturnsVideoId(string input)
     {
         var result = Assert.IsType<YoutubeInput>(SongInputParser.Parse(input));
 
         Assert.Equal(QueueItemSource.Youtube, result.Source);
-        Assert.Contains("dQw4w9WgXcQ", result.Url);
+        Assert.Equal("dQw4w9WgXcQ", result.VideoId);
+        Assert.Equal("https://www.youtube.com/watch?v=dQw4w9WgXcQ", result.Url);
+    }
+
+    [Theory]
+    [InlineData("https://www.youtube.com/")]
+    [InlineData("https://www.youtube.com/playlist?list=PL123")]
+    [InlineData("https://www.youtube.com/@somechannel")]
+    [InlineData("https://www.youtube.com/results?search_query=music")]
+    [InlineData("https://www.youtube.com/watch")]
+    [InlineData("https://www.youtube.com/watch?v=tooShort")]
+    [InlineData("https://www.youtube.com/watch?v=dQw4w9WgXcQextra")]
+    [InlineData("https://youtu.be/")]
+    [InlineData("https://youtu.be/short")]
+    public void Parse_YoutubeUrlWithoutSingleVideo_ReturnsNull(string input)
+    {
+        Assert.Null(SongInputParser.Parse(input));
     }
 
     [Fact]
@@ -72,6 +94,6 @@ public class SongInputParserTests
         var result = Assert.IsType<YoutubeInput>(
             SongInputParser.Parse("  https://youtu.be/dQw4w9WgXcQ \n"));
 
-        Assert.Equal("https://youtu.be/dQw4w9WgXcQ", result.Url);
+        Assert.Equal("dQw4w9WgXcQ", result.VideoId);
     }
 }

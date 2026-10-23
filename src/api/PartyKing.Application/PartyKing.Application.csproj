@@ -16,9 +16,14 @@
     </ItemGroup>
 
     <ItemGroup>
+      <InternalsVisibleTo Include="PartyKing.Application.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
       <ProjectReference Include="..\PartyKing.Contract\PartyKing.Contract.csproj" />
       <ProjectReference Include="..\PartyKing.Infrastructure.Spotify\PartyKing.Infrastructure.Spotify.csproj" />
       <ProjectReference Include="..\PartyKing.Infrastructure\PartyKing.Infrastructure.csproj" />
+      <ProjectReference Include="..\PartyKing.Infrastructure.Youtube\PartyKing.Infrastructure.Youtube.csproj" />
     </ItemGroup>
 
 </Project>

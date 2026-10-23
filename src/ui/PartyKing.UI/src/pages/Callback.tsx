@@ -1,7 +1,7 @@
 import {useEffect, useRef, useState} from "react";
 import {Link, useNavigate} from "react-router-dom";
 import {sessionsApi} from "@/service/endpoints/sessions/sessionsApi";
-import {ROUTE_PATHS, sessionMusicPath} from "@/router/constants";
+import {ROUTE_PATHS, sessionPath} from "@/router/constants";
 import {InfoMessage} from "@/components/common/InfoMessage";
 import {ErrorMessage} from "@/components/common/ErrorMessage";
 
@@ -24,7 +24,7 @@ export const Callback = () => {
     authorizeStarted.current = true;
 
     sessionsApi.authenticate(code, state)
-      .then(user => navigate(sessionMusicPath(user.sessionId), {replace: true}))
+      .then(user => navigate(sessionPath(user.sessionId), {replace: true}))
       .catch((e: { message?: string }) => setAuthorizeError(e?.message ?? "Could not log in"));
   }, [code, state, error, stateError, navigate]);
 
@@ -39,5 +39,5 @@ export const Callback = () => {
     );
   }
 
-  return <InfoMessage message="Authorization successful. Redirecting to the music page"/>;
+  return <InfoMessage message="Authorization successful. Redirecting to the session"/>;
 };
