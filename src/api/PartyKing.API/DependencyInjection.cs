@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.DataProtection;
 using PartyKing.API.Authentication;
 using PartyKing.API.Authentication.Cookie;
+using PartyKing.API.Metrics;
 using PartyKing.Application;
 using PartyKing.Infrastructure;
 using PartyKing.Infrastructure.Authentication;
@@ -14,6 +15,8 @@ public static class DependencyInjection
     public static void RegisterServices(this IServiceCollection services, IConfigurationManager configuration)
     {
         services.AddHttpContextAccessor();
+        services.AddSingleton<ActionMetrics>();
+        services.AddScoped<ActionMetricsFilter>();
         var dataProtection = services.AddDataProtection().SetApplicationName("PartyKing");
         var keysDirectory = configuration["DataProtection:KeysDirectory"];
         if (!string.IsNullOrWhiteSpace(keysDirectory))
