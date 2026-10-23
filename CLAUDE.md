@@ -12,7 +12,7 @@ Backend (run from `src/api`):
 - Run everything (API + UI via Aspire): `dotnet run --project PartyKing.AppHost`
 - Run the API only: `dotnet run --project PartyKing.API` (the `http` launch profile binds to `http://127.0.0.1:4200`)
 - Add an EF migration: `dotnet ef migrations add <Name> --project PartyKing.Persistence --startup-project PartyKing.Persistence --context WriterDbContext`
-- Migrations are applied automatically at API startup (`MigrateDb()` in `Program.cs`). The SQLite file is `PartyKing.db`, relative to the working directory.
+- Migrations are applied automatically at API startup (`MigrateDb()` in `Program.cs`). The SQLite file is `PartyKing.db` relative to the working directory, or `PARTYKING_DATABASE_PATH` when set.
 
 Frontend (from `src/ui/PartyKing.UI`):
 - `npm install`, then `npm start` (Vite dev server on port 2137, host `0.0.0.0`, polling watch for WSL2/Windows HMR)
@@ -21,11 +21,15 @@ Frontend (from `src/ui/PartyKing.UI`):
 
 Backend tests: `dotnet test PartyKing.Application.Tests` (from `src/api`) (xunit; currently covers `SongInputParser`).
 
+## Deployment (Docker / Fly.io)
+
+`Dockerfile` (repo root) builds one image: nginx (`docker/nginx.conf`) serves the UI build and proxies `/api/*` to Kestrel on `127.0.0.1:5000` (prefix stripped); `docker/entrypoint.sh` runs both. `fly.toml` targets `party.talgrim.dev`, one always-on machine (SQLite and in-memory singletons), and the `/data` volume that holds `PartyKing.db` (`PARTYKING_DATABASE_PATH`), Data Protection keys (`DataProtection__KeysDirectory`) and uploaded photos (`ASPNETCORE_WEBROOT`). Secrets (`SpotifySettings__*`, `AdminSettings__*`) come from `fly secrets`. The image ships no photos; slideshow folders are created at startup and `get-photo` returns 204 when there is nothing to show. The UI's `apiUrl` is `/api` in production builds and `http://127.0.0.1:4200` in dev (`VITE_API_URL` overrides). See the README section "Wdrożenie".
+
 ## Architecture
 
 Project dependencies (layered, top → bottom):
 - **AppHost**: Aspire host. Starts `PartyKing.API` and the UI as an npm app on port 2137.
-- **API**: controllers plus `Program.cs`. CORS allows any origin with credentials. Static files from `wwwroot` serve the images (`wwwroot/SampleImages/{Uploaded,Placeholder}`).
+- **API**: controllers plus `Program.cs`. CORS allows any origin with credentials. Static files from the web root serve the images (`SampleImages/{Uploaded,Placeholder}`, created at startup and not in git).
 - **Application**: services (`SlideshowService`, `QueueService`, `SessionService`, `AdminService`, `SpotifyService`, `HostTokenProvider`), options binding (`SlideshowConfiguration` ← `SlideshowSettings`, `AdminConfiguration` ← `AdminSettings`), and DTO mappings. References Contract and Infrastructure.
 - **Contract**: public DTOs under `V1/`, returned by controllers.
 - **Infrastructure**: repositories that wrap EF Core. References Persistence and Domain.
