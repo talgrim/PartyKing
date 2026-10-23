@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { SWRConfig } from 'swr';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { Slideshow } from './Slideshow';
+import { SlideshowView } from './SlideshowView';
 
 const mocks = vi.hoisted(() => ({ fetchFromApi: vi.fn() }));
 
@@ -15,15 +15,15 @@ vi.mock('@splidejs/react-splide/css', () => ({}));
 const renderPage = () =>
   render(
     <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
-      <MemoryRouter initialEntries={['/s/session-1/slideshow']}>
+      <MemoryRouter initialEntries={['/s/session-1']}>
         <Routes>
-          <Route path="/s/:sessionId/slideshow" element={<Slideshow />} />
+          <Route path="/s/:sessionId" element={<SlideshowView sessionId="session-1" />} />
         </Routes>
       </MemoryRouter>
     </SWRConfig>,
   );
 
-describe('Slideshow', () => {
+describe('SlideshowView', () => {
   it('shows an empty state when the API has no photo (204 arrives as an empty string)', async () => {
     mocks.fetchFromApi.mockResolvedValue('');
 
