@@ -35,7 +35,9 @@ if (builder.Environment.IsDevelopment())
             .AllowAnyHeader()
             .AllowAnyMethod()
             .SetIsOriginAllowed(_ => true)
-            .AllowCredentials();
+            .AllowCredentials()
+            // Without it Firefox repeats the preflight before almost every cross-origin JSON POST
+            .SetPreflightMaxAge(TimeSpan.FromHours(1));
     }));
 }
 
