@@ -29,6 +29,7 @@ declare namespace Spotify {
     connect(): Promise<boolean>;
     disconnect(): void;
     activateElement(): Promise<void>;
+    togglePlay(): Promise<void>;
     addListener(event: 'ready' | 'not_ready', callback: (data: { device_id: string }) => void): boolean;
     addListener(
       event: 'initialization_error' | 'authentication_error' | 'account_error' | 'playback_error',

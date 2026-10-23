@@ -1,6 +1,7 @@
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import useSWR from 'swr';
+import { PlayPauseButton } from '@/components/Music/PlayPauseButton';
 import { Queue } from '@/components/Music/Queue';
 import { SpotifyPlayer, SpotifyPlayerHandle } from '@/components/Music/SpotifyPlayer';
 import { YoutubePlayer } from '@/components/Music/YoutubePlayer';
@@ -24,6 +25,7 @@ export const Music = (): ReactNode => {
 
   const [started, setStarted] = useState(false);
   const [song, setSong] = useState<SongDto | null>(null);
+  const [paused, setPaused] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Not logged in: go through Spotify again. The login hands the session back to the same host,
@@ -70,11 +72,13 @@ export const Music = (): ReactNode => {
     advancing.current = true;
     try {
       setSong(await queueApi.next(sessionId));
+      setPaused(false);
       setError(null);
     } catch (e) {
       const status = (e as { status?: number })?.status;
       if (status === HTTP_STATUS_CODE.NOT_FOUND) {
         setSong(null);
+        setPaused(false);
       } else if (status === HTTP_STATUS_CODE.UNAUTHORIZED) {
         void loginAsHost();
       } else if (status === HTTP_STATUS_CODE.FORBIDDEN) {
@@ -92,6 +96,15 @@ export const Music = (): ReactNode => {
     spotifyPlayer.current?.activate();
     setStarted(true);
     void playNext();
+  };
+
+  // Spotify reports its state back through onPausedChange, so only ask it to toggle. YouTube is driven by state.
+  const togglePlay = () => {
+    if (song?.source === SongSource.Spotify) {
+      spotifyPlayer.current?.togglePlay();
+    } else {
+      setPaused((current) => !current);
+    }
   };
 
   // Nothing is playing: pick up songs as soon as somebody queues them.
@@ -120,7 +133,14 @@ export const Music = (): ReactNode => {
         {started && !song && <p className="text-center">Waiting for songs. Add one to the queue.</p>}
 
         {song?.source === SongSource.Youtube && (
-          <YoutubePlayer key={song.id} songUrl={song.url} mute={false} onEnded={playNext} />
+          <YoutubePlayer
+            key={song.id}
+            songUrl={song.url}
+            mute={false}
+            paused={paused}
+            onPausedChange={setPaused}
+            onEnded={playNext}
+          />
         )}
 
         {song?.source === SongSource.Spotify && (
@@ -137,6 +157,7 @@ export const Music = (): ReactNode => {
             handle={spotifyPlayer}
             uri={song?.source === SongSource.Spotify ? song.url : null}
             onEnded={playNext}
+            onPausedChange={setPaused}
             onError={setError}
           />
         )}
@@ -147,6 +168,7 @@ export const Music = (): ReactNode => {
       <div className="col-span-5">
         <Queue sessionId={sessionId} currentSongId={song?.id} />
         <div className="space-x-4 px-2">
+          <PlayPauseButton paused={paused} disabled={!started || !song} onToggle={togglePlay} />
           <button
             onClick={playNext}
             disabled={!started}

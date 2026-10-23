@@ -4,12 +4,16 @@ import { queueApi } from '@/service/endpoints/queue/queueApi';
 export type SpotifyPlayerHandle = {
   /** Must be called from a user gesture (click) so the browser allows audio playback. */
   activate: () => void;
+  /** Pauses the current track, or resumes it when it is paused. */
+  togglePlay: () => void;
 };
 
 type Props = {
   /** Spotify track URI to play, or null when nothing should play. */
   uri: string | null;
   onEnded: () => void;
+  /** Reports the real playback state of `uri`, including pauses made from other Spotify clients. */
+  onPausedChange: (paused: boolean) => void;
   onError: (message: string) => void;
   handle?: Ref<SpotifyPlayerHandle>;
 };
@@ -33,22 +37,27 @@ const loadSdk = () => {
   return sdkPromise;
 };
 
-export const SpotifyPlayer = ({ uri, onEnded, onError, handle }: Props) => {
+export const SpotifyPlayer = ({ uri, onEnded, onPausedChange, onError, handle }: Props) => {
   const playerRef = useRef<Spotify.Player | null>(null);
   const [deviceId, setDeviceId] = useState<string | null>(null);
 
   // The SDK callbacks are registered once, so keep the latest props in refs.
   const onEndedRef = useRef(onEnded);
+  const onPausedChangeRef = useRef(onPausedChange);
   const onErrorRef = useRef(onError);
   const currentUriRef = useRef<string | null>(uri);
   const endedUriRef = useRef<string | null>(null);
   onEndedRef.current = onEnded;
+  onPausedChangeRef.current = onPausedChange;
   onErrorRef.current = onError;
   currentUriRef.current = uri;
 
   useImperativeHandle(handle, () => ({
     activate: () => {
       void playerRef.current?.activateElement();
+    },
+    togglePlay: () => {
+      void playerRef.current?.togglePlay();
     },
   }));
 
@@ -89,9 +98,17 @@ export const SpotifyPlayer = ({ uri, onEnded, onError, handle }: Props) => {
           state.position === 0 &&
           state.track_window.previous_tracks.some((track) => track.uri === current);
 
-        if (finished && endedUriRef.current !== current) {
-          endedUriRef.current = current;
-          onEndedRef.current();
+        if (finished) {
+          if (endedUriRef.current !== current) {
+            endedUriRef.current = current;
+            onEndedRef.current();
+          }
+          return;
+        }
+
+        // Ignore states of a previous track that arrive after the next one was requested.
+        if (state.track_window.current_track.uri === current) {
+          onPausedChangeRef.current(state.paused);
         }
       });
 
