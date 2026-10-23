@@ -29,13 +29,14 @@ Backend to .NET 9 (ASP.NET Core) zorkiestrowany przez .NET Aspire, frontend to S
 
 ### Slideshow zdjęć
 
-- Goście wchodzą na `/image-upload`, wybierają zdjęcia z telefonu i wysyłają je na serwer
-  (wiele plików naraz, obsługiwane rozszerzenia: `.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`).
+- Każda sesja ma **własny slideshow**. Goście wchodzą na `/s/<id>/upload` (po podaniu hasła sesji), wybierają zdjęcia z telefonu i wysyłają je na serwer
+  (wiele plików naraz, obsługiwane rozszerzenia: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`).
 - Opcja **„Usuń po wyświetleniu"** — zdjęcie zostaje skasowane (plik + rekord w bazie)
   natychmiast po tym, jak zejdzie z ekranu.
-- Ekran prezentacyjny (`/slideshow`) pokazuje zdjęcia jedno po drugim, w kolejności wrzucania.
-- Gdy nie ma nic nowego do pokazania, serwer wyświetla wbudowane zdjęcia zastępcze
-  (*placeholdery*) z katalogu `wwwroot/SampleImages/Placeholder`, w pętli.
+- Ekran prezentacyjny (`/s/<id>/slideshow`, też za hasłem sesji) pokazuje zdjęcia jedno po drugim, w kolejności wrzucania.
+- Gdy sesja nie ma żadnych zdjęć do pokazania, ekran wyświetla „No photos yet" (nie ma zdjęć zastępczych).
+- Admin ustawia dla każdej sesji czas slajdu i opcje powtarzania w panelu `/admin` („Slideshow settings").
+- Zdjęcia sesji leżą w `wwwroot/Images/Uploaded/<id sesji>/` i są usuwane razem z sesją.
 - Każde zdjęcie jest oznaczane jako wyświetlone (`WasPresented`), więc slideshow **wznawia się
   w tym samym miejscu po restarcie serwera**.
 - Zachowanie steruje się ustawieniami trzymanymi w bazie: `AutoRepeat` (zapętlenie po dojściu do
@@ -68,9 +69,9 @@ a stan prezentacji przeżywa odświeżenie strony.
 
 ```
 [telefon gościa]                              [ekran prezentacyjny]
- /image-upload                                  /slideshow
+ /s/<id>/upload                                 /s/<id>/slideshow
       |                                              |
-      | PUT /upload-photo/{deleteAfterPresentation}  | GET /get-photo  (co 5 s)
+      | PUT /sessions/<id>/photos/{deleteAfterPresentation} | GET /sessions/<id>/photos/current (co 5 s)
       v                                              v
 +---------------------------------------------------------------+
 |  PartyKing.API  ->  SlideshowService  ->  SlideshowImages-    |
@@ -152,8 +153,8 @@ Strony frontendu (`src/ui/PartyKing.UI/src/pages`):
 
 | Ścieżka | Strona | Opis |
 |---|---|---|
-| `/slideshow` | `Slideshow` | Ekran prezentacyjny — to okno pokazuje się na telewizorze / ekranie LED |
-| `/image-upload` | `ImageUploader` | Wysyłanie zdjęć z podglądem miniatur i paskiem postępu |
+| `/s/:sessionId/slideshow` | `Slideshow` | Ekran prezentacyjny sesji — to okno pokazuje się na telewizorze / ekranie LED (wymaga hasła sesji) |
+| `/s/:sessionId/upload` | `ImageUploader` | Wysyłanie zdjęć do slideshow sesji z podglądem miniatur i paskiem postępu (wymaga hasła sesji) |
 | `/s/:sessionId` | `MusicQueue` | Strona sesji: co gra, wyszukiwanie / wklejanie linku i lista kolejki (bez logowania); dla gospodarza dodatkowo odtwarzacz (Spotify + YouTube), dla admina przyciski sterowania |
 | `/callback` | `Callback` | Powrót ze Spotify po zalogowaniu gospodarza; potem przekierowanie na stronę sesji |
 | `/` | `Home` | Ekran startowy |
@@ -231,8 +232,8 @@ czyli bez Swaggera i bez endpointów `/health` i `/alive`.
 
 | Adres | Co to |
 |---|---|
-| `http://<host-ui>:2137/slideshow` | Ekran prezentacyjny |
-| `http://<host-ui>:2137/image-upload` | Strona do wrzucania zdjęć (ten link dajesz gościom) |
+| `http://<host-ui>:2137/s/<id>/slideshow` | Ekran prezentacyjny sesji |
+| `http://<host-ui>:2137/s/<id>/upload` | Strona do wrzucania zdjęć do sesji (ten link dajesz gościom) |
 | `http://<host-ui>:2137/s/<id>` | Strona sesji z kolejką muzyki dla gości (drugi link dla gości); gospodarz loguje się tu przez „Log in as host with Spotify" |
 | `http://<host-api>/swagger` | Swagger UI (tylko w Development) |
 | `https://localhost:17218` | Dashboard Aspire (wariant A) |
@@ -278,8 +279,7 @@ Spotify. Używa `127.0.0.1`, więc gospodarz musi logować się przez `http://12
 ```json
 {
   "SlideshowSettings": {
-    "UploadedPhotosDirectory": "SampleImages\\Uploaded",
-    "PlaceholderPhotosDirectory": "SampleImages\\Placeholder",
+    "UploadedPhotosDirectory": "Images/Uploaded",
     "SlideTime": "00:00:05"
   }
 }
@@ -287,13 +287,12 @@ Spotify. Używa `127.0.0.1`, więc gospodarz musi logować się przez `http://12
 
 | Klucz | Znaczenie |
 |---|---|
-| `UploadedPhotosDirectory` | Katalog (względem `wwwroot`), do którego trafiają zdjęcia gości |
-| `PlaceholderPhotosDirectory` | Katalog ze zdjęciami zastępczymi, skanowany rekurencyjnie przy starcie |
-| `SlideTime` | Domyślny czas jednego slajdu — używany, gdy `slideTime` nie zostanie podany w `POST /update-configuration` |
+| `UploadedPhotosDirectory` | Katalog (względem `wwwroot`), do którego trafiają zdjęcia gości; każda sesja ma w nim podkatalog o nazwie swojego id |
+| `SlideTime` | Domyślny czas jednego slajdu — używany w sesji, która nie ustawiła własnego, i gdy `slideTime` nie zostanie podany w `PUT /admin/sessions/{id}/slideshow-settings` |
 
 Uwaga: **obowiązujący** czas slajdu, `AutoRepeat` i `StartFromBeginning` są przechowywane
-w bazie danych (tabela `SlideshowSettings`, jeden wiersz) i zmienia się je przez API —
-`SlideTime` z `appsettings.json` służy tylko jako wartość domyślna.
+w bazie danych (tabela `SlideshowSettings`, jeden wiersz na sesję) i zmienia się je przez API
+lub panel admina — `SlideTime` z `appsettings.json` służy tylko jako wartość domyślna.
 
 Lokalne nadpisania można trzymać w `appsettings.Local.json` lub `appsettings.Development.json`
 (pierwszy plik jest wykluczony z repozytorium przez `.gitignore`).
@@ -350,7 +349,7 @@ Lokalny test obrazu: `docker build -t partyking .` i `docker run -p 8181:8181 -v
 ## API
 
 Kontrolery nie mają prefiksu trasy — **wszystkie endpointy są w korzeniu**, np.
-`GET http://<host-api>/get-photo`. W przykładach poniżej:
+`GET http://<host-api>/sessions/<id>/photos/current`. W przykładach poniżej:
 
 ```bash
 API=http://127.0.0.1:4200   # podmień na własny adres z launchSettings.json
@@ -358,103 +357,80 @@ API=http://127.0.0.1:4200   # podmień na własny adres z launchSettings.json
 
 ### Slideshow
 
-#### `PUT /upload-photo/{deleteAfterPresentation}`
+Slideshow jest osobny dla każdej sesji. Endpointy zdjęć wymagają hasła sesji (ciasteczko
+z `POST /sessions/{id}/join`, jak przy kolejce muzyki), a bez niego odpowiadają `401`.
+
+```bash
+SESSION=<id sesji>
+curl -c cookies.txt -X POST "$API/sessions/$SESSION/join" \
+  -H "Content-Type: application/json" -d '{ "password": "haslo" }'
+```
+
+#### `PUT /sessions/{sessionId}/photos/{deleteAfterPresentation}`
 
 Wysłanie jednego lub wielu zdjęć. Dane w formacie `multipart/form-data`, pole **`files`**
 (powtórzone dla każdego pliku). Parametr `deleteAfterPresentation` (`true`/`false`) decyduje,
 czy zdjęcia mają być usuwane po wyświetleniu.
 
-Endpoint jest publiczny (goście wrzucają zdjęcia bez logowania), więc go ograniczono: dozwolone są tylko
-`jpg`, `jpeg`, `png`, `gif` i `webp` (sprawdzane po rozszerzeniu i bajtach pliku, typ z nagłówka klienta jest ignorowany),
-maks. 20 MB na zdjęcie i 100 MB na żądanie, limit 60 żądań na minutę z jednego IP (`429`).
+Dozwolone są tylko `jpg`, `jpeg`, `png`, `gif` i `webp` (sprawdzane po rozszerzeniu i bajtach pliku,
+typ z nagłówka klienta jest ignorowany), maks. 20 MB na zdjęcie i 100 MB na żądanie, limit 60 żądań
+na minutę z jednego IP (`429`).
 
 ```bash
-curl -X PUT "$API/upload-photo/false" \
+curl -b cookies.txt -X PUT "$API/sessions/$SESSION/photos/false" \
   -F "files=@zdjecie1.jpg" \
   -F "files=@zdjecie2.png"
 ```
 
-Odpowiedzi: `200 OK` (puste ciało), `400 Bad Request` z powodem (np. nieobsługiwany format) albo `429 Too Many Requests`.
+Odpowiedzi: `200 OK` (puste ciało), `400 Bad Request` z powodem (np. nieobsługiwany format),
+`401 Unauthorized` (sesja zablokowana) albo `429 Too Many Requests`.
 
-#### `GET /get-photo`
+#### `GET /sessions/{sessionId}/photos/current`
 
-Zwraca zdjęcie, które ma być aktualnie na ekranie, wraz z momentem jego wygaśnięcia
-(UTC). To ten endpoint odpytuje strona `/slideshow` co 5 sekund.
+Zwraca zdjęcie, które ma być aktualnie na ekranie sesji, wraz z momentem jego wygaśnięcia
+(UTC). To ten endpoint odpytuje strona `/s/<id>/slideshow` co 5 sekund.
 
 ```bash
-curl "$API/get-photo"
+curl -b cookies.txt "$API/sessions/$SESSION/photos/current"
 ```
 
 ```json
 {
-  "fileName": "SampleImages\\Uploaded\\01988512-f059-73dd-ae67-29b2edf9f268.jpeg",
+  "fileName": "Images/Uploaded/0198850a-0000-7000-8000-000000000000/01988512-f059-73dd-ae67-29b2edf9f268.jpeg",
   "expirationDate": "2026-09-22T20:15:42.1234567+00:00"
 }
 ```
 
-`fileName` to ścieżka względna wewnątrz `wwwroot`, więc sam plik pobiera się bezpośrednio:
+`fileName` to ścieżka względna wewnątrz `wwwroot`, więc sam plik pobiera się bezpośrednio
+(pliki nie są chronione hasłem, ale ich adresy zawierają id sesji i identyfikator UUIDv7):
 
 ```bash
-curl -O "$API/SampleImages/Uploaded/01988512-f059-73dd-ae67-29b2edf9f268.jpeg"
+curl -O "$API/Images/Uploaded/<id sesji>/01988512-f059-73dd-ae67-29b2edf9f268.jpeg"
 ```
 
-Jeśli nie ma nowych zdjęć do pokazania (wszystkie zostały już wyświetlone, a `AutoRepeat`
-i `StartFromBeginning` są wyłączone), zwracane jest zdjęcie zastępcze. Ścieżki placeholderów
-zawierają **wiodący separator**, bo są wyliczane względem katalogu `wwwroot`:
+Gdy sesja nie ma żadnego zdjęcia do pokazania (nic nie wrzucono albo wszystkie zostały już wyświetlone,
+a `AutoRepeat` i `StartFromBeginning` są wyłączone), endpoint zwraca `204 No Content`,
+a strona slideshow pokazuje „No photos yet".
 
-```json
-{
-  "fileName": "\\SampleImages\\Placeholder\\IMG_3383.JPG",
-  "expirationDate": "2026-09-22T10:08:49.2013336+00:00"
-}
-```
+#### `GET /admin/sessions/{sessionId}/slideshow-settings`
 
-Gdy nie ma żadnego zdjęcia (ani wrzuconego, ani placeholdera) endpoint zwraca `204 No Content`,
-a strona slideshow pokazuje „No photos yet”.
-
-#### `GET /get-all`
-
-Wymaga zalogowanego admina (ciasteczko admina).
-
-Lista plików znajdujących się w katalogu wrzuconych zdjęć (czytana z dysku, nie z bazy).
+Wymaga zalogowanego admina (hasło sesji nie jest potrzebne). Zwraca ustawienia slideshow sesji;
+sesja, która nic nie zmieniała, ma wartości domyślne (czas slajdu z `appsettings.json`).
 
 ```bash
-curl "$API/get-all"
+curl -b admin-cookies.txt "$API/admin/sessions/$SESSION/slideshow-settings"
 ```
 
 ```json
-[
-  { "fileName": "IMG_2332.png",  "path": "SampleImages\\Uploaded\\IMG_2332.png" },
-  { "fileName": "IMG_7758.jpeg", "path": "SampleImages\\Uploaded\\IMG_7758.jpeg" }
-]
+{ "autoRepeat": false, "startFromBeginning": false, "slideTime": "00:00:05" }
 ```
 
-#### `GET /get-configuration`
+#### `PUT /admin/sessions/{sessionId}/slideshow-settings`
 
-Wymaga zalogowanego admina.
-
-Konfiguracja wczytana z `appsettings.json`.
+Wymaga zalogowanego admina. Zapisuje ustawienia slideshow sesji w bazie danych.
 
 ```bash
-curl "$API/get-configuration"
-```
-
-```json
-{
-  "uploadedPhotosDirectory": "SampleImages\\Uploaded",
-  "placeholderPhotosDirectory": "SampleImages\\Placeholder",
-  "slideTime": "00:00:05"
-}
-```
-
-#### `POST /update-configuration`
-
-Wymaga zalogowanego admina.
-
-Zapisuje ustawienia slideshow w bazie danych.
-
-```bash
-curl -X POST "$API/update-configuration" \
+curl -b admin-cookies.txt -X PUT "$API/admin/sessions/$SESSION/slideshow-settings" \
   -H "Content-Type: application/json" \
   -d '{ "autoRepeat": true, "startFromBeginning": false, "slideTime": "00:00:10" }'
 ```
@@ -463,9 +439,10 @@ curl -X POST "$API/update-configuration" \
 |---|---|---|
 | `autoRepeat` | `bool` | Po dojściu do ostatniego zdjęcia zacznij od początku |
 | `startFromBeginning` | `bool` | Pokazuj również zdjęcia już wyświetlone |
-| `slideTime` | `string?` (`hh:mm:ss`) | Czas jednego slajdu; `null` → wartość z `appsettings.json` |
+| `slideTime` | `string?` (`hh:mm:ss`) | Czas jednego slajdu, od 1 sekundy do 1 godziny; `null` → wartość z `appsettings.json` |
 
-Odpowiedź: `200 OK`. Nowy czas slajdu zaczyna obowiązywać przy kolejnej zmianie zdjęcia.
+Odpowiedź: `204 No Content` (`400` dla niedozwolonego czasu, `404` dla nieznanej sesji).
+Nowy czas slajdu zaczyna obowiązywać przy kolejnej zmianie zdjęcia.
 
 ### Muzyka
 
