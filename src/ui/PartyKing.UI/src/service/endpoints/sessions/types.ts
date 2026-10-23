@@ -22,3 +22,13 @@ export type UserDto = {
   /** The session the login claimed. */
   sessionId: string;
 };
+
+// Mirrors PartyKing.Contract.V1.Slideshow.SlideshowSettingsDto
+export type SlideshowSettingsDto = {
+  /** Start over after the last photo. */
+  autoRepeat: boolean;
+  /** Show photos that were already presented again. */
+  startFromBeginning: boolean;
+  /** How long a photo stays, as a .NET TimeSpan ("00:00:20"). */
+  slideTime: string;
+};

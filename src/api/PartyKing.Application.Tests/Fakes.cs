@@ -1,4 +1,7 @@
 using ErrorOr;
+using Microsoft.AspNetCore.Http;
+using PartyKing.Application.Slideshow.Services;
+using PartyKing.Contract.V1.Slideshow;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Application.System;
 using PartyKing.Domain.Entities;
@@ -100,4 +103,34 @@ internal class FakeQueueRepository : IQueueRepository
 
     public Task<QueueItem> AddAsync(QueueItem item, CancellationToken cancellationToken) => throw new NotSupportedException();
     public Task<IReadOnlyList<QueueItem>> GetPendingAsync(Guid sessionId, CancellationToken cancellationToken) => throw new NotSupportedException();
+}
+
+internal class FakeSlideshowService : ISlideshowService
+{
+    public List<Guid> DeletedSessions { get; } = [];
+
+    public Task DeleteSessionAsync(Guid sessionId)
+    {
+        DeletedSessions.Add(sessionId);
+        return Task.CompletedTask;
+    }
+
+    public Task InitializeAsync(string rootPath, CancellationToken cancellationToken) => Task.CompletedTask;
+
+    public Task<ErrorOr<SlideshowSettingsDto>> GetSettingsAsync(Guid sessionId, CancellationToken cancellationToken) =>
+        throw new NotSupportedException();
+
+    public Task<ErrorOr<Success>> UpdateSettingsAsync(
+        Guid sessionId,
+        SlideshowSettingsDto settings,
+        CancellationToken cancellationToken) => throw new NotSupportedException();
+
+    public Task UploadImagesAsync(
+        Guid sessionId,
+        IFormFile[] files,
+        bool deleteAfterPresentation,
+        CancellationToken cancellationToken) => throw new NotSupportedException();
+
+    public Task<SlideshowImageDto?> GetImageAsync(Guid sessionId, CancellationToken cancellationToken) =>
+        throw new NotSupportedException();
 }

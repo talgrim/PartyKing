@@ -1,6 +1,7 @@
 import { FormEvent, ReactNode, useState } from 'react';
 import { Link } from 'react-router-dom';
 import useSWR from 'swr';
+import { SlideshowSettingsForm } from '@/components/Admin/SlideshowSettingsForm';
 import { PageNavigation } from '@/components/common/PageNavigation';
 import { ROUTE_PATHS, sessionPath } from '@/router/constants';
 import { HTTP_STATUS_CODE } from '@/service/constants';
@@ -93,6 +94,7 @@ const Sessions = ({ onLoggedOut }: { onLoggedOut: () => void }): ReactNode => {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [settingsOpenFor, setSettingsOpenFor] = useState<string | null>(null);
 
   const { data: sessions, mutate } = useSWR('sessions', sessionsApi.getSessions, { refreshInterval: 10000 });
 
@@ -141,7 +143,7 @@ const Sessions = ({ onLoggedOut }: { onLoggedOut: () => void }): ReactNode => {
   };
 
   const remove = (session: SessionDto) => {
-    if (window.confirm(`Delete “${session.name}” (${session.code}) together with its queue?`)) {
+    if (window.confirm(`Delete “${session.name}” (${session.code}) together with its queue and photos?`)) {
       void run(() => adminApi.deleteSession(session.id), 'Session deleted');
     }
   };
@@ -218,6 +220,13 @@ const Sessions = ({ onLoggedOut }: { onLoggedOut: () => void }): ReactNode => {
               <button className={secondaryButton} disabled={busy} onClick={() => changePassword(session)}>
                 Change password
               </button>
+              <button
+                className={secondaryButton}
+                aria-expanded={settingsOpenFor === session.id}
+                onClick={() => setSettingsOpenFor(settingsOpenFor === session.id ? null : session.id)}
+              >
+                Slideshow settings
+              </button>
               {session.hasHost && (
                 <button className={secondaryButton} disabled={busy} onClick={() => release(session)}>
                   Remove host
@@ -227,6 +236,9 @@ const Sessions = ({ onLoggedOut }: { onLoggedOut: () => void }): ReactNode => {
                 Delete
               </button>
             </div>
+            {settingsOpenFor === session.id && (
+              <SlideshowSettingsForm sessionId={session.id} onLoggedOut={onLoggedOut} />
+            )}
           </li>
         ))}
         {sessions?.length === 0 && <li>There are no sessions yet.</li>}

@@ -1,8 +1,7 @@
 import { ReactNode, useState } from 'react';
 import { Link } from 'react-router-dom';
 import useSWR from 'swr';
-import { PageNavigation } from '@/components/common/PageNavigation';
-import { ROUTE_PATHS, sessionPath } from '@/router/constants';
+import { sessionPath } from '@/router/constants';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 
 /** Landing page: every session, with a search box that filters by code (or name). */
@@ -21,13 +20,6 @@ export const Home = (): ReactNode => {
   return (
     <div className="w-full min-h-full bg-slate-800 text-slate-400">
       <div className="max-w-xl mx-auto">
-        <PageNavigation
-          className="px-2 pt-4"
-          links={[
-            { to: ROUTE_PATHS.SLIDESHOW, label: 'Slideshow' },
-            { to: ROUTE_PATHS.IMAGE_UPLOADER, label: 'Upload photos' },
-          ]}
-        />
         <h1 className="px-2 pt-4 text-2xl text-slate-200">Join a party</h1>
 
         <div className="mt-4 mb-2 px-2">

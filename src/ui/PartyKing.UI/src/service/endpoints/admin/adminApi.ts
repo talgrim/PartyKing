@@ -1,7 +1,7 @@
 import { axios } from '@/service/request';
 import { PlayerCommand } from '../player/types';
 import { SongDto } from '../queue/types';
-import { SessionDto } from '../sessions/types';
+import { SessionDto, SlideshowSettingsDto } from '../sessions/types';
 
 const unwrap = <T>(promise: Promise<unknown>) => promise as Promise<T>;
 
@@ -26,7 +26,7 @@ export const adminApi = {
   renameSession: (sessionId: string, name: string) =>
     unwrap<void>(axios.patch(`/admin/sessions/${sessionId}`, { name }, withCredentials)),
 
-  /** Also deletes the session's queue. */
+  /** Also deletes the session's queue and uploaded photos. */
   deleteSession: (sessionId: string) =>
     unwrap<void>(axios.delete(`/admin/sessions/${sessionId}`, withCredentials)),
 
@@ -42,6 +42,12 @@ export const adminApi = {
     unwrap<SongDto>(
       axios.post(`/admin/sessions/${sessionId}/songs/next`, null, { ...withCredentials, params: { currentSongId } }),
     ),
+
+  getSlideshowSettings: (sessionId: string) =>
+    unwrap<SlideshowSettingsDto>(axios.get(`/admin/sessions/${sessionId}/slideshow-settings`, withCredentials)),
+
+  updateSlideshowSettings: (sessionId: string, settings: SlideshowSettingsDto) =>
+    unwrap<void>(axios.put(`/admin/sessions/${sessionId}/slideshow-settings`, settings, withCredentials)),
 
   /** Removes the host so someone else can claim the session. */
   releaseHost: (sessionId: string) =>

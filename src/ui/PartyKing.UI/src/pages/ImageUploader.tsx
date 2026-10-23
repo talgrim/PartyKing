@@ -1,26 +1,35 @@
 import React, { ChangeEvent, ReactNode, useRef, useState } from "react"
-import { axios } from "../service/request";
-import envVariables from "@/envVariables";
+import { useParams } from "react-router-dom";
+import useSWR from "swr";
 import {Alert, Backdrop, Checkbox, FormControlLabel, FormGroup, LinearProgress} from '@mui/material';
-import { makeUrlWithParams } from "@/service/fetcher/apiService";
 import { UploadedImagePreview } from "@/components/UploadedImagePreview";
 import { PageNavigation } from "@/components/common/PageNavigation";
-import { ROUTE_PATHS } from "@/router/constants";
+import { SessionPasswordForm } from "@/components/Music/SessionPasswordForm";
+import { ROUTE_PATHS, sessionPath } from "@/router/constants";
+import { HTTP_STATUS_CODE } from "@/service/constants";
+import { sessionsApi } from "@/service/endpoints/sessions/sessionsApi";
 
 type UploadStatus = 'waiting' | 'uploading' | 'success' | 'error';
 
 // The API answers 400 with a readable reason (unsupported format, file too big) and 429 when a guest uploads too often
 const describeUploadError = (error: unknown): string => {
-    const response = (error as { response?: { status?: number; data?: unknown } })?.response;
+    const { status, message } = (error as { status?: number; message?: string }) ?? {};
 
-    if (response?.status === 400 && typeof response.data === 'string' && response.data) return response.data;
-    if (response?.status === 429) return 'Zbyt wiele prób. Spróbuj ponownie za minutę.';
-    if (response?.status === 413) return 'Pliki są za duże (maks. 20 MB na zdjęcie, 100 MB naraz).';
+    if (status === HTTP_STATUS_CODE.BAD_REQUEST && message) return message;
+    if (status === HTTP_STATUS_CODE.TOO_MANY_REQUESTS) return 'Zbyt wiele prób. Spróbuj ponownie za minutę.';
+    if (status === HTTP_STATUS_CODE.PAYLOAD_TOO_LARGE) return 'Pliki są za duże (maks. 20 MB na zdjęcie, 100 MB naraz).';
 
     return 'Nie udało się wrzucić plików. Spróbuj ponownie.';
 };
 
+/** Guests add photos to the slideshow of one session; the session password is asked for first. */
 export const ImageUploader = (): ReactNode => {
+    const { sessionId = '' } = useParams();
+    const { error, mutate } = useSWR(['session', sessionId], () => sessionsApi.getSession(sessionId), {
+        shouldRetryOnError: false,
+    });
+    const locked = (error as { status?: number } | undefined)?.status === HTTP_STATUS_CODE.UNAUTHORIZED;
+
     const [files, setFiles] = useState<File[]>([]);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploadStatus, setUploadStatus] = useState<UploadStatus>('waiting');
@@ -28,12 +37,8 @@ export const ImageUploader = (): ReactNode => {
     const fileInput = useRef<HTMLInputElement>(null);
     const [deleteAfterPresentation, setChecked] = React.useState(false);
 
-    let API_URL = makeUrlWithParams(`${envVariables.apiUrl}/upload-photo/${deleteAfterPresentation}`);
-
     const handleCheckboxChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setChecked(event.target.checked);
-        console.log(deleteAfterPresentation);
-        API_URL = makeUrlWithParams(`${envVariables.apiUrl}/upload-photo/${deleteAfterPresentation}`);
     };
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -49,46 +54,44 @@ export const ImageUploader = (): ReactNode => {
         setUploadStatus('uploading');
 
         try {
-            const mappedFiles = files.map((file) => new File([file], file.name));
-            const formData = new FormData();
-            for(let i = 0; i < mappedFiles.length; i++) {
-                formData.append('files', mappedFiles[i]);
-            }
-            const response = await axios.put(API_URL.toString(), formData,
-                {
-                    headers: {
-                        'Content-Type': `multipart/form-data`,
-                    },
-                    onUploadProgress: (progressEvent) => {
-                        console.log(progressEvent);
-
-                        if (progressEvent.total) {
-                            setUploadProgress(Math.round((progressEvent.loaded * 100) / progressEvent.total));
-                        }
-                    }
-                }
-            );
+            await sessionsApi.uploadPhotos(sessionId, files, deleteAfterPresentation, setUploadProgress);
 
             setUploadStatus('success');
             setUploadProgress(0);
             if (fileInput.current) fileInput.current.value = '';
             setFiles([]);
-
-            console.log(response);
         } catch (error) {
+            if ((error as { status?: number })?.status === HTTP_STATUS_CODE.UNAUTHORIZED) {
+                // The password was changed meanwhile
+                setUploadStatus('waiting');
+                void mutate();
+                return;
+            }
+
             setUploadStatus('error');
             setErrorMessage(describeUploadError(error));
-
-            console.log(error);
         }
+    }
+
+    const navigation = (
+        <PageNavigation links={[
+            { to: sessionPath(sessionId), label: "Session" },
+            { to: ROUTE_PATHS.HOME, label: "Sessions" },
+        ]}/>
+    );
+
+    if (locked) {
+        return (
+            <div className="flex flex-col items-center space-y-4 py-5 w-full">
+                {navigation}
+                <SessionPasswordForm sessionId={sessionId} onJoined={() => void mutate()} />
+            </div>
+        );
     }
 
     return (
         <div className="flex flex-col items-center space-y-4 py-5 w-full">
-            <PageNavigation links={[
-                { to: ROUTE_PATHS.SLIDESHOW, label: "Slideshow" },
-                { to: ROUTE_PATHS.HOME, label: "Sessions" },
-            ]}/>
+            {navigation}
 
             { uploadStatus === 'uploading' &&
                 <Backdrop open>

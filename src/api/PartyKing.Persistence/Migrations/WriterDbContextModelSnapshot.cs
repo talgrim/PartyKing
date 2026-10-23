@@ -154,18 +154,23 @@ namespace PartyKing.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("WasPresented")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SessionId", "Id");
 
                     b.ToTable("Images");
                 });
 
             modelBuilder.Entity("PartyKing.Domain.Entities.SlideshowSettings", b =>
                 {
-                    b.Property<int>("Id")
-                        .HasColumnType("INTEGER");
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("AutoRepeat")
                         .HasColumnType("INTEGER");
@@ -176,18 +181,9 @@ namespace PartyKing.Persistence.Migrations
                     b.Property<bool>("StartFromBeginning")
                         .HasColumnType("INTEGER");
 
-                    b.HasKey("Id");
+                    b.HasKey("SessionId");
 
                     b.ToTable("SlideshowSettings");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            AutoRepeat = false,
-                            SlideTime = new TimeSpan(0, 0, 0, 20, 0),
-                            StartFromBeginning = false
-                        });
                 });
 
             modelBuilder.Entity("PartyKing.Domain.Entities.SpotifyProfile", b =>
@@ -236,6 +232,24 @@ namespace PartyKing.Persistence.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("HostProfile");
+                });
+
+            modelBuilder.Entity("PartyKing.Domain.Entities.SlideshowImage", b =>
+                {
+                    b.HasOne("PartyKing.Domain.Entities.Session", null)
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PartyKing.Domain.Entities.SlideshowSettings", b =>
+                {
+                    b.HasOne("PartyKing.Domain.Entities.Session", null)
+                        .WithOne()
+                        .HasForeignKey("PartyKing.Domain.Entities.SlideshowSettings", "SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

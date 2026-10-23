@@ -1,4 +1,3 @@
-﻿using PartyKing.Domain.Enums;
 using PartyKing.Domain.Models.Slideshow;
 
 namespace PartyKing.Domain.Entities;
@@ -9,17 +8,9 @@ public class SlideshowImage
     {
     }
 
-    public SlideshowImage(Guid id, string name, string url, string contentType)
-    {
-        Id = id;
-        ImageName = name;
-        ImageUrl = url;
-        ContentType = contentType;
-        DeleteAfterPresentation = false;
-    }
-
     public SlideshowImage(SlideshowImageWriteModel writeModel)
     {
+        SessionId = writeModel.SessionId;
         ImageName = $"{Id}{writeModel.Extension}";
         ImageUrl = writeModel.GetFullPath(ImageName);
         ContentType = writeModel.ContentType;
@@ -27,14 +18,15 @@ public class SlideshowImage
     }
 
     public Guid Id { get; set; } = Guid.CreateVersion7();
+    public Guid SessionId { get; set; }
     public string ImageName { get; set; }
     public string ImageUrl { get; set; }
     public string ContentType { get; set; }
     public bool DeleteAfterPresentation { get; set; }
     public bool WasPresented { get; set; }
 
-    public SlideshowImageReadModel ToReadModel(SlideshowImageSource source)
+    public SlideshowImageReadModel ToReadModel()
     {
-        return new SlideshowImageReadModel(ImageName, ImageUrl, ContentType, source, DeleteAfterPresentation);
+        return new SlideshowImageReadModel(ImageName, ImageUrl, ContentType, DeleteAfterPresentation);
     }
 }
