@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   getQueue: vi.fn(),
   enqueue: vi.fn(),
   searchSpotify: vi.fn(),
+  remove: vi.fn(),
 }));
 
 vi.mock('@/service/endpoints/queue/queueApi', () => ({
@@ -137,5 +138,53 @@ describe('Queue', () => {
     expect(screen.getByPlaceholderText(/search spotify/i)).toHaveValue('');
     expect(screen.queryByText('Track 1')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Clear search' })).not.toBeInTheDocument();
+  });
+
+  describe('removing songs', () => {
+    const renderPending = (canRemove: boolean) => {
+      pending = [queued(1), queued(2)];
+      render(
+        <SWRConfig value={{ provider: () => new Map() }}>
+          <Queue sessionId="session" canRemove={canRemove} />
+        </SWRConfig>,
+      );
+    };
+
+    it('shows no delete icon without permission', async () => {
+      renderPending(false);
+
+      await screen.findByText('Artist - Track 1');
+      expect(screen.queryByRole('button', { name: /remove/i })).not.toBeInTheDocument();
+    });
+
+    it('colors the delete icon red', async () => {
+      renderPending(true);
+
+      expect(await screen.findByRole('button', { name: 'Remove Track 1 from the queue' })).toHaveClass('text-red-500');
+    });
+
+    it('removes the song and refreshes the queue', async () => {
+      const user = userEvent.setup();
+      mocks.remove.mockImplementation(async (_: string, id: number) => {
+        pending = pending.filter((song) => song.id !== id);
+      });
+      renderPending(true);
+
+      await user.click(await screen.findByRole('button', { name: 'Remove Track 1 from the queue' }));
+
+      expect(mocks.remove).toHaveBeenCalledWith('session', 1);
+      await waitFor(() => expect(screen.queryByText('Artist - Track 1')).not.toBeInTheDocument());
+      expect(screen.getByText('Artist - Track 2')).toBeInTheDocument();
+    });
+
+    it('shows the error when the song cannot be removed', async () => {
+      const user = userEvent.setup();
+      mocks.remove.mockRejectedValue({ status: 409, message: 'The song is no longer waiting in the queue' });
+      renderPending(true);
+
+      await user.click(await screen.findByRole('button', { name: 'Remove Track 1 from the queue' }));
+
+      expect(await screen.findByText('The song is no longer waiting in the queue')).toBeInTheDocument();
+    });
   });
 });

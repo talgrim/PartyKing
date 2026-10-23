@@ -65,7 +65,7 @@ export const MusicQueue = (): ReactNode => {
               />
             )}
             <h2 className="px-2 pt-4 text-xl text-slate-200">Add a song to the queue</h2>
-            <Queue sessionId={session.id} />
+            <Queue sessionId={session.id} canRemove={isHost || isAdmin} />
           </>
         )}
       </div>

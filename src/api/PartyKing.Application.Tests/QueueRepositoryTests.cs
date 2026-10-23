@@ -159,4 +159,48 @@ public class QueueRepositoryTests : IAsyncLifetime
 
         Assert.Null(await _repository.GetPlayingAsync(_sessionId, CancellationToken.None));
     }
+
+    [Fact]
+    public async Task Remove_OfAQueuedSong_DeletesItAndKeepsTheOthers()
+    {
+        await AddSongAsync("one");
+        var second = await AddSongAsync("two");
+        await AddSongAsync("three");
+
+        var result = await _repository.RemoveAsync(_sessionId, second, CancellationToken.None);
+
+        Assert.Equal(QueueItemRemoval.Removed, result);
+        Assert.Equal(["one", "three"], await PendingTitlesAsync());
+    }
+
+    [Fact]
+    public async Task Remove_OfTheSongPlaying_LeavesItAlone()
+    {
+        var first = await AddSongAsync("one");
+        await AdvanceAsync(null);
+
+        var result = await _repository.RemoveAsync(_sessionId, first, CancellationToken.None);
+
+        Assert.Equal(QueueItemRemoval.NotQueued, result);
+        Assert.Equal(first, (await _repository.GetPlayingAsync(_sessionId, CancellationToken.None))?.Id);
+    }
+
+    [Fact]
+    public async Task Remove_OfASongOfAnotherSession_IsNotFoundAndDeletesNothing()
+    {
+        var song = await AddSongAsync("one");
+
+        var result = await _repository.RemoveAsync(Guid.NewGuid(), song, CancellationToken.None);
+
+        Assert.Equal(QueueItemRemoval.NotFound, result);
+        Assert.Equal(["one"], await PendingTitlesAsync());
+    }
+
+    [Fact]
+    public async Task Remove_OfAMissingSong_IsNotFound()
+    {
+        var result = await _repository.RemoveAsync(_sessionId, 999, CancellationToken.None);
+
+        Assert.Equal(QueueItemRemoval.NotFound, result);
+    }
 }

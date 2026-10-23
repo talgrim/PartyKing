@@ -11,7 +11,7 @@ export const PlayPauseButton = ({ paused, disabled, onToggle }: Props) => (
   <button
     onClick={onToggle}
     disabled={disabled}
-    className="p-2 bg-amber-600 text-slate-200 rounded-md cursor-pointer disabled:opacity-50 inline-flex items-center gap-1"
+    className="h-10 px-3 bg-amber-600 text-slate-200 rounded-md cursor-pointer disabled:opacity-50 inline-flex items-center justify-center gap-1"
   >
     {paused ? <PlayArrowIcon fontSize="small" /> : <PauseIcon fontSize="small" />}
     {paused ? 'Play' : 'Pause'}

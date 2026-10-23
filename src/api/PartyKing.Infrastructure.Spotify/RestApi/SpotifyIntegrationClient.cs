@@ -26,13 +26,15 @@ internal class SpotifyIntegrationClient : ISpotifyIntegrationClient
 
     private ISpotifyClient? _client;
 
-    // Playback in the browser (Web Playback SDK) needs streaming plus the account's email and subscription
+    // Playback in the browser (Web Playback SDK) needs streaming plus the account's email and subscription;
+    // reading the playback state lets the host's player take a song over from another of the host's devices
     private static readonly ICollection<string> Scope =
     [
         Scopes.Streaming,
         Scopes.UserReadEmail,
         Scopes.UserReadPrivate,
-        Scopes.UserModifyPlaybackState
+        Scopes.UserModifyPlaybackState,
+        Scopes.UserReadPlaybackState
     ];
 
     public SpotifyIntegrationClient(

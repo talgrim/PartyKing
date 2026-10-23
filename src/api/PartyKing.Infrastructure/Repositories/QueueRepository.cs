@@ -20,6 +20,19 @@ public interface IQueueRepository
     /// player whose song an admin has already skipped, advances nothing. Returns the song playing afterwards.
     /// </summary>
     Task<QueueItem?> AdvanceAsync(Guid sessionId, int? currentItemId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Deletes a song that is still waiting in the queue. A song of another session counts as not found, and a song
+    /// that is playing or already played is left alone.
+    /// </summary>
+    Task<QueueItemRemoval> RemoveAsync(Guid sessionId, int itemId, CancellationToken cancellationToken);
+}
+
+public enum QueueItemRemoval
+{
+    Removed,
+    NotFound,
+    NotQueued
 }
 
 internal class QueueRepository : IQueueRepository
@@ -107,6 +120,39 @@ internal class QueueRepository : IQueueRepository
             await dbContext.SaveChangesAsync(cancellationToken);
 
             return next;
+        }
+        finally
+        {
+            advanceLock.Release();
+        }
+    }
+
+    public async Task<QueueItemRemoval> RemoveAsync(Guid sessionId, int itemId, CancellationToken cancellationToken)
+    {
+        var advanceLock = _advanceLocks.GetOrAdd(sessionId, _ => new SemaphoreSlim(1, 1));
+
+        await advanceLock.WaitAsync(cancellationToken);
+        try
+        {
+            await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
+
+            var item = await dbContext.QueueItems
+                .FirstOrDefaultAsync(x => x.Id == itemId && x.SessionId == sessionId, cancellationToken);
+
+            if (item is null)
+            {
+                return QueueItemRemoval.NotFound;
+            }
+
+            if (item.Status != QueueItemStatus.Queued)
+            {
+                return QueueItemRemoval.NotQueued;
+            }
+
+            dbContext.QueueItems.Remove(item);
+            await dbContext.SaveChangesAsync(cancellationToken);
+
+            return QueueItemRemoval.Removed;
         }
         finally
         {

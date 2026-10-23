@@ -39,6 +39,8 @@ internal class FakeQueueRepository : IQueueRepository
     public QueueItem? Playing { get; set; }
     public List<(Guid SessionId, int? CurrentItemId)> AdvanceCalls { get; } = [];
     public QueueItem? AdvanceResult { get; set; }
+    public List<(Guid SessionId, int ItemId)> RemoveCalls { get; } = [];
+    public QueueItemRemoval RemoveResult { get; set; } = QueueItemRemoval.Removed;
 
     public Task<QueueItem?> GetPlayingAsync(Guid sessionId, CancellationToken cancellationToken) =>
         Task.FromResult(Playing);
@@ -47,6 +49,12 @@ internal class FakeQueueRepository : IQueueRepository
     {
         AdvanceCalls.Add((sessionId, currentItemId));
         return Task.FromResult(AdvanceResult);
+    }
+
+    public Task<QueueItemRemoval> RemoveAsync(Guid sessionId, int itemId, CancellationToken cancellationToken)
+    {
+        RemoveCalls.Add((sessionId, itemId));
+        return Task.FromResult(RemoveResult);
     }
 
     public Task<QueueItem> AddAsync(QueueItem item, CancellationToken cancellationToken) => throw new NotSupportedException();

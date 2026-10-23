@@ -24,6 +24,13 @@ export const queueApi = {
       axios.post(`/sessions/${sessionId}/songs/next`, null, { ...withCredentials, params: { currentSongId } }),
     ),
 
+  /**
+   * Host or admin only. Deletes a song that is still waiting; rejects with status 403 for anyone else, 404 when the
+   * song is gone and 409 when it is already playing.
+   */
+  remove: (sessionId: string, songId: number) =>
+    unwrap<void>(axios.delete(`/sessions/${sessionId}/songs/${songId}`, withCredentials)),
+
   searchSpotify: (sessionId: string, query: string) =>
     unwrap<SpotifyTrackDto[]>(
       axios.get(`/sessions/${sessionId}/tracks`, { params: { query } }),
