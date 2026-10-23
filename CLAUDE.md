@@ -11,7 +11,7 @@ PartyKing is a party app: guests upload photos that the API serves as a timed sl
 Backend (run from `src/api`):
 - Build: `dotnet build PartyKing.sln`
 - Run everything (API + UI via Aspire): `dotnet run --project PartyKing.AppHost`
-- Run the API only: `dotnet run --project PartyKing.API` (the `http` launch profile binds to `http://localhost:4200`)
+- Run the API only: `dotnet run --project PartyKing.API` (the `http` launch profile binds to `http://127.0.0.1:4200`)
 - Add an EF migration: `dotnet ef migrations add <Name> --project PartyKing.Persistence --startup-project PartyKing.Persistence --context WriterDbContext`
 - Migrations are applied automatically at API startup (`MigrateDb()` in `Program.cs`). The SQLite file is `PartyKing.db`, relative to the working directory.
 
@@ -51,10 +51,11 @@ Key patterns and gotchas:
 
 Frontend (`PartyKing.UI/src`):
 - React 19, react-router (`router/routes.tsx`: `/` Home lists sessions with a code search, `/s/:sessionId` MusicQueue for guests, `/s/:sessionId/music` Music for the host player, `/callback` Spotify redirect, `/admin` admin login and session panel, plus Slideshow and ImageUploader), MUI + Tailwind v4, axios + SWR.
-- The API base URL is hardcoded in `src/envVariables.ts` (`http://localhost:4200`) and must match the API launch profile. To test from phones on the LAN, change both `envVariables.ts` and `src/api/PartyKing.API/Properties/launchSettings.json` to the machine's LAN IP, but don't commit that change. Axios is configured in `src/service/request.ts`, and the `@/` import alias maps to `src/`.
+- The API base URL is hardcoded in `src/envVariables.ts` (`http://127.0.0.1:4200`) and must match the API launch profile. To test from phones on the LAN, change both `envVariables.ts` and `src/api/PartyKing.API/Properties/launchSettings.json` to the machine's LAN IP, but don't commit that change. Axios is configured in `src/service/request.ts`, and the `@/` import alias maps to `src/`.
 
 ## Conventions
 - Commits follow the Conventional Commits format.
 - Use subagent Explore for codebase exploration.
 - Don't commit changes until explicitly stated.
 - Stick to SOLID.
+- Commit tests in a separate commit

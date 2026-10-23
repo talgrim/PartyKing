@@ -174,7 +174,7 @@ cd PartyKing
 cd src/ui/PartyKing.UI && npm install && cd ../../..
 ```
 
-> **Adres API.** Domyślnie API nasłuchuje na `http://localhost:4200`, a frontend łączy się z tym
+> **Adres API.** Domyślnie API nasłuchuje na `http://127.0.0.1:4200`, a frontend łączy się z tym
 > adresem. Wystarczy to do pracy na jednym komputerze; żeby wejść z telefonów, podmień adres
 > na IP maszyny: [Konfiguracja](#konfiguracja).
 
@@ -206,7 +206,7 @@ npm start
 
 Frontend wstaje na porcie **2137** i nasłuchuje na `0.0.0.0`, żeby był dostępny z telefonów
 w tej samej sieci Wi-Fi. API domyślnie nasłuchuje na adresie z
-`src/api/PartyKing.API/Properties/launchSettings.json` (domyślnie `http://localhost:4200`) —
+`src/api/PartyKing.API/Properties/launchSettings.json` (domyślnie `http://127.0.0.1:4200`) —
 przy pracy z telefonów trzeba go dostosować do własnej sieci, patrz [Konfiguracja](#konfiguracja).
 
 Adres można też nadpisać jednorazowo, bez modyfikowania plików projektu:
@@ -236,13 +236,13 @@ czyli bez Swaggera i bez endpointów `/health` i `/alive`.
 ### Adres API
 
 Adres backendu jest ustawiony **w dwóch miejscach** i w obu musi być taki sam (domyślnie
-`http://localhost:4200`):
+`http://127.0.0.1:4200`):
 
 1. `src/api/PartyKing.API/Properties/launchSettings.json` → `applicationUrl`
 2. `src/ui/PartyKing.UI/src/envVariables.ts` → wartość `_apiUrl`
 
 Żeby telefony gości mogły połączyć się z serwerem, w obu miejscach użyj adresu IP maszyny
-w lokalnej sieci zamiast `localhost` (tej zmiany nie commituj). API ma politykę CORS przepuszczającą
+w lokalnej sieci zamiast `127.0.0.1` (tej zmiany nie commituj). API ma politykę CORS przepuszczającą
 dowolne pochodzenie.
 
 ### Spotify
@@ -319,7 +319,7 @@ Kontrolery nie mają prefiksu trasy — **wszystkie endpointy są w korzeniu**, 
 `GET http://<host-api>/get-photo`. W przykładach poniżej:
 
 ```bash
-API=http://localhost:4200   # podmień na własny adres z launchSettings.json
+API=http://127.0.0.1:4200   # podmień na własny adres z launchSettings.json
 ```
 
 ### Slideshow
