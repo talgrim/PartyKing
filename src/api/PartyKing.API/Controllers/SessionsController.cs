@@ -1,17 +1,25 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Contract.V1.Sessions;
+using PartyKing.Infrastructure.Authentication;
+using PartyKing.Infrastructure.Authorization;
 
 namespace PartyKing.API.Controllers;
 
 public class SessionsController : CoreController
 {
     private readonly ISessionService _sessionService;
+    private readonly ICookieAuthorizationHandler _cookieAuthorizationHandler;
 
-    public SessionsController(IHttpContextAccessor httpContextAccessor, ISessionService sessionService)
+    public SessionsController(
+        IHttpContextAccessor httpContextAccessor,
+        ISessionService sessionService,
+        ICookieAuthorizationHandler cookieAuthorizationHandler)
         : base(httpContextAccessor)
     {
         _sessionService = sessionService;
+        _cookieAuthorizationHandler = cookieAuthorizationHandler;
     }
 
     [HttpGet("sessions")]
@@ -26,6 +34,24 @@ public class SessionsController : CoreController
     public async Task<IActionResult> GetSession(Guid sessionId, CancellationToken cancellationToken)
     {
         var result = await _sessionService.GetAsync(sessionId, cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>
+    /// Tells the UI whether to show the player controls. Open to everyone: a viewer who is neither host nor admin
+    /// just gets false for both.
+    /// </summary>
+    [HttpGet("sessions/{sessionId:guid}/me")]
+    [ProducesResponseType<ViewerRoleDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetViewerRole(Guid sessionId, CancellationToken cancellationToken)
+    {
+        // The signed cookie is enough to know who the host is; whether their Spotify token still works is a
+        // separate matter, handled where the token is used
+        var profileId = _cookieAuthorizationHandler.TryReadProfileId(Request, out var id) ? id : null;
+        var isAdmin = (await HttpContext.AuthenticateAsync(Constants.AdminScheme)).Succeeded;
+
+        var result = await _sessionService.GetViewerRoleAsync(sessionId, profileId, isAdmin, cancellationToken);
 
         return result.Match(Ok, Problem);
     }

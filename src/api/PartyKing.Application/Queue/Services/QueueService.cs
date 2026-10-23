@@ -17,8 +17,16 @@ public interface IQueueService
     Task<ErrorOr<SongDataDto>> EnqueueAsync(Guid sessionId, string? input, CancellationToken cancellationToken);
     Task<ErrorOr<IReadOnlyList<SongDataDto>>> GetQueueAsync(Guid sessionId, CancellationToken cancellationToken);
 
-    /// <summary>Host only: forbidden unless <paramref name="hostProfileId"/> hosts the session.</summary>
-    Task<ErrorOr<SongDataDto>> GetNextAsync(Guid sessionId, string hostProfileId, CancellationToken cancellationToken);
+    /// <summary>
+    /// Host only: forbidden unless <paramref name="hostProfileId"/> hosts the session. <paramref name="currentSongId"/>
+    /// is the song the player thinks is playing (null: none); when it is outdated, nothing advances and the song
+    /// that is really playing is returned.
+    /// </summary>
+    Task<ErrorOr<SongDataDto>> GetNextAsync(
+        Guid sessionId,
+        string hostProfileId,
+        int? currentSongId,
+        CancellationToken cancellationToken);
 }
 
 internal class QueueService : IQueueService
@@ -91,6 +99,7 @@ internal class QueueService : IQueueService
     public async Task<ErrorOr<SongDataDto>> GetNextAsync(
         Guid sessionId,
         string hostProfileId,
+        int? currentSongId,
         CancellationToken cancellationToken)
     {
         var session = await _sessionsRepository.GetAsync(sessionId, cancellationToken);
@@ -104,7 +113,7 @@ internal class QueueService : IQueueService
             return Error.Forbidden(description: "Only the host of this session can advance its queue");
         }
 
-        var next = await _queueRepository.AdvanceAsync(sessionId, cancellationToken);
+        var next = await _queueRepository.AdvanceAsync(sessionId, currentSongId, cancellationToken);
 
         if (next is null)
         {

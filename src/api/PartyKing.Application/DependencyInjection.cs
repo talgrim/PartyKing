@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Configuration;
+using PartyKing.Application.Player.Services;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Slideshow.Services;
@@ -18,6 +19,7 @@ public static class DependencyInjection
         services.RegisterSlideshow(configuration);
         services.RegisterSpotify();
         services.RegisterQueue();
+        services.RegisterPlayer();
         services.RegisterSessions();
         services.RegisterAdmin(configuration);
     }
@@ -56,6 +58,12 @@ public static class DependencyInjection
     {
         services.AddScoped<ISpotifyService, SpotifyService>();
         services.AddSingleton<IHostTokenProvider, HostTokenProvider>();
+    }
+
+    private static void RegisterPlayer(this IServiceCollection services)
+    {
+        services.AddSingleton<IPlayerStateStore, PlayerStateStore>();
+        services.AddScoped<IPlayerService, PlayerService>();
     }
 
     private static void RegisterQueue(this IServiceCollection services)

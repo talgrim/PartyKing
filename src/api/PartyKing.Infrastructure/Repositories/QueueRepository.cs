@@ -9,8 +9,17 @@ namespace PartyKing.Infrastructure.Repositories;
 public interface IQueueRepository
 {
     Task<QueueItem> AddAsync(QueueItem item, CancellationToken cancellationToken);
+
+    /// <summary>The songs waiting to be played, in order. The song being played is not among them.</summary>
     Task<IReadOnlyList<QueueItem>> GetPendingAsync(Guid sessionId, CancellationToken cancellationToken);
-    Task<QueueItem?> AdvanceAsync(Guid sessionId, CancellationToken cancellationToken);
+    Task<QueueItem?> GetPlayingAsync(Guid sessionId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Marks the current song as played and starts the next queued one, but only when the song playing now is
+    /// <paramref name="currentItemId"/> (null: nothing is playing). A caller with an outdated view, such as a
+    /// player whose song an admin has already skipped, advances nothing. Returns the song playing afterwards.
+    /// </summary>
+    Task<QueueItem?> AdvanceAsync(Guid sessionId, int? currentItemId, CancellationToken cancellationToken);
 }
 
 internal class QueueRepository : IQueueRepository
@@ -43,13 +52,26 @@ internal class QueueRepository : IQueueRepository
 
         return await dbContext.QueueItems
             .AsNoTracking()
-            .Where(x => x.SessionId == sessionId && x.Status != QueueItemStatus.Played)
+            .Where(x => x.SessionId == sessionId && x.Status == QueueItemStatus.Queued)
             .OrderBy(x => x.Id)
             .ToListAsync(cancellationToken);
     }
 
-    /// <summary>Marks the current item as played and starts the next queued one, if any.</summary>
-    public async Task<QueueItem?> AdvanceAsync(Guid sessionId, CancellationToken cancellationToken)
+    public async Task<QueueItem?> GetPlayingAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _readerDbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        return await dbContext.QueueItems
+            .AsNoTracking()
+            .Where(x => x.SessionId == sessionId && x.Status == QueueItemStatus.Playing)
+            .OrderBy(x => x.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<QueueItem?> AdvanceAsync(
+        Guid sessionId,
+        int? currentItemId,
+        CancellationToken cancellationToken)
     {
         var advanceLock = _advanceLocks.GetOrAdd(sessionId, _ => new SemaphoreSlim(1, 1));
 
@@ -61,6 +83,11 @@ internal class QueueRepository : IQueueRepository
             var playing = await dbContext.QueueItems
                 .Where(x => x.SessionId == sessionId && x.Status == QueueItemStatus.Playing)
                 .ToListAsync(cancellationToken);
+
+            if (playing.FirstOrDefault()?.Id != currentItemId)
+            {
+                return playing.FirstOrDefault();
+            }
 
             foreach (var item in playing)
             {
