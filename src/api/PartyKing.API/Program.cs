@@ -22,6 +22,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddErrorHandling();
 builder.Services.RegisterServices(builder.Configuration);
 
 // The dev UI (port 2137) calls the API (port 4200) cross-origin; in production both share one origin behind nginx
@@ -110,7 +111,7 @@ app
     .UseRateLimiter()
     .UseAuthentication()
     .UseAuthorization()
-    .UseExceptionHandler("/error")
+    .UseErrorHandling()
     .UseStaticFiles(CreateImagesOnlyStaticFiles());
 
 app.MapControllers();
