@@ -21,7 +21,7 @@ public sealed class ActionMetrics : IDisposable
     }
 
     public void RecordDuration(
-        TimeSpan elapsed,
+        double durationMs,
         string controller,
         string action,
         string method,
@@ -29,7 +29,7 @@ public sealed class ActionMetrics : IDisposable
         string outcome)
     {
         _duration.Record(
-            elapsed.TotalMilliseconds,
+            durationMs,
             new KeyValuePair<string, object?>("controller", controller),
             new KeyValuePair<string, object?>("action", action),
             new KeyValuePair<string, object?>("http.request.method", method),

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
@@ -30,9 +31,10 @@ public class AdminCookieAuthenticationHandler : AuthenticationHandler<CookieAuth
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        var startTimestamp = AuthorizationMetrics.Start();
+        var startTimestamp = Stopwatch.GetTimestamp();
         var result = await AuthenticateAsync();
-        _metrics.RecordDuration(Scheme.Name, startTimestamp, result.Succeeded);
+        var durationMs = Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds;
+        _metrics.RecordDuration(Scheme.Name, durationMs, result.Succeeded);
 
         return result;
     }

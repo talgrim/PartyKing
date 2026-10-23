@@ -30,11 +30,12 @@ public sealed class ActionMetricsFilter : IAsyncActionFilter
         }
         finally
         {
-            Record(context, executed, Stopwatch.GetElapsedTime(startTimestamp));
+            var durationMs = Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds;
+            Record(context, executed, durationMs);
         }
     }
 
-    private void Record(ActionExecutingContext context, ActionExecutedContext? executed, TimeSpan elapsed)
+    private void Record(ActionExecutingContext context, ActionExecutedContext? executed, double durationMs)
     {
         var descriptor = context.ActionDescriptor as ControllerActionDescriptor;
         var controller = descriptor?.ControllerName ?? "unknown";
@@ -55,6 +56,6 @@ public sealed class ActionMetricsFilter : IAsyncActionFilter
             outcome = statusCode >= 400 ? ErrorOutcome : SuccessOutcome;
         }
 
-        _metrics.RecordDuration(elapsed, controller, action, context.HttpContext.Request.Method, statusCode, outcome);
+        _metrics.RecordDuration(durationMs, controller, action, context.HttpContext.Request.Method, statusCode, outcome);
     }
 }

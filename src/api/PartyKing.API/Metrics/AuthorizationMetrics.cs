@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Diagnostics.Metrics;
 
 namespace PartyKing.API.Metrics;
@@ -22,16 +21,11 @@ public sealed class AuthorizationMetrics : IDisposable
             description: "Time spent authenticating or authorizing a request.");
     }
 
-    public static long Start()
-    {
-        return Stopwatch.GetTimestamp();
-    }
-
     /// <param name="component">What was measured: <c>RequireSessionAccess</c> or the authentication scheme name.</param>
-    public void RecordDuration(string component, long startTimestamp, bool granted)
+    public void RecordDuration(string component, double durationMs, bool granted)
     {
         _duration.Record(
-            Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds,
+            durationMs,
             new KeyValuePair<string, object?>("component", component),
             new KeyValuePair<string, object?>("outcome", granted ? GrantedOutcome : DeniedOutcome));
     }

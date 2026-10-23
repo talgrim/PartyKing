@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using PartyKing.API.Metrics;
@@ -28,12 +29,13 @@ internal class SessionAccessFilter : IAsyncAuthorizationFilter
 
     public async Task OnAuthorizationAsync(AuthorizationFilterContext context)
     {
-        var startTimestamp = AuthorizationMetrics.Start();
+        var startTimestamp = Stopwatch.GetTimestamp();
         var hasAccess = Guid.TryParse(context.RouteData.Values["sessionId"]?.ToString(), out var sessionId)
             && _cookieAuthorizationHandler.TryReadSessionAccess(context.HttpContext.Request, sessionId, out var stamp)
             && await _sessionService.HasAccessAsync(sessionId, stamp, context.HttpContext.RequestAborted);
 
-        _metrics.RecordDuration("RequireSessionAccess", startTimestamp, hasAccess);
+        var durationMs = Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds;
+        _metrics.RecordDuration("RequireSessionAccess", durationMs, hasAccess);
 
         if (!hasAccess)
         {
