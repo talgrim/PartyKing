@@ -12,7 +12,6 @@ namespace PartyKing.Application.Slideshow.Services;
 
 public interface ISlideshowService
 {
-    bool IsInitialized();
     Task InitializeAsync(string rootPath, CancellationToken cancellationToken);
     Task UpdateSettingsAsync(SlideshowSettings settings, CancellationToken cancellationToken);
     Task UploadImagesAsync(IFormFile[] files, bool deleteAfterPresentation, CancellationToken cancellationToken);
@@ -38,11 +37,6 @@ internal class SlideshowService : ISlideshowService
         _slideshowConfiguration = slideshowSettingsOptions.Value;
     }
 
-    public bool IsInitialized()
-    {
-        return _imagesRepository.IsInitialized;
-    }
-
     public Task InitializeAsync(string rootPath, CancellationToken cancellationToken)
     {
         return _imagesRepository.InitializeAsync(
@@ -62,10 +56,20 @@ internal class SlideshowService : ISlideshowService
         bool deleteAfterPresentation,
         CancellationToken cancellationToken)
     {
+        // Validate everything first so a bad file doesn't leave the rest of the batch half stored
+        var validated = new List<(IFormFile File, ValidatedImage Image)>();
+        foreach (var file in files)
+        {
+            await using var content = file.OpenReadStream();
+            var image = await UploadedImageValidator.ValidateAsync(file.FileName, file.Length, content, cancellationToken);
+            validated.Add((file, image));
+        }
+
         await Parallel.ForEachAsync(
-            files,
+            validated,
             cancellationToken,
-            async (file, stoppingToken) => await UploadImageAsync(file, deleteAfterPresentation, stoppingToken));
+            async (item, stoppingToken) =>
+                await UploadImageAsync(item.File, item.Image, deleteAfterPresentation, stoppingToken));
     }
 
     public async Task<SlideshowImageDto?> GetImageAsync(CancellationToken cancellationToken)
@@ -100,6 +104,7 @@ internal class SlideshowService : ISlideshowService
 
     private async Task UploadImageAsync(
         IFormFile file,
+        ValidatedImage image,
         bool deleteAfterPresentation,
         CancellationToken cancellationToken)
     {
@@ -112,8 +117,8 @@ internal class SlideshowService : ISlideshowService
         SlideshowImageWriteModel CreateModel()
         {
             return new SlideshowImageWriteModel(
-                Path.GetExtension(file.FileName),
-                file.ContentType,
+                image.Extension,
+                image.ContentType,
                 content,
                 _slideshowConfiguration.UploadedPhotosDirectory,
                 deleteAfterPresentation);

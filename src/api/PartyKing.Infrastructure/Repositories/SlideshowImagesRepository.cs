@@ -10,7 +10,6 @@ namespace PartyKing.Infrastructure.Repositories;
 
 public interface ISlideshowImagesRepository
 {
-    bool IsInitialized { get; }
     TimeSpan SlideTime { get; }
     Task InitializeAsync(string rootPath, string placeholdersPath, string uploadedPath, CancellationToken cancellationToken);
     Task UpdateSettingsAsync(SlideshowSettings settings, CancellationToken cancellationToken);
@@ -33,7 +32,6 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
     private string _rootPath = null!;
     private string _placeholdersPath = null!;
 
-    public bool IsInitialized { get; private set; }
     public TimeSpan SlideTime => _currentSettings.SlideTime;
 
     public SlideshowImagesRepository(
@@ -65,8 +63,6 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
 
         await LoadSettingsAsync(cancellationToken);
 
-        IsInitialized = true;
-
         _logger.LogInformation(
             "Initialized settings. Root path: {Root}, Placeholders path: {Placeholders}, Placeholders loaded: {Count}",
             rootPath,
@@ -83,8 +79,20 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
 
     public async Task AddSlideshowImageAsync(SlideshowImageWriteModel slideshowImage, CancellationToken cancellationToken)
     {
-        var imageName = await AddImageDataToDbAsync(slideshowImage, cancellationToken);
-        await SaveImageToFileAsync(imageName, slideshowImage, cancellationToken);
+        var image = new SlideshowImage(slideshowImage);
+
+        // File first: a failed write must not leave a database row without a file
+        await SaveImageToFileAsync(image, slideshowImage, cancellationToken);
+
+        try
+        {
+            await AddImageDataToDbAsync(image, cancellationToken);
+        }
+        catch
+        {
+            DeleteFileQuietly(image);
+            throw;
+        }
     }
 
     public async Task<SlideshowImageReadResult> GetSlideshowImageAsync(Guid? currentId, CancellationToken cancellationToken)
@@ -180,51 +188,49 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
         }
     }
 
-    private async Task<string> AddImageDataToDbAsync(SlideshowImageWriteModel slideshowImage, CancellationToken cancellationToken)
+    private async Task AddImageDataToDbAsync(SlideshowImage image, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Adding image data to database. FileName: {FileName}, Content Type: {ContentType}",
-            slideshowImage.Extension,
-            slideshowImage.ContentType);
+            image.ImageName,
+            image.ContentType);
 
-        var image = new SlideshowImage(slideshowImage);
-        try
-        {
-            await using var context = await _writerFactory.CreateDbContextAsync(cancellationToken);
+        await using var context = await _writerFactory.CreateDbContextAsync(cancellationToken);
 
-            await context.Images.AddAsync(image, cancellationToken);
+        await context.Images.AddAsync(image, cancellationToken);
 
-            await context.SaveChangesAsync(cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to add image data to database. FileName: {FileName}", slideshowImage.Extension);
-        }
-
-        return image.ImageName;
+        await context.SaveChangesAsync(cancellationToken);
     }
 
     private async Task SaveImageToFileAsync(
-        string imageName,
+        SlideshowImage image,
         SlideshowImageWriteModel slideshowImage,
         CancellationToken cancellationToken)
     {
-        var filePath = slideshowImage.GetFullPath(imageName);
-        _logger.LogInformation("Saving image to file: {FilePath}", filePath);
+        _logger.LogInformation("Saving image to file: {FilePath}", image.ImageUrl);
 
-        FileStream? fileStream = null;
         try
         {
-            fileStream = File.Create(Path.Combine(_rootPath, filePath));
+            await using var fileStream = File.Create(Path.Combine(_rootPath, image.ImageUrl));
             slideshowImage.Data.Seek(0, SeekOrigin.Begin);
             await slideshowImage.Data.CopyToAsync(fileStream, cancellationToken);
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Failed to save image to file: {FilePath}", filePath);
+            _logger.LogError(e, "Failed to save image to file: {FilePath}", image.ImageUrl);
+            DeleteFileQuietly(image);
+            throw;
         }
-        finally
+    }
+
+    private void DeleteFileQuietly(SlideshowImage image)
+    {
+        try
         {
-            fileStream?.Close();
+            File.Delete(Path.Combine(_rootPath, image.ImageUrl));
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "Failed to clean up {FilePath}", image.ImageUrl);
         }
     }
 
