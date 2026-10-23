@@ -4,5 +4,6 @@ export const ROUTE_PATHS = {
   LOGIN: '/login',
   SLIDESHOW: '/slideshow',
   IMAGE_UPLOADER: '/image-upload',
-  MUSIC: '/music'
+  MUSIC: '/music',
+  MUSIC_QUEUE: '/music-queue'
 };
