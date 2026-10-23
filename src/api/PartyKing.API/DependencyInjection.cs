@@ -4,6 +4,7 @@ using PartyKing.Application;
 using PartyKing.Infrastructure;
 using PartyKing.Infrastructure.Authentication;
 using PartyKing.Infrastructure.Spotify;
+using PartyKing.Infrastructure.Youtube;
 
 namespace PartyKing.API;
 
@@ -16,6 +17,7 @@ public static class DependencyInjection
         services.RegisterApplication(configuration);
         services.RegisterInfrastructure();
         services.RegisterSpotifyInfrastructure(configuration);
+        services.RegisterYoutubeInfrastructure();
         services.AddAuthorization();
         AddConfigurations(configuration);
     }
