@@ -10,6 +10,8 @@ import { ErrorLog, ErrorLogEntry } from './ErrorLog';
 import { PlayerControls } from './PlayerControls';
 import { SpotifyPlayer, SpotifyPlayerHandle } from './SpotifyPlayer';
 import { YoutubePlayer } from './YoutubePlayer';
+import { getPlaybackState } from '@/service/endpoints/spotify/spotifyPlaybackApi';
+import { takeoverPositionMs, useTakeoverAvailable } from './takeover';
 import { describeYoutubeError } from './youtubeErrors';
 
 const MAX_LOGGED_ERRORS = 50;
@@ -45,6 +47,8 @@ export const HostPlayer = ({ sessionId, isAdmin }: Props): ReactNode => {
   const [song, setSong] = useState<SongDto | null>(null);
   const [paused, setPaused] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [takeover, setTakeover] = useState<{ uri: string; positionMs: number } | null>(null);
   const [errorLog, setErrorLog] = useState<ErrorLogEntry[]>([]);
 
   // Callbacks that fire at arbitrary times (timers, the Spotify SDK) read the latest state through these.
@@ -168,11 +172,25 @@ export const HostPlayer = ({ sessionId, isAdmin }: Props): ReactNode => {
     void playNext();
   };
 
+  // The song the server says is playing, when it is a Spotify one that the host's account plays on another device:
+  // then the button takes it over instead of starting it over.
+  const serverSpotifyUri =
+    nowPlaying?.song?.source === SongSource.Spotify ? nowPlaying.song.url : null;
+  const takeoverAvailable = useTakeoverAvailable(token, deviceId, serverSpotifyUri, !started);
+
   // Plays whatever the server says is playing (after a reload that is the song that was interrupted), or else
-  // the next song in the queue.
-  const start = () => {
+  // the next song in the queue. When that song is on another device, it continues from where that device is.
+  const start = async () => {
     // The click is the user gesture that lets the browser play audio.
     spotifyPlayer.current?.activate();
+
+    if (takeoverAvailable && token && deviceId && serverSpotifyUri) {
+      // Read again: the song may have moved on since the last poll
+      const state = await getPlaybackState(token).catch(() => null);
+      const positionMs = takeoverPositionMs(state, deviceId, serverSpotifyUri);
+      if (positionMs !== null) setTakeover({ uri: serverSpotifyUri, positionMs });
+    }
+
     setStarted(true);
     void playNext();
   };
@@ -248,13 +266,17 @@ export const HostPlayer = ({ sessionId, isAdmin }: Props): ReactNode => {
         {!started && (
           <div className="text-center">
             <button
-              onClick={start}
+              onClick={() => void start()}
               disabled={!token}
               className="p-4 bg-amber-600 text-slate-200 rounded-md cursor-pointer disabled:opacity-50"
             >
-              Start the music
+              {takeoverAvailable ? 'Play here' : 'Start the music'}
             </button>
-            <p className="pt-2 text-sm text-slate-500">The music plays in this tab, so keep the page open.</p>
+            <p className="pt-2 text-sm text-slate-500">
+              {takeoverAvailable
+                ? 'This song is playing on another of your devices. Continue it here, from the same spot.'
+                : 'The music plays in this tab, so keep the page open.'}
+            </p>
           </div>
         )}
 
@@ -278,6 +300,8 @@ export const HostPlayer = ({ sessionId, isAdmin }: Props): ReactNode => {
             onEnded={playNext}
             onPausedChange={handlePausedChange}
             onError={reportError}
+            onDeviceChange={setDeviceId}
+            takeover={takeover}
           />
         )}
 

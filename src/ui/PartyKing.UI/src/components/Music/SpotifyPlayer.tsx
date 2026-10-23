@@ -15,6 +15,10 @@ type Props = {
   /** Reports the real playback state of `uri`, including pauses made from other Spotify clients. */
   onPausedChange: (paused: boolean) => void;
   onError: (message: string) => void;
+  /** Reports the id of this browser's Spotify device once it is ready, and null when it goes away. */
+  onDeviceChange?: (deviceId: string | null) => void;
+  /** Continue `uri` from `positionMs` instead of from the start, once, when it is taken over from another device. */
+  takeover?: { uri: string; positionMs: number } | null;
   handle?: Ref<SpotifyPlayerHandle>;
 };
 
@@ -37,7 +41,15 @@ const loadSdk = () => {
   return sdkPromise;
 };
 
-export const SpotifyPlayer = ({ uri, onEnded, onPausedChange, onError, handle }: Props) => {
+export const SpotifyPlayer = ({
+  uri,
+  onEnded,
+  onPausedChange,
+  onError,
+  onDeviceChange,
+  takeover,
+  handle,
+}: Props) => {
   const playerRef = useRef<Spotify.Player | null>(null);
   const [deviceId, setDeviceId] = useState<string | null>(null);
 
@@ -45,11 +57,16 @@ export const SpotifyPlayer = ({ uri, onEnded, onPausedChange, onError, handle }:
   const onEndedRef = useRef(onEnded);
   const onPausedChangeRef = useRef(onPausedChange);
   const onErrorRef = useRef(onError);
+  const onDeviceChangeRef = useRef(onDeviceChange);
+  const takeoverRef = useRef(takeover);
+  const usedTakeoverRef = useRef<Props['takeover']>(null);
   const currentUriRef = useRef<string | null>(uri);
   const endedUriRef = useRef<string | null>(null);
   onEndedRef.current = onEnded;
   onPausedChangeRef.current = onPausedChange;
   onErrorRef.current = onError;
+  onDeviceChangeRef.current = onDeviceChange;
+  takeoverRef.current = takeover;
   currentUriRef.current = uri;
 
   useImperativeHandle(handle, () => ({
@@ -79,8 +96,14 @@ export const SpotifyPlayer = ({ uri, onEnded, onPausedChange, onError, handle }:
         },
       });
 
-      player.addListener('ready', ({ device_id }) => setDeviceId(device_id));
-      player.addListener('not_ready', () => setDeviceId(null));
+      player.addListener('ready', ({ device_id }) => {
+        setDeviceId(device_id);
+        onDeviceChangeRef.current?.(device_id);
+      });
+      player.addListener('not_ready', () => {
+        setDeviceId(null);
+        onDeviceChangeRef.current?.(null);
+      });
       player.addListener('initialization_error', ({ message }) => onErrorRef.current(message));
       player.addListener('authentication_error', ({ message }) => onErrorRef.current(message));
       player.addListener('account_error', () =>
@@ -129,6 +152,12 @@ export const SpotifyPlayer = ({ uri, onEnded, onPausedChange, onError, handle }:
     let cancelled = false;
 
     const play = async () => {
+      // Used up by this call: a later replay of the song (e.g. after a reconnect) starts from the beginning
+      const pending = takeoverRef.current;
+      const resume =
+        pending && pending !== usedTakeoverRef.current && pending.uri === uri ? pending.positionMs : undefined;
+      usedTakeoverRef.current = pending;
+
       try {
         const token = await queueApi.getSpotifyToken();
         const response = await fetch(
@@ -139,7 +168,7 @@ export const SpotifyPlayer = ({ uri, onEnded, onPausedChange, onError, handle }:
               Authorization: `Bearer ${token}`,
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ uris: [uri] }),
+            body: JSON.stringify({ uris: [uri], ...(resume !== undefined && { position_ms: Math.round(resume) }) }),
           },
         );
 
