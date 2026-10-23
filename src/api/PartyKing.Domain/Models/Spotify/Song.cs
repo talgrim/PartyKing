@@ -11,9 +11,4 @@ public class Song
     public int DurationMs { get; set; }
 
     public string ArtistsDisplay => string.Join(", ", Artists.Select(x => x.Name));
-
-    public string ToDisplayString()
-    {
-        return $"{ArtistsDisplay} - {Name} - {Album.Name}";
-    }
 }
