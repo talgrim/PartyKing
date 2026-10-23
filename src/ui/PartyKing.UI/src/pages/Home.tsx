@@ -1,12 +1,15 @@
 import { ReactNode, useState } from 'react';
 import { Link } from 'react-router-dom';
 import useSWR from 'swr';
-import { sessionPath } from '@/router/constants';
+import { PageNavigation } from '@/components/common/PageNavigation';
+import { ROUTE_PATHS, sessionPath } from '@/router/constants';
+import { useIsAdmin } from '@/service/endpoints/admin/useIsAdmin';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 
 /** Landing page: every session, with a search box that filters by code (or name). */
 export const Home = (): ReactNode => {
   const [search, setSearch] = useState('');
+  const isAdmin = useIsAdmin();
 
   const { data: sessions, error } = useSWR('sessions', sessionsApi.getSessions, {
     refreshInterval: 10000,
@@ -20,6 +23,7 @@ export const Home = (): ReactNode => {
   return (
     <div className="w-full min-h-full bg-slate-800 text-slate-400">
       <div className="max-w-xl mx-auto">
+        {isAdmin && <PageNavigation className="px-2 pt-4" links={[{ to: ROUTE_PATHS.ADMIN, label: 'Admin panel' }]} />}
         <h1 className="px-2 pt-4 text-2xl text-slate-200">Join a party</h1>
 
         <div className="mt-4 mb-2 px-2">

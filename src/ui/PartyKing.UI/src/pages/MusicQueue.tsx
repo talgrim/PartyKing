@@ -77,6 +77,7 @@ export const MusicQueue = (): ReactNode => {
           links={[
             { to: ROUTE_PATHS.HOME, label: 'All sessions' },
             { to: sessionUploadPath(sessionId), label: 'Upload photos' },
+            ...(isAdmin ? [{ to: ROUTE_PATHS.ADMIN, label: 'Admin panel' }] : []),
           ]}
         />
 
