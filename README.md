@@ -129,12 +129,13 @@ Backend jest podzielony na warstwy w stylu Clean Architecture (projekty w `src/a
 | `PartyKing.Application` | `SlideshowService`, `QueueService`, `SpotifyService`, `HostTokenProvider`, konfiguracja, mapowania |
 | `PartyKing.Infrastructure` | Repozytoria (zdjęcia, kolejka, profile Spotify) — baza danych + operacje na plikach |
 | `PartyKing.Infrastructure.Spotify` | Klient Spotify Web API (logowanie, wyszukiwanie, pobieranie utworu) |
+| `PartyKing.Infrastructure.Youtube` | Klient oEmbed YouTube (tytuł, autor, miniatura; sprawdzenie, czy film można osadzić) |
 | `PartyKing.Persistence` | `DbContext`, konfiguracje encji, migracje, dane startowe |
 | `PartyKing.Domain` | Encje, enumy, modele read/write |
 | `PartyKing.Application.Tests` | Testy jednostkowe (xUnit) |
 | `PartyKing.UI` | SPA w React (osobny projekt npm w `src/ui`, poza `.sln`) |
 
-Kierunek zależności: `API → Application → Infrastructure (+ Infrastructure.Spotify) → Persistence → Domain`,
+Kierunek zależności: `API → Application → Infrastructure (+ Infrastructure.Spotify, Infrastructure.Youtube) → Persistence → Domain`,
 przy czym `Contract` jest używany przez `API` i `Application`.
 
 W warstwie danych odczyt jest rozdzielony od zapisu — istnieją dwa konteksty,
@@ -435,8 +436,9 @@ curl -X POST "$API/queue/songs" \
   -d '{ "input": "https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC" }'
 ```
 
-`input` to link lub URI utworu ze Spotify (`spotify:track:...`) albo adres YouTube
-(`youtube.com`, `m.`, `music.`, `youtu.be`). Odpowiedź `200 OK`:
+`input` to link lub URI utworu ze Spotify (`spotify:track:...`) albo adres pojedynczego filmu
+z YouTube (`youtube.com/watch?v=`, `/shorts/`, `/embed/`, `/live/`, `m.`, `music.`, `youtu.be`);
+playlisty, kanały i wyniki wyszukiwania są odrzucane. Odpowiedź `200 OK`:
 
 ```json
 {
@@ -450,8 +452,11 @@ curl -X POST "$API/queue/songs" \
 }
 ```
 
-`source` to enum serializowany jako liczba: `0` = Spotify, `1` = YouTube. Dla YouTube `name`
-to na razie sam adres. Błędy: `400` (nierozpoznane wejście), `404` (nie ma takiego utworu),
+`source` to enum serializowany jako liczba: `0` = Spotify, `1` = YouTube. Dla YouTube `url`
+to znormalizowany adres `https://www.youtube.com/watch?v=<id>`, a `name`, `artists` i `albumArtUrl`
+to tytuł, autor i miniatura z oEmbed (gdy YouTube nie odpowiada, `name` to sam adres). Błędy: `400`
+(nierozpoznane wejście albo właściciel filmu zablokował odtwarzanie poza YouTube), `404` (nie ma
+takiego utworu lub filmu),
 `401` (sesja gospodarza wygasła — musi zalogować się ponownie).
 
 #### `GET /queue/songs`
@@ -504,7 +509,13 @@ frontendu znajduje się w `vite.config.ts`.
   na stronie `/music` (trzeba kliknąć „Start", żeby przeglądarka pozwoliła na dźwięk).
 - Gospodarz to pierwszy zapisany profil Spotify; nie ma wyboru ani wylogowania gospodarza.
   Gdy refresh token wygaśnie, gospodarz musi zalogować się ponownie.
-- Utwory z YouTube są w kolejce tytułowane samym adresem (brak pobierania tytułu).
+- Filmów z wyłączonym osadzaniem (błąd YouTube 101/150) nie da się odtworzyć w aplikacji. Są
+  odrzucane przy dodawaniu do kolejki; jeśli mimo to trafią do odtwarzacza, są pomijane, a
+  powód widać w logu błędów pod odtwarzaczem (widocznym tylko dla admina). Pomijanie kończy się po
+  dwóch niepowodzeniach z rzędu — wtedy trzeba kliknąć „Next song".
+- YouTube nie odtwarza osadzonych filmów (błąd 150), gdy strona jest otwarta z adresu IP, np.
+  `127.0.0.1`; z `localhost` działa. Logowanie do Spotify wymaga `127.0.0.1`, więc lokalnie utwory
+  z YouTube nie zagrają — problem znika po wdrożeniu aplikacji pod prawdziwą domeną.
 - Strona gości nie pokazuje, który utwór aktualnie gra — API tego nie udostępnia.
 - **Adres API jest zahardkodowany** w dwóch miejscach (patrz [Konfiguracja](#konfiguracja))
   zamiast być czytany ze zmiennych środowiskowych.
