@@ -33,6 +33,7 @@ public static class DependencyInjection
 
     private static void RegisterSessions(this IServiceCollection services)
     {
+        services.AddSingleton<IJoinTokenProtector, JoinTokenProtector>();
         services.AddScoped<ISessionService, SessionService>();
     }
 
