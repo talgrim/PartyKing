@@ -34,7 +34,7 @@ public class QueueRepositoryTests : IAsyncLifetime
         {
             await dbContext.Database.MigrateAsync();
 
-            var session = new Session("ABC123", "Party");
+            var session = new Session("ABC123", "Party", "hash");
             _sessionId = session.Id;
             dbContext.Sessions.Add(session);
             await dbContext.SaveChangesAsync();
