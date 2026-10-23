@@ -10,7 +10,9 @@ RUN npm run build
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS api-build
 WORKDIR /src
 COPY src/api/ ./
-RUN dotnet publish PartyKing.API/PartyKing.API.csproj -c Release -o /out /p:UseAppHost=false
+# ReadyToRun precompiles the assemblies so startup needs far less JIT (the shared CPU is throttled hard after a burst)
+RUN dotnet publish PartyKing.API/PartyKing.API.csproj -c Release -o /out -r linux-x64 --self-contained false \
+    /p:UseAppHost=false /p:PublishReadyToRun=true
 
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 RUN apt-get update \
@@ -28,6 +30,8 @@ RUN chmod +x /entrypoint.sh
 # Everything that has to survive a redeploy lives on the /data volume
 ENV ASPNETCORE_ENVIRONMENT=Production \
     ASPNETCORE_URLS=http://127.0.0.1:5000 \
+    # Tiered compilation stays on (hot methods are re-optimized); PGO instrumentation only adds CPU at this traffic
+    DOTNET_TieredPGO=0 \
     ASPNETCORE_WEBROOT=/data/wwwroot \
     PARTYKING_DATABASE_PATH=/data/PartyKing.db \
     DataProtection__KeysDirectory=/data/keys
