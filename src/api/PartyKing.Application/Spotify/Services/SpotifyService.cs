@@ -1,6 +1,7 @@
 ﻿using ErrorOr;
 using Microsoft.AspNetCore.Http;
 using OneOf.Types;
+using PartyKing.Application.Mappings;
 using PartyKing.Contract.V1.Spotify;
 using PartyKing.Domain.Results;
 using PartyKing.Infrastructure.Authorization;
@@ -13,8 +14,9 @@ public interface ISpotifyService
 {
     Uri GetAuthenticationUrl();
     Task<ErrorOr<Success<UserDto>>> AuthenticateByCodeAsync(string code, CancellationToken cancellationToken);
-    Task<ErrorOr<string>> AuthenticateByProfileIdAsync(int id, CancellationToken cancellationToken);
+    Task<ErrorOr<string>> AuthenticateByProfileIdAsync(string id, CancellationToken cancellationToken);
     Task<string> GetCurrentlyPlayingAsync(string accessToken, CancellationToken cancellationToken);
+    Task<ErrorOr<IReadOnlyList<SpotifyTrackDto>>> SearchTracksAsync(string query, CancellationToken cancellationToken);
 }
 
 internal class SpotifyService : ISpotifyService
@@ -23,17 +25,20 @@ internal class SpotifyService : ISpotifyService
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ICookieAuthorizationHandler _cookieAuthorizationHandler;
     private readonly ISpotifyProfilesRepository _spotifyProfilesRepository;
+    private readonly IHostTokenProvider _hostTokenProvider;
 
     public SpotifyService(
         ISpotifyIntegrationClient spotifyClient,
         IHttpContextAccessor httpContextAccessor,
         ICookieAuthorizationHandler cookieAuthorizationHandler,
-        ISpotifyProfilesRepository spotifyProfilesRepository)
+        ISpotifyProfilesRepository spotifyProfilesRepository,
+        IHostTokenProvider hostTokenProvider)
     {
         _spotifyClient = spotifyClient;
         _httpContextAccessor = httpContextAccessor;
         _cookieAuthorizationHandler = cookieAuthorizationHandler;
         _spotifyProfilesRepository = spotifyProfilesRepository;
+        _hostTokenProvider = hostTokenProvider;
     }
 
     public Uri GetAuthenticationUrl()
@@ -58,7 +63,7 @@ internal class SpotifyService : ISpotifyService
         return new Success<UserDto>(user);
     }
 
-    public async Task<ErrorOr<string>> AuthenticateByProfileIdAsync(int id, CancellationToken cancellationToken)
+    public async Task<ErrorOr<string>> AuthenticateByProfileIdAsync(string id, CancellationToken cancellationToken)
     {
         var profileResult = await _spotifyProfilesRepository.GetProfileAsync(id, cancellationToken);
 
@@ -77,6 +82,26 @@ internal class SpotifyService : ISpotifyService
     public Task<string> GetCurrentlyPlayingAsync(string accessToken, CancellationToken cancellationToken)
     {
         return _spotifyClient.GetCurrentlyPlayingAsync(accessToken, cancellationToken);
+    }
+
+    public async Task<ErrorOr<IReadOnlyList<SpotifyTrackDto>>> SearchTracksAsync(
+        string query,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return ErrorOr.Error.Validation(description: "Search query must not be empty");
+        }
+
+        var token = await _hostTokenProvider.GetAccessTokenAsync(cancellationToken);
+        if (token.IsError)
+        {
+            return token.FirstError;
+        }
+
+        var songs = await _spotifyClient.SearchTracksAsync(token.Value, query.Trim(), cancellationToken);
+
+        return songs.Select(x => x.ToDto()).ToList();
     }
 
     private void Authorize(AuthenticationResult result)

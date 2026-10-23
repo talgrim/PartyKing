@@ -1,8 +1,13 @@
-﻿using PartyKing.Contract.V1.Enums;
+using PartyKing.Contract.V1.Enums;
 
 namespace PartyKing.Contract.V1.Queue;
 
-public record SongDataDto(SongSource Source, string? Url, string Name)
-{
-    public static SongDataDto Spotify(string name) => new(SongSource.Spotify, null, name);
-}
+/// <param name="Url">YouTube URL, or Spotify track URI (spotify:track:...).</param>
+public record SongDataDto(
+    int Id,
+    SongSource Source,
+    string Url,
+    string Name,
+    string? Artists,
+    string? AlbumArtUrl,
+    int? DurationMs);

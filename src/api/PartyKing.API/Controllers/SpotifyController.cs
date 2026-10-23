@@ -45,4 +45,22 @@ public class SpotifyController : CoreController
 
         return Ok(result);
     }
+
+    [HttpGet("spotify/tracks")]
+    [ProducesResponseType<IReadOnlyList<SpotifyTrackDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> SearchTracks([FromQuery] string query, CancellationToken cancellationToken)
+    {
+        var result = await _spotifyService.SearchTracksAsync(query, cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>Access token of the logged-in host, used by the browser's Spotify Web Playback SDK.</summary>
+    [HttpGet("spotify/token")]
+    [AuthorizeByCookie]
+    [ProducesResponseType<string>(StatusCodes.Status200OK)]
+    public IActionResult GetAccessToken()
+    {
+        return Ok(GetSpotifyAccessToken());
+    }
 }

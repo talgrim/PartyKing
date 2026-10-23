@@ -1,49 +1,46 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
-using PartyKing.Application.Configuration;
-using PartyKing.Contract.V1.Enums;
+using Microsoft.AspNetCore.Mvc;
+using PartyKing.API.Authorization;
+using PartyKing.Application.Queue.Services;
 using PartyKing.Contract.V1.Queue;
 
 namespace PartyKing.API.Controllers;
 
 public class QueueController : CoreController
 {
-    private bool _switch = false;
+    private readonly IQueueService _queueService;
 
-    private readonly (string Url, string Name)[] _youtubeUrls =
-    [
-        ("https://music.youtube.com/watch?v=nDR-Ex-tATU", "Amazing Horse Extended Version Animation Video"),
-        ("https://www.youtube.com/watch?v=wbby9coDRCk", "Narwhals"),
-        ("https://www.youtube.com/watch?v=zWq65etOM-M", "You are a Pirate Limewire")
-    ];
-
-    public QueueController(IHttpContextAccessor httpContextAccessor) : base(httpContextAccessor)
+    public QueueController(IHttpContextAccessor httpContextAccessor, IQueueService queueService)
+        : base(httpContextAccessor)
     {
+        _queueService = queueService;
     }
 
-    [HttpGet("queue-song")]
+    [HttpPost("queue/songs")]
     [ProducesResponseType<SongDataDto>(StatusCodes.Status200OK)]
-    public Task<IActionResult> QueueSong(string url, CancellationToken cancellationToken)
+    public async Task<IActionResult> QueueSong(
+        [FromBody] EnqueueSongRequest request,
+        CancellationToken cancellationToken)
     {
-        return Task.FromResult<IActionResult>(Ok());
+        var result = await _queueService.EnqueueAsync(request.Input, cancellationToken);
+
+        return result.Match(Ok, Problem);
     }
 
-    [HttpGet("get-next")]
+    [HttpGet("queue/songs")]
+    [ProducesResponseType<IReadOnlyList<SongDataDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetQueue(CancellationToken cancellationToken)
+    {
+        return Ok(await _queueService.GetQueueAsync(cancellationToken));
+    }
+
+    /// <summary>Marks the current song as played and starts the next one. 404 when the queue is empty.</summary>
+    [HttpPost("queue/songs/next")]
+    [AuthorizeByCookie]
     [ProducesResponseType<SongDataDto>(StatusCodes.Status200OK)]
-    public Task<IActionResult> GetNext()
+    public async Task<IActionResult> GetNext(CancellationToken cancellationToken)
     {
-        return Task.FromResult<IActionResult>(Ok(GenerateRandom()));
-    }
+        var result = await _queueService.GetNextAsync(cancellationToken);
 
-    private SongDataDto GenerateRandom()
-    {
-        _switch = !_switch;
-        if (_switch)
-        {
-            var (url, name) = _youtubeUrls[Random.Shared.Next(_youtubeUrls.Length)];
-            return new SongDataDto(SongSource.Youtube, url, name);
-        }
-
-        return SongDataDto.Spotify("Mock name");
+        return result.Match(Ok, Problem);
     }
 }
