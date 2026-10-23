@@ -11,6 +11,8 @@ import { SessionDto } from '@/service/endpoints/sessions/types';
 const errorMessage = (error: unknown) =>
   (error as { message?: string })?.message || 'Something went wrong';
 
+const MIN_PASSWORD_LENGTH = 4;
+
 const inputClass = 'w-full px-2 py-2 border-1 border-gray-700 rounded-sm focus:outline-none';
 const primaryButton = 'px-3 py-2 bg-amber-600 text-slate-200 rounded-md cursor-pointer disabled:opacity-50';
 const secondaryButton = 'px-2 py-1 bg-slate-900 rounded-md cursor-pointer disabled:opacity-50';
@@ -88,6 +90,7 @@ const LoginForm = ({ onLoggedIn }: { onLoggedIn: () => void }): ReactNode => {
 
 const Sessions = ({ onLoggedOut }: { onLoggedOut: () => void }): ReactNode => {
   const [name, setName] = useState('');
+  const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -113,8 +116,21 @@ const Sessions = ({ onLoggedOut }: { onLoggedOut: () => void }): ReactNode => {
 
   const create = async (e: FormEvent) => {
     e.preventDefault();
-    await run(() => adminApi.createSession(name.trim()), 'Session created');
+    await run(() => adminApi.createSession(name.trim(), password), 'Session created');
     setName('');
+    setPassword('');
+  };
+
+  const changePassword = (session: SessionDto) => {
+    const next = window.prompt(`New password for “${session.name}” (at least ${MIN_PASSWORD_LENGTH} characters)`);
+    if (next === null) {
+      return;
+    }
+    if (next.length < MIN_PASSWORD_LENGTH) {
+      setMessage(`The password must be at least ${MIN_PASSWORD_LENGTH} characters`);
+      return;
+    }
+    void run(() => adminApi.changeSessionPassword(session.id, next), 'Password changed');
   };
 
   const rename = (session: SessionDto) => {
@@ -148,7 +164,7 @@ const Sessions = ({ onLoggedOut }: { onLoggedOut: () => void }): ReactNode => {
 
   return (
     <>
-      <form className="flex gap-2 mt-4 px-2" onSubmit={create}>
+      <form className="flex flex-wrap gap-2 mt-4 px-2" onSubmit={create}>
         <input
           className={inputClass}
           value={name}
@@ -157,7 +173,23 @@ const Sessions = ({ onLoggedOut }: { onLoggedOut: () => void }): ReactNode => {
           aria-label="New session name"
           maxLength={60}
         />
-        <button type="submit" disabled={busy} className={`${primaryButton} shrink-0`}>
+        <input
+          className={inputClass}
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Session password"
+          autoComplete="new-password"
+          aria-label="New session password"
+          minLength={MIN_PASSWORD_LENGTH}
+          maxLength={100}
+          required
+        />
+        <button
+          type="submit"
+          disabled={busy || password.length < MIN_PASSWORD_LENGTH}
+          className={`${primaryButton} shrink-0`}
+        >
           Create session
         </button>
       </form>
@@ -182,6 +214,9 @@ const Sessions = ({ onLoggedOut }: { onLoggedOut: () => void }): ReactNode => {
               </button>
               <button className={secondaryButton} disabled={busy} onClick={() => rename(session)}>
                 Rename
+              </button>
+              <button className={secondaryButton} disabled={busy} onClick={() => changePassword(session)}>
+                Change password
               </button>
               {session.hasHost && (
                 <button className={secondaryButton} disabled={busy} onClick={() => release(session)}>

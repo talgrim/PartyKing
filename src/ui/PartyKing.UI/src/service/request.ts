@@ -10,6 +10,8 @@ const configureAxios = (
   baseUrl = envVariables.apiUrl,
 ) => {
   axios.defaults.baseURL = baseUrl;
+  // Session calls need the cookie that remembers the entered session password (cross-origin in dev)
+  axios.defaults.withCredentials = true;
   axios.defaults.headers.common['Accept'] = 'application/json';
   axios.defaults.headers.common['Content-Type'] = 'application/json';
   axios.defaults.validateStatus = (status) => {

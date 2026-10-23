@@ -10,6 +10,13 @@ export const sessionsApi = {
   getSession: (sessionId: string) =>
     unwrap<SessionDto>(axios.get(`/sessions/${sessionId}`)),
 
+  /**
+   * Checks the session password and unlocks the session for this browser (a cookie). Rejects with status 401 for a
+   * wrong password, and also for an unknown session.
+   */
+  join: (sessionId: string, password: string) =>
+    unwrap<void>(axios.post(`/sessions/${sessionId}/join`, { password }, { withCredentials: true })),
+
   /** What the logged-in visitor (host or admin, if any) may do in the session. */
   getViewerRole: (sessionId: string) =>
     unwrap<ViewerRoleDto>(axios.get(`/sessions/${sessionId}/me`, { withCredentials: true })),
