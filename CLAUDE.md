@@ -12,7 +12,7 @@ Backend (run from repo root):
 - Build: `dotnet build PartyKing.sln`
 - Run everything (API + UI via Aspire): `dotnet run --project PartyKing.AppHost`
 - Run the API only: `dotnet run --project PartyKing.API` (the `http` launch profile binds to `http://localhost:4200`)
-- Add an EF migration: `dotnet ef migrations add <Name> --project PartyKing.Persistence --startup-project PartyKing.API --context WriterDbContext`
+- Add an EF migration: `dotnet ef migrations add <Name> --project PartyKing.Persistence --startup-project PartyKing.Persistence --context WriterDbContext`
 - Migrations are applied automatically at API startup (`MigrateDb()` in `Program.cs`). The SQLite file is `PartyKing.db`, relative to the working directory.
 - `PartyKing.API/PartyKing.http` has sample requests.
 
@@ -53,3 +53,4 @@ Frontend (`PartyKing.UI/src`):
 - Stick to the Clean Architecture.
 - Commits follow the Conventional Commits format.
 - REST: Plural nouns
+- Use subagent Explore for codebase exploration
