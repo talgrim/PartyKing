@@ -29,7 +29,7 @@ public class AuthorizationMetricsTests
     [Fact]
     public void Records_granted_outcome_with_component()
     {
-        var tags = Assert.Single(Capture(m => m.RecordDuration("RequireSessionAccess", AuthorizationMetrics.Start(), true)));
+        var tags = Assert.Single(Capture(m => m.RecordDuration("RequireSessionAccess", 0, true)));
 
         Assert.Equal("RequireSessionAccess", tags["component"]);
         Assert.Equal(AuthorizationMetrics.GrantedOutcome, tags["outcome"]);
@@ -38,7 +38,7 @@ public class AuthorizationMetricsTests
     [Fact]
     public void Records_denied_outcome_for_failed_authentication()
     {
-        var tags = Assert.Single(Capture(m => m.RecordDuration("CustomCookie", AuthorizationMetrics.Start(), false)));
+        var tags = Assert.Single(Capture(m => m.RecordDuration("CustomCookie", 0, false)));
 
         Assert.Equal("CustomCookie", tags["component"]);
         Assert.Equal(AuthorizationMetrics.DeniedOutcome, tags["outcome"]);
