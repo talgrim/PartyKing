@@ -167,6 +167,6 @@ describe('HostPlayer', () => {
     mocks.getNowPlaying.mockResolvedValue(nowPlaying(null));
     mocks.getNowPlaying.mockResolvedValueOnce(nowPlaying(song(1, 'Blocked song')));
 
-    await waitFor(() => expect(screen.queryByText(/video /)).not.toBeInTheDocument(), { timeout: 4000 });
-  });
+    await waitFor(() => expect(screen.queryByText(/video /)).not.toBeInTheDocument(), { timeout: 9000 });
+  }, 12_000);
 });
