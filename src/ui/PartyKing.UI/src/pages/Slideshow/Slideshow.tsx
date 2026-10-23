@@ -64,7 +64,7 @@ export const Slideshow = () => {
         className="fixed top-2 right-2 z-10 opacity-30 hover:opacity-100"
         links={[
           {to: ROUTE_PATHS.IMAGE_UPLOADER, label: 'Upload photos'},
-          {to: ROUTE_PATHS.MUSIC_QUEUE, label: 'Music queue'},
+          {to: ROUTE_PATHS.HOME, label: 'Sessions'},
         ]}
       />
       <div className="photos-slideshow">

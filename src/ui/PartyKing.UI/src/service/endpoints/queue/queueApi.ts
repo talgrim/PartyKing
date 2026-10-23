@@ -7,18 +7,22 @@ const unwrap = <T>(promise: Promise<unknown>) => promise as Promise<T>;
 const withCredentials = { withCredentials: true };
 
 export const queueApi = {
-  getQueue: () => unwrap<SongDto[]>(axios.get('/queue/songs')),
+  getQueue: (sessionId: string) =>
+    unwrap<SongDto[]>(axios.get(`/sessions/${sessionId}/songs`)),
 
-  enqueue: (input: string) =>
-    unwrap<SongDto>(axios.post('/queue/songs', { input })),
+  enqueue: (sessionId: string, input: string) =>
+    unwrap<SongDto>(axios.post(`/sessions/${sessionId}/songs`, { input })),
 
-  /** Host only. Marks the current song as played and starts the next; rejects with status 404 when the queue is empty. */
-  next: () =>
-    unwrap<SongDto>(axios.post('/queue/songs/next', null, withCredentials)),
+  /**
+   * Host only. Marks the current song as played and starts the next; rejects with status 404 when the queue is
+   * empty and 403 when the logged-in account is not the host of the session.
+   */
+  next: (sessionId: string) =>
+    unwrap<SongDto>(axios.post(`/sessions/${sessionId}/songs/next`, null, withCredentials)),
 
-  searchSpotify: (query: string) =>
+  searchSpotify: (sessionId: string, query: string) =>
     unwrap<SpotifyTrackDto[]>(
-      axios.get('/spotify/tracks', { params: { query } }),
+      axios.get(`/sessions/${sessionId}/tracks`, { params: { query } }),
     ),
 
   /** Host only. Access token for the Spotify Web Playback SDK. */

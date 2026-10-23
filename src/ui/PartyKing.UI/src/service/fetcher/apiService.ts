@@ -5,12 +5,6 @@ import envVariables from "@/envVariables";
 export const SERVICE_ENDPOINT = {
     Spotify: () => {
         return {
-            currentlyPlaying: {
-                GET: `/currently-playing`,
-            },
-            authUrl: {
-                GET: `/auth-url`,
-            },
             authenticate: {
                 POST: `/authenticate`
             }

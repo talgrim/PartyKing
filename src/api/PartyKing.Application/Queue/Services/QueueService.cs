@@ -12,9 +12,11 @@ namespace PartyKing.Application.Queue.Services;
 
 public interface IQueueService
 {
-    Task<ErrorOr<SongDataDto>> EnqueueAsync(string? input, CancellationToken cancellationToken);
-    Task<IReadOnlyList<SongDataDto>> GetQueueAsync(CancellationToken cancellationToken);
-    Task<ErrorOr<SongDataDto>> GetNextAsync(CancellationToken cancellationToken);
+    Task<ErrorOr<SongDataDto>> EnqueueAsync(Guid sessionId, string? input, CancellationToken cancellationToken);
+    Task<ErrorOr<IReadOnlyList<SongDataDto>>> GetQueueAsync(Guid sessionId, CancellationToken cancellationToken);
+
+    /// <summary>Host only: forbidden unless <paramref name="hostProfileId"/> hosts the session.</summary>
+    Task<ErrorOr<SongDataDto>> GetNextAsync(Guid sessionId, string hostProfileId, CancellationToken cancellationToken);
 }
 
 internal class QueueService : IQueueService
@@ -22,25 +24,38 @@ internal class QueueService : IQueueService
     private readonly IQueueRepository _queueRepository;
     private readonly ISpotifyIntegrationClient _spotifyClient;
     private readonly IHostTokenProvider _hostTokenProvider;
+    private readonly ISessionsRepository _sessionsRepository;
 
     public QueueService(
         IQueueRepository queueRepository,
+        ISessionsRepository sessionsRepository,
         ISpotifyIntegrationClient spotifyClient,
         IHostTokenProvider hostTokenProvider)
     {
         _queueRepository = queueRepository;
+        _sessionsRepository = sessionsRepository;
         _spotifyClient = spotifyClient;
         _hostTokenProvider = hostTokenProvider;
     }
 
-    public async Task<ErrorOr<SongDataDto>> EnqueueAsync(string? input, CancellationToken cancellationToken)
+    public async Task<ErrorOr<SongDataDto>> EnqueueAsync(
+        Guid sessionId,
+        string? input,
+        CancellationToken cancellationToken)
     {
+        var session = await _sessionsRepository.GetAsync(sessionId, cancellationToken);
+        if (session is null)
+        {
+            return SessionNotFound();
+        }
+
         var parsed = SongInputParser.Parse(input);
 
         ErrorOr<QueueItem> item = parsed switch
         {
-            SpotifyTrackInput spotify => await CreateSpotifyItemAsync(spotify.TrackId, cancellationToken),
-            YoutubeInput youtube => new QueueItem(QueueItemSource.Youtube, youtube.Url, youtube.Url, null, null, null),
+            SpotifyTrackInput spotify => await CreateSpotifyItemAsync(sessionId, spotify.TrackId, cancellationToken),
+            YoutubeInput youtube => new QueueItem(
+                sessionId, QueueItemSource.Youtube, youtube.Url, youtube.Url, null, null, null),
             _ => Error.Validation(
                 description: "Expected a YouTube URL, a Spotify track link or a spotify:track: URI")
         };
@@ -55,16 +70,37 @@ internal class QueueService : IQueueService
         return saved.ToDto();
     }
 
-    public async Task<IReadOnlyList<SongDataDto>> GetQueueAsync(CancellationToken cancellationToken)
+    public async Task<ErrorOr<IReadOnlyList<SongDataDto>>> GetQueueAsync(
+        Guid sessionId,
+        CancellationToken cancellationToken)
     {
-        var items = await _queueRepository.GetPendingAsync(cancellationToken);
+        if (await _sessionsRepository.GetAsync(sessionId, cancellationToken) is null)
+        {
+            return SessionNotFound();
+        }
+
+        var items = await _queueRepository.GetPendingAsync(sessionId, cancellationToken);
 
         return items.Select(x => x.ToDto()).ToList();
     }
 
-    public async Task<ErrorOr<SongDataDto>> GetNextAsync(CancellationToken cancellationToken)
+    public async Task<ErrorOr<SongDataDto>> GetNextAsync(
+        Guid sessionId,
+        string hostProfileId,
+        CancellationToken cancellationToken)
     {
-        var next = await _queueRepository.AdvanceAsync(cancellationToken);
+        var session = await _sessionsRepository.GetAsync(sessionId, cancellationToken);
+        if (session is null)
+        {
+            return SessionNotFound();
+        }
+
+        if (session.HostProfileId != hostProfileId)
+        {
+            return Error.Forbidden(description: "Only the host of this session can advance its queue");
+        }
+
+        var next = await _queueRepository.AdvanceAsync(sessionId, cancellationToken);
 
         if (next is null)
         {
@@ -74,9 +110,14 @@ internal class QueueService : IQueueService
         return next.ToDto();
     }
 
-    private async Task<ErrorOr<QueueItem>> CreateSpotifyItemAsync(string trackId, CancellationToken cancellationToken)
+    private static Error SessionNotFound() => Error.NotFound(description: "The session was not found");
+
+    private async Task<ErrorOr<QueueItem>> CreateSpotifyItemAsync(
+        Guid sessionId,
+        string trackId,
+        CancellationToken cancellationToken)
     {
-        var token = await _hostTokenProvider.GetAccessTokenAsync(cancellationToken);
+        var token = await _hostTokenProvider.GetSessionAccessTokenAsync(sessionId, cancellationToken);
         if (token.IsError)
         {
             return token.FirstError;
@@ -89,6 +130,6 @@ internal class QueueService : IQueueService
             return Error.NotFound(description: "Spotify track was not found");
         }
 
-        return song.ToQueueItem();
+        return song.ToQueueItem(sessionId);
     }
 }

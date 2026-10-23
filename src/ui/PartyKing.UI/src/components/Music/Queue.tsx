@@ -4,22 +4,21 @@ import { looksLikeSongLink, queueApi } from '@/service/endpoints/queue/queueApi'
 import { SongDto, SpotifyTrackDto } from '@/service/endpoints/queue/types';
 
 type Props = {
+  sessionId: string;
   /** Id of the song that is playing right now; it is shown separately from the "up next" list. */
   currentSongId?: number;
 };
 
 const errorMessage = (error: unknown) =>
-  (error as { title?: string; message?: string })?.message ||
-  (error as { title?: string })?.title ||
-  'Something went wrong';
+  (error as { message?: string })?.message || 'Something went wrong';
 
-export const Queue = ({ currentSongId }: Props): ReactNode => {
+export const Queue = ({ sessionId, currentSongId }: Props): ReactNode => {
   const [input, setInput] = useState('');
   const [results, setResults] = useState<SpotifyTrackDto[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  const { data: queue, mutate } = useSWR<SongDto[]>('queue-songs', queueApi.getQueue, {
+  const { data: queue, mutate } = useSWR<SongDto[]>(['queue-songs', sessionId], () => queueApi.getQueue(sessionId), {
     refreshInterval: 3000,
   });
 
@@ -28,7 +27,7 @@ export const Queue = ({ currentSongId }: Props): ReactNode => {
   const enqueue = async (value: string) => {
     setBusy(true);
     try {
-      await queueApi.enqueue(value);
+      await queueApi.enqueue(sessionId, value);
       setMessage('Added to the queue');
       setInput('');
       setResults([]);
@@ -52,7 +51,7 @@ export const Queue = ({ currentSongId }: Props): ReactNode => {
 
     setBusy(true);
     try {
-      const tracks = await queueApi.searchSpotify(value);
+      const tracks = await queueApi.searchSpotify(sessionId, value);
       setResults(tracks);
       setMessage(tracks.length === 0 ? 'No songs found' : null);
     } catch (error) {

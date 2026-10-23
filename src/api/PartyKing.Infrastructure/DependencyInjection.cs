@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PartyKing.Infrastructure.Authorization;
 using PartyKing.Infrastructure.Repositories;
@@ -34,6 +34,9 @@ public static class DependencyInjection
         services.AddSingleton<ISlideshowImagesRepository, SlideshowImagesRepository>();
         services.AddSingleton<ISpotifyProfilesRepository, SpotifyProfilesRepository>();
         services.AddSingleton<IQueueRepository, QueueRepository>();
+        services.AddSingleton<ISessionsRepository, SessionsRepository>();
+        services.AddSingleton<IOAuthStatesRepository, OAuthStatesRepository>();
+        services.AddSingleton<IAdminAccountsRepository, AdminAccountsRepository>();
     }
 
     private static void AddAuthorization(this IServiceCollection services)

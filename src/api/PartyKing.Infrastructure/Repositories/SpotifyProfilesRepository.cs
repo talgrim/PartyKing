@@ -1,4 +1,4 @@
-﻿using ErrorOr;
+using ErrorOr;
 using Microsoft.EntityFrameworkCore;
 using PartyKing.Domain.Entities;
 using PartyKing.Domain.Results;
@@ -10,7 +10,6 @@ public interface ISpotifyProfilesRepository
 {
     Task CreateProfileAsync(AuthenticationResult result, CancellationToken cancellationToken);
     Task<ErrorOr<SpotifyProfile>> GetProfileAsync(string id, CancellationToken cancellationToken);
-    Task<ErrorOr<SpotifyProfile>> GetHostProfileAsync(CancellationToken cancellationToken);
 }
 
 internal class SpotifyProfilesRepository : ISpotifyProfilesRepository
@@ -38,11 +37,13 @@ internal class SpotifyProfilesRepository : ISpotifyProfilesRepository
         {
             // Re-login: replace the stored token, the old one may have been revoked or expired
             existing.UpdateRefreshToken(result.RefreshToken);
+            existing.UpdateDisplayName(result.DisplayName);
             await dbContext.SaveChangesAsync(cancellationToken);
             return;
         }
 
         var profile = SpotifyProfile.Create(profileId, result.RefreshToken);
+        profile.UpdateDisplayName(result.DisplayName);
 
         await dbContext.SpotifyProfiles.AddAsync(profile, cancellationToken);
 
@@ -58,21 +59,6 @@ internal class SpotifyProfilesRepository : ISpotifyProfilesRepository
         if (profile is null)
         {
             return Error.NotFound(description: $"Profile with ID {id} was not found in the database");
-        }
-
-        return profile;
-    }
-
-    /// <summary>The party has a single Spotify host account; this returns the stored profile.</summary>
-    public async Task<ErrorOr<SpotifyProfile>> GetHostProfileAsync(CancellationToken cancellationToken)
-    {
-        await using var dbContext = await _readerDbContextFactory.CreateDbContextAsync(cancellationToken);
-
-        var profile = await dbContext.SpotifyProfiles.FirstOrDefaultAsync(cancellationToken);
-
-        if (profile is null)
-        {
-            return Error.NotFound(description: "No Spotify host has logged in yet");
         }
 
         return profile;

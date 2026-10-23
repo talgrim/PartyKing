@@ -15,31 +15,37 @@ public class QueueController : CoreController
         _queueService = queueService;
     }
 
-    [HttpPost("queue/songs")]
+    [HttpPost("sessions/{sessionId:guid}/songs")]
     [ProducesResponseType<SongDataDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> QueueSong(
+        Guid sessionId,
         [FromBody] EnqueueSongRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _queueService.EnqueueAsync(request.Input, cancellationToken);
+        var result = await _queueService.EnqueueAsync(sessionId, request.Input, cancellationToken);
 
         return result.Match(Ok, Problem);
     }
 
-    [HttpGet("queue/songs")]
+    [HttpGet("sessions/{sessionId:guid}/songs")]
     [ProducesResponseType<IReadOnlyList<SongDataDto>>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetQueue(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetQueue(Guid sessionId, CancellationToken cancellationToken)
     {
-        return Ok(await _queueService.GetQueueAsync(cancellationToken));
+        var result = await _queueService.GetQueueAsync(sessionId, cancellationToken);
+
+        return result.Match(Ok, Problem);
     }
 
-    /// <summary>Marks the current song as played and starts the next one. 404 when the queue is empty.</summary>
-    [HttpPost("queue/songs/next")]
+    /// <summary>
+    /// Marks the current song as played and starts the next one. Only the session's host may call it.
+    /// 404 when the queue is empty.
+    /// </summary>
+    [HttpPost("sessions/{sessionId:guid}/songs/next")]
     [AuthorizeByCookie]
     [ProducesResponseType<SongDataDto>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetNext(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetNext(Guid sessionId, CancellationToken cancellationToken)
     {
-        var result = await _queueService.GetNextAsync(cancellationToken);
+        var result = await _queueService.GetNextAsync(sessionId, GetProfileId(), cancellationToken);
 
         return result.Match(Ok, Problem);
     }

@@ -14,6 +14,11 @@ public class QueueItemConfiguration : IEntityTypeConfiguration<QueueItem>
         builder.Property(x => x.Status).HasConversion<string>();
         builder.Property(x => x.Url).IsRequired();
         builder.Property(x => x.Title).IsRequired();
-        builder.HasIndex(x => x.Status);
+        builder.HasIndex(x => new { x.SessionId, x.Status });
+        builder
+            .HasOne<Session>()
+            .WithMany()
+            .HasForeignKey(x => x.SessionId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

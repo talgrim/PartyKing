@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using ErrorOr;
 using Microsoft.Extensions.DependencyInjection;
 using PartyKing.Application.System;
@@ -9,12 +10,13 @@ using SpotifyAPI.Web;
 namespace PartyKing.Application.Spotify.Services;
 
 /// <summary>
-/// Provides a Spotify access token for the host account, so guests (who aren't logged in) can search
-/// and queue Spotify songs. The token is cached until shortly before it expires.
+/// Provides a Spotify access token for a session's host account, so guests (who aren't logged in) can search
+/// and queue Spotify songs. Tokens are cached per host until shortly before they expire.
 /// </summary>
 public interface IHostTokenProvider
 {
-    Task<ErrorOr<string>> GetAccessTokenAsync(CancellationToken cancellationToken);
+    Task<ErrorOr<string>> GetSessionAccessTokenAsync(Guid sessionId, CancellationToken cancellationToken);
+    Task<ErrorOr<string>> GetAccessTokenAsync(string profileId, CancellationToken cancellationToken);
 }
 
 internal class HostTokenProvider : IHostTokenProvider
@@ -23,33 +25,52 @@ internal class HostTokenProvider : IHostTokenProvider
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ISpotifyProfilesRepository _profilesRepository;
+    private readonly ISessionsRepository _sessionsRepository;
     private readonly IDateTimeProvider _dateTimeProvider;
-    private readonly SemaphoreSlim _lock = new(1, 1);
-
-    private string? _accessToken;
-    private DateTimeOffset _expiresAt;
+    private readonly ConcurrentDictionary<string, CachedToken> _tokens = new();
 
     public HostTokenProvider(
         IServiceScopeFactory scopeFactory,
         ISpotifyProfilesRepository profilesRepository,
+        ISessionsRepository sessionsRepository,
         IDateTimeProvider dateTimeProvider)
     {
         _scopeFactory = scopeFactory;
         _profilesRepository = profilesRepository;
+        _sessionsRepository = sessionsRepository;
         _dateTimeProvider = dateTimeProvider;
     }
 
-    public async Task<ErrorOr<string>> GetAccessTokenAsync(CancellationToken cancellationToken)
+    public async Task<ErrorOr<string>> GetSessionAccessTokenAsync(Guid sessionId, CancellationToken cancellationToken)
     {
-        await _lock.WaitAsync(cancellationToken);
+        var session = await _sessionsRepository.GetAsync(sessionId, cancellationToken);
+
+        if (session is null)
+        {
+            return Error.NotFound(description: "The session was not found");
+        }
+
+        if (session.HostProfileId is null)
+        {
+            return Error.Conflict(description: "The session has no host yet");
+        }
+
+        return await GetAccessTokenAsync(session.HostProfileId, cancellationToken);
+    }
+
+    public async Task<ErrorOr<string>> GetAccessTokenAsync(string profileId, CancellationToken cancellationToken)
+    {
+        var cached = _tokens.GetOrAdd(profileId, _ => new CachedToken());
+
+        await cached.Lock.WaitAsync(cancellationToken);
         try
         {
-            if (_accessToken is not null && _dateTimeProvider.UtcNow < _expiresAt)
+            if (cached.AccessToken is not null && _dateTimeProvider.UtcNow < cached.ExpiresAt)
             {
-                return _accessToken;
+                return cached.AccessToken;
             }
 
-            var profile = await _profilesRepository.GetHostProfileAsync(cancellationToken);
+            var profile = await _profilesRepository.GetProfileAsync(profileId, cancellationToken);
             if (profile.IsError)
             {
                 return profile.FirstError;
@@ -68,14 +89,21 @@ internal class HostTokenProvider : IHostTokenProvider
                 return Error.Unauthorized(description: "The Spotify host session expired. The host must log in again");
             }
 
-            _accessToken = result.AccessToken;
-            _expiresAt = _dateTimeProvider.UtcNow.AddSeconds(result.ExpiresIn) - ExpirationMargin;
+            cached.AccessToken = result.AccessToken;
+            cached.ExpiresAt = _dateTimeProvider.UtcNow.AddSeconds(result.ExpiresIn) - ExpirationMargin;
 
-            return _accessToken;
+            return cached.AccessToken;
         }
         finally
         {
-            _lock.Release();
+            cached.Lock.Release();
         }
+    }
+
+    private sealed class CachedToken
+    {
+        public SemaphoreSlim Lock { get; } = new(1, 1);
+        public string? AccessToken { get; set; }
+        public DateTimeOffset ExpiresAt { get; set; }
     }
 }

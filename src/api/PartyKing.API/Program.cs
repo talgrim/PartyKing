@@ -1,6 +1,15 @@
+using System.Threading.RateLimiting;
 using Microsoft.Extensions.FileProviders;
 using PartyKing.API;
+using PartyKing.API.Controllers;
+using PartyKing.Application;
 using PartyKing.Infrastructure;
+
+// `dotnet run --project PartyKing.API -- hash-password [password]` prints a hash for AdminSettings:PasswordHash
+if (args is ["hash-password", ..])
+{
+    return PasswordHashTool.Run(args.Skip(1).ToArray());
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +26,19 @@ builder.Services.AddCors(options => options.AddPolicy("CorsPolicy", policy =>
         .SetIsOriginAllowed(_ => true)
         .AllowCredentials();
 }));
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy(AdminController.LoginRateLimitPolicy, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1)
+            }));
+});
 
 builder.Services.AddControllers();
 
@@ -35,6 +57,7 @@ app
     .UseHttpsRedirection()
     .UseRouting()
     .UseCors("CorsPolicy")
+    .UseRateLimiter()
     .UseAuthentication()
     .UseAuthorization()
     .UseExceptionHandler("/error")
@@ -43,5 +66,8 @@ app
 app.MapControllers();
 
 await app.Services.MigrateDb();
+await app.Services.SeedAdminAsync();
 
 app.Run();
+
+return 0;

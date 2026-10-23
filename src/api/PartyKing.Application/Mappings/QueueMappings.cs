@@ -23,9 +23,10 @@ public static class QueueMappings
             item.DurationMs);
     }
 
-    public static QueueItem ToQueueItem(this Song song)
+    public static QueueItem ToQueueItem(this Song song, Guid sessionId)
     {
         return new QueueItem(
+            sessionId,
             QueueItemSource.Spotify,
             song.Uri,
             song.Name,
