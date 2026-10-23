@@ -1,9 +1,26 @@
 /// <reference types="vitest" />
-import { defineConfig } from 'vite';
+import { defineConfig, Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import tsConfigPaths from 'vite-tsconfig-paths';
 import tailwindcss from '@tailwindcss/vite';
 
+
+// The API and the Spotify login redirect use 127.0.0.1. A page opened via `localhost` is a different site for the
+// browser, so the SameSite=Lax login cookies never reach the API. Send `localhost` visitors to 127.0.0.1.
+const redirectLocalhostToLoopbackIp = (): Plugin => ({
+  name: 'redirect-localhost-to-127.0.0.1',
+  configureServer: (server) => {
+    server.middlewares.use((req, res, next) => {
+      const host = req.headers.host ?? '';
+      if (!/^localhost(:\d+)?$/i.test(host)) {
+        return next();
+      }
+      res.statusCode = 307;
+      res.setHeader('Location', `http://${host.replace(/^localhost/i, '127.0.0.1')}${req.url ?? '/'}`);
+      res.end();
+    });
+  },
+});
 
 // https://vitejs.dev/config/
 // eslint-disable-next-line import/no-default-export
@@ -15,7 +32,7 @@ export default defineConfig({
       usePolling: true // Fix for HMR between WSL2 and windows
     }
   },
-  plugins: [tailwindcss(), tsConfigPaths(), react()],
+  plugins: [redirectLocalhostToLoopbackIp(), tailwindcss(), tsConfigPaths(), react()],
   build: {
     sourcemap: true,
   },
