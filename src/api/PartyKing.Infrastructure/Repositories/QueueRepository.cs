@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using PartyKing.Domain.Entities;
 using PartyKing.Domain.Enums;
@@ -8,15 +9,15 @@ namespace PartyKing.Infrastructure.Repositories;
 public interface IQueueRepository
 {
     Task<QueueItem> AddAsync(QueueItem item, CancellationToken cancellationToken);
-    Task<IReadOnlyList<QueueItem>> GetPendingAsync(CancellationToken cancellationToken);
-    Task<QueueItem?> AdvanceAsync(CancellationToken cancellationToken);
+    Task<IReadOnlyList<QueueItem>> GetPendingAsync(Guid sessionId, CancellationToken cancellationToken);
+    Task<QueueItem?> AdvanceAsync(Guid sessionId, CancellationToken cancellationToken);
 }
 
 internal class QueueRepository : IQueueRepository
 {
     private readonly IDbContextFactory<ReaderDbContext> _readerDbContextFactory;
     private readonly IDbContextFactory<WriterDbContext> _writerDbContextFactory;
-    private readonly SemaphoreSlim _advanceLock = new(1, 1);
+    private readonly ConcurrentDictionary<Guid, SemaphoreSlim> _advanceLocks = new();
 
     public QueueRepository(
         IDbContextFactory<ReaderDbContext> readerDbContextFactory,
@@ -36,27 +37,29 @@ internal class QueueRepository : IQueueRepository
         return item;
     }
 
-    public async Task<IReadOnlyList<QueueItem>> GetPendingAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<QueueItem>> GetPendingAsync(Guid sessionId, CancellationToken cancellationToken)
     {
         await using var dbContext = await _readerDbContextFactory.CreateDbContextAsync(cancellationToken);
 
         return await dbContext.QueueItems
             .AsNoTracking()
-            .Where(x => x.Status != QueueItemStatus.Played)
+            .Where(x => x.SessionId == sessionId && x.Status != QueueItemStatus.Played)
             .OrderBy(x => x.Id)
             .ToListAsync(cancellationToken);
     }
 
     /// <summary>Marks the current item as played and starts the next queued one, if any.</summary>
-    public async Task<QueueItem?> AdvanceAsync(CancellationToken cancellationToken)
+    public async Task<QueueItem?> AdvanceAsync(Guid sessionId, CancellationToken cancellationToken)
     {
-        await _advanceLock.WaitAsync(cancellationToken);
+        var advanceLock = _advanceLocks.GetOrAdd(sessionId, _ => new SemaphoreSlim(1, 1));
+
+        await advanceLock.WaitAsync(cancellationToken);
         try
         {
             await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
 
             var playing = await dbContext.QueueItems
-                .Where(x => x.Status == QueueItemStatus.Playing)
+                .Where(x => x.SessionId == sessionId && x.Status == QueueItemStatus.Playing)
                 .ToListAsync(cancellationToken);
 
             foreach (var item in playing)
@@ -65,7 +68,7 @@ internal class QueueRepository : IQueueRepository
             }
 
             var next = await dbContext.QueueItems
-                .Where(x => x.Status == QueueItemStatus.Queued)
+                .Where(x => x.SessionId == sessionId && x.Status == QueueItemStatus.Queued)
                 .OrderBy(x => x.Id)
                 .FirstOrDefaultAsync(cancellationToken);
 
@@ -80,7 +83,7 @@ internal class QueueRepository : IQueueRepository
         }
         finally
         {
-            _advanceLock.Release();
+            advanceLock.Release();
         }
     }
 }

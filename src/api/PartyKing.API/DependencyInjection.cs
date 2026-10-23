@@ -1,4 +1,4 @@
-﻿using PartyKing.API.Authentication;
+using PartyKing.API.Authentication;
 using PartyKing.API.Authentication.Cookie;
 using PartyKing.Application;
 using PartyKing.Infrastructure;
@@ -12,6 +12,7 @@ public static class DependencyInjection
     public static void RegisterServices(this IServiceCollection services, IConfigurationManager configuration)
     {
         services.AddHttpContextAccessor();
+        services.AddDataProtection();
         services.RegisterApplication(configuration);
         services.RegisterInfrastructure();
         services.RegisterSpotifyInfrastructure(configuration);
@@ -29,12 +30,18 @@ public static class DependencyInjection
     {
         services
             .AddAuthentication()
-            .AddScheme<CookieAuthenticationOptions, CookieAuthenticationHandler>(Constants.Scheme, null);
+            .AddScheme<CookieAuthenticationOptions, CookieAuthenticationHandler>(Constants.Scheme, null)
+            .AddScheme<CookieAuthenticationOptions, AdminCookieAuthenticationHandler>(Constants.AdminScheme, null);
 
         services
             .AddAuthorizationBuilder()
             .AddPolicy(Policies.AuthenticatedUser, policy =>
             {
+                policy.RequireAuthenticatedUser();
+            })
+            .AddPolicy(Policies.Admin, policy =>
+            {
+                policy.AddAuthenticationSchemes(Constants.AdminScheme);
                 policy.RequireAuthenticatedUser();
             });
     }

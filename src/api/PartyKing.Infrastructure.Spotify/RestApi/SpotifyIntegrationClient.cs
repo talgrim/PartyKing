@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PartyKing.Application.Configuration;
 using PartyKing.Domain.Models.Spotify;
@@ -10,7 +10,7 @@ namespace PartyKing.Infrastructure.Spotify.RestApi;
 
 public interface ISpotifyIntegrationClient
 {
-    Uri GetAuthenticationUri();
+    Uri GetAuthenticationUri(string state);
     Task<AuthenticationResult> AuthenticateAsync(string code, CancellationToken cancellationToken);
     Task<ReAuthenticationResult> ReAuthenticateAsync(string refreshToken, CancellationToken cancellationToken);
 
@@ -60,11 +60,12 @@ internal class SpotifyIntegrationClient : ISpotifyIntegrationClient
         _logger = logger;
     }
 
-    public Uri GetAuthenticationUri()
+    public Uri GetAuthenticationUri(string state)
     {
         var loginRequest = new LoginRequest(_config.RedirectUri, _config.ClientId, LoginRequest.ResponseType.Code)
         {
             Scope = Scope,
+            State = state,
 #if DEBUG
             ShowDialog = true
 #endif
@@ -81,9 +82,14 @@ internal class SpotifyIntegrationClient : ISpotifyIntegrationClient
 
         var response = await oauth.RequestToken(request, cancellationToken);
 
-        var profileId = await GetProfileIdAsync(response.AccessToken, cancellationToken);
+        var profile = await GetProfileAsync(response.AccessToken, cancellationToken);
 
-        return new AuthenticationResult(profileId, response.AccessToken, response.RefreshToken, response.ExpiresIn);
+        return new AuthenticationResult(
+            profile.Id,
+            string.IsNullOrWhiteSpace(profile.DisplayName) ? profile.Id : profile.DisplayName,
+            response.AccessToken,
+            response.RefreshToken,
+            response.ExpiresIn);
     }
 
     public async Task<ReAuthenticationResult> ReAuthenticateAsync(
@@ -137,12 +143,11 @@ internal class SpotifyIntegrationClient : ISpotifyIntegrationClient
         }
     }
 
-    private async Task<string> GetProfileIdAsync(string accessToken, CancellationToken cancellationToken)
+    private async Task<PrivateUser> GetProfileAsync(string accessToken, CancellationToken cancellationToken)
     {
         InitializeClientIfNecessary(accessToken);
 
-        var profile = await _client!.UserProfile.Current(cancellationToken);
-        return profile.Id;
+        return await _client!.UserProfile.Current(cancellationToken);
     }
 
     private void InitializeClientIfNecessary(string accessToken)

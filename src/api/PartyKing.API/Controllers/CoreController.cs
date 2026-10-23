@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using ErrorOr;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -34,6 +34,12 @@ public abstract class CoreController : ControllerBase
         return User.Claims.First(x => x.Type == ClaimTypes.Authentication).Value;
     }
 
+    /// <summary>Spotify profile id of the logged-in host, taken from the signed cookie.</summary>
+    protected string GetProfileId()
+    {
+        return User.Claims.First(x => x.Type == ClaimTypes.NameIdentifier).Value;
+    }
+
     protected IActionResult Problem(List<Error> errors)
     {
         if (errors.Count is 0)
@@ -57,6 +63,7 @@ public abstract class CoreController : ControllerBase
             ErrorType.Validation => StatusCodes.Status400BadRequest,
             ErrorType.NotFound => StatusCodes.Status404NotFound,
             ErrorType.Unauthorized => StatusCodes.Status401Unauthorized,
+            ErrorType.Forbidden => StatusCodes.Status403Forbidden,
             _ => StatusCodes.Status500InternalServerError,
         };
 

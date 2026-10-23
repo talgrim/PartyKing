@@ -17,6 +17,47 @@ namespace PartyKing.Persistence.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.8");
 
+            modelBuilder.Entity("PartyKing.Domain.Entities.AdminAccount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Username")
+                        .IsUnique();
+
+                    b.ToTable("AdminAccounts");
+                });
+
+            modelBuilder.Entity("PartyKing.Domain.Entities.OAuthState", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("SessionId");
+
+                    b.ToTable("OAuthStates");
+                });
+
             modelBuilder.Entity("PartyKing.Domain.Entities.QueueItem", b =>
                 {
                     b.Property<int>("Id")
@@ -31,6 +72,9 @@ namespace PartyKing.Persistence.Migrations
 
                     b.Property<int?>("DurationMs")
                         .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Source")
                         .IsRequired()
@@ -50,9 +94,39 @@ namespace PartyKing.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Status");
+                    b.HasIndex("SessionId", "Status");
 
                     b.ToTable("QueueItems");
+                });
+
+            modelBuilder.Entity("PartyKing.Domain.Entities.Session", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("HostProfileId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("HostProfileId")
+                        .IsUnique();
+
+                    b.ToTable("Sessions");
                 });
 
             modelBuilder.Entity("PartyKing.Domain.Entities.SlideshowImage", b =>
@@ -290,6 +364,9 @@ namespace PartyKing.Persistence.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("DisplayName")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("RefreshToken")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -300,6 +377,34 @@ namespace PartyKing.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("SpotifyProfiles");
+                });
+
+            modelBuilder.Entity("PartyKing.Domain.Entities.OAuthState", b =>
+                {
+                    b.HasOne("PartyKing.Domain.Entities.Session", null)
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PartyKing.Domain.Entities.QueueItem", b =>
+                {
+                    b.HasOne("PartyKing.Domain.Entities.Session", null)
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PartyKing.Domain.Entities.Session", b =>
+                {
+                    b.HasOne("PartyKing.Domain.Entities.SpotifyProfile", "HostProfile")
+                        .WithMany()
+                        .HasForeignKey("HostProfileId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("HostProfile");
                 });
 #pragma warning restore 612, 618
         }
