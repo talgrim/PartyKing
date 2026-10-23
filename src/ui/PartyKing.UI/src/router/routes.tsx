@@ -15,8 +15,8 @@ export const routes: RouteObject[] = [
     children: [
       {path: '', element: <Home/>},
       {path: ROUTE_PATHS.CALLBACK, element: <Callback/>},
-      {path: ROUTE_PATHS.SLIDESHOW, element: <Slideshow/>},
-      {path: ROUTE_PATHS.IMAGE_UPLOADER, element: <ImageUploader/>},
+      {path: ROUTE_PATHS.SESSION_SLIDESHOW, element: <Slideshow/>},
+      {path: ROUTE_PATHS.SESSION_UPLOAD, element: <ImageUploader/>},
       {path: ROUTE_PATHS.ADMIN, element: <Admin/>},
       {path: ROUTE_PATHS.SESSION, element: <MusicQueue/>},
     ],

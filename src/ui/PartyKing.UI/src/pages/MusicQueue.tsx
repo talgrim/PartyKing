@@ -8,7 +8,7 @@ import { Queue } from '@/components/Music/Queue';
 import { SessionHeader } from '@/components/Music/SessionHeader';
 import { SessionPasswordForm } from '@/components/Music/SessionPasswordForm';
 import { PageNavigation } from '@/components/common/PageNavigation';
-import { ROUTE_PATHS } from '@/router/constants';
+import { ROUTE_PATHS, sessionSlideshowPath, sessionUploadPath } from '@/router/constants';
 import { HTTP_STATUS_CODE } from '@/service/constants';
 import { useNowPlaying } from '@/service/endpoints/player/useNowPlaying';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
@@ -43,8 +43,8 @@ export const MusicQueue = (): ReactNode => {
           className="px-2 pt-4"
           links={[
             { to: ROUTE_PATHS.HOME, label: 'All sessions' },
-            { to: ROUTE_PATHS.SLIDESHOW, label: 'Slideshow' },
-            { to: ROUTE_PATHS.IMAGE_UPLOADER, label: 'Upload photos' },
+            { to: sessionSlideshowPath(sessionId), label: 'Slideshow' },
+            { to: sessionUploadPath(sessionId), label: 'Upload photos' },
           ]}
         />
 

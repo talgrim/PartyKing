@@ -8,6 +8,8 @@ export const onResponseFulfilled = <T, D>(response: AxiosResponse<T, D>): T => {
 // ASP.NET validation problems carry the readable reason in `errors`, other problems in `title`.
 const readableMessage = (response?: any): string => {
   const data = response?.response?.data;
+  // Some endpoints (photo upload) answer a rejection with a plain text reason
+  if (typeof data === 'string' && data) return data;
   const validationErrors: string[] = Object.values(data?.errors ?? {}).flat() as string[];
 
   return data?.detail || validationErrors[0] || data?.title || response?.message || 'Request failed';
