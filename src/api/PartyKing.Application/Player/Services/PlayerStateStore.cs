@@ -21,6 +21,9 @@ public interface IPlayerStateStore
 
     /// <summary>Queues a command for the player. False when no player is connected to receive it.</summary>
     bool TrySendCommand(Guid sessionId, PlayerCommand command);
+
+    /// <summary>Forgets the session's player, e.g. when the session is deleted or its host released.</summary>
+    void Remove(Guid sessionId);
 }
 
 public sealed class PlayerStateStore : IPlayerStateStore
@@ -83,6 +86,11 @@ public sealed class PlayerStateStore : IPlayerStateStore
             state.PendingCommand = command;
             return true;
         }
+    }
+
+    public void Remove(Guid sessionId)
+    {
+        _states.TryRemove(sessionId, out _);
     }
 
     private bool IsConnected(State state)

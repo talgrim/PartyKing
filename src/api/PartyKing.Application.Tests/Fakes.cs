@@ -1,3 +1,5 @@
+using ErrorOr;
+using PartyKing.Application.Spotify.Services;
 using PartyKing.Application.System;
 using PartyKing.Domain.Entities;
 using PartyKing.Domain.Enums;
@@ -45,9 +47,32 @@ internal class FakeSessionsRepository : ISessionsRepository
 
     public Task<IReadOnlyList<Session>> GetAllAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
     public Task<bool> RenameAsync(Guid id, string name, CancellationToken cancellationToken) => throw new NotSupportedException();
-    public Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken) => throw new NotSupportedException();
+    public Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken) =>
+        Task.FromResult(_sessions.RemoveAll(x => x.Id == id) > 0);
     public Task<SessionClaimResult> TryClaimAsync(Guid id, string profileId, CancellationToken cancellationToken) => throw new NotSupportedException();
-    public Task<bool> ReleaseAsync(Guid id, CancellationToken cancellationToken) => throw new NotSupportedException();
+    public Task<bool> ReleaseAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var session = _sessions.FirstOrDefault(x => x.Id == id);
+        if (session is not null)
+        {
+            session.HostProfileId = null;
+        }
+
+        return Task.FromResult(session is not null);
+    }
+}
+
+internal class FakeHostTokenProvider : IHostTokenProvider
+{
+    public List<string> Invalidated { get; } = [];
+
+    public void Invalidate(string profileId) => Invalidated.Add(profileId);
+
+    public Task<ErrorOr<string>> GetSessionAccessTokenAsync(Guid sessionId, CancellationToken cancellationToken) =>
+        throw new NotSupportedException();
+
+    public Task<ErrorOr<string>> GetAccessTokenAsync(string profileId, CancellationToken cancellationToken) =>
+        throw new NotSupportedException();
 }
 
 internal class FakeQueueRepository : IQueueRepository

@@ -111,4 +111,15 @@ public class PlayerStateStoreTests
         Assert.False(_store.Get(other).Connected);
         Assert.False(_store.TrySendCommand(other, PlayerCommand.Pause));
     }
+
+    [Fact]
+    public void Remove_ForgetsThePlayer()
+    {
+        _store.Report(_sessionId, 5, paused: false);
+
+        _store.Remove(_sessionId);
+
+        Assert.False(_store.Get(_sessionId).Connected);
+        Assert.Null(_store.Get(_sessionId).SongId);
+    }
 }

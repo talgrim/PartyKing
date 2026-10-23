@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using PartyKing.Domain.Entities;
 using PartyKing.Domain.Enums;
@@ -39,7 +38,11 @@ internal class QueueRepository : IQueueRepository
 {
     private readonly IDbContextFactory<ReaderDbContext> _readerDbContextFactory;
     private readonly IDbContextFactory<WriterDbContext> _writerDbContextFactory;
-    private readonly ConcurrentDictionary<Guid, SemaphoreSlim> _advanceLocks = new();
+
+    // A fixed set of locks, picked by session id, so memory stays bounded however many sessions come and go.
+    // Two sessions sharing a lock only wait for each other briefly.
+    private static readonly SemaphoreSlim[] AdvanceLocks =
+        Enumerable.Range(0, 64).Select(_ => new SemaphoreSlim(1, 1)).ToArray();
 
     public QueueRepository(
         IDbContextFactory<ReaderDbContext> readerDbContextFactory,
@@ -86,7 +89,7 @@ internal class QueueRepository : IQueueRepository
         int? currentItemId,
         CancellationToken cancellationToken)
     {
-        var advanceLock = _advanceLocks.GetOrAdd(sessionId, _ => new SemaphoreSlim(1, 1));
+        var advanceLock = GetAdvanceLock(sessionId);
 
         await advanceLock.WaitAsync(cancellationToken);
         try
@@ -129,7 +132,7 @@ internal class QueueRepository : IQueueRepository
 
     public async Task<QueueItemRemoval> RemoveAsync(Guid sessionId, int itemId, CancellationToken cancellationToken)
     {
-        var advanceLock = _advanceLocks.GetOrAdd(sessionId, _ => new SemaphoreSlim(1, 1));
+        var advanceLock = GetAdvanceLock(sessionId);
 
         await advanceLock.WaitAsync(cancellationToken);
         try
@@ -158,5 +161,10 @@ internal class QueueRepository : IQueueRepository
         {
             advanceLock.Release();
         }
+    }
+
+    private static SemaphoreSlim GetAdvanceLock(Guid sessionId)
+    {
+        return AdvanceLocks[(uint)sessionId.GetHashCode() % (uint)AdvanceLocks.Length];
     }
 }

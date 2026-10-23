@@ -142,7 +142,7 @@ export const ImageUploader = (): ReactNode => {
             <div className="grid grid-cols-3 gap-3">
                 {files.map((file: File): ReactNode => {
                     return (
-                        <UploadedImagePreview className="" image={file} key={file.name}/>
+                        <UploadedImagePreview className="" image={file} key={`${file.name}-${file.size}-${file.lastModified}`}/>
                     )
                 })}
             </div>

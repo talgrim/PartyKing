@@ -1,4 +1,5 @@
 using PartyKing.Application.Admin.Services;
+using PartyKing.Application.Player.Services;
 using PartyKing.Application.Sessions.Services;
 
 namespace PartyKing.Application.Tests;
@@ -10,7 +11,7 @@ public class ViewerRoleTests
 
     public ViewerRoleTests()
     {
-        _service = new SessionService(_sessions, new PasswordHasher());
+        _service = new SessionService(_sessions, new PasswordHasher(), new PlayerStateStore(new FakeClock()), new FakeHostTokenProvider());
     }
 
     [Fact]
