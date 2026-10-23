@@ -12,7 +12,7 @@ public class SessionPasswordTests
 
     public SessionPasswordTests()
     {
-        _service = new SessionService(_sessions, new PasswordHasher(), new PlayerStateStore(new FakeClock()), new FakeHostTokenProvider());
+        _service = new SessionService(_sessions, new PasswordHasher(), new PlayerStateStore(new FakeClock()), new FakeHostTokenProvider(), new FakeSlideshowService());
     }
 
     [Theory]

@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { SWRConfig } from 'swr';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { Slideshow } from './Slideshow';
 
 const mocks = vi.hoisted(() => ({ fetchFromApi: vi.fn() }));
@@ -15,8 +15,10 @@ vi.mock('@splidejs/react-splide/css', () => ({}));
 const renderPage = () =>
   render(
     <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
-      <MemoryRouter>
-        <Slideshow />
+      <MemoryRouter initialEntries={['/s/session-1/slideshow']}>
+        <Routes>
+          <Route path="/s/:sessionId/slideshow" element={<Slideshow />} />
+        </Routes>
       </MemoryRouter>
     </SWRConfig>,
   );
@@ -30,6 +32,23 @@ describe('Slideshow', () => {
     expect(await screen.findByText('No photos yet')).toBeInTheDocument();
   });
 
+  it('asks the session photos of the route\'s session', async () => {
+    mocks.fetchFromApi.mockResolvedValue('');
+
+    renderPage();
+
+    await screen.findByText('No photos yet');
+    expect(mocks.fetchFromApi).toHaveBeenCalledWith({ endpoint: '/sessions/session-1/photos/current' });
+  });
+
+  it('asks for the session password when the session is locked', async () => {
+    mocks.fetchFromApi.mockRejectedValue({ status: 401 });
+
+    renderPage();
+
+    expect(await screen.findByLabelText('Session password')).toBeInTheDocument();
+  });
+
   it('shows an error when the photo cannot be loaded', async () => {
     mocks.fetchFromApi.mockRejectedValue(new Error('boom'));
 
@@ -39,11 +58,11 @@ describe('Slideshow', () => {
   });
 
   it('shows the current photo', async () => {
-    mocks.fetchFromApi.mockResolvedValue({ fileName: 'SampleImages/Uploaded/a.jpg', expirationDate: new Date() });
+    mocks.fetchFromApi.mockResolvedValue({ fileName: 'Images/Uploaded/session-1/a.jpg', expirationDate: new Date() });
 
     renderPage();
 
     const image = await screen.findByRole('img');
-    expect(image).toHaveAttribute('src', expect.stringContaining('SampleImages/Uploaded/a.jpg'));
+    expect(image).toHaveAttribute('src', expect.stringContaining('Images/Uploaded/session-1/a.jpg'));
   });
 });
