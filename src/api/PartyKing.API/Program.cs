@@ -5,6 +5,12 @@ using PartyKing.API.Controllers;
 using PartyKing.Application;
 using PartyKing.Infrastructure;
 
+// `dotnet run --project PartyKing.API -- hash-password [password]` prints a hash for AdminSettings:PasswordHash
+if (args is ["hash-password", ..])
+{
+    return PasswordHashTool.Run(args.Skip(1).ToArray());
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
@@ -63,3 +69,5 @@ await app.Services.MigrateDb();
 await app.Services.SeedAdminAsync();
 
 app.Run();
+
+return 0;

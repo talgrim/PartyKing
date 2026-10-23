@@ -86,17 +86,29 @@ internal class AdminService : IAdminService
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(_config.Username) || string.IsNullOrWhiteSpace(_config.Password))
+        var hasHash = !string.IsNullOrWhiteSpace(_config.PasswordHash);
+
+        if (string.IsNullOrWhiteSpace(_config.Username) || (!hasHash && string.IsNullOrWhiteSpace(_config.Password)))
         {
             _logger.LogWarning(
-                "No admin account exists. Set {Section}:Username and {Section}:Password in appsettings.Local.json " +
-                "and restart to create one",
+                "No admin account exists. Set {Section}:Username and {Section}:Password (or {Section}:PasswordHash) " +
+                "in appsettings.Local.json and restart to create one",
+                AdminConfiguration.SectionName,
                 AdminConfiguration.SectionName,
                 AdminConfiguration.SectionName);
             return;
         }
 
-        var account = new AdminAccount(_config.Username.Trim(), _passwordHasher.Hash(_config.Password));
+        if (hasHash && !_passwordHasher.IsHash(_config.PasswordHash!.Trim()))
+        {
+            _logger.LogError(
+                "{Section}:PasswordHash is not a valid hash. Generate one with: dotnet run --project PartyKing.API -- hash-password",
+                AdminConfiguration.SectionName);
+            return;
+        }
+
+        var passwordHash = hasHash ? _config.PasswordHash!.Trim() : _passwordHasher.Hash(_config.Password!);
+        var account = new AdminAccount(_config.Username.Trim(), passwordHash);
 
         await _accountsRepository.AddAsync(account, cancellationToken);
 

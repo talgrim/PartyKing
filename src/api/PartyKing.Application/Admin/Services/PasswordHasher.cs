@@ -6,6 +6,9 @@ public interface IPasswordHasher
 {
     string Hash(string password);
     bool Verify(string password, string hash);
+
+    /// <summary>True when the value has the format produced by <see cref="Hash"/>.</summary>
+    bool IsHash(string value);
 }
 
 /// <summary>PBKDF2-SHA256 with a random salt, stored as <c>pbkdf2$iterations$salt$hash</c>.</summary>
@@ -23,20 +26,48 @@ public class PasswordHasher : IPasswordHasher
         return $"pbkdf2${Iterations}${Convert.ToBase64String(salt)}${Convert.ToBase64String(hash)}";
     }
 
+    public bool IsHash(string value)
+    {
+        return TryParse(value, out _, out _, out _);
+    }
+
     public bool Verify(string password, string hash)
     {
-        var parts = hash.Split('$');
-
-        if (parts is not ["pbkdf2", var iterationsPart, var saltPart, var hashPart]
-            || !int.TryParse(iterationsPart, out var iterations))
+        if (!TryParse(hash, out var iterations, out var salt, out var expected))
         {
             return false;
         }
 
-        var salt = Convert.FromBase64String(saltPart);
-        var expected = Convert.FromBase64String(hashPart);
         var actual = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA256, expected.Length);
 
         return CryptographicOperations.FixedTimeEquals(actual, expected);
+    }
+
+    private static bool TryParse(string value, out int iterations, out byte[] salt, out byte[] hash)
+    {
+        iterations = 0;
+        salt = [];
+        hash = [];
+
+        var parts = value.Split('$');
+
+        if (parts is not ["pbkdf2", var iterationsPart, var saltPart, var hashPart]
+            || !int.TryParse(iterationsPart, out iterations)
+            || iterations <= 0)
+        {
+            return false;
+        }
+
+        try
+        {
+            salt = Convert.FromBase64String(saltPart);
+            hash = Convert.FromBase64String(hashPart);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+
+        return salt.Length > 0 && hash.Length > 0;
     }
 }
