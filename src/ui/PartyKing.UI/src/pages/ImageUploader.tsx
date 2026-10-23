@@ -73,7 +73,7 @@ export const ImageUploader = (): ReactNode => {
         <div className="flex flex-col items-center space-y-4 py-5 w-full">
             <PageNavigation links={[
                 { to: ROUTE_PATHS.SLIDESHOW, label: "Slideshow" },
-                { to: ROUTE_PATHS.MUSIC_QUEUE, label: "Music queue" },
+                { to: ROUTE_PATHS.HOME, label: "Sessions" },
             ]}/>
 
             { uploadStatus === 'uploading' &&

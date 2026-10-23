@@ -1,52 +1,72 @@
+import { ReactNode, useState } from 'react';
+import { Link } from 'react-router-dom';
 import useSWR from 'swr';
-import {fetchFromApi, SERVICE_ENDPOINT} from "@/service/fetcher/apiService";
-import {ApiError} from "@/service/ApiError";
-import {HTTP_STATUS_CODE} from "@/service/constants";
-import {ErrorMessage} from "@/components/common/ErrorMessage";
-import {useNavigate} from "react-router-dom";
-import {InfoMessage} from "@/components/common/InfoMessage";
-import {ROUTE_PATHS} from "@/router/constants";
-import {useEffect, useState} from "react";
-import {Backdrop, CircularProgress} from "@mui/material";
+import { PageNavigation } from '@/components/common/PageNavigation';
+import { ROUTE_PATHS, sessionPath } from '@/router/constants';
+import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 
-export const Home = () => {
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+/** Landing page: every session, with a search box that filters by code (or name). */
+export const Home = (): ReactNode => {
+  const [search, setSearch] = useState('');
 
-  const navigate = useNavigate();
+  const { data: sessions, error } = useSWR('sessions', sessionsApi.getSessions, {
+    refreshInterval: 10000,
+  });
 
-  const {data, error} = useSWR<string, ApiError>(
-    {
-      endpoint: SERVICE_ENDPOINT.Spotify().currentlyPlaying.GET,
-    },
-    fetchFromApi,
-    {
-      onErrorRetry: (e, _, config, revalidate, {retryCount}) => {
-        if (e.status === HTTP_STATUS_CODE.NOT_FOUND) return;
-        if (e.status === HTTP_STATUS_CODE.UNAUTHORIZED) {
-          navigate(ROUTE_PATHS.LOGIN, {replace: true});
-          return;
-        }
-        setTimeout(() => revalidate({retryCount}), config.errorRetryInterval);
-      },
-      revalidateOnFocus: false,
-    },
+  const term = search.trim().toLowerCase();
+  const visible = (sessions ?? []).filter(
+    (session) => !term || session.code.toLowerCase().includes(term) || session.name.toLowerCase().includes(term),
   );
 
-  useEffect(() => {
-    setIsLoading(data === undefined);
-  }, [data])
+  return (
+    <div className="w-full min-h-full bg-slate-800 text-slate-400">
+      <div className="max-w-xl mx-auto">
+        <PageNavigation
+          className="px-2 pt-4"
+          links={[
+            { to: ROUTE_PATHS.SLIDESHOW, label: 'Slideshow' },
+            { to: ROUTE_PATHS.IMAGE_UPLOADER, label: 'Upload photos' },
+          ]}
+        />
+        <h1 className="px-2 pt-4 text-2xl text-slate-200">Join a party</h1>
 
-  if (isLoading) {
-    return <Backdrop open>
-      <CircularProgress/>
-    </Backdrop>
-  }
+        <div className="mt-4 mb-2 px-2">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full px-2 py-2 border-1 border-gray-700 rounded-sm focus:outline-none"
+            placeholder="Search by session code"
+            aria-label="Search sessions by code"
+          />
+        </div>
 
-  if (error) {
-    return <ErrorMessage message={JSON.stringify(error)}/>;
-  }
+        {error && <p className="px-2 text-amber-500">Could not load the sessions</p>}
+        {!error && !sessions && <p className="px-2">Loading sessions…</p>}
+        {sessions && sessions.length === 0 && <p className="px-2">There are no sessions yet.</p>}
+        {sessions && sessions.length > 0 && visible.length === 0 && (
+          <p className="px-2">No session matches “{search.trim()}”.</p>
+        )}
 
-  const message = `Authorized. Current song: ${data}`;
-
-  return <InfoMessage message={message}/>;
+        <ul className="px-2 pb-4 space-y-2">
+          {visible.map((session) => (
+            <li key={session.id}>
+              <Link
+                to={sessionPath(session.id)}
+                className="flex items-center justify-between gap-2 p-3 bg-slate-900 rounded-md hover:bg-slate-700"
+              >
+                <div className="min-w-0">
+                  <div className="truncate text-lg text-slate-200">{session.name}</div>
+                  <div className="truncate text-sm text-slate-500">
+                    {session.hasHost ? `Host: ${session.hostName}` : 'No host yet'}
+                  </div>
+                </div>
+                <span className="font-mono text-amber-500">{session.code}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
 };
