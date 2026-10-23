@@ -55,7 +55,10 @@ public static class Extensions
             {
                 metrics.AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
-                    .AddRuntimeInstrumentation();
+                    .AddRuntimeInstrumentation()
+                    .AddMeter("PartyKing.API")
+                    .AddMeter("PartyKing.Infrastructure.Spotify")
+                    .AddMeter("PartyKing.Infrastructure");
             })
             .WithTracing(tracing =>
             {

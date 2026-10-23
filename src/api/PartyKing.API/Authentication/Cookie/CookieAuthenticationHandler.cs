@@ -1,7 +1,9 @@
+using System.Diagnostics;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
+using PartyKing.API.Metrics;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Infrastructure.Authentication;
 using PartyKing.Infrastructure.Authorization;
@@ -12,20 +14,33 @@ public class CookieAuthenticationHandler : AuthenticationHandler<CookieAuthentic
 {
     private readonly ISpotifyService _spotifyService;
     private readonly ICookieAuthorizationHandler _cookieAuthorizationHandler;
+    private readonly AuthorizationMetrics _metrics;
 
     public CookieAuthenticationHandler(
         IOptionsMonitor<CookieAuthenticationOptions> options,
         ILoggerFactory logger,
         UrlEncoder encoder,
         ISpotifyService spotifyService,
-        ICookieAuthorizationHandler cookieAuthorizationHandler)
+        ICookieAuthorizationHandler cookieAuthorizationHandler,
+        AuthorizationMetrics metrics)
         : base(options, logger, encoder)
     {
+        _metrics = metrics;
         _spotifyService = spotifyService;
         _cookieAuthorizationHandler = cookieAuthorizationHandler;
     }
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
+    {
+        var startTimestamp = Stopwatch.GetTimestamp();
+        var result = await AuthenticateAsync();
+        var durationMs = Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds;
+        _metrics.RecordDuration(Scheme.Name, durationMs, result.Succeeded);
+
+        return result;
+    }
+
+    private async Task<AuthenticateResult> AuthenticateAsync()
     {
         // The profile id comes from the signed cookie, never from anything the client can edit
         if (!_cookieAuthorizationHandler.TryReadProfileId(Request, out var profileId))

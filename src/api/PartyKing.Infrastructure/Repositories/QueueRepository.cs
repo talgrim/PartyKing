@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using PartyKing.Domain.Entities;
 using PartyKing.Domain.Enums;
+using PartyKing.Infrastructure.Metrics;
 using PartyKing.Persistence.Database;
 
 namespace PartyKing.Infrastructure.Repositories;
@@ -38,6 +40,7 @@ internal class QueueRepository : IQueueRepository
 {
     private readonly IDbContextFactory<ReaderDbContext> _readerDbContextFactory;
     private readonly IDbContextFactory<WriterDbContext> _writerDbContextFactory;
+    private readonly RepositoryMetrics _metrics;
 
     // A fixed set of locks, picked by session id, so memory stays bounded however many sessions come and go.
     // Two sessions sharing a lock only wait for each other briefly.
@@ -46,10 +49,12 @@ internal class QueueRepository : IQueueRepository
 
     public QueueRepository(
         IDbContextFactory<ReaderDbContext> readerDbContextFactory,
-        IDbContextFactory<WriterDbContext> writerDbContextFactory)
+        IDbContextFactory<WriterDbContext> writerDbContextFactory,
+        RepositoryMetrics metrics)
     {
         _readerDbContextFactory = readerDbContextFactory;
         _writerDbContextFactory = writerDbContextFactory;
+        _metrics = metrics;
     }
 
     public async Task<QueueItem> AddAsync(QueueItem item, CancellationToken cancellationToken)
@@ -91,7 +96,7 @@ internal class QueueRepository : IQueueRepository
     {
         var advanceLock = GetAdvanceLock(sessionId);
 
-        await advanceLock.WaitAsync(cancellationToken);
+        await WaitForAdvanceLockAsync(nameof(AdvanceAsync), advanceLock, cancellationToken);
         try
         {
             await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -134,7 +139,7 @@ internal class QueueRepository : IQueueRepository
     {
         var advanceLock = GetAdvanceLock(sessionId);
 
-        await advanceLock.WaitAsync(cancellationToken);
+        await WaitForAdvanceLockAsync(nameof(RemoveAsync), advanceLock, cancellationToken);
         try
         {
             await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -160,6 +165,26 @@ internal class QueueRepository : IQueueRepository
         finally
         {
             advanceLock.Release();
+        }
+    }
+
+    private async Task WaitForAdvanceLockAsync(
+        string operation,
+        SemaphoreSlim advanceLock,
+        CancellationToken cancellationToken)
+    {
+        var startTimestamp = Stopwatch.GetTimestamp();
+        var acquired = false;
+
+        try
+        {
+            await advanceLock.WaitAsync(cancellationToken);
+            acquired = true;
+        }
+        finally
+        {
+            var waitMs = Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds;
+            _metrics.RecordAdvanceLockWait(operation, waitMs, acquired);
         }
     }
 

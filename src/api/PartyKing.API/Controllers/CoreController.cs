@@ -2,13 +2,12 @@ using System.Security.Claims;
 using ErrorOr;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.Extensions.Options;
-using PartyKing.Application.Configuration;
-using PartyKing.Contract.V1.Slideshow;
+using PartyKing.API.Metrics;
 
 namespace PartyKing.API.Controllers;
 
 [ApiController]
+[ServiceFilter(typeof(ActionMetricsFilter))]
 public abstract class CoreController : ControllerBase
 {
     private readonly IHttpContextAccessor _httpContextAccessor;

@@ -1,7 +1,9 @@
+using System.Diagnostics.Metrics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PartyKing.Domain.Entities;
 using PartyKing.Domain.Enums;
+using PartyKing.Infrastructure.Metrics;
 using PartyKing.Infrastructure.Repositories;
 using PartyKing.Persistence.Database;
 
@@ -16,6 +18,7 @@ public class QueueRepositoryTests : IAsyncLifetime
     private readonly string _originalDirectory = Environment.CurrentDirectory;
     private readonly string _directory = Path.Combine(Path.GetTempPath(), $"partyking-tests-{Guid.NewGuid():N}");
     private ServiceProvider _provider = null!;
+    private readonly RepositoryMetrics _metrics = new();
     private QueueRepository _repository = null!;
     private Guid _sessionId;
 
@@ -42,12 +45,14 @@ public class QueueRepositoryTests : IAsyncLifetime
 
         _repository = new QueueRepository(
             _provider.GetRequiredService<IDbContextFactory<ReaderDbContext>>(),
-            writer);
+            writer,
+            _metrics);
     }
 
     public async Task DisposeAsync()
     {
         await _provider.DisposeAsync();
+        _metrics.Dispose();
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
         Environment.CurrentDirectory = _originalDirectory;
         Directory.Delete(_directory, recursive: true);
@@ -202,5 +207,71 @@ public class QueueRepositoryTests : IAsyncLifetime
         var result = await _repository.RemoveAsync(_sessionId, 999, CancellationToken.None);
 
         Assert.Equal(QueueItemRemoval.NotFound, result);
+    }
+
+    private List<(string Operation, bool Acquired)> CaptureAdvanceLockWaits(Action act)
+    {
+        var waits = new List<(string, bool)>();
+        using var listener = new MeterListener();
+        listener.InstrumentPublished = (instrument, l) =>
+        {
+            if (instrument.Name == RepositoryMetrics.AdvanceLockWaitInstrumentName)
+            {
+                l.EnableMeasurementEvents(instrument, _metrics);
+            }
+        };
+        listener.SetMeasurementEventCallback<double>((_, _, tags, _) =>
+        {
+            var tagMap = tags.ToArray().ToDictionary(t => t.Key, t => t.Value);
+            waits.Add(((string)tagMap["operation"]!, (bool)tagMap["acquired"]!));
+        });
+        listener.Start();
+
+        act();
+
+        return waits;
+    }
+
+    [Fact]
+    public void Advance_RecordsTheTimeSpentWaitingForTheLock()
+    {
+        var waits = CaptureAdvanceLockWaits(() => AdvanceAsync(null).GetAwaiter().GetResult());
+
+        Assert.Equal([("AdvanceAsync", true)], waits);
+    }
+
+    [Fact]
+    public void Advance_RecordsAWaitThatEndedByCancellation()
+    {
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+
+        var waits = CaptureAdvanceLockWaits(() =>
+            Assert.ThrowsAny<OperationCanceledException>(
+                () => _repository.AdvanceAsync(_sessionId, null, cancelled.Token).GetAwaiter().GetResult()));
+
+        Assert.Equal([("AdvanceAsync", false)], waits);
+    }
+
+    [Fact]
+    public void Remove_RecordsTheTimeSpentWaitingForTheLock()
+    {
+        var waits = CaptureAdvanceLockWaits(() =>
+            _repository.RemoveAsync(_sessionId, 1, CancellationToken.None).GetAwaiter().GetResult());
+
+        Assert.Equal([("RemoveAsync", true)], waits);
+    }
+
+    [Fact]
+    public void Remove_RecordsAWaitThatEndedByCancellation()
+    {
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+
+        var waits = CaptureAdvanceLockWaits(() =>
+            Assert.ThrowsAny<OperationCanceledException>(
+                () => _repository.RemoveAsync(_sessionId, 1, cancelled.Token).GetAwaiter().GetResult()));
+
+        Assert.Equal([("RemoveAsync", false)], waits);
     }
 }
