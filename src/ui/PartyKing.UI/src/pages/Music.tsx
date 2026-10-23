@@ -11,6 +11,10 @@ import { queueApi } from '@/service/endpoints/queue/queueApi';
 import { SongDto, SongSource } from '@/service/endpoints/queue/types';
 
 const TOKEN_REFRESH_MS = 30 * 60 * 1000;
+// A host login that comes back to this page and is still rejected within this window is a loop.
+const LOGIN_LOOP_WINDOW_MS = 30 * 1000;
+
+const loginAttemptKey = (sessionId: string) => `host-login-attempt:${sessionId}`;
 
 export const Music = (): ReactNode => {
   const navigate = useNavigate();
@@ -25,7 +29,15 @@ export const Music = (): ReactNode => {
   // Not logged in: go through Spotify again. The login hands the session back to the same host,
   // and rejects anyone else.
   const loginAsHost = useCallback(async () => {
+    const lastAttempt = Number(sessionStorage.getItem(loginAttemptKey(sessionId)));
+    if (Date.now() - lastAttempt < LOGIN_LOOP_WINDOW_MS) {
+      // We just came back from Spotify and are still not logged in (e.g. the cookie was not stored).
+      // Redirecting again would loop forever.
+      setError('Host login did not stick. Check that cookies are enabled and the page and API use the same host.');
+      return;
+    }
     try {
+      sessionStorage.setItem(loginAttemptKey(sessionId), String(Date.now()));
       window.location.href = await sessionsApi.createHostLoginUrl(sessionId);
     } catch {
       navigate(sessionPath(sessionId), { replace: true });
@@ -43,6 +55,11 @@ export const Music = (): ReactNode => {
       }
     },
   });
+
+  // Logged in for real: the next 401 is a new login, not a loop.
+  useEffect(() => {
+    if (token) sessionStorage.removeItem(loginAttemptKey(sessionId));
+  }, [token, sessionId]);
 
   const { data: queue } = useSWR(['queue-songs', sessionId], () => queueApi.getQueue(sessionId), {
     refreshInterval: 3000,
