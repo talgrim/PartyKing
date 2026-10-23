@@ -7,6 +7,8 @@ import { Backdrop, CircularProgress } from '@mui/material';
 import { ReactNode } from 'react';
 import envVariables from "@/envVariables";
 import {Slide} from "@/pages/Slideshow/Slide";
+import {PageNavigation} from "@/components/common/PageNavigation";
+import {ROUTE_PATHS} from "@/router/constants";
 
 export type ApiImage = {
   fileName: string,
@@ -58,6 +60,13 @@ export const Slideshow = () => {
 
   return (
     <div className="grid grid-cols-12">
+      <PageNavigation
+        className="fixed top-2 right-2 z-10 opacity-30 hover:opacity-100"
+        links={[
+          {to: ROUTE_PATHS.IMAGE_UPLOADER, label: 'Upload photos'},
+          {to: ROUTE_PATHS.MUSIC_QUEUE, label: 'Music queue'},
+        ]}
+      />
       <div className="photos-slideshow">
         <Splide
           options={ SliderConfig }

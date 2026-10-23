@@ -4,6 +4,8 @@ import envVariables from "@/envVariables";
 import {Alert, Backdrop, Checkbox, FormControlLabel, FormGroup, LinearProgress} from '@mui/material';
 import { makeUrlWithParams } from "@/service/fetcher/apiService";
 import { UploadedImagePreview } from "@/components/UploadedImagePreview";
+import { PageNavigation } from "@/components/common/PageNavigation";
+import { ROUTE_PATHS } from "@/router/constants";
 
 type UploadStatus = 'waiting' | 'uploading' | 'success' | 'error';
 
@@ -69,6 +71,11 @@ export const ImageUploader = (): ReactNode => {
 
     return (
         <div className="flex flex-col items-center space-y-4 py-5 w-full">
+            <PageNavigation links={[
+                { to: ROUTE_PATHS.SLIDESHOW, label: "Slideshow" },
+                { to: ROUTE_PATHS.MUSIC_QUEUE, label: "Music queue" },
+            ]}/>
+
             { uploadStatus === 'uploading' &&
                 <Backdrop open>
                     <div className="w-3xl">
