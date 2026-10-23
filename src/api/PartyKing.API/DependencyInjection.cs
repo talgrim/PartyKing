@@ -16,6 +16,7 @@ public static class DependencyInjection
     {
         services.AddHttpContextAccessor();
         services.AddSingleton<ActionMetrics>();
+        services.AddSingleton<AuthorizationMetrics>();
         services.AddScoped<ActionMetricsFilter>();
         var dataProtection = services.AddDataProtection().SetApplicationName("PartyKing");
         var keysDirectory = configuration["DataProtection:KeysDirectory"];
