@@ -1,4 +1,4 @@
-import { FormEvent, ReactNode, useState } from 'react';
+import { FormEvent, ReactNode, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import useSWR from 'swr';
 import { SlideshowSettingsForm } from '@/components/Admin/SlideshowSettingsForm';
@@ -6,8 +6,10 @@ import { PageNavigation } from '@/components/common/PageNavigation';
 import { ROUTE_PATHS, sessionPath } from '@/router/constants';
 import { HTTP_STATUS_CODE } from '@/service/constants';
 import { adminApi } from '@/service/endpoints/admin/adminApi';
+import { ADMIN_HINT_KEY } from '@/service/endpoints/admin/useIsAdmin';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 import { SessionDto } from '@/service/endpoints/sessions/types';
+import { usePersistedFlag } from '@/utils/usePersistedFlag';
 
 const errorMessage = (error: unknown) =>
   (error as { message?: string })?.message || 'Something went wrong';
@@ -26,6 +28,16 @@ export const Admin = (): ReactNode => {
   });
 
   const unauthorized = (error as { status?: number } | undefined)?.status === HTTP_STATUS_CODE.UNAUTHORIZED;
+
+  // Lets Home show the Admin button without asking the API on every visit
+  const [, setAdminHint] = usePersistedFlag(ADMIN_HINT_KEY, false);
+  useEffect(() => {
+    if (loggedIn) {
+      setAdminHint(true);
+    } else if (unauthorized) {
+      setAdminHint(false);
+    }
+  }, [loggedIn, unauthorized, setAdminHint]);
 
   return (
     <div className="w-full min-h-full bg-slate-800 text-slate-400">

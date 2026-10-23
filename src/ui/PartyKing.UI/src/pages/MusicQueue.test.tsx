@@ -67,6 +67,18 @@ describe('MusicQueue', () => {
     expect(screen.queryByRole('button', { name: 'Maximize' })).not.toBeInTheDocument();
   });
 
+  it('links an admin to the admin panel, and nobody else', async () => {
+    mocks.getViewerRole.mockResolvedValue({ isHost: false, isAdmin: true });
+    await renderPage();
+    expect(await screen.findByRole('link', { name: 'Admin panel' })).toHaveAttribute('href', '/admin');
+  });
+
+  it('shows a guest no link to the admin panel', async () => {
+    mocks.getViewerRole.mockResolvedValue({ isHost: false, isAdmin: false });
+    await renderPage();
+    expect(screen.queryByRole('link', { name: 'Admin panel' })).not.toBeInTheDocument();
+  });
+
   it('gives the host the player', async () => {
     mocks.getViewerRole.mockResolvedValue({ isHost: true, isAdmin: false });
 
