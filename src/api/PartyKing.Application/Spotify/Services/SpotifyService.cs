@@ -17,7 +17,6 @@ public interface ISpotifyService
     Task<ErrorOr<Uri>> GetHostLoginUrlAsync(Guid sessionId, CancellationToken cancellationToken);
     Task<ErrorOr<UserDto>> AuthenticateByCodeAsync(string code, string state, CancellationToken cancellationToken);
     Task<ErrorOr<string>> AuthenticateByProfileIdAsync(string id, CancellationToken cancellationToken);
-    Task<string> GetCurrentlyPlayingAsync(string accessToken, CancellationToken cancellationToken);
     Task<ErrorOr<IReadOnlyList<SpotifyTrackDto>>> SearchTracksAsync(
         Guid sessionId,
         string query,
@@ -130,11 +129,6 @@ internal class SpotifyService : ISpotifyService
         _cookieAuthorizationHandler.Authorize(result.AccessToken, result.ExpiresIn, _httpContextAccessor.HttpContext);
 
         return result.AccessToken;
-    }
-
-    public Task<string> GetCurrentlyPlayingAsync(string accessToken, CancellationToken cancellationToken)
-    {
-        return _spotifyClient.GetCurrentlyPlayingAsync(accessToken, cancellationToken);
     }
 
     public async Task<ErrorOr<IReadOnlyList<SpotifyTrackDto>>> SearchTracksAsync(

@@ -39,17 +39,6 @@ public class SpotifyController : CoreController
         return result.Match(Ok, Problem);
     }
 
-    [HttpGet]
-    [AuthorizeByCookie]
-    [Route("currently-playing")]
-    [ProducesResponseType<string>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetCurrentlyPlaying(CancellationToken cancellationToken)
-    {
-        var result = await _spotifyService.GetCurrentlyPlayingAsync(GetSpotifyAccessToken(), cancellationToken);
-
-        return Ok(result);
-    }
-
     [HttpGet("sessions/{sessionId:guid}/tracks")]
     [ProducesResponseType<IReadOnlyList<SpotifyTrackDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> SearchTracks(

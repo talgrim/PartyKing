@@ -14,7 +14,6 @@ public interface ISpotifyIntegrationClient
     Task<AuthenticationResult> AuthenticateAsync(string code, CancellationToken cancellationToken);
     Task<ReAuthenticationResult> ReAuthenticateAsync(string refreshToken, CancellationToken cancellationToken);
 
-    Task<string> GetCurrentlyPlayingAsync(string accessToken, CancellationToken cancellationToken);
     Task<IReadOnlyList<Song>> SearchTracksAsync(string accessToken, string query, CancellationToken cancellationToken);
     Task<Song?> GetTrackAsync(string accessToken, string trackId, CancellationToken cancellationToken);
 }
@@ -27,27 +26,13 @@ internal class SpotifyIntegrationClient : ISpotifyIntegrationClient
 
     private ISpotifyClient? _client;
 
+    // Playback in the browser (Web Playback SDK) needs streaming plus the account's email and subscription
     private static readonly ICollection<string> Scope =
     [
-        Scopes.UgcImageUpload,
-        Scopes.UserReadPlaybackState,
-        Scopes.UserModifyPlaybackState,
-        Scopes.UserReadCurrentlyPlaying,
         Scopes.Streaming,
-        Scopes.AppRemoteControl,
         Scopes.UserReadEmail,
         Scopes.UserReadPrivate,
-        Scopes.PlaylistReadCollaborative,
-        Scopes.PlaylistModifyPublic,
-        Scopes.PlaylistReadPrivate,
-        Scopes.PlaylistModifyPrivate,
-        Scopes.UserLibraryModify,
-        Scopes.UserLibraryRead,
-        Scopes.UserTopRead,
-        Scopes.UserReadPlaybackPosition,
-        Scopes.UserReadRecentlyPlayed,
-        Scopes.UserFollowRead,
-        Scopes.UserFollowModify
+        Scopes.UserModifyPlaybackState
     ];
 
     public SpotifyIntegrationClient(
@@ -105,16 +90,6 @@ internal class SpotifyIntegrationClient : ISpotifyIntegrationClient
         return new ReAuthenticationResult(response.AccessToken, response.RefreshToken, response.ExpiresIn);
     }
 
-    public async Task<string> GetCurrentlyPlayingAsync(string accessToken, CancellationToken cancellationToken)
-    {
-        InitializeClientIfNecessary(accessToken);
-
-        var currentlyPlaying =
-            await _client!.Player.GetCurrentlyPlaying(new PlayerCurrentlyPlayingRequest(), cancellationToken);
-
-        return FormatCurrentSong(currentlyPlaying);
-    }
-
     public async Task<IReadOnlyList<Song>> SearchTracksAsync(
         string accessToken,
         string query,
@@ -153,16 +128,5 @@ internal class SpotifyIntegrationClient : ISpotifyIntegrationClient
     private void InitializeClientIfNecessary(string accessToken)
     {
         _client ??= _clientFactory.CreateClient(accessToken);
-    }
-
-    private static string FormatCurrentSong(CurrentlyPlaying? currentlyPlaying)
-    {
-        if (currentlyPlaying?.Item is not FullTrack track)
-            return string.Empty;
-
-        var isPlaying = currentlyPlaying.IsPlaying ? "Playing" : "Stopped";
-        var song = track.ToDomain();
-
-        return $"{song.ToDisplayString()} ({isPlaying})";
     }
 }

@@ -475,8 +475,7 @@ Token dostępowy gospodarza dla Web Playback SDK w przeglądarce. Wymaga zalogow
 #### Logowanie do Spotify
 
 `GET /auth-url` zwraca adres autoryzacji Spotify, a `POST /authenticate` (ciało: kod z
-przekierowania) wymienia kod na tokeny i ustawia sesję. `GET /currently-playing` (wymaga logowania)
-zwraca aktualnie odtwarzany utwór.
+przekierowania) wymienia kod na tokeny i ustawia sesję.
 
 ### Diagnostyka
 
