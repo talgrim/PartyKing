@@ -1,5 +1,7 @@
 using ErrorOr;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
+using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Contract.V1.Slideshow;
 using PartyKing.Application.Spotify.Services;
@@ -133,4 +135,10 @@ internal class FakeSlideshowService : ISlideshowService
 
     public Task<SlideshowImageDto?> GetImageAsync(Guid sessionId, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
+}
+
+internal static class JoinTokens
+{
+    public static IJoinTokenProtector Create(IDateTimeProvider clock) =>
+        new JoinTokenProtector(new EphemeralDataProtectionProvider(), clock);
 }

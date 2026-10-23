@@ -14,7 +14,7 @@ public class SessionCleanupTests
 
     public SessionCleanupTests()
     {
-        _service = new SessionService(_sessions, new PasswordHasher(), _playerStates, _tokens, _slideshows);
+        _service = new SessionService(_sessions, new PasswordHasher(), _playerStates, _tokens, _slideshows, JoinTokens.Create(new FakeClock()), new FakeClock());
     }
 
     [Fact]

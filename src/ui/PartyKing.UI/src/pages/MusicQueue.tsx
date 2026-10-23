@@ -1,8 +1,9 @@
-import { ReactNode, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { ReactNode, useEffect, useState } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import useSWR, { useSWRConfig } from 'swr';
 import { AdminPlayerControls } from '@/components/Music/AdminPlayerControls';
 import { MaximizedView } from '@/components/Music/MaximizedView';
+import { JoinQrCode } from '@/components/Music/JoinQrCode';
 import { HostPlayer } from '@/components/Music/HostPlayer';
 import { NowPlayingCard } from '@/components/Music/NowPlayingCard';
 import { Queue } from '@/components/Music/Queue';
@@ -17,6 +18,8 @@ import { useNowPlaying } from '@/service/endpoints/player/useNowPlaying';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 import { useViewerRole } from '@/service/endpoints/sessions/useViewerRole';
 import { usePersistedFlag } from '@/utils/usePersistedFlag';
+
+const JOIN_PARAM = 'join';
 
 /**
  * Page of a session, behind the session password. Anyone who entered it (admins included) sees what is playing and
@@ -40,6 +43,29 @@ export const MusicQueue = (): ReactNode => {
 
   // Revalidates everything on the page, which was refused before the password was entered
   const onJoined = () => void mutate(() => true);
+
+  // A scanned QR code arrives as ?join=<token>: unlock with it, then drop it from the address
+  const [searchParams, setSearchParams] = useSearchParams();
+  const joinToken = searchParams.get(JOIN_PARAM);
+  const [joinFailed, setJoinFailed] = useState(false);
+
+  useEffect(() => {
+    if (!joinToken) return;
+
+    sessionsApi
+      .joinWithToken(sessionId, joinToken)
+      .then(onJoined)
+      .catch(() => setJoinFailed(true))
+      .finally(() => {
+        setSearchParams(
+          (params) => {
+            params.delete(JOIN_PARAM);
+            return params;
+          },
+          { replace: true },
+        );
+      });
+  }, [joinToken, sessionId]);
 
   const canViewSlideshow = isHost || isAdmin;
 
@@ -81,6 +107,9 @@ export const MusicQueue = (): ReactNode => {
           ]}
         />
 
+        {locked && joinFailed && (
+          <p className="px-2 pt-4 text-amber-500">This QR code has expired. Enter the password instead.</p>
+        )}
         {locked && <SessionPasswordForm sessionId={sessionId} onJoined={onJoined} />}
 
         {error && !locked && (
@@ -97,6 +126,7 @@ export const MusicQueue = (): ReactNode => {
         {session && !locked && (
           <>
             <SessionHeader session={session} isHost={isHost} />
+            {canViewSlideshow && <JoinQrCode sessionId={session.id} />}
             <NowPlayingCard nowPlaying={nowPlaying} />
             {/* An admin who is also the host plays the music themselves, so only the host's player is shown. */}
             {isHost && <HostPlayer sessionId={session.id} isAdmin={isAdmin} />}

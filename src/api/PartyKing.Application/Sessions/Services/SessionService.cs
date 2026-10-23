@@ -5,6 +5,7 @@ using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Player.Services;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Application.Spotify.Services;
+using PartyKing.Application.System;
 using PartyKing.Contract.V1.Sessions;
 using PartyKing.Domain.Entities;
 using PartyKing.Application.Sessions.Helpers;
@@ -39,6 +40,22 @@ public interface ISessionService
     /// </summary>
     Task<ErrorOr<string>> JoinAsync(Guid id, string? password, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Issues a short-lived token that unlocks the session without its password, for a QR code. Only the host
+    /// (<paramref name="profileId"/>) or an admin may ask for one; anyone else gets Forbidden.
+    /// </summary>
+    Task<ErrorOr<JoinTokenDto>> CreateJoinTokenAsync(
+        Guid id,
+        string? profileId,
+        bool isAdmin,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Redeems a join token. Returns the access stamp to remember, or Unauthorized, the same for a forged,
+    /// expired or outdated token (the password changed) and for an unknown session.
+    /// </summary>
+    Task<ErrorOr<string>> JoinWithTokenAsync(Guid id, string? token, CancellationToken cancellationToken);
+
     /// <summary>True when <paramref name="accessStamp"/> was issued for the session's current password.</summary>
     Task<bool> HasAccessAsync(Guid id, string? accessStamp, CancellationToken cancellationToken);
 }
@@ -49,12 +66,16 @@ internal class SessionService : ISessionService
     private const int MaxNameLength = 60;
     private const int MinPasswordLength = 4;
     private const int MaxPasswordLength = 100;
+    private const int MaxTokenLength = 1000;
+    private static readonly TimeSpan JoinTokenLifetime = TimeSpan.FromMinutes(5);
 
     private readonly ISessionsRepository _sessionsRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IPlayerStateStore _playerStateStore;
     private readonly IHostTokenProvider _hostTokenProvider;
     private readonly ISlideshowService _slideshowService;
+    private readonly IJoinTokenProtector _joinTokenProtector;
+    private readonly IDateTimeProvider _clock;
 
     // Verified against when the session is unknown, so both failures cost the same time
     private readonly string _dummyHash;
@@ -64,13 +85,17 @@ internal class SessionService : ISessionService
         IPasswordHasher passwordHasher,
         IPlayerStateStore playerStateStore,
         IHostTokenProvider hostTokenProvider,
-        ISlideshowService slideshowService)
+        ISlideshowService slideshowService,
+        IJoinTokenProtector joinTokenProtector,
+        IDateTimeProvider clock)
     {
         _sessionsRepository = sessionsRepository;
         _passwordHasher = passwordHasher;
         _playerStateStore = playerStateStore;
         _hostTokenProvider = hostTokenProvider;
         _slideshowService = slideshowService;
+        _joinTokenProtector = joinTokenProtector;
+        _clock = clock;
         _dummyHash = passwordHasher.Hash(Guid.NewGuid().ToString());
     }
 
@@ -216,6 +241,46 @@ internal class SessionService : ISessionService
 
         return session is null || !valid
             ? Error.Unauthorized(description: "Wrong session password")
+            : AccessStamp(session.PasswordHash);
+    }
+
+    public async Task<ErrorOr<JoinTokenDto>> CreateJoinTokenAsync(
+        Guid id,
+        string? profileId,
+        bool isAdmin,
+        CancellationToken cancellationToken)
+    {
+        var session = await _sessionsRepository.GetAsync(id, cancellationToken);
+
+        if (session is null)
+        {
+            return NotFound();
+        }
+
+        var isHost = profileId is not null && session.HostProfileId == profileId;
+
+        if (!isHost && !isAdmin)
+        {
+            return Error.Forbidden(description: "Only the host or an admin can create a join code");
+        }
+
+        var expiresAt = _clock.UtcNow.Add(JoinTokenLifetime);
+        var token = _joinTokenProtector.Protect(new JoinTokenPayload(id, AccessStamp(session.PasswordHash)), expiresAt);
+
+        return new JoinTokenDto(token, expiresAt);
+    }
+
+    public async Task<ErrorOr<string>> JoinWithTokenAsync(Guid id, string? token, CancellationToken cancellationToken)
+    {
+        var payload = token is { Length: > 0 and <= MaxTokenLength } ? _joinTokenProtector.Unprotect(token) : null;
+        var session = await _sessionsRepository.GetAsync(id, cancellationToken);
+
+        // The stamp ties the token to the current password, so changing the password revokes outstanding tokens
+        return session is null
+            || payload is null
+            || payload.SessionId != id
+            || payload.AccessStamp != AccessStamp(session.PasswordHash)
+            ? Error.Unauthorized(description: "Invalid or expired join code")
             : AccessStamp(session.PasswordHash);
     }
 

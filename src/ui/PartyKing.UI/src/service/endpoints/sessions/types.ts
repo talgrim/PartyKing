@@ -16,6 +16,14 @@ export type ViewerRoleDto = {
   isAdmin: boolean;
 };
 
+// Mirrors PartyKing.Contract.V1.Sessions.JoinTokenDto
+export type JoinTokenDto = {
+  /** Signed token that unlocks the session without its password. */
+  token: string;
+  /** ISO timestamp after which the token stops working. */
+  expiresAt: string;
+};
+
 export type UserDto = {
   id: string;
   accessToken: string;

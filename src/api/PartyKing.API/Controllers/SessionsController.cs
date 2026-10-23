@@ -57,6 +57,44 @@ public class SessionsController : CoreController
         return NoContent();
     }
 
+    /// <summary>
+    /// Unlocks the session with a token from a QR code instead of the password. Shares the join rate limit; every
+    /// failure is a plain 401.
+    /// </summary>
+    [HttpPost("sessions/{sessionId:guid}/join-with-token")]
+    [EnableRateLimiting(JoinRateLimitPolicy)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> JoinWithToken(
+        Guid sessionId,
+        [FromBody] JoinWithTokenRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _sessionService.JoinWithTokenAsync(sessionId, request.Token, cancellationToken);
+
+        if (result.IsError)
+        {
+            return Problem(result.Errors);
+        }
+
+        _cookieAuthorizationHandler.GrantSessionAccess(sessionId, result.Value, HttpContext);
+
+        return NoContent();
+    }
+
+    /// <summary>Creates the short-lived token for the "Show QR code" link. Host or admin only (403 otherwise).</summary>
+    [HttpPost("sessions/{sessionId:guid}/join-token")]
+    [RequireSessionAccess]
+    [ProducesResponseType<JoinTokenDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> CreateJoinToken(Guid sessionId, CancellationToken cancellationToken)
+    {
+        var profileId = _cookieAuthorizationHandler.TryReadProfileId(Request, out var id) ? id : null;
+        var isAdmin = (await HttpContext.AuthenticateAsync(Constants.AdminScheme)).Succeeded;
+
+        var result = await _sessionService.CreateJoinTokenAsync(sessionId, profileId, isAdmin, cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
     [HttpGet("sessions/{sessionId:guid}")]
     [RequireSessionAccess]
     [ProducesResponseType<SessionDto>(StatusCodes.Status200OK)]

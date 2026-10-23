@@ -49,6 +49,10 @@ Backend to .NET 9 (ASP.NET Core) zorkiestrowany przez .NET Aspire, frontend to S
   zmienić przyciskiem „Change password"). Każdy, także admin, musi je podać (`POST /sessions/{id}/join`, limit
   10 prób na minutę z jednego IP), zanim zobaczy sesję; przeglądarka zapamiętuje to w podpisanym cookie.
   Zmiana hasła unieważnia wcześniejsze odblokowania.
+- Gospodarz i admin mogą na stronie sesji kliknąć **„Show QR code"**: w oknie pojawia się kod QR, po zeskanowaniu
+  którego gość wchodzi do sesji **bez podawania hasła**. Kod zawiera podpisany token ważny 5 minut (okno odświeża
+  kod samo, 30 s przed wygaśnięciem); token można użyć wielokrotnie, ale zmiana hasła sesji unieważnia wszystkie
+  wydane tokeny. Przeterminowany kod odsyła gościa do zwykłego formularza hasła.
 - Goście wchodzą na stronę sesji `/s/<id>` (bez konta, ale z hasłem sesji), widzą co aktualnie gra (okładka, wykonawca,
   tytuł, czy jest pauza) i dodają utwory przez **wyszukiwanie w Spotify** albo **wklejenie linku**
   (link/URI utworu ze Spotify lub adres YouTube). Poniżej widzą listę „następne w kolejce".
@@ -354,6 +358,23 @@ Kontrolery nie mają prefiksu trasy — **wszystkie endpointy są w korzeniu**, 
 API=http://127.0.0.1:4200   # podmień na własny adres z launchSettings.json
 ```
 
+### Dołączanie przez kod QR
+
+Zamiast hasła sesji można wejść z tokenem z kodu QR. Token jest podpisany (ASP.NET Data Protection), zawiera id
+sesji, znacznik dostępu i czas wygaśnięcia (5 minut) i nie jest zapisywany w bazie.
+
+#### `POST /sessions/{sessionId}/join-token` (gospodarz lub admin)
+
+Wymaga odblokowanej sesji (ciasteczko z `/join`) oraz ciasteczka gospodarza lub admina; inni dostają `403`.
+Odpowiedź `200`: `{ "token": "...", "expiresAt": "2026-01-01T12:05:00+00:00" }`. Interfejs buduje z niego link
+`/s/<id>?join=<token>` i pokazuje go jako kod QR.
+
+#### `POST /sessions/{sessionId}/join-with-token`
+
+Body: `{ "token": "..." }`. Odpowiedź `204` i to samo ciasteczko dostępu co po `/join`. Każdy błąd (token
+sfałszowany, przeterminowany, z innej sesji, wydany przed zmianą hasła, nieznana sesja) to ten sam `401`.
+Współdzieli z `/join` limit 10 prób na minutę z jednego IP (`429`).
+
 ### Slideshow
 
 Slideshow jest osobny dla każdej sesji. Endpointy zdjęć wymagają hasła sesji (ciasteczko
@@ -519,7 +540,7 @@ dotnet test PartyKing.Application.Tests
 npm test
 ```
 
-Backend ma na razie testy tylko parsera wejścia kolejki (`SongInputParser`). Konfiguracja pokrycia
+Backend testuje m.in. parser wejścia kolejki (`SongInputParser`), hasła sesji i tokeny dołączania przez QR. Konfiguracja pokrycia
 frontendu znajduje się w `vite.config.ts`.
 
 ## Znane ograniczenia

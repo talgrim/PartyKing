@@ -1,5 +1,5 @@
 import { axios } from '@/service/request';
-import { SessionDto, UserDto, ViewerRoleDto } from './types';
+import { JoinTokenDto, SessionDto, UserDto, ViewerRoleDto } from './types';
 
 // The axios response interceptor unwraps `response.data`, so these resolve to the payload itself.
 const unwrap = <T>(promise: Promise<unknown>) => promise as Promise<T>;
@@ -16,6 +16,17 @@ export const sessionsApi = {
    */
   join: (sessionId: string, password: string) =>
     unwrap<void>(axios.post(`/sessions/${sessionId}/join`, { password }, { withCredentials: true })),
+
+  /**
+   * Unlocks the session with the token from a QR code. Rejects with status 401 when the token is invalid, expired
+   * or outdated (the password changed), and 429 when tried too often.
+   */
+  joinWithToken: (sessionId: string, token: string) =>
+    unwrap<void>(axios.post(`/sessions/${sessionId}/join-with-token`, { token }, { withCredentials: true })),
+
+  /** Creates a short-lived token for a QR code. Host or admin only; rejects with status 403 for anyone else. */
+  createJoinToken: (sessionId: string) =>
+    unwrap<JoinTokenDto>(axios.post(`/sessions/${sessionId}/join-token`, undefined, { withCredentials: true })),
 
   /** What the logged-in visitor (host or admin, if any) may do in the session. */
   getViewerRole: (sessionId: string) =>
