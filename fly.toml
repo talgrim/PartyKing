@@ -10,6 +10,8 @@ primary_region = 'fra'
   dockerfile = 'Dockerfile'
 
 [env]
+  # Fly's edge sets Fly-Client-IP / X-Forwarded-Proto; nginx may trust them only here
+  TRUST_FLY_CLIENT_IP = '1'
   SpotifySettings__RedirectUri = 'https://party.talgrim.dev/callback'
 
 [[mounts]]
@@ -28,6 +30,8 @@ primary_region = 'fra'
     timeout = '5s'
     grace_period = '20s'
     method = 'GET'
+    # nginx serves /health on a separate internal port that the http_service does not expose
+    port = 8182
     path = '/health'
 
 [[vm]]

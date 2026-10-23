@@ -21,6 +21,7 @@ WORKDIR /app
 COPY --from=api-build /out ./
 COPY --from=ui-build /ui/dist /usr/share/nginx/html
 COPY docker/nginx.conf /etc/nginx/nginx.conf
+COPY docker/security-headers.conf docker/proxy.conf /etc/nginx/
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
