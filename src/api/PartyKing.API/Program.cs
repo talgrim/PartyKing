@@ -58,7 +58,7 @@ builder.Services.AddRateLimiter(options =>
                 PermitLimit = 10,
                 Window = TimeSpan.FromMinutes(1)
             }));
-    // Guests upload without logging in; several of them can share one Wi-Fi (one IP), so the limit is generous
+    // Several guests can share one Wi-Fi (one IP), so the limit is generous
     options.AddPolicy(SlideshowController.UploadRateLimitPolicy, context =>
         RateLimitPartition.GetFixedWindowLimiter(
             context.Connection.RemoteIpAddress?.ToString() ?? "unknown",

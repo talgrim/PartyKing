@@ -1,6 +1,13 @@
-﻿namespace PartyKing.Domain.Models.Slideshow;
+namespace PartyKing.Domain.Models.Slideshow;
 
-public record SlideshowImageWriteModel(string Extension, string ContentType, Stream Data, string Path, bool DeleteAfterPresentation)
+/// <param name="Path">Directory of the image relative to the web root, using '/' so it works as a URL as well.</param>
+public record SlideshowImageWriteModel(
+    Guid SessionId,
+    string Extension,
+    string ContentType,
+    Stream Data,
+    string Path,
+    bool DeleteAfterPresentation)
 {
-    public string GetFullPath(string imageName) => System.IO.Path.Combine(Path, imageName);
+    public string GetFullPath(string imageName) => $"{Path}/{imageName}";
 }

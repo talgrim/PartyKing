@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using PartyKing.Domain.Entities;
 
@@ -8,15 +8,13 @@ public class SlideshowSettingsConfiguration : IEntityTypeConfiguration<Slideshow
 {
     public void Configure(EntityTypeBuilder<SlideshowSettings> builder)
     {
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id)
+        builder.HasKey(x => x.SessionId);
+        builder.Property(x => x.SessionId)
             .ValueGeneratedNever();
-
-        builder.HasData(new SlideshowSettings
-        {
-            AutoRepeat = false,
-            StartFromBeginning = false,
-            SlideTime = TimeSpan.FromSeconds(20)
-        });
+        builder
+            .HasOne<Session>()
+            .WithOne()
+            .HasForeignKey<SlideshowSettings>(x => x.SessionId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

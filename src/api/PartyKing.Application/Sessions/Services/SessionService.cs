@@ -3,6 +3,7 @@ using System.Text;
 using ErrorOr;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Player.Services;
+using PartyKing.Application.Slideshow.Services;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Contract.V1.Sessions;
 using PartyKing.Domain.Entities;
@@ -53,6 +54,7 @@ internal class SessionService : ISessionService
     private readonly IPasswordHasher _passwordHasher;
     private readonly IPlayerStateStore _playerStateStore;
     private readonly IHostTokenProvider _hostTokenProvider;
+    private readonly ISlideshowService _slideshowService;
 
     // Verified against when the session is unknown, so both failures cost the same time
     private readonly string _dummyHash;
@@ -61,12 +63,14 @@ internal class SessionService : ISessionService
         ISessionsRepository sessionsRepository,
         IPasswordHasher passwordHasher,
         IPlayerStateStore playerStateStore,
-        IHostTokenProvider hostTokenProvider)
+        IHostTokenProvider hostTokenProvider,
+        ISlideshowService slideshowService)
     {
         _sessionsRepository = sessionsRepository;
         _passwordHasher = passwordHasher;
         _playerStateStore = playerStateStore;
         _hostTokenProvider = hostTokenProvider;
+        _slideshowService = slideshowService;
         _dummyHash = passwordHasher.Hash(Guid.NewGuid().ToString());
     }
 
@@ -161,6 +165,9 @@ internal class SessionService : ISessionService
         }
 
         ForgetHost(id, hostProfileId);
+
+        // The rows went with the cascade delete; the uploaded files are still on disk
+        await _slideshowService.DeleteSessionAsync(id);
 
         return Result.Success;
     }
