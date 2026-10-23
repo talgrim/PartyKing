@@ -30,12 +30,7 @@ public class CookieAuthenticationHandler : AuthenticationHandler<CookieAuthentic
                 return AuthenticateResult.Fail("Authentication cookie is missing");   
             }
 
-            if (!int.TryParse(profileIdString, out var profileId))
-            {
-                return AuthenticateResult.Fail("Invalid User ID. Expected int");
-            }
-
-            var result = await _spotifyService.AuthenticateByProfileIdAsync(profileId, CancellationToken.None);
+            var result = await _spotifyService.AuthenticateByProfileIdAsync(profileIdString, CancellationToken.None);
 
             if (result.IsError)
             {

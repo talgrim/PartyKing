@@ -9,7 +9,8 @@ namespace PartyKing.Infrastructure.Repositories;
 public interface ISpotifyProfilesRepository
 {
     Task CreateProfileAsync(AuthenticationResult result, CancellationToken cancellationToken);
-    Task<ErrorOr<SpotifyProfile>> GetProfileAsync(int id, CancellationToken cancellationToken);
+    Task<ErrorOr<SpotifyProfile>> GetProfileAsync(string id, CancellationToken cancellationToken);
+    Task<ErrorOr<SpotifyProfile>> GetHostProfileAsync(CancellationToken cancellationToken);
 }
 
 internal class SpotifyProfilesRepository : ISpotifyProfilesRepository
@@ -29,10 +30,15 @@ internal class SpotifyProfilesRepository : ISpotifyProfilesRepository
     {
         await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
 
-        var profileId = int.Parse(result.ProfileId);
+        var profileId = result.ProfileId;
 
-        if (await dbContext.SpotifyProfiles.AnyAsync(x => x.Id == profileId, cancellationToken))
+        var existing = await dbContext.SpotifyProfiles.FirstOrDefaultAsync(x => x.Id == profileId, cancellationToken);
+
+        if (existing is not null)
         {
+            // Re-login: replace the stored token, the old one may have been revoked or expired
+            existing.UpdateRefreshToken(result.RefreshToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
             return;
         }
 
@@ -43,7 +49,7 @@ internal class SpotifyProfilesRepository : ISpotifyProfilesRepository
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<ErrorOr<SpotifyProfile>> GetProfileAsync(int id, CancellationToken cancellationToken)
+    public async Task<ErrorOr<SpotifyProfile>> GetProfileAsync(string id, CancellationToken cancellationToken)
     {
         await using var dbContext = await _readerDbContextFactory.CreateDbContextAsync(cancellationToken);
 
@@ -52,6 +58,21 @@ internal class SpotifyProfilesRepository : ISpotifyProfilesRepository
         if (profile is null)
         {
             return Error.NotFound(description: $"Profile with ID {id} was not found in the database");
+        }
+
+        return profile;
+    }
+
+    /// <summary>The party has a single Spotify host account; this returns the stored profile.</summary>
+    public async Task<ErrorOr<SpotifyProfile>> GetHostProfileAsync(CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _readerDbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        var profile = await dbContext.SpotifyProfiles.FirstOrDefaultAsync(cancellationToken);
+
+        if (profile is null)
+        {
+            return Error.NotFound(description: "No Spotify host has logged in yet");
         }
 
         return profile;

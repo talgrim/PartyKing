@@ -17,6 +17,44 @@ namespace PartyKing.Persistence.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.8");
 
+            modelBuilder.Entity("PartyKing.Domain.Entities.QueueItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AlbumArtUrl")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Artists")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("DurationMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("QueueItems");
+                });
+
             modelBuilder.Entity("PartyKing.Domain.Entities.SlideshowImage", b =>
                 {
                     b.Property<Guid>("Id")
@@ -249,8 +287,8 @@ namespace PartyKing.Persistence.Migrations
 
             modelBuilder.Entity("PartyKing.Domain.Entities.SpotifyProfile", b =>
                 {
-                    b.Property<int>("Id")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("RefreshToken")
                         .IsRequired()

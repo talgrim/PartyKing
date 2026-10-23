@@ -33,6 +33,7 @@ public static class DependencyInjection
     {
         services.AddSingleton<ISlideshowImagesRepository, SlideshowImagesRepository>();
         services.AddSingleton<ISpotifyProfilesRepository, SpotifyProfilesRepository>();
+        services.AddSingleton<IQueueRepository, QueueRepository>();
     }
 
     private static void AddAuthorization(this IServiceCollection services)

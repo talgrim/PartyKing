@@ -6,18 +6,23 @@ namespace PartyKing.Domain.Entities;
 
 public class SpotifyProfile
 {
-    public int Id { get; set; }
-    public string RefreshToken { get; internal init; } = null!;
+    public string Id { get; set; } = null!;
+    public string RefreshToken { get; private set; } = null!;
 
     private SpotifyProfile(){}
 
-    public SpotifyProfile(int id, string refreshToken)
+    public SpotifyProfile(string id, string refreshToken)
     {
         Id = id;
         RefreshToken = refreshToken;
     }
 
-    public static SpotifyProfile Create(int profileId, string refreshToken)
+    public void UpdateRefreshToken(string refreshToken)
+    {
+        RefreshToken = refreshToken;
+    }
+
+    public static SpotifyProfile Create(string profileId, string refreshToken)
     {
         return new SpotifyProfile(profileId, refreshToken);
     }
