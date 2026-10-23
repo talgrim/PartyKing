@@ -27,6 +27,17 @@ public interface IQueueService
         string hostProfileId,
         int? currentSongId,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Removes a waiting song. Forbidden unless the caller is an admin or <paramref name="profileId"/> hosts the
+    /// session; conflict when the song is no longer waiting (it is playing or has been played).
+    /// </summary>
+    Task<ErrorOr<Success>> RemoveAsync(
+        Guid sessionId,
+        int songId,
+        string? profileId,
+        bool isAdmin,
+        CancellationToken cancellationToken);
 }
 
 internal class QueueService : IQueueService
@@ -121,6 +132,33 @@ internal class QueueService : IQueueService
         }
 
         return next.ToDto();
+    }
+
+    public async Task<ErrorOr<Success>> RemoveAsync(
+        Guid sessionId,
+        int songId,
+        string? profileId,
+        bool isAdmin,
+        CancellationToken cancellationToken)
+    {
+        var session = await _sessionsRepository.GetAsync(sessionId, cancellationToken);
+        if (session is null)
+        {
+            return SessionNotFound();
+        }
+
+        var isHost = profileId is not null && session.HostProfileId == profileId;
+        if (!isAdmin && !isHost)
+        {
+            return Error.Forbidden(description: "Only the host or an admin can remove songs from the queue");
+        }
+
+        return await _queueRepository.RemoveAsync(sessionId, songId, cancellationToken) switch
+        {
+            QueueItemRemoval.Removed => Result.Success,
+            QueueItemRemoval.NotQueued => Error.Conflict(description: "The song is no longer waiting in the queue"),
+            _ => Error.NotFound(description: "The song was not found in the queue")
+        };
     }
 
     private static Error SessionNotFound() => Error.NotFound(description: "The session was not found");

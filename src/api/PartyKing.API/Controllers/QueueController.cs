@@ -1,18 +1,26 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using PartyKing.API.Authorization;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Contract.V1.Queue;
+using PartyKing.Infrastructure.Authentication;
+using PartyKing.Infrastructure.Authorization;
 
 namespace PartyKing.API.Controllers;
 
 public class QueueController : CoreController
 {
     private readonly IQueueService _queueService;
+    private readonly ICookieAuthorizationHandler _cookieAuthorizationHandler;
 
-    public QueueController(IHttpContextAccessor httpContextAccessor, IQueueService queueService)
+    public QueueController(
+        IHttpContextAccessor httpContextAccessor,
+        IQueueService queueService,
+        ICookieAuthorizationHandler cookieAuthorizationHandler)
         : base(httpContextAccessor)
     {
         _queueService = queueService;
+        _cookieAuthorizationHandler = cookieAuthorizationHandler;
     }
 
     [HttpPost("sessions/{sessionId:guid}/songs")]
@@ -52,5 +60,21 @@ public class QueueController : CoreController
         var result = await _queueService.GetNextAsync(sessionId, GetProfileId(), currentSongId, cancellationToken);
 
         return result.Match(Ok, Problem);
+    }
+
+    /// <summary>
+    /// Removes a song that is still waiting in the queue. Open to the session's host (signed host cookie) and to
+    /// admins (admin cookie); 403 for everyone else, 409 when the song is already playing or played.
+    /// </summary>
+    [HttpDelete("sessions/{sessionId:guid}/songs/{songId:int}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> RemoveSong(Guid sessionId, int songId, CancellationToken cancellationToken)
+    {
+        var profileId = _cookieAuthorizationHandler.TryReadProfileId(Request, out var id) ? id : null;
+        var isAdmin = (await HttpContext.AuthenticateAsync(Constants.AdminScheme)).Succeeded;
+
+        var result = await _queueService.RemoveAsync(sessionId, songId, profileId, isAdmin, cancellationToken);
+
+        return result.Match(_ => NoContent(), Problem);
     }
 }
