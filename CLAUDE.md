@@ -4,8 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-PartyKing is a party app: guests upload photos that the API serves as a timed slideshow, plus music sessions: each session has its own queue (YouTube links and Spotify tracks, persisted in SQLite) and its own host, who plays it through the Spotify Web Playback SDK. It has a .NET 9 backend (`src/api/PartyKing.sln`) orchestrated by .NET Aspire, and a React + Vite frontend in `src/ui/PartyKing.UI`. (`PartyKing.UI/README.md` is stale Next.js boilerplate; the UI is Vite.)
-
+PartyKing is a party app: guests upload photos that the API serves as a timed slideshow, plus music sessions: each session has its own queue (YouTube links and Spotify tracks, persisted in SQLite) and its own host, who plays it through the Spotify Web Playback SDK. It has a .NET 9 backend (`src/api/PartyKing.sln`) orchestrated by .NET Aspire, and a React + Vite frontend in `src/ui/PartyKing.UI`.
 ## Commands
 
 Backend (run from `src/api`):
