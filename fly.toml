@@ -12,6 +12,10 @@ primary_region = 'fra'
 [env]
   # Fly's edge sets Fly-Client-IP / X-Forwarded-Proto; nginx may trust them only here
   TRUST_FLY_CLIENT_IP = '1'
+  # Never Debug/Trace in production: EF Core and ASP.NET log every query and request at those levels
+  Logging__LogLevel__Default = 'Information'
+  Logging__LogLevel__Microsoft__AspNetCore = 'Warning'
+  Logging__LogLevel__Microsoft__EntityFrameworkCore = 'Warning'
   SpotifySettings__RedirectUri = 'https://party.talgrim.dev/callback'
 
 [[mounts]]
