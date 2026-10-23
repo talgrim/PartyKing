@@ -18,7 +18,7 @@ Backend (run from `src/api`):
 Frontend (from `src/ui/PartyKing.UI`):
 - `npm install`, then `npm start` (Vite dev server on port 2137, host `0.0.0.0`, polling watch for WSL2/Windows HMR)
 - `npm run build`
-- `npm test` runs `vitest run`. To run a single test: `npx vitest run src/path/to/file.test.ts`. Note that `vite.config.ts` references `testGlobalSetup.ts`/`testSetup.ts`, which don't exist yet.
+- `npm test` runs `vitest run`. To run a single test: `npx vitest run src/path/to/file.test.ts`. Tests run in jsdom with `testSetup.ts` (jest-dom matchers). `src/App.test.js` is a stale CRA leftover and fails, so run the Music tests with `npx vitest run src/components/Music`.
 
 Backend tests: `dotnet test PartyKing.Application.Tests` (from `src/api`) (xunit; currently covers `SongInputParser`).
 
@@ -58,4 +58,5 @@ Frontend (`PartyKing.UI/src`):
 - Use subagent Explore for codebase exploration.
 - Don't commit changes until explicitly stated.
 - Stick to SOLID.
-- Commit tests in a separate commit
+- Commit tests in a separate commit.
+- Commits should be atomic.
