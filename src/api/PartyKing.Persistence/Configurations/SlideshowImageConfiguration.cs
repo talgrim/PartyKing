@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using PartyKing.Domain.Entities;
-using PartyKing.Persistence.SeedHelpers;
 
 namespace PartyKing.Persistence.Configurations;
 
@@ -14,6 +13,5 @@ public class SlideshowImageConfiguration : IEntityTypeConfiguration<SlideshowIma
         builder.Property(x => x.ImageUrl);
         builder.Property(x => x.ContentType);
 
-        builder.HasData(SlideshowImageSeedHelper.GetData());
     }
 }
