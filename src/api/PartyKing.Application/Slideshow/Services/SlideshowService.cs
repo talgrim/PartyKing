@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using ErrorOr;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
@@ -180,7 +180,13 @@ internal class SlideshowService : ISlideshowService
     private async Task<SlideshowSettings> LoadSettingsAsync(Guid sessionId, CancellationToken cancellationToken)
     {
         return await _imagesRepository.GetSettingsAsync(sessionId, cancellationToken)
-            ?? new SlideshowSettings { SessionId = sessionId, SlideTime = _slideshowConfiguration.SlideTime };
+               ?? new SlideshowSettings
+               {
+                   SessionId = sessionId,
+                   AutoRepeat = true,
+                   SlideTime = _slideshowConfiguration.SlideTime,
+                   StartFromBeginning = true
+               };
     }
 
     private async Task UploadImageAsync(

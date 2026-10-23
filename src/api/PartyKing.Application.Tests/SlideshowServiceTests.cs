@@ -116,6 +116,8 @@ public class SlideshowServiceTests
 
         Assert.False(result.IsError);
         Assert.Equal(TimeSpan.FromSeconds(5), result.Value.SlideTime);
+        Assert.True(result.Value.AutoRepeat);
+        Assert.True(result.Value.StartFromBeginning);
     }
 
     [Fact]
