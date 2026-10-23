@@ -17,6 +17,9 @@ public interface IHostTokenProvider
 {
     Task<ErrorOr<string>> GetSessionAccessTokenAsync(Guid sessionId, CancellationToken cancellationToken);
     Task<ErrorOr<string>> GetAccessTokenAsync(string profileId, CancellationToken cancellationToken);
+
+    /// <summary>Drops the cached token of a host account, e.g. when the host is released from a session.</summary>
+    void Invalidate(string profileId);
 }
 
 internal class HostTokenProvider : IHostTokenProvider
@@ -86,6 +89,9 @@ internal class HostTokenProvider : IHostTokenProvider
             }
             catch (APIException)
             {
+                // The refresh token is dead, so there is nothing worth caching for this account
+                _tokens.TryRemove(profileId, out _);
+
                 return Error.Unauthorized(description: "The Spotify host session expired. The host must log in again");
             }
 
@@ -98,6 +104,11 @@ internal class HostTokenProvider : IHostTokenProvider
         {
             cached.Lock.Release();
         }
+    }
+
+    public void Invalidate(string profileId)
+    {
+        _tokens.TryRemove(profileId, out _);
     }
 
     private sealed class CachedToken

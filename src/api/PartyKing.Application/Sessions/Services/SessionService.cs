@@ -2,6 +2,8 @@ using System.Security.Cryptography;
 using System.Text;
 using ErrorOr;
 using PartyKing.Application.Admin.Services;
+using PartyKing.Application.Player.Services;
+using PartyKing.Application.Spotify.Services;
 using PartyKing.Contract.V1.Sessions;
 using PartyKing.Domain.Entities;
 using PartyKing.Application.Sessions.Helpers;
@@ -49,14 +51,22 @@ internal class SessionService : ISessionService
 
     private readonly ISessionsRepository _sessionsRepository;
     private readonly IPasswordHasher _passwordHasher;
+    private readonly IPlayerStateStore _playerStateStore;
+    private readonly IHostTokenProvider _hostTokenProvider;
 
     // Verified against when the session is unknown, so both failures cost the same time
     private readonly string _dummyHash;
 
-    public SessionService(ISessionsRepository sessionsRepository, IPasswordHasher passwordHasher)
+    public SessionService(
+        ISessionsRepository sessionsRepository,
+        IPasswordHasher passwordHasher,
+        IPlayerStateStore playerStateStore,
+        IHostTokenProvider hostTokenProvider)
     {
         _sessionsRepository = sessionsRepository;
         _passwordHasher = passwordHasher;
+        _playerStateStore = playerStateStore;
+        _hostTokenProvider = hostTokenProvider;
         _dummyHash = passwordHasher.Hash(Guid.NewGuid().ToString());
     }
 
@@ -141,16 +151,34 @@ internal class SessionService : ISessionService
 
     public async Task<ErrorOr<Success>> DeleteAsync(Guid id, CancellationToken cancellationToken)
     {
+        var hostProfileId = (await _sessionsRepository.GetAsync(id, cancellationToken))?.HostProfileId;
+
         var deleted = await _sessionsRepository.DeleteAsync(id, cancellationToken);
 
-        return deleted ? Result.Success : NotFound();
+        if (!deleted)
+        {
+            return NotFound();
+        }
+
+        ForgetHost(id, hostProfileId);
+
+        return Result.Success;
     }
 
     public async Task<ErrorOr<Success>> ReleaseAsync(Guid id, CancellationToken cancellationToken)
     {
+        var hostProfileId = (await _sessionsRepository.GetAsync(id, cancellationToken))?.HostProfileId;
+
         var released = await _sessionsRepository.ReleaseAsync(id, cancellationToken);
 
-        return released ? Result.Success : NotFound();
+        if (!released)
+        {
+            return NotFound();
+        }
+
+        ForgetHost(id, hostProfileId);
+
+        return Result.Success;
     }
 
     public async Task<ErrorOr<Success>> ChangePasswordAsync(
@@ -194,6 +222,18 @@ internal class SessionService : ISessionService
         var session = await _sessionsRepository.GetAsync(id, cancellationToken);
 
         return session is not null && accessStamp == AccessStamp(session.PasswordHash);
+    }
+
+    /// <summary>Drops what the server remembers about the session's player and its host's Spotify token.</summary>
+    private void ForgetHost(Guid sessionId, string? hostProfileId)
+    {
+        _playerStateStore.Remove(sessionId);
+
+        // The account may host another session by now, but then it just refreshes its token again
+        if (hostProfileId is not null)
+        {
+            _hostTokenProvider.Invalidate(hostProfileId);
+        }
     }
 
     /// <summary>Changes whenever the password does, which invalidates the unlocks issued for the old one.</summary>
