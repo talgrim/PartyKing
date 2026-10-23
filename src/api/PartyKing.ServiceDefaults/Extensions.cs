@@ -57,7 +57,8 @@ public static class Extensions
                     .AddHttpClientInstrumentation()
                     .AddRuntimeInstrumentation()
                     .AddMeter("PartyKing.API")
-                    .AddMeter("PartyKing.Infrastructure.Spotify");
+                    .AddMeter("PartyKing.Infrastructure.Spotify")
+                    .AddMeter("PartyKing.Infrastructure");
             })
             .WithTracing(tracing =>
             {
