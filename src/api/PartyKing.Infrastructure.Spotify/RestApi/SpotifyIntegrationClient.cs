@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PartyKing.Application.Configuration;
+using PartyKing.Domain.Models.Spotify;
 using PartyKing.Domain.Results;
 using PartyKing.Infrastructure.Spotify.Mappings;
 using SpotifyAPI.Web;
@@ -14,6 +15,8 @@ public interface ISpotifyIntegrationClient
     Task<ReAuthenticationResult> ReAuthenticateAsync(string refreshToken, CancellationToken cancellationToken);
 
     Task<string> GetCurrentlyPlayingAsync(string accessToken, CancellationToken cancellationToken);
+    Task<IReadOnlyList<Song>> SearchTracksAsync(string accessToken, string query, CancellationToken cancellationToken);
+    Task<Song?> GetTrackAsync(string accessToken, string trackId, CancellationToken cancellationToken);
 }
 
 internal class SpotifyIntegrationClient : ISpotifyIntegrationClient
@@ -104,6 +107,34 @@ internal class SpotifyIntegrationClient : ISpotifyIntegrationClient
             await _client!.Player.GetCurrentlyPlaying(new PlayerCurrentlyPlayingRequest(), cancellationToken);
 
         return FormatCurrentSong(currentlyPlaying);
+    }
+
+    public async Task<IReadOnlyList<Song>> SearchTracksAsync(
+        string accessToken,
+        string query,
+        CancellationToken cancellationToken)
+    {
+        var client = _clientFactory.CreateClient(accessToken);
+
+        var response = await client.Search.Item(new SearchRequest(SearchRequest.Types.Track, query), cancellationToken);
+
+        return response.Tracks.Items?.Select(x => x.ToDomain()).ToList() ?? [];
+    }
+
+    public async Task<Song?> GetTrackAsync(string accessToken, string trackId, CancellationToken cancellationToken)
+    {
+        var client = _clientFactory.CreateClient(accessToken);
+
+        try
+        {
+            var track = await client.Tracks.Get(trackId, cancellationToken);
+            return track.ToDomain();
+        }
+        catch (APIException exception) when (exception.Response?.StatusCode is System.Net.HttpStatusCode.NotFound
+                                                 or System.Net.HttpStatusCode.BadRequest)
+        {
+            return null;
+        }
     }
 
     private async Task<string> GetProfileIdAsync(string accessToken, CancellationToken cancellationToken)

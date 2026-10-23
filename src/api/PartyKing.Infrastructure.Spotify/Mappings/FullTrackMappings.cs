@@ -9,7 +9,11 @@ public static class FullTrackMappings
     {
         return new Song
         {
+            Id = track.Id,
+            Uri = track.Uri,
             Name = track.Name,
+            AlbumArtUrl = track.Album.Images.FirstOrDefault()?.Url,
+            DurationMs = track.DurationMs,
             Album = track.Album.ToDomain(),
             Artists = track.Artists.Select(ToDomain).ToList(),
         };
