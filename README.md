@@ -43,12 +43,14 @@ Backend to .NET 9 (ASP.NET Core) zorkiestrowany przez .NET Aspire, frontend to S
 ### Kolejka muzyki
 
 - Jedna wspólna kolejka (YouTube + Spotify), trzymana w bazie SQLite — przeżywa restart serwera.
-- Goście wchodzą na `/music-queue` (bez logowania) i dodają utwory przez **wyszukiwanie w Spotify**
-  albo **wklejenie linku** (link/URI utworu ze Spotify lub adres YouTube). Poniżej widzą listę
-  „następne w kolejce".
-- Gospodarz loguje się kontem Spotify (wymagany **Premium**) i otwiera `/music`: strona odtwarza
-  kolejkę — utwory ze Spotify przez Web Playback SDK, utwory z YouTube przez odtwarzacz YouTube —
-  i automatycznie przechodzi do następnego utworu.
+- Goście wchodzą na stronę sesji `/s/<id>` (bez logowania), widzą co aktualnie gra (okładka, wykonawca,
+  tytuł, czy jest pauza) i dodają utwory przez **wyszukiwanie w Spotify** albo **wklejenie linku**
+  (link/URI utworu ze Spotify lub adres YouTube). Poniżej widzą listę „następne w kolejce".
+- Gospodarz loguje się kontem Spotify (wymagany **Premium**) i wraca na tę samą stronę sesji, na której
+  pojawia się odtwarzacz: odtwarza kolejkę — utwory ze Spotify przez Web Playback SDK, utwory z YouTube
+  przez odtwarzacz YouTube — i automatycznie przechodzi do następnego utworu. Przyciski Play/Pause
+  i Następny utwór widzą tylko gospodarz i admin (admin steruje przez serwer, o ile odtwarzacz gospodarza
+  jest połączony).
 - Jest jedno konto gospodarza; goście nigdy nie logują się do Spotify. Backend używa tokena
   gospodarza do wyszukiwania i pobierania danych utworów w imieniu gości.
 
@@ -147,9 +149,8 @@ Strony frontendu (`src/ui/PartyKing.UI/src/pages`):
 |---|---|---|
 | `/slideshow` | `Slideshow` | Ekran prezentacyjny — to okno pokazuje się na telewizorze / ekranie LED |
 | `/image-upload` | `ImageUploader` | Wysyłanie zdjęć z podglądem miniatur i paskiem postępu |
-| `/music-queue` | `MusicQueue` | Dla gości: wyszukiwanie / wklejanie linku i lista kolejki (bez logowania) |
-| `/music` | `Music` | Dla gospodarza: odtwarzacz (Spotify + YouTube) z automatycznym przechodzeniem dalej |
-| `/login`, `/callback` | `Login`, `Callback` | Logowanie gospodarza do Spotify; po zalogowaniu przekierowanie na `/music` |
+| `/s/:sessionId` | `MusicQueue` | Strona sesji: co gra, wyszukiwanie / wklejanie linku i lista kolejki (bez logowania); dla gospodarza dodatkowo odtwarzacz (Spotify + YouTube), dla admina przyciski sterowania |
+| `/callback` | `Callback` | Powrót ze Spotify po zalogowaniu gospodarza; potem przekierowanie na stronę sesji |
 | `/` | `Home` | Ekran startowy |
 
 Na stronach slideshow, wysyłania zdjęć i kolejki są przyciski nawigacji między nimi.
@@ -227,8 +228,7 @@ czyli bez Swaggera i bez endpointów `/health` i `/alive`.
 |---|---|
 | `http://<host-ui>:2137/slideshow` | Ekran prezentacyjny |
 | `http://<host-ui>:2137/image-upload` | Strona do wrzucania zdjęć (ten link dajesz gościom) |
-| `http://<host-ui>:2137/music-queue` | Kolejka muzyki dla gości (drugi link dla gości) |
-| `http://127.0.0.1:2137/login` | Logowanie gospodarza do Spotify, potem `/music` z odtwarzaczem |
+| `http://<host-ui>:2137/s/<id>` | Strona sesji z kolejką muzyki dla gości (drugi link dla gości); gospodarz loguje się tu przez „Log in as host with Spotify" |
 | `http://<host-api>/swagger` | Swagger UI (tylko w Development) |
 | `https://localhost:17218` | Dashboard Aspire (wariant A) |
 
@@ -263,7 +263,7 @@ wykluczony z repozytorium:
 ```
 
 `RedirectUri` musi być dokładnie taki sam jak adres dodany w ustawieniach aplikacji w Dashboardzie
-Spotify. Używa `127.0.0.1`, więc gospodarz musi logować się przez `http://127.0.0.1:2137/login`
+Spotify. Używa `127.0.0.1`, więc gospodarz musi logować się przez `http://127.0.0.1:2137/...`
 (nie `localhost`). Pierwsze zapisane konto Spotify jest traktowane jako konto gospodarza.
 
 ### Ustawienia slideshow
@@ -506,7 +506,7 @@ frontendu znajduje się w `vite.config.ts`.
 ## Znane ograniczenia
 
 - **Odtwarzanie ze Spotify wymaga konta Premium** gospodarza i jest odtwarzane tylko w przeglądarce
-  na stronie `/music` (trzeba kliknąć „Start", żeby przeglądarka pozwoliła na dźwięk).
+  na stronie sesji `/s/<id>` (trzeba kliknąć „Start", żeby przeglądarka pozwoliła na dźwięk).
 - Gospodarz to pierwszy zapisany profil Spotify; nie ma wyboru ani wylogowania gospodarza.
   Gdy refresh token wygaśnie, gospodarz musi zalogować się ponownie.
 - Filmów z wyłączonym osadzaniem (błąd YouTube 101/150) nie da się odtworzyć w aplikacji. Są
