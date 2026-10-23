@@ -229,7 +229,11 @@ export const HostPlayer = ({ sessionId, isAdmin }: Props): ReactNode => {
 
   // Tell the server what we are doing: that is how guests see the pause state and how it knows we are connected.
   // An admin's pause or resume comes back as the answer.
+  const reportInFlightRef = useRef(false);
   const reportState = useCallback(async () => {
+    // A hung server must not pile up requests: wait for the previous report to finish or time out.
+    if (reportInFlightRef.current) return;
+    reportInFlightRef.current = true;
     try {
       const { command } = await playerApi.reportState(sessionId, {
         songId: songRef.current?.id ?? null,
@@ -241,6 +245,8 @@ export const HostPlayer = ({ sessionId, isAdmin }: Props): ReactNode => {
       if (shouldToggle) togglePlay();
     } catch {
       // The next report tries again; meanwhile the server shows the player as not connected
+    } finally {
+      reportInFlightRef.current = false;
     }
   }, [sessionId, togglePlay]);
 
