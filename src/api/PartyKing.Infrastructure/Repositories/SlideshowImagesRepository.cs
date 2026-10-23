@@ -12,7 +12,7 @@ public interface ISlideshowImagesRepository
 {
     bool IsInitialized { get; }
     TimeSpan SlideTime { get; }
-    Task InitializeAsync(string rootPath, string placeholdersPath, CancellationToken cancellationToken);
+    Task InitializeAsync(string rootPath, string placeholdersPath, string uploadedPath, CancellationToken cancellationToken);
     Task UpdateSettingsAsync(SlideshowSettings settings, CancellationToken cancellationToken);
     Task AddSlideshowImageAsync(SlideshowImageWriteModel slideshowImage, CancellationToken cancellationToken);
     Task<SlideshowImageReadResult> GetSlideshowImageAsync(Guid? currentId, CancellationToken cancellationToken);
@@ -46,15 +46,16 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
         _logger = logger;
     }
 
-    public async Task InitializeAsync(string rootPath, string placeholdersPath, CancellationToken cancellationToken)
+    public async Task InitializeAsync(string rootPath, string placeholdersPath, string uploadedPath, CancellationToken cancellationToken)
     {
         _rootPath = rootPath;
         _placeholdersPath = placeholdersPath;
 
-        var allFiles = Directory.GetFiles(
-            Path.Combine(_rootPath, _placeholdersPath),
-            "*.*",
-            SearchOption.AllDirectories);
+        // Neither folder ships with the app: a fresh deployment starts without any images
+        var placeholdersDirectory = Directory.CreateDirectory(Path.Combine(_rootPath, _placeholdersPath));
+        Directory.CreateDirectory(Path.Combine(_rootPath, uploadedPath));
+
+        var allFiles = Directory.GetFiles(placeholdersDirectory.FullName, "*.*", SearchOption.AllDirectories);
 
         var imageFiles = allFiles
             .Where(x => ImagesExtensions.Contains(Path.GetExtension(x), StringComparer.OrdinalIgnoreCase))
@@ -153,9 +154,14 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository
         }
     }
 
-    private SlideshowImageReadModel GetPlaceholderImage()
+    private SlideshowImageReadModel? GetPlaceholderImage()
     {
         var (fileName, url) = _placeholders.GetNext();
+
+        if (fileName is null || url is null)
+        {
+            return null;
+        }
 
         return SlideshowImageReadModel.Placeholder(fileName, url, GetContentType());
 

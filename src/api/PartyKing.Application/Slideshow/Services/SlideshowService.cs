@@ -48,6 +48,7 @@ internal class SlideshowService : ISlideshowService
         return _imagesRepository.InitializeAsync(
             rootPath,
             _slideshowConfiguration.PlaceholderPhotosDirectory,
+            _slideshowConfiguration.UploadedPhotosDirectory,
             cancellationToken);
     }
 
@@ -71,12 +72,18 @@ internal class SlideshowService : ISlideshowService
     {
         if (!_currentImageExpiration.HasValue || _currentImageExpiration < _dateTimeProvider.UtcNow)
         {
-            if (_currentImage is not null && _currentImage.Data!.DeleteAfterPresentation)
+            if (_currentImage?.Data is { DeleteAfterPresentation: true })
             {
                 await _imagesRepository.DeleteImageAsync(_currentImage, cancellationToken);
             }
 
             await RefreshCurrentImageAsync(cancellationToken);
+        }
+
+        // Nothing uploaded and no placeholders: there is nothing to show
+        if (_currentImage?.Data is null || !_currentImageExpiration.HasValue)
+        {
+            return null;
         }
 
         return MapToContract();
@@ -119,11 +126,7 @@ internal class SlideshowService : ISlideshowService
 
         var newImage = await _imagesRepository.GetSlideshowImageAsync(_currentImage?.ImageId, cancellationToken);
 
-        if (!newImage.IsOk)
-        {
-            return;
-        }
-
+        // Kept even without image data, so the next lookup continues after this id and a deleted image is not shown again
         _currentImage = newImage;
     }
 }
