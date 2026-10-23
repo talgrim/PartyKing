@@ -17,6 +17,7 @@ public class PlayerController : CoreController
     }
 
     [HttpGet("sessions/{sessionId:guid}/now-playing")]
+    [RequireSessionAccess]
     [ProducesResponseType<NowPlayingDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetNowPlaying(Guid sessionId, CancellationToken cancellationToken)
     {
@@ -30,6 +31,7 @@ public class PlayerController : CoreController
     /// is connected. The response carries the command an admin sent in the meantime.
     /// </summary>
     [HttpPost("sessions/{sessionId:guid}/player/state")]
+    [RequireSessionAccess]
     [AuthorizeByCookie]
     [ProducesResponseType<PlayerStateResponse>(StatusCodes.Status200OK)]
     public async Task<IActionResult> ReportState(
@@ -44,6 +46,7 @@ public class PlayerController : CoreController
 
     /// <summary>Asks the host's player to pause or resume. 409 when no player is connected.</summary>
     [HttpPost("admin/sessions/{sessionId:guid}/player/commands")]
+    [RequireSessionAccess]
     [AuthorizeAdmin]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> SendCommand(
@@ -61,6 +64,7 @@ public class PlayerController : CoreController
     /// 404 when the queue is empty.
     /// </summary>
     [HttpPost("admin/sessions/{sessionId:guid}/songs/next")]
+    [RequireSessionAccess]
     [AuthorizeAdmin]
     [ProducesResponseType<SongDataDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Skip(

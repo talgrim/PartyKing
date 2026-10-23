@@ -1,4 +1,7 @@
+using System.Security.Cryptography;
+using System.Text;
 using ErrorOr;
+using PartyKing.Application.Admin.Services;
 using PartyKing.Contract.V1.Sessions;
 using PartyKing.Domain.Entities;
 using PartyKing.Application.Sessions.Helpers;
@@ -17,24 +20,44 @@ public interface ISessionService
         string? profileId,
         bool isAdmin,
         CancellationToken cancellationToken);
-    Task<ErrorOr<SessionDto>> CreateAsync(string? name, CancellationToken cancellationToken);
+    Task<ErrorOr<SessionDto>> CreateAsync(string? name, string? password, CancellationToken cancellationToken);
     Task<ErrorOr<Success>> RenameAsync(Guid id, string? name, CancellationToken cancellationToken);
     Task<ErrorOr<Success>> DeleteAsync(Guid id, CancellationToken cancellationToken);
 
     /// <summary>Removes the host so someone else can claim the session.</summary>
     Task<ErrorOr<Success>> ReleaseAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Replaces the password; everyone who had unlocked the session has to enter the new one.</summary>
+    Task<ErrorOr<Success>> ChangePasswordAsync(Guid id, string? password, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Checks the password. Returns the access stamp to remember, or Unauthorized, the same for a wrong password
+    /// and an unknown session.
+    /// </summary>
+    Task<ErrorOr<string>> JoinAsync(Guid id, string? password, CancellationToken cancellationToken);
+
+    /// <summary>True when <paramref name="accessStamp"/> was issued for the session's current password.</summary>
+    Task<bool> HasAccessAsync(Guid id, string? accessStamp, CancellationToken cancellationToken);
 }
 
 internal class SessionService : ISessionService
 {
     private const int MaxCodeAttempts = 10;
     private const int MaxNameLength = 60;
+    private const int MinPasswordLength = 4;
+    private const int MaxPasswordLength = 100;
 
     private readonly ISessionsRepository _sessionsRepository;
+    private readonly IPasswordHasher _passwordHasher;
 
-    public SessionService(ISessionsRepository sessionsRepository)
+    // Verified against when the session is unknown, so both failures cost the same time
+    private readonly string _dummyHash;
+
+    public SessionService(ISessionsRepository sessionsRepository, IPasswordHasher passwordHasher)
     {
         _sessionsRepository = sessionsRepository;
+        _passwordHasher = passwordHasher;
+        _dummyHash = passwordHasher.Hash(Guid.NewGuid().ToString());
     }
 
     public async Task<IReadOnlyList<SessionDto>> GetAllAsync(CancellationToken cancellationToken)
@@ -69,16 +92,26 @@ internal class SessionService : ISessionService
         return new ViewerRoleDto(isHost, isAdmin);
     }
 
-    public async Task<ErrorOr<SessionDto>> CreateAsync(string? name, CancellationToken cancellationToken)
+    public async Task<ErrorOr<SessionDto>> CreateAsync(
+        string? name,
+        string? password,
+        CancellationToken cancellationToken)
     {
         if (name is { Length: > MaxNameLength })
         {
             return NameTooLong();
         }
 
+        if (ValidatePassword(password) is { } invalid)
+        {
+            return invalid;
+        }
+
+        var passwordHash = _passwordHasher.Hash(password!);
+
         for (var attempt = 0; attempt < MaxCodeAttempts; attempt++)
         {
-            var session = new Session(SessionCodeGenerator.Generate(), name ?? string.Empty);
+            var session = new Session(SessionCodeGenerator.Generate(), name ?? string.Empty, passwordHash);
 
             if (await _sessionsRepository.TryAddAsync(session, cancellationToken))
             {
@@ -118,6 +151,67 @@ internal class SessionService : ISessionService
         var released = await _sessionsRepository.ReleaseAsync(id, cancellationToken);
 
         return released ? Result.Success : NotFound();
+    }
+
+    public async Task<ErrorOr<Success>> ChangePasswordAsync(
+        Guid id,
+        string? password,
+        CancellationToken cancellationToken)
+    {
+        if (ValidatePassword(password) is { } invalid)
+        {
+            return invalid;
+        }
+
+        var updated = await _sessionsRepository.UpdatePasswordHashAsync(
+            id,
+            _passwordHasher.Hash(password!),
+            cancellationToken);
+
+        return updated ? Result.Success : NotFound();
+    }
+
+    public async Task<ErrorOr<string>> JoinAsync(Guid id, string? password, CancellationToken cancellationToken)
+    {
+        var session = await _sessionsRepository.GetAsync(id, cancellationToken);
+
+        // An over-long password can't be right, and skipping the hash keeps it from being a cheap CPU burner
+        var valid = password is { Length: <= MaxPasswordLength }
+            && _passwordHasher.Verify(password, session?.PasswordHash ?? _dummyHash);
+
+        return session is null || !valid
+            ? Error.Unauthorized(description: "Wrong session password")
+            : AccessStamp(session.PasswordHash);
+    }
+
+    public async Task<bool> HasAccessAsync(Guid id, string? accessStamp, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(accessStamp))
+        {
+            return false;
+        }
+
+        var session = await _sessionsRepository.GetAsync(id, cancellationToken);
+
+        return session is not null && accessStamp == AccessStamp(session.PasswordHash);
+    }
+
+    /// <summary>Changes whenever the password does, which invalidates the unlocks issued for the old one.</summary>
+    private static string AccessStamp(string passwordHash)
+    {
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(passwordHash)))[..16];
+    }
+
+    private static Error? ValidatePassword(string? password)
+    {
+        if (string.IsNullOrEmpty(password) || password.Length < MinPasswordLength)
+        {
+            return Error.Validation(description: $"The password must be at least {MinPasswordLength} characters");
+        }
+
+        return password.Length > MaxPasswordLength
+            ? Error.Validation(description: $"The password must be at most {MaxPasswordLength} characters")
+            : null;
     }
 
     private static SessionDto ToDto(Session session)

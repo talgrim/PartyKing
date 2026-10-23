@@ -61,7 +61,12 @@ export const Home = (): ReactNode => {
                     {session.hasHost ? `Host: ${session.hostName}` : 'No host yet'}
                   </div>
                 </div>
-                <span className="font-mono text-amber-500">{session.code}</span>
+                <span className="font-mono text-amber-500">
+                  <span aria-label="Password protected" role="img">
+                    🔒
+                  </span>{' '}
+                  {session.code}
+                </span>
               </Link>
             </li>
           ))}

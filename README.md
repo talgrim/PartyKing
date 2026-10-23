@@ -44,7 +44,11 @@ Backend to .NET 9 (ASP.NET Core) zorkiestrowany przez .NET Aspire, frontend to S
 ### Kolejka muzyki
 
 - Jedna wspólna kolejka (YouTube + Spotify), trzymana w bazie SQLite — przeżywa restart serwera.
-- Goście wchodzą na stronę sesji `/s/<id>` (bez logowania), widzą co aktualnie gra (okładka, wykonawca,
+- Każda sesja jest chroniona hasłem, które admin ustawia przy jej tworzeniu (min. 4 znaki; admin może je potem
+  zmienić przyciskiem „Change password"). Każdy, także admin, musi je podać (`POST /sessions/{id}/join`, limit
+  10 prób na minutę z jednego IP), zanim zobaczy sesję; przeglądarka zapamiętuje to w podpisanym cookie.
+  Zmiana hasła unieważnia wcześniejsze odblokowania.
+- Goście wchodzą na stronę sesji `/s/<id>` (bez konta, ale z hasłem sesji), widzą co aktualnie gra (okładka, wykonawca,
   tytuł, czy jest pauza) i dodają utwory przez **wyszukiwanie w Spotify** albo **wklejenie linku**
   (link/URI utworu ze Spotify lub adres YouTube). Poniżej widzą listę „następne w kolejce".
 - Gospodarz loguje się kontem Spotify (wymagany **Premium**) i wraca na tę samą stronę sesji, na której
@@ -265,7 +269,7 @@ wykluczony z repozytorium:
 
 `RedirectUri` musi być dokładnie taki sam jak adres dodany w ustawieniach aplikacji w Dashboardzie
 Spotify. Używa `127.0.0.1`, więc gospodarz musi logować się przez `http://127.0.0.1:2137/...`
-(nie `localhost`). Pierwsze zapisane konto Spotify jest traktowane jako konto gospodarza.
+(nie `localhost`; serwer Vite sam przekierowuje `localhost` na `127.0.0.1`). Pierwsze zapisane konto Spotify jest traktowane jako konto gospodarza.
 
 ### Ustawienia slideshow
 

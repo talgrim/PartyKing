@@ -19,6 +19,7 @@ public class SpotifyController : CoreController
 
     /// <summary>Starts the Spotify login that makes the caller the host of the session.</summary>
     [HttpPost("sessions/{sessionId:guid}/host-login-urls")]
+    [RequireSessionAccess]
     [ProducesResponseType<Uri>(StatusCodes.Status200OK)]
     public async Task<IActionResult> CreateHostLoginUrl(Guid sessionId, CancellationToken cancellationToken)
     {
@@ -40,6 +41,7 @@ public class SpotifyController : CoreController
     }
 
     [HttpGet("sessions/{sessionId:guid}/tracks")]
+    [RequireSessionAccess]
     [ProducesResponseType<IReadOnlyList<SpotifyTrackDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> SearchTracks(
         Guid sessionId,

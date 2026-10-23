@@ -16,8 +16,12 @@ export const adminApi = {
   /** Resolves when the admin cookie is valid; rejects with status 401 otherwise. */
   me: () => unwrap<void>(axios.get('/admin/me', withCredentials)),
 
-  createSession: (name?: string) =>
-    unwrap<SessionDto>(axios.post('/admin/sessions', { name: name || null }, withCredentials)),
+  createSession: (name: string | undefined, password: string) =>
+    unwrap<SessionDto>(axios.post('/admin/sessions', { name: name || null, password }, withCredentials)),
+
+  /** Everyone who had unlocked the session has to enter the new password. */
+  changeSessionPassword: (sessionId: string, password: string) =>
+    unwrap<void>(axios.put(`/admin/sessions/${sessionId}/password`, { password }, withCredentials)),
 
   renameSession: (sessionId: string, name: string) =>
     unwrap<void>(axios.patch(`/admin/sessions/${sessionId}`, { name }, withCredentials)),

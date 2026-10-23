@@ -7,4 +7,5 @@ public static class Constants
     public const string UserCookieName = "cookie.partyKing.user";
     public const string AuthCookieName = "cookie.partyKing.auth";
     public const string AdminCookieName = "cookie.partyKing.admin";
+    public const string SessionAccessCookieName = "cookie.partyKing.sessions";
 }

@@ -24,6 +24,7 @@ public class QueueController : CoreController
     }
 
     [HttpPost("sessions/{sessionId:guid}/songs")]
+    [RequireSessionAccess]
     [ProducesResponseType<SongDataDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> QueueSong(
         Guid sessionId,
@@ -36,6 +37,7 @@ public class QueueController : CoreController
     }
 
     [HttpGet("sessions/{sessionId:guid}/songs")]
+    [RequireSessionAccess]
     [ProducesResponseType<IReadOnlyList<SongDataDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetQueue(Guid sessionId, CancellationToken cancellationToken)
     {
@@ -50,6 +52,7 @@ public class QueueController : CoreController
     /// when omitted); if an admin has skipped it meanwhile, nothing advances and the song that is playing is returned.
     /// </summary>
     [HttpPost("sessions/{sessionId:guid}/songs/next")]
+    [RequireSessionAccess]
     [AuthorizeByCookie]
     [ProducesResponseType<SongDataDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetNext(
@@ -67,6 +70,7 @@ public class QueueController : CoreController
     /// admins (admin cookie); 403 for everyone else, 409 when the song is already playing or played.
     /// </summary>
     [HttpDelete("sessions/{sessionId:guid}/songs/{songId:int}")]
+    [RequireSessionAccess]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> RemoveSong(Guid sessionId, int songId, CancellationToken cancellationToken)
     {

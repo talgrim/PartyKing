@@ -49,6 +49,15 @@ builder.Services.AddRateLimiter(options =>
                 PermitLimit = 10,
                 Window = TimeSpan.FromMinutes(1)
             }));
+    // Every attempt costs a PBKDF2 run, and a short password is easy to guess, so guessing is capped per IP
+    options.AddPolicy(SessionsController.JoinRateLimitPolicy, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1)
+            }));
     // Guests upload without logging in; several of them can share one Wi-Fi (one IP), so the limit is generous
     options.AddPolicy(SlideshowController.UploadRateLimitPolicy, context =>
         RateLimitPartition.GetFixedWindowLimiter(

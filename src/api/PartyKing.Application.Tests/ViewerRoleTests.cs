@@ -1,3 +1,4 @@
+using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Sessions.Services;
 
 namespace PartyKing.Application.Tests;
@@ -9,7 +10,7 @@ public class ViewerRoleTests
 
     public ViewerRoleTests()
     {
-        _service = new SessionService(_sessions);
+        _service = new SessionService(_sessions, new PasswordHasher());
     }
 
     [Fact]

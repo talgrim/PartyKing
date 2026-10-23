@@ -1,11 +1,12 @@
 import { ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import useSWR from 'swr';
+import useSWR, { useSWRConfig } from 'swr';
 import { AdminPlayerControls } from '@/components/Music/AdminPlayerControls';
 import { HostPlayer } from '@/components/Music/HostPlayer';
 import { NowPlayingCard } from '@/components/Music/NowPlayingCard';
 import { Queue } from '@/components/Music/Queue';
 import { SessionHeader } from '@/components/Music/SessionHeader';
+import { SessionPasswordForm } from '@/components/Music/SessionPasswordForm';
 import { PageNavigation } from '@/components/common/PageNavigation';
 import { ROUTE_PATHS } from '@/router/constants';
 import { HTTP_STATUS_CODE } from '@/service/constants';
@@ -14,12 +15,14 @@ import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 import { useViewerRole } from '@/service/endpoints/sessions/useViewerRole';
 
 /**
- * Page of a session. Anyone sees what is playing and can search for or paste songs to add to the queue, no login
- * needed. The host also gets the player, and an admin the controls to pause and skip.
+ * Page of a session, behind the session password. Anyone who entered it (admins included) sees what is playing and
+ * can search for or paste songs to add to the queue, no login needed. The host also gets the player, and an admin
+ * the controls to pause and skip.
  */
 export const MusicQueue = (): ReactNode => {
   const { sessionId = '' } = useParams();
 
+  const { mutate } = useSWRConfig();
   const { isHost, isAdmin } = useViewerRole(sessionId);
   const { data: nowPlaying, mutate: refreshNowPlaying } = useNowPlaying(sessionId);
 
@@ -27,6 +30,11 @@ export const MusicQueue = (): ReactNode => {
     refreshInterval: 10000,
     shouldRetryOnError: false,
   });
+
+  // Revalidates everything on the page, which was refused before the password was entered
+  const onJoined = () => void mutate(() => true);
+
+  const locked = (error as { status?: number } | undefined)?.status === HTTP_STATUS_CODE.UNAUTHORIZED;
 
   return (
     <div className="w-full min-h-full bg-slate-800 text-slate-400">
@@ -40,7 +48,9 @@ export const MusicQueue = (): ReactNode => {
           ]}
         />
 
-        {error && (
+        {locked && <SessionPasswordForm sessionId={sessionId} onJoined={onJoined} />}
+
+        {error && !locked && (
           <p className="px-2 pt-4 text-amber-500">
             {(error as { status?: number }).status === HTTP_STATUS_CODE.NOT_FOUND
               ? 'This session does not exist (anymore).'
@@ -51,7 +61,7 @@ export const MusicQueue = (): ReactNode => {
           </p>
         )}
 
-        {session && (
+        {session && !locked && (
           <>
             <SessionHeader session={session} isHost={isHost} />
             <NowPlayingCard nowPlaying={nowPlaying} />

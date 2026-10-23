@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { SWRConfig } from 'swr';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { MusicQueue } from './MusicQueue';
@@ -8,10 +9,11 @@ const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
   getViewerRole: vi.fn(),
   getNowPlaying: vi.fn(),
+  join: vi.fn(),
 }));
 
 vi.mock('@/service/endpoints/sessions/sessionsApi', () => ({
-  sessionsApi: { getSession: mocks.getSession, getViewerRole: mocks.getViewerRole },
+  sessionsApi: { getSession: mocks.getSession, getViewerRole: mocks.getViewerRole, join: mocks.join },
 }));
 vi.mock('@/service/endpoints/player/playerApi', () => ({ playerApi: { getNowPlaying: mocks.getNowPlaying } }));
 vi.mock('@/components/Music/Queue', () => ({ Queue: () => <div>queue</div> }));
@@ -85,5 +87,30 @@ describe('MusicQueue', () => {
 
     expect(await screen.findByText('host player')).toBeVisible();
     expect(screen.queryByText('admin controls')).not.toBeInTheDocument();
+  });
+
+  it('asks for the password instead of showing the session until it is entered', async () => {
+    mocks.getSession.mockRejectedValueOnce({ status: 401, message: 'The session password is required' });
+    mocks.getViewerRole.mockResolvedValue({ isHost: false, isAdmin: true });
+    mocks.join.mockResolvedValue(undefined);
+
+    render(
+      <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
+        <MemoryRouter initialEntries={['/s/session-1']}>
+          <Routes>
+            <Route path="/s/:sessionId" element={<MusicQueue />} />
+          </Routes>
+        </MemoryRouter>
+      </SWRConfig>,
+    );
+
+    await userEvent.type(await screen.findByLabelText('Session password'), 'secret');
+    expect(screen.queryByText('queue')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Join' }));
+
+    expect(mocks.join).toHaveBeenCalledWith('session-1', 'secret');
+    expect(await screen.findByText('queue')).toBeVisible();
+    expect(screen.queryByLabelText('Session password')).not.toBeInTheDocument();
   });
 });
