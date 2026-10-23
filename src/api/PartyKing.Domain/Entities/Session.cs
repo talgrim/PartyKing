@@ -8,10 +8,11 @@ public class Session
     {
     }
 
-    public Session(string code, string name)
+    public Session(string code, string name, string passwordHash)
     {
         Id = Guid.NewGuid();
         Code = code;
+        PasswordHash = passwordHash;
         Name = string.IsNullOrWhiteSpace(name) ? DefaultName : name.Trim();
         CreatedAt = DateTime.UtcNow;
     }
@@ -21,6 +22,9 @@ public class Session
     /// <summary>Short, human-friendly, unique code used to find the session.</summary>
     public string Code { get; set; } = null!;
     public string Name { get; set; } = null!;
+
+    /// <summary>Hash of the password everyone (admins included) must enter to join the session.</summary>
+    public string PasswordHash { get; set; } = null!;
 
     /// <summary>Spotify profile id of the host; null until someone claims the session.</summary>
     public string? HostProfileId { get; set; }

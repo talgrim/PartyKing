@@ -12,6 +12,7 @@ public class SessionConfiguration : IEntityTypeConfiguration<Session>
         builder.Property(x => x.Id).ValueGeneratedNever();
         builder.Property(x => x.Code).IsRequired();
         builder.Property(x => x.Name).IsRequired();
+        builder.Property(x => x.PasswordHash).IsRequired();
         builder.HasIndex(x => x.Code).IsUnique();
 
         // One host account can own at most one session (NULLs are allowed to repeat).

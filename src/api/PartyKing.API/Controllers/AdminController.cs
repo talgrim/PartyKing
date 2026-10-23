@@ -60,7 +60,7 @@ public class AdminController : CoreController
         [FromBody] CreateSessionRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _sessionService.CreateAsync(request.Name, cancellationToken);
+        var result = await _sessionService.CreateAsync(request.Name, request.Password, cancellationToken);
 
         return result.Match(Ok, Problem);
     }
@@ -74,6 +74,20 @@ public class AdminController : CoreController
         CancellationToken cancellationToken)
     {
         var result = await _sessionService.RenameAsync(sessionId, request.Name, cancellationToken);
+
+        return result.Match(_ => NoContent(), Problem);
+    }
+
+    /// <summary>Sets a new password; everyone has to enter it again to get back in.</summary>
+    [HttpPut("admin/sessions/{sessionId:guid}/password")]
+    [AuthorizeAdmin]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> ChangeSessionPassword(
+        Guid sessionId,
+        [FromBody] ChangeSessionPasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _sessionService.ChangePasswordAsync(sessionId, request.Password, cancellationToken);
 
         return result.Match(_ => NoContent(), Problem);
     }

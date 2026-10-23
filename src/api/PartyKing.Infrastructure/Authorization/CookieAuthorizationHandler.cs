@@ -16,20 +16,32 @@ public interface ICookieAuthorizationHandler
     /// <summary>Reads the admin account id; false when the cookie is missing or was tampered with.</summary>
     bool TryReadAdminId(HttpRequest request, out Guid adminId);
     void SignOutAdmin(HttpContext? httpContext);
+
+    /// <summary>Remembers that this browser entered the session's password; <paramref name="stamp"/> ties it to that password.</summary>
+    void GrantSessionAccess(Guid sessionId, string stamp, HttpContext? httpContext);
+
+    /// <summary>Reads the stamp stored for the session; false when there is none or the cookie was tampered with.</summary>
+    bool TryReadSessionAccess(HttpRequest request, Guid sessionId, out string stamp);
 }
 
 internal class CookieAuthorizationHandler : ICookieAuthorizationHandler
 {
     private static readonly int UserExpirationTime = (int)TimeSpan.FromDays(30).TotalSeconds;
     private static readonly int AdminExpirationTime = (int)TimeSpan.FromHours(12).TotalSeconds;
+    private static readonly int SessionAccessExpirationTime = (int)TimeSpan.FromDays(30).TotalSeconds;
+
+    // Keeps the cookie small; when exceeded the oldest unlocks are forgotten and the password is asked again
+    private const int MaxUnlockedSessions = 20;
 
     private readonly IDataProtector _userProtector;
     private readonly IDataProtector _adminProtector;
+    private readonly IDataProtector _sessionAccessProtector;
 
     public CookieAuthorizationHandler(IDataProtectionProvider dataProtectionProvider)
     {
         _userProtector = dataProtectionProvider.CreateProtector("PartyKing.UserCookie");
         _adminProtector = dataProtectionProvider.CreateProtector("PartyKing.AdminCookie");
+        _sessionAccessProtector = dataProtectionProvider.CreateProtector("PartyKing.SessionAccessCookie");
     }
 
     public void Authorize(string profileId, HttpContext? httpContext)
@@ -87,6 +99,45 @@ internal class CookieAuthorizationHandler : ICookieAuthorizationHandler
     public void SignOutAdmin(HttpContext? httpContext)
     {
         Require(httpContext).Response.Cookies.Delete(Constants.AdminCookieName, new CookieOptions { Path = "/" });
+    }
+
+    public void GrantSessionAccess(Guid sessionId, string stamp, HttpContext? httpContext)
+    {
+        var context = Require(httpContext);
+
+        var unlocked = ReadSessionAccess(context.Request)
+            .Where(x => x.SessionId != sessionId)
+            .Append((SessionId: sessionId, Stamp: stamp))
+            .TakeLast(MaxUnlockedSessions);
+
+        context.Response.Cookies.Append(
+            Constants.SessionAccessCookieName,
+            _sessionAccessProtector.Protect(string.Join(';', unlocked.Select(x => $"{x.SessionId:N}:{x.Stamp}"))),
+            GetOptions(SessionAccessExpirationTime, context));
+    }
+
+    public bool TryReadSessionAccess(HttpRequest request, Guid sessionId, out string stamp)
+    {
+        stamp = ReadSessionAccess(request).LastOrDefault(x => x.SessionId == sessionId).Stamp ?? string.Empty;
+
+        return stamp.Length > 0;
+    }
+
+    private IEnumerable<(Guid SessionId, string Stamp)> ReadSessionAccess(HttpRequest request)
+    {
+        if (!request.Cookies.TryGetValue(Constants.SessionAccessCookieName, out var protectedValue)
+            || !TryUnprotect(_sessionAccessProtector, protectedValue, out var value))
+        {
+            yield break;
+        }
+
+        foreach (var entry in value.Split(';', StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (entry.Split(':') is [var id, var stamp] && Guid.TryParseExact(id, "N", out var sessionId))
+            {
+                yield return (sessionId, stamp);
+            }
+        }
     }
 
     private static bool TryUnprotect(IDataProtector protector, string? protectedValue, out string value)

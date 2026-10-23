@@ -13,6 +13,7 @@ public interface ISessionsRepository
     Task<IReadOnlyList<Session>> GetAllAsync(CancellationToken cancellationToken);
     Task<Session?> GetAsync(Guid id, CancellationToken cancellationToken);
     Task<bool> RenameAsync(Guid id, string name, CancellationToken cancellationToken);
+    Task<bool> UpdatePasswordHashAsync(Guid id, string passwordHash, CancellationToken cancellationToken);
 
     /// <summary>Deletes the session together with its queue.</summary>
     Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken);
@@ -83,6 +84,20 @@ internal class SessionsRepository : ISessionsRepository
         var updated = await dbContext.Sessions
             .Where(x => x.Id == id)
             .ExecuteUpdateAsync(x => x.SetProperty(s => s.Name, name), cancellationToken);
+
+        return updated > 0;
+    }
+
+    public async Task<bool> UpdatePasswordHashAsync(
+        Guid id,
+        string passwordHash,
+        CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        var updated = await dbContext.Sessions
+            .Where(x => x.Id == id)
+            .ExecuteUpdateAsync(x => x.SetProperty(s => s.PasswordHash, passwordHash), cancellationToken);
 
         return updated > 0;
     }

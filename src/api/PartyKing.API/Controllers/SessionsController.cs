@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using PartyKing.API.Authorization;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Contract.V1.Sessions;
 using PartyKing.Infrastructure.Authentication;
@@ -9,6 +11,8 @@ namespace PartyKing.API.Controllers;
 
 public class SessionsController : CoreController
 {
+    public const string JoinRateLimitPolicy = "session-join";
+
     private readonly ISessionService _sessionService;
     private readonly ICookieAuthorizationHandler _cookieAuthorizationHandler;
 
@@ -29,7 +33,32 @@ public class SessionsController : CoreController
         return Ok(await _sessionService.GetAllAsync(cancellationToken));
     }
 
+    /// <summary>
+    /// Checks the session password and remembers the unlock in a cookie. 401 for a wrong password and for an
+    /// unknown session alike, so it doesn't reveal which sessions exist.
+    /// </summary>
+    [HttpPost("sessions/{sessionId:guid}/join")]
+    [EnableRateLimiting(JoinRateLimitPolicy)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Join(
+        Guid sessionId,
+        [FromBody] JoinSessionRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _sessionService.JoinAsync(sessionId, request.Password, cancellationToken);
+
+        if (result.IsError)
+        {
+            return Problem(result.Errors);
+        }
+
+        _cookieAuthorizationHandler.GrantSessionAccess(sessionId, result.Value, HttpContext);
+
+        return NoContent();
+    }
+
     [HttpGet("sessions/{sessionId:guid}")]
+    [RequireSessionAccess]
     [ProducesResponseType<SessionDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetSession(Guid sessionId, CancellationToken cancellationToken)
     {
@@ -43,6 +72,7 @@ public class SessionsController : CoreController
     /// just gets false for both.
     /// </summary>
     [HttpGet("sessions/{sessionId:guid}/me")]
+    [RequireSessionAccess]
     [ProducesResponseType<ViewerRoleDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetViewerRole(Guid sessionId, CancellationToken cancellationToken)
     {
