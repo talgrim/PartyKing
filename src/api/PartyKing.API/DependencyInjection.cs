@@ -30,6 +30,7 @@ public static class DependencyInjection
         services.RegisterSpotifyInfrastructure(configuration);
         services.RegisterYoutubeInfrastructure();
         services.AddAuthorization();
+        services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
         AddConfigurations(configuration);
     }
 
