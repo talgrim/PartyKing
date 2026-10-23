@@ -21,7 +21,7 @@ Frontend (from `PartyKing.UI`):
 - `npm run build`
 - `npm test` runs `vitest run`. To run a single test: `npx vitest run src/path/to/file.test.ts`. Note that `vite.config.ts` references `testGlobalSetup.ts`/`testSetup.ts`, which don't exist yet.
 
-The repo has no .NET test projects.
+Backend tests: `dotnet test src/api/PartyKing.Application.Tests` (xunit; currently covers `SongInputParser`).
 
 ## Architecture
 
