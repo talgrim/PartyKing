@@ -60,7 +60,7 @@ public class ActionMetricsFilterTests
     }
 
     [Fact]
-    public async Task Records_duration_with_tags_for_successful_action()
+    public async Task OnActionExecution_WhenTheActionSucceeds_RecordsDurationWithTags()
     {
         var (filter, measurements, listener, metrics) = Create();
         using var _ = listener;
@@ -79,7 +79,7 @@ public class ActionMetricsFilterTests
     }
 
     [Fact]
-    public async Task Marks_error_status_results_as_error()
+    public async Task OnActionExecution_WhenTheResultIsAnErrorStatus_RecordsAnErrorOutcome()
     {
         var (filter, measurements, listener, metrics) = Create();
         using var _ = listener;
@@ -95,7 +95,7 @@ public class ActionMetricsFilterTests
     }
 
     [Fact]
-    public async Task Records_exception_and_rethrows()
+    public async Task OnActionExecution_WhenTheActionThrows_RecordsAnExceptionOutcomeAndRethrows()
     {
         var (filter, measurements, listener, metrics) = Create();
         using var _ = listener;

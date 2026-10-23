@@ -55,7 +55,7 @@ public class MeteredSpotifyIntegrationClientTests
     }
 
     [Fact]
-    public void Records_successful_call_with_operation_name()
+    public void SearchTracksAsync_OnSuccess_RecordsTheOperationAndOutcome()
     {
         var tags = Assert.Single(Capture(c => c.SearchTracksAsync("t", "q", default), new FakeClient()));
 
@@ -64,7 +64,7 @@ public class MeteredSpotifyIntegrationClientTests
     }
 
     [Fact]
-    public void Treats_a_missing_track_as_success()
+    public void GetTrackAsync_WhenTheTrackIsMissing_RecordsASuccessOutcome()
     {
         var tags = Assert.Single(Capture(c => c.GetTrackAsync("t", "id", default), new FakeClient()));
 
@@ -73,7 +73,7 @@ public class MeteredSpotifyIntegrationClientTests
     }
 
     [Fact]
-    public void Records_exception_outcome_for_a_failing_call()
+    public void SearchTracksAsync_WhenTheInnerCallThrows_RecordsAnExceptionOutcome()
     {
         var inner = new FakeClient { Failure = new InvalidOperationException("boom") };
 
@@ -83,7 +83,7 @@ public class MeteredSpotifyIntegrationClientTests
     }
 
     [Fact]
-    public void Does_not_time_building_the_authentication_url()
+    public void GetAuthenticationUri_RecordsNothing()
     {
         var tagSets = Capture(c => { c.GetAuthenticationUri("s"); return Task.CompletedTask; }, new FakeClient());
 
