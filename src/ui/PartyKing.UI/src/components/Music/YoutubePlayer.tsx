@@ -3,11 +3,14 @@ import ReactPlayer from 'react-player';
 
 type PlayerProps = {
     songUrl: string,
-    onEnded?: Function,
-    mute: boolean
+    onEnded?: () => void,
+    mute: boolean,
+    paused?: boolean,
+    // Fired when playback is paused or resumed, including through the player's own controls.
+    onPausedChange?: (paused: boolean) => void
 }
 
-export const YoutubePlayer = ({songUrl, mute, onEnded}: PlayerProps) => {
+export const YoutubePlayer = ({songUrl, mute, paused = false, onPausedChange, onEnded}: PlayerProps) => {
     const player = useRef(null);
 
     return (
@@ -15,14 +18,15 @@ export const YoutubePlayer = ({songUrl, mute, onEnded}: PlayerProps) => {
             ref={player}
             src={songUrl}
             className="w-full h-full max-h-screen aspect-video"
-            playing={true}
+            playing={!paused}
             volume={0.02}
             controls={true}
             muted={mute}
             onReady={() => {
                 console.log('Player ready', player);
             }}
-            onPlay={() => console.log('play')}
+            onPlay={() => onPausedChange?.(false)}
+            onPause={() => onPausedChange?.(true)}
             onEnded={onEnded}
             style={{ 
                 width: '100%',

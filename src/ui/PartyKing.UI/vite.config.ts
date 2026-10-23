@@ -22,7 +22,6 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    globalSetup: ['./testGlobalSetup.ts'],
     setupFiles: ['./testSetup.ts', '@vitest/web-worker'],
     deps: {
       inline: ['vitest-canvas-mock'],
@@ -38,10 +37,12 @@ export default defineConfig({
     coverage: {
       reporter: ['text', 'text-summary', 'json-summary', 'html'],
       reportsDirectory: './coverage',
-      lines: 80,
-      functions: 68,
-      branches: 85,
-      statements: 80,
+      thresholds: {
+        lines: 80,
+        functions: 68,
+        branches: 85,
+        statements: 80,
+      },
       exclude: [
         'src/routes/**',
         'src/constants/**',

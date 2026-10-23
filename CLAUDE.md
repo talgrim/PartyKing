@@ -4,21 +4,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-PartyKing is a party app: guests upload photos that the API serves as a timed slideshow, plus music sessions: each session has its own queue (YouTube links and Spotify tracks, persisted in SQLite) and its own host, who plays it through the Spotify Web Playback SDK. It has a .NET 9 backend (`src/api/PartyKing.sln`) orchestrated by .NET Aspire, and a React + Vite frontend in `src/ui/PartyKing.UI`. (`PartyKing.UI/README.md` is stale Next.js boilerplate; the UI is Vite.)
-
+PartyKing is a party app: guests upload photos that the API serves as a timed slideshow, plus music sessions: each session has its own queue (YouTube links and Spotify tracks, persisted in SQLite) and its own host, who plays it through the Spotify Web Playback SDK. It has a .NET 9 backend (`src/api/PartyKing.sln`) orchestrated by .NET Aspire, and a React + Vite frontend in `src/ui/PartyKing.UI`.
 ## Commands
 
 Backend (run from `src/api`):
 - Build: `dotnet build PartyKing.sln`
 - Run everything (API + UI via Aspire): `dotnet run --project PartyKing.AppHost`
-- Run the API only: `dotnet run --project PartyKing.API` (the `http` launch profile binds to `http://localhost:4200`)
+- Run the API only: `dotnet run --project PartyKing.API` (the `http` launch profile binds to `http://127.0.0.1:4200`)
 - Add an EF migration: `dotnet ef migrations add <Name> --project PartyKing.Persistence --startup-project PartyKing.Persistence --context WriterDbContext`
 - Migrations are applied automatically at API startup (`MigrateDb()` in `Program.cs`). The SQLite file is `PartyKing.db`, relative to the working directory.
 
 Frontend (from `src/ui/PartyKing.UI`):
 - `npm install`, then `npm start` (Vite dev server on port 2137, host `0.0.0.0`, polling watch for WSL2/Windows HMR)
 - `npm run build`
-- `npm test` runs `vitest run`. To run a single test: `npx vitest run src/path/to/file.test.ts`. Note that `vite.config.ts` references `testGlobalSetup.ts`/`testSetup.ts`, which don't exist yet.
+- `npm test` runs `vitest run`. To run a single test: `npx vitest run src/path/to/file.test.ts`. Tests run in jsdom with `testSetup.ts` (jest-dom matchers). `src/App.test.js` is a stale CRA leftover and fails, so run the Music tests with `npx vitest run src/components/Music`.
 
 Backend tests: `dotnet test PartyKing.Application.Tests` (from `src/api`) (xunit; currently covers `SongInputParser`).
 
@@ -51,10 +50,12 @@ Key patterns and gotchas:
 
 Frontend (`PartyKing.UI/src`):
 - React 19, react-router (`router/routes.tsx`: `/` Home lists sessions with a code search, `/s/:sessionId` MusicQueue for guests, `/s/:sessionId/music` Music for the host player, `/callback` Spotify redirect, `/admin` admin login and session panel, plus Slideshow and ImageUploader), MUI + Tailwind v4, axios + SWR.
-- The API base URL is hardcoded in `src/envVariables.ts` (`http://localhost:4200`) and must match the API launch profile. To test from phones on the LAN, change both `envVariables.ts` and `src/api/PartyKing.API/Properties/launchSettings.json` to the machine's LAN IP, but don't commit that change. Axios is configured in `src/service/request.ts`, and the `@/` import alias maps to `src/`.
+- The API base URL is hardcoded in `src/envVariables.ts` (`http://127.0.0.1:4200`) and must match the API launch profile. To test from phones on the LAN, change both `envVariables.ts` and `src/api/PartyKing.API/Properties/launchSettings.json` to the machine's LAN IP, but don't commit that change. Axios is configured in `src/service/request.ts`, and the `@/` import alias maps to `src/`.
 
 ## Conventions
 - Commits follow the Conventional Commits format.
 - Use subagent Explore for codebase exploration.
 - Don't commit changes until explicitly stated.
 - Stick to SOLID.
+- Commit tests in a separate commit.
+- Commits should be atomic.

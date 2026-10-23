@@ -2,7 +2,7 @@ class EnvVariables {
   private readonly _apiUrl: string;
 
   constructor() {
-    this._apiUrl = "http://localhost:4200";
+    this._apiUrl = "http://127.0.0.1:4200";
   }
 
   get apiUrl() {
