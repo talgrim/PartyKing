@@ -1,0 +1,39 @@
+# fly.toml app configuration file generated for partyking on 2026-10-23T16:59:42+02:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'partyking'
+primary_region = 'fra'
+
+[build]
+  dockerfile = 'Dockerfile'
+
+[env]
+  # Fly's edge sets Fly-Client-IP / X-Forwarded-Proto; nginx may trust them only here
+  TRUST_FLY_CLIENT_IP = '1'
+  SpotifySettings__RedirectUri = 'https://party.talgrim.dev/callback'
+
+[[mounts]]
+  source = 'partyking_data'
+  destination = '/data'
+
+[http_service]
+  internal_port = 8181
+  force_https = true
+  auto_stop_machines = 'off'
+  auto_start_machines = false
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '20s'
+    method = 'GET'
+    # nginx serves /health on a separate internal port that the http_service does not expose
+    port = 8182
+    path = '/health'
+
+[[vm]]
+  size = 'shared-cpu-1x'
+  memory = '512mb'

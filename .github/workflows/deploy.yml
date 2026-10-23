@@ -1,0 +1,21 @@
+name: Deploy to Fly.io
+on:
+  push:
+    branches: [master]
+
+# One deploy at a time: the app runs on a single machine with a SQLite volume
+concurrency: deploy-group
+
+jobs:
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <AssemblyName>PartyKing.API</AssemblyName>
+        <RootNamespace>PartyKing.API</RootNamespace>
+        <LangVersion>13</LangVersion>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ErrorOr" Version="2.0.1" />
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.8" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.8" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.3" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\PartyKing.Application\PartyKing.Application.csproj" />
+      <ProjectReference Include="..\PartyKing.Contract\PartyKing.Contract.csproj" />
+      <ProjectReference Include="..\PartyKing.Infrastructure.Spotify\PartyKing.Infrastructure.Spotify.csproj" />
+      <ProjectReference Include="..\PartyKing.ServiceDefaults\PartyKing.ServiceDefaults.csproj" />
+      <ProjectReference Include="..\PartyKing.Infrastructure.Youtube\PartyKing.Infrastructure.Youtube.csproj" />
+    </ItemGroup>
+
+</Project>

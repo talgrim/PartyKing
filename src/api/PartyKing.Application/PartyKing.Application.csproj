@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ErrorOr" Version="2.0.1" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.8" />
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.Abstractions" Version="2.3.0" />
+        <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.8" />
+        <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.8" />
+        <PackageReference Include="OneOf" Version="3.0.271" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <InternalsVisibleTo Include="PartyKing.Application.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\PartyKing.Contract\PartyKing.Contract.csproj" />
+      <ProjectReference Include="..\PartyKing.Infrastructure.Spotify\PartyKing.Infrastructure.Spotify.csproj" />
+      <ProjectReference Include="..\PartyKing.Infrastructure\PartyKing.Infrastructure.csproj" />
+      <ProjectReference Include="..\PartyKing.Infrastructure.Youtube\PartyKing.Infrastructure.Youtube.csproj" />
+    </ItemGroup>
+
+</Project>

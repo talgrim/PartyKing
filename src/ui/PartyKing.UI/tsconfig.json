@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    // @splidejs/react-splide ships its types outside its package.json "exports"
+    "resolvePackageJsonExports": false,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "strictNullChecks": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@mocks/*": ["test/__mocks__/*"],
+      "@root/*": ["*"],
+      "@e2e/*": ["e2e/*"]
+    },
+    "plugins": [{ "name": "typescript-plugin-css-modules" }],
+    "types": ["vitest/globals", "@testing-library/jest-dom/vitest"]
+  },
+  // vite.config.ts is left out: it needs package "exports" resolution, which is turned off above.
+  "include": ["src"]
+}

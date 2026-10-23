@@ -1,0 +1,4 @@
+# Shell scripts and nginx config run on Linux inside the container
+*.sh text eol=lf
+docker/nginx.conf text eol=lf
+Dockerfile text eol=lf
