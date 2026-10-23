@@ -22,13 +22,16 @@ public class WriterDbContext : PartyKingDbContextBase
 
 public class PartyKingDbContextBase : DbContext
 {
+    /// <summary>Environment variable that overrides the SQLite file location (defaults to PartyKing.db in the working directory).</summary>
+    public const string DatabasePathVariable = "PARTYKING_DATABASE_PATH";
+
     protected PartyKingDbContextBase(DbContextOptions<PartyKingDbContextBase> options) : base(options)
     {
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        optionsBuilder.UseSqlite("Data Source=PartyKing.db");
+        optionsBuilder.UseSqlite($"Data Source={Environment.GetEnvironmentVariable(DatabasePathVariable) ?? "PartyKing.db"}");
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -1,4 +1,6 @@
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.FileProviders;
 using PartyKing.API;
 using PartyKing.API.Controllers;
@@ -42,6 +44,20 @@ builder.Services.AddRateLimiter(options =>
 
 builder.Services.AddControllers();
 
+// Behind nginx/Fly the real client IP and scheme arrive in X-Forwarded-* headers. Kestrel is only reachable
+// through the proxy in the container, so every proxy is trusted.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
+// Photo uploads can be several files in one request
+const long maxUploadBytes = 200L * 1024 * 1024;
+builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = maxUploadBytes);
+builder.Services.Configure<FormOptions>(options => options.MultipartBodyLengthLimit = maxUploadBytes);
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -51,10 +67,17 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseForwardedHeaders();
+
 app.MapDefaultEndpoints();
 
+// TLS is terminated by the proxy in front of the container
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
 app
-    .UseHttpsRedirection()
     .UseRouting()
     .UseCors("CorsPolicy")
     .UseRateLimiter()

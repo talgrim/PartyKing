@@ -40,14 +40,14 @@ internal class CookieAuthorizationHandler : ICookieAuthorizationHandler
         context.Response.Cookies.Append(
             Constants.UserCookieName,
             _userProtector.Protect(profileId),
-            GetOptions(UserExpirationTime));
+            GetOptions(UserExpirationTime, context));
     }
 
     public void Authorize(string spotifyAccessToken, int expiresIn, HttpContext? httpContext)
     {
         var context = Require(httpContext);
 
-        context.Response.Cookies.Append(Constants.AuthCookieName, spotifyAccessToken, GetOptions(expiresIn));
+        context.Response.Cookies.Append(Constants.AuthCookieName, spotifyAccessToken, GetOptions(expiresIn, context));
     }
 
     public void AuthorizeAdmin(Guid adminId, HttpContext? httpContext)
@@ -57,7 +57,7 @@ internal class CookieAuthorizationHandler : ICookieAuthorizationHandler
         context.Response.Cookies.Append(
             Constants.AdminCookieName,
             _adminProtector.Protect(adminId.ToString()),
-            GetOptions(AdminExpirationTime));
+            GetOptions(AdminExpirationTime, context));
     }
 
     public bool TryReadProfileId(HttpRequest request, out string profileId)
@@ -114,12 +114,13 @@ internal class CookieAuthorizationHandler : ICookieAuthorizationHandler
         return httpContext ?? throw new InvalidOperationException("Null HTTP context when trying to authorize");
     }
 
-    private static CookieOptions GetOptions(int expirationSeconds)
+    private static CookieOptions GetOptions(int expirationSeconds, HttpContext context)
     {
         return new CookieOptions
         {
             Path = "/",
             HttpOnly = true,
+            Secure = context.Request.IsHttps,
             SameSite = SameSiteMode.Lax,
             Expires = DateTimeOffset.UtcNow.Add(TimeSpan.FromSeconds(expirationSeconds))
         };
