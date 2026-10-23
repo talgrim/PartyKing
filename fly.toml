@@ -12,6 +12,10 @@ primary_region = 'fra'
 [env]
   # Fly's edge sets Fly-Client-IP / X-Forwarded-Proto; nginx may trust them only here
   TRUST_FLY_CLIENT_IP = '1'
+  # Never Debug/Trace in production: EF Core and ASP.NET log every query and request at those levels
+  Logging__LogLevel__Default = 'Information'
+  Logging__LogLevel__Microsoft__AspNetCore = 'Warning'
+  Logging__LogLevel__Microsoft__EntityFrameworkCore = 'Warning'
   SpotifySettings__RedirectUri = 'https://party.talgrim.dev/callback'
 
 [[mounts]]
@@ -33,6 +37,11 @@ primary_region = 'fra'
     # nginx serves /health on a separate internal port that the http_service does not expose
     port = 8182
     path = '/health'
+
+[metrics]
+  # nginx proxies this port to Kestrel's Prometheus endpoint; Fly shows it in its managed Grafana
+  port = 8183
+  path = '/metrics'
 
 [[vm]]
   size = 'shared-cpu-1x'
