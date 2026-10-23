@@ -1,7 +1,8 @@
 # PartyKing
 
 Aplikacja imprezowa łącząca dwie funkcje: **slideshow zdjęć wrzucanych przez gości z telefonów**
-(wyświetlany na wspólnym ekranie / ekranie LED) oraz **kolejkę muzyki** z odtwarzaczem YouTube.
+(wyświetlany na wspólnym ekranie / ekranie LED) oraz **wspólną kolejkę muzyki** (utwory ze Spotify i linki do YouTube), którą goście zasilają
+bez logowania, a gospodarz odtwarza na jednym urządzeniu.
 
 Backend to .NET 9 (ASP.NET Core) zorkiestrowany przez .NET Aspire, frontend to SPA w React 19 + Vite.
 
@@ -41,8 +42,15 @@ Backend to .NET 9 (ASP.NET Core) zorkiestrowany przez .NET Aspire, frontend to S
 
 ### Kolejka muzyki
 
-- Strona `/music` z odtwarzaczem YouTube i formularzem na wklejenie adresu utworu.
-- **Ta część jest na razie zamockowana** — patrz [Znane ograniczenia](#znane-ograniczenia).
+- Jedna wspólna kolejka (YouTube + Spotify), trzymana w bazie SQLite — przeżywa restart serwera.
+- Goście wchodzą na `/music-queue` (bez logowania) i dodają utwory przez **wyszukiwanie w Spotify**
+  albo **wklejenie linku** (link/URI utworu ze Spotify lub adres YouTube). Poniżej widzą listę
+  „następne w kolejce".
+- Gospodarz loguje się kontem Spotify (wymagany **Premium**) i otwiera `/music`: strona odtwarza
+  kolejkę — utwory ze Spotify przez Web Playback SDK, utwory z YouTube przez odtwarzacz YouTube —
+  i automatycznie przechodzi do następnego utworu.
+- Jest jedno konto gospodarza; goście nigdy nie logują się do Spotify. Backend używa tokena
+  gospodarza do wyszukiwania i pobierania danych utworów w imieniu gości.
 
 ## Jak to działa
 
@@ -70,6 +78,10 @@ Kolejność zdjęć jest realizowana bez osobnej kolumny sortującej: identyfika
 `Guid.CreateVersion7()` (UUIDv7 zawiera znacznik czasu i jest sortowalny), więc zapytanie
 `WHERE Id > currentId ORDER BY Id` naturalnie zwraca kolejne wrzucone zdjęcie.
 
+Kolejka muzyki działa podobnie: stan trzyma baza (`QueueItems`), a `QueueRepository` pilnuje, że
+w danej chwili gra co najwyżej jeden element (`Playing`); `POST /queue/songs/next` oznacza go jako
+`Played` i uruchamia następny w kolejce (`Queued`).
+
 ## Stos technologiczny
 
 **Backend**
@@ -81,7 +93,9 @@ Kolejność zdjęć jest realizowana bez osobnej kolumny sortującej: identyfika
 | .NET Aspire 9.4 | Orkiestracja (AppHost + hosting aplikacji npm), dashboard |
 | Entity Framework Core 9 + SQLite | Dostęp do danych, migracje, seed |
 | ErrorOr | Mapowanie błędów domenowych na odpowiedzi HTTP |
+| Spotify Web API | Wyszukiwanie utworów, logowanie gospodarza (OAuth) |
 | Swashbuckle / Swagger | Dokumentacja API (tylko w Development) |
+| xUnit | Testy backendu |
 | OpenTelemetry | Metryki, logi i traces (przez ServiceDefaults) |
 
 **Frontend**
@@ -97,44 +111,54 @@ Kolejność zdjęć jest realizowana bez osobnej kolumny sortującej: identyfika
 | axios | Klient HTTP (upload plików) |
 | Splide | Karuzela slideshow |
 | react-player | Odtwarzacz YouTube |
+| Spotify Web Playback SDK | Odtwarzanie utworów ze Spotify w przeglądarce gospodarza |
 | Vitest + Testing Library | Testy |
 
 ## Struktura repozytorium
 
-Backend jest podzielony na warstwy w stylu Clean Architecture (8 projektów w `PartyKing.sln`):
+Repozytorium ma dwa katalogi główne: backend w `src/api`, frontend w `src/ui/PartyKing.UI`.
+
+Backend jest podzielony na warstwy w stylu Clean Architecture (projekty w `src/api/PartyKing.sln`):
 
 | Projekt | Odpowiedzialność |
 |---|---|
 | `PartyKing.AppHost` | Aspire — uruchamia API oraz UI jako aplikację npm |
 | `PartyKing.ServiceDefaults` | Współdzielone: OpenTelemetry, health checks, service discovery, resilience |
-| `PartyKing.API` | Kontrolery, Swagger, CORS, pliki statyczne (`wwwroot`) |
+| `PartyKing.API` | Kontrolery, Swagger, CORS, uwierzytelnianie cookie, pliki statyczne (`wwwroot`) |
 | `PartyKing.Contract` | DTO wersjonowane (`V1/...`) — kontrakt dla frontendu |
-| `PartyKing.Application` | `SlideshowService` (co pokazać i do kiedy), konfiguracja, mapowania |
-| `PartyKing.Infrastructure` | `SlideshowImagesRepository` — baza danych + operacje na plikach |
+| `PartyKing.Application` | `SlideshowService`, `QueueService`, `SpotifyService`, `HostTokenProvider`, konfiguracja, mapowania |
+| `PartyKing.Infrastructure` | Repozytoria (zdjęcia, kolejka, profile Spotify) — baza danych + operacje na plikach |
+| `PartyKing.Infrastructure.Spotify` | Klient Spotify Web API (logowanie, wyszukiwanie, pobieranie utworu) |
 | `PartyKing.Persistence` | `DbContext`, konfiguracje encji, migracje, dane startowe |
 | `PartyKing.Domain` | Encje, enumy, modele read/write |
-| `PartyKing.UI` | SPA w React (osobny projekt npm, poza `.sln`) |
+| `PartyKing.Application.Tests` | Testy jednostkowe (xUnit) |
+| `PartyKing.UI` | SPA w React (osobny projekt npm w `src/ui`, poza `.sln`) |
 
-Kierunek zależności: `API → Application → Infrastructure → Persistence → Domain`,
+Kierunek zależności: `API → Application → Infrastructure (+ Infrastructure.Spotify) → Persistence → Domain`,
 przy czym `Contract` jest używany przez `API` i `Application`.
 
 W warstwie danych odczyt jest rozdzielony od zapisu — istnieją dwa konteksty,
 `ReaderDbContext` i `WriterDbContext`, oba dziedziczące po `PartyKingDbContextBase`.
 
-Strony frontendu (`PartyKing.UI/src/pages`):
+Strony frontendu (`src/ui/PartyKing.UI/src/pages`):
 
 | Ścieżka | Strona | Opis |
 |---|---|---|
 | `/slideshow` | `Slideshow` | Ekran prezentacyjny — to okno pokazuje się na telewizorze / ekranie LED |
 | `/image-upload` | `ImageUploader` | Wysyłanie zdjęć z podglądem miniatur i paskiem postępu |
-| `/music` | `Music` | Odtwarzacz YouTube + formularz kolejki |
-| `/` | `Home` | Ekran startowy (wymaga integracji ze Spotify — obecnie nieaktywny) |
-| `/login`, `/callback` | `Login`, `Callback` | Logowanie do Spotify (obecnie nieaktywne) |
+| `/music-queue` | `MusicQueue` | Dla gości: wyszukiwanie / wklejanie linku i lista kolejki (bez logowania) |
+| `/music` | `Music` | Dla gospodarza: odtwarzacz (Spotify + YouTube) z automatycznym przechodzeniem dalej |
+| `/login`, `/callback` | `Login`, `Callback` | Logowanie gospodarza do Spotify; po zalogowaniu przekierowanie na `/music` |
+| `/` | `Home` | Ekran startowy |
+
+Na stronach slideshow, wysyłania zdjęć i kolejki są przyciski nawigacji między nimi.
 
 ## Wymagania
 
 - **.NET SDK 9.0** lub nowszy
 - **Node.js 20.19+ albo 22.12+** (wymóg Vite 7) i npm
+- Do muzyki ze Spotify: aplikacja w [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+  (Client ID i Client Secret) oraz konto **Spotify Premium** gospodarza
 - Opcjonalnie: runtime kontenerów (Docker/Podman) — potrzebny tylko przy publikacji UI
   jako obrazu (`PublishAsDockerFile()`), nie przy pracy lokalnej
 
@@ -147,21 +171,19 @@ git clone https://github.com/talgrim/PartyKing.git
 cd PartyKing
 
 # zależności frontendu
-cd PartyKing.UI && npm install && cd ..
+cd src/ui/PartyKing.UI && npm install && cd ../../..
 ```
 
-> **Zanim uruchomisz — podmień adres API.** W repozytorium zahardkodowany jest adres
-> `192.168.0.178:4200`. Na maszynie o innym adresie IP `dotnet run --project PartyKing.API`
-> **nie wstanie** i przerwie działanie błędem
-> `SocketException (10049): The requested address is not valid in its context.`
-> Co dokładnie zmienić: [Konfiguracja](#konfiguracja).
+> **Adres API.** Domyślnie API nasłuchuje na `http://localhost:4200`, a frontend łączy się z tym
+> adresem. Wystarczy to do pracy na jednym komputerze; żeby wejść z telefonów, podmień adres
+> na IP maszyny: [Konfiguracja](#konfiguracja).
 
 ### Warianty uruchomienia
 
 #### A. Wszystko naraz, przez Aspire (zalecane)
 
 ```bash
-dotnet run --project PartyKing.AppHost
+dotnet run --project src/api/PartyKing.AppHost
 ```
 
 AppHost startuje API, następnie (po jego gotowości) frontend, i otwiera **dashboard Aspire**
@@ -175,22 +197,22 @@ nie wystartuje.
 
 ```bash
 # terminal 1 — API
-dotnet run --project PartyKing.API
+dotnet run --project src/api/PartyKing.API
 
 # terminal 2 — frontend
-cd PartyKing.UI
+cd src/ui/PartyKing.UI
 npm start
 ```
 
 Frontend wstaje na porcie **2137** i nasłuchuje na `0.0.0.0`, żeby był dostępny z telefonów
 w tej samej sieci Wi-Fi. API domyślnie nasłuchuje na adresie z
-`PartyKing.API/Properties/launchSettings.json` — **ten adres trzeba dostosować do własnej sieci**,
-patrz [Konfiguracja](#konfiguracja).
+`src/api/PartyKing.API/Properties/launchSettings.json` (domyślnie `http://localhost:4200`) —
+przy pracy z telefonów trzeba go dostosować do własnej sieci, patrz [Konfiguracja](#konfiguracja).
 
 Adres można też nadpisać jednorazowo, bez modyfikowania plików projektu:
 
 ```bash
-dotnet run --project PartyKing.API --no-launch-profile -- \
+dotnet run --project src/api/PartyKing.API --no-launch-profile -- \
   --urls=http://0.0.0.0:4200 --environment=Development
 ```
 
@@ -204,7 +226,8 @@ czyli bez Swaggera i bez endpointów `/health` i `/alive`.
 |---|---|
 | `http://<host-ui>:2137/slideshow` | Ekran prezentacyjny |
 | `http://<host-ui>:2137/image-upload` | Strona do wrzucania zdjęć (ten link dajesz gościom) |
-| `http://<host-ui>:2137/music` | Odtwarzacz |
+| `http://<host-ui>:2137/music-queue` | Kolejka muzyki dla gości (drugi link dla gości) |
+| `http://127.0.0.1:2137/login` | Logowanie gospodarza do Spotify, potem `/music` z odtwarzaczem |
 | `http://<host-api>/swagger` | Swagger UI (tylko w Development) |
 | `https://localhost:17218` | Dashboard Aspire (wariant A) |
 
@@ -212,18 +235,39 @@ czyli bez Swaggera i bez endpointów `/health` i `/alive`.
 
 ### Adres API
 
-Adres backendu jest ustawiony **w dwóch miejscach** i oba trzeba zmienić na adres IP maszyny
-w lokalnej sieci (domyślnie w repo jest `192.168.0.178:4200`):
+Adres backendu jest ustawiony **w dwóch miejscach** i w obu musi być taki sam (domyślnie
+`http://localhost:4200`):
 
-1. `PartyKing.API/Properties/launchSettings.json` → `applicationUrl`
-2. `PartyKing.UI/src/envVariables.ts` → wartość `_apiUrl`
+1. `src/api/PartyKing.API/Properties/launchSettings.json` → `applicationUrl`
+2. `src/ui/PartyKing.UI/src/envVariables.ts` → wartość `_apiUrl`
 
-Użycie adresu IP zamiast `localhost` jest konieczne, aby telefony gości mogły połączyć się
-z serwerem. API ma politykę CORS przepuszczającą dowolne pochodzenie.
+Żeby telefony gości mogły połączyć się z serwerem, w obu miejscach użyj adresu IP maszyny
+w lokalnej sieci zamiast `localhost` (tej zmiany nie commituj). API ma politykę CORS przepuszczającą
+dowolne pochodzenie.
+
+### Spotify
+
+W `src/api/PartyKing.API/appsettings.json` (sekcja `SpotifySettings`) wpisz dane aplikacji ze
+Spotify Developer Dashboard. Najlepiej trzymać je w `appsettings.Local.json`, który jest
+wykluczony z repozytorium:
+
+```json
+{
+  "SpotifySettings": {
+    "ClientId": "<client id>",
+    "ClientSecret": "<client secret>",
+    "RedirectUri": "http://127.0.0.1:2137/callback"
+  }
+}
+```
+
+`RedirectUri` musi być dokładnie taki sam jak adres dodany w ustawieniach aplikacji w Dashboardzie
+Spotify. Używa `127.0.0.1`, więc gospodarz musi logować się przez `http://127.0.0.1:2137/login`
+(nie `localhost`). Pierwsze zapisane konto Spotify jest traktowane jako konto gospodarza.
 
 ### Ustawienia slideshow
 
-`PartyKing.API/appsettings.json`:
+`src/api/PartyKing.API/appsettings.json`:
 
 ```json
 {
@@ -251,20 +295,21 @@ Lokalne nadpisania można trzymać w `appsettings.Local.json` lub `appsettings.D
 ## Baza danych
 
 SQLite, plik `PartyKing.db` tworzony w katalogu roboczym procesu API
-(przy `dotnet run --project PartyKing.API` to `PartyKing.API/`).
+(przy `dotnet run --project src/api/PartyKing.API` to `src/api/PartyKing.API/`).
 
-- Migracje (`PartyKing.Persistence/Migrations`) są **stosowane automatycznie przy starcie API**
+- Migracje (`src/api/PartyKing.Persistence/Migrations`) są **stosowane automatycznie przy starcie API**
   przez `app.Services.MigrateDb()` — nie trzeba nic robić ręcznie.
 - Dane startowe: 19 przykładowych zdjęć (`SlideshowImageSeedHelper`) oraz domyślny wiersz
   ustawień slideshow (`SlideTime` = 20 s, `AutoRepeat` i `StartFromBeginning` wyłączone).
 - Aby zacząć od czystej bazy, wystarczy usunąć plik `PartyKing.db` i zrestartować API.
 
-Dodanie nowej migracji (wymaga `dotnet tool install --global dotnet-ef`) — ponieważ w projekcie
+Dodanie nowej migracji (z katalogu `src/api`; wymaga `dotnet tool install --global dotnet-ef`) — ponieważ w projekcie
 są dwa konteksty, trzeba wskazać ten służący do zapisu:
 
 ```bash
 dotnet ef migrations add NazwaMigracji \
   --project PartyKing.Persistence \
+  --startup-project PartyKing.Persistence \
   --context WriterDbContext
 ```
 
@@ -274,7 +319,7 @@ Kontrolery nie mają prefiksu trasy — **wszystkie endpointy są w korzeniu**, 
 `GET http://<host-api>/get-photo`. W przykładach poniżej:
 
 ```bash
-API=http://192.168.0.178:4200   # podmień na własny adres z launchSettings.json
+API=http://localhost:4200   # podmień na własny adres z launchSettings.json
 ```
 
 ### Slideshow
@@ -380,34 +425,58 @@ Odpowiedź: `200 OK`. Nowy czas slajdu zaczyna obowiązywać przy kolejnej zmian
 
 ### Muzyka
 
-> Endpointy zamockowane — nie odtwarzają jeszcze prawdziwej kolejki.
+#### `POST /queue/songs`
 
-#### `GET /get-next`
-
-Zwraca losowy utwór z YouTube.
+Dodaje utwór do wspólnej kolejki. Bez logowania.
 
 ```bash
-curl "$API/get-next"
+curl -X POST "$API/queue/songs" \
+  -H "Content-Type: application/json" \
+  -d '{ "input": "https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC" }'
 ```
+
+`input` to link lub URI utworu ze Spotify (`spotify:track:...`) albo adres YouTube
+(`youtube.com`, `m.`, `music.`, `youtu.be`). Odpowiedź `200 OK`:
 
 ```json
 {
-  "source": 1,
-  "url": "https://www.youtube.com/watch?v=wbby9coDRCk",
-  "name": "Narwhals"
+  "id": 1,
+  "source": 0,
+  "url": "spotify:track:4uLU6hMCjMI75M1A2tKUQC",
+  "name": "Tytuł utworu",
+  "artists": "Wykonawca",
+  "albumArtUrl": "https://i.scdn.co/image/...",
+  "durationMs": 215000
 }
 ```
 
-`source` to enum `SongSource` serializowany jako liczba: `0` = Spotify, `1` = YouTube.
+`source` to enum serializowany jako liczba: `0` = Spotify, `1` = YouTube. Dla YouTube `name`
+to na razie sam adres. Błędy: `400` (nierozpoznane wejście), `404` (nie ma takiego utworu),
+`401` (sesja gospodarza wygasła — musi zalogować się ponownie).
 
-#### `GET /queue-song?url=<adres>`
+#### `GET /queue/songs`
 
-Miejsce na dodanie utworu do kolejki. Obecnie przyjmuje żądanie i zwraca `200 OK`,
-nie zapisując niczego.
+Lista oczekujących utworów (ten sam kształt co powyżej).
 
-```bash
-curl "$API/queue-song?url=https://www.youtube.com/watch?v=wbby9coDRCk"
-```
+#### `POST /queue/songs/next` (gospodarz)
+
+Oznacza bieżący utwór jako odtworzony i uruchamia następny; zwraca go. `404`, gdy kolejka jest
+pusta. Wymaga zalogowanego gospodarza (cookie).
+
+#### `GET /spotify/tracks?query=<tekst>`
+
+Wyszukiwanie utworów w Spotify (bez logowania gościa — używany jest token gospodarza). Zwraca
+listę `{ uri, name, artists, albumArtUrl, durationMs }`.
+
+#### `GET /spotify/token` (gospodarz)
+
+Token dostępowy gospodarza dla Web Playback SDK w przeglądarce. Wymaga zalogowania.
+
+#### Logowanie do Spotify
+
+`GET /auth-url` zwraca adres autoryzacji Spotify, a `POST /authenticate` (ciało: kod z
+przekierowania) wymienia kod na tokeny i ustawia sesję. `GET /currently-playing` (wymaga logowania)
+zwraca aktualnie odtwarzany utwór.
 
 ### Diagnostyka
 
@@ -420,21 +489,24 @@ curl "$API/queue-song?url=https://www.youtube.com/watch?v=wbby9coDRCk"
 ## Testy
 
 ```bash
-cd PartyKing.UI
-npm test          # Vitest
+# backend (xUnit) — z katalogu src/api
+dotnet test PartyKing.Application.Tests
+
+# frontend (Vitest) — z katalogu src/ui/PartyKing.UI
+npm test
 ```
 
-Konfiguracja pokrycia znajduje się w `vite.config.ts`. Backend nie ma na razie projektu
-testowego.
+Backend ma na razie testy tylko parsera wejścia kolejki (`SongInputParser`). Konfiguracja pokrycia
+frontendu znajduje się w `vite.config.ts`.
 
 ## Znane ograniczenia
 
-- **Integracja ze Spotify została usunięta**, ale frontend jeszcze jej szuka. Strony `/`, `/login`
-  i `/callback` odwołują się do endpointów `/auth-url`, `/authenticate` i `/currently-playing`,
-  których backend już nie udostępnia — te trzy strony nie działają. Punktem wejścia do aplikacji
-  jest `/slideshow` lub `/image-upload`.
-- **Kolejka muzyki jest zamockowana** — `GET /queue-song` nic nie zapisuje, a `GET /get-next`
-  zwraca losowy utwór z zaszytej na sztywno listy.
+- **Odtwarzanie ze Spotify wymaga konta Premium** gospodarza i jest odtwarzane tylko w przeglądarce
+  na stronie `/music` (trzeba kliknąć „Start", żeby przeglądarka pozwoliła na dźwięk).
+- Gospodarz to pierwszy zapisany profil Spotify; nie ma wyboru ani wylogowania gospodarza.
+  Gdy refresh token wygaśnie, gospodarz musi zalogować się ponownie.
+- Utwory z YouTube są w kolejce tytułowane samym adresem (brak pobierania tytułu).
+- Strona gości nie pokazuje, który utwór aktualnie gra — API tego nie udostępnia.
 - **Adres API jest zahardkodowany** w dwóch miejscach (patrz [Konfiguracja](#konfiguracja))
   zamiast być czytany ze zmiennych środowiskowych.
 - **Connection string do SQLite jest zahardkodowany** w `PartyKingDbContextBase.OnConfiguring`,
@@ -447,5 +519,5 @@ testowego.
   ale klienci inni niż przeglądarka muszą to uwzględnić.
 - Gałąź `204 No Content` w `SlideshowController.GetPhoto` jest martwym kodem —
   `SlideshowService.GetImageAsync` nigdy nie zwraca `null`.
-- `PartyKing.UI/README.md` to niezmieniony szablon `create-next-app` — projekt korzysta z Vite,
+- `src/ui/PartyKing.UI/README.md` to niezmieniony szablon `create-next-app` — projekt korzysta z Vite,
   nie z Next.js.
