@@ -108,4 +108,58 @@ describe('SpotifyPlayer', () => {
     expect(onEnded).toHaveBeenCalledTimes(1);
     expect(onPausedChange).not.toHaveBeenCalled();
   });
+
+  describe('playing a track', () => {
+    const fetchMock = vi.fn();
+
+    const playBodies = () => fetchMock.mock.calls.map(([, init]) => JSON.parse(init.body as string));
+
+    beforeEach(() => {
+      fetchMock.mockReset();
+      fetchMock.mockResolvedValue({ ok: true });
+      vi.stubGlobal('fetch', fetchMock);
+    });
+
+    afterEach(() => vi.unstubAllGlobals());
+
+    it('starts from the beginning by default', async () => {
+      const { player } = await renderPlayer();
+
+      player.emit('ready', { device_id: 'web' });
+
+      await waitFor(() => expect(playBodies()).toEqual([{ uris: [TRACK] }]));
+    });
+
+    it('continues from the position it takes the track over at, in the same call', async () => {
+      const handlers = { onEnded: vi.fn(), onPausedChange: vi.fn(), onError: vi.fn() };
+      render(<SpotifyPlayer uri={TRACK} takeover={{ uri: TRACK, positionMs: 42_000.4 }} {...handlers} />);
+      await waitFor(() => expect(FakePlayer.instances).toHaveLength(1));
+
+      FakePlayer.instances[0].emit('ready', { device_id: 'web' });
+
+      await waitFor(() => expect(playBodies()).toEqual([{ uris: [TRACK], position_ms: 42_000 }]));
+    });
+
+    it('ignores a takeover meant for another track', async () => {
+      const handlers = { onEnded: vi.fn(), onPausedChange: vi.fn(), onError: vi.fn() };
+      render(<SpotifyPlayer uri={TRACK} takeover={{ uri: OTHER_TRACK, positionMs: 42_000 }} {...handlers} />);
+      await waitFor(() => expect(FakePlayer.instances).toHaveLength(1));
+
+      FakePlayer.instances[0].emit('ready', { device_id: 'web' });
+
+      await waitFor(() => expect(playBodies()).toEqual([{ uris: [TRACK] }]));
+    });
+
+    it('reports its device id', async () => {
+      const onDeviceChange = vi.fn();
+      const handlers = { onEnded: vi.fn(), onPausedChange: vi.fn(), onError: vi.fn() };
+      render(<SpotifyPlayer uri={null} onDeviceChange={onDeviceChange} {...handlers} />);
+      await waitFor(() => expect(FakePlayer.instances).toHaveLength(1));
+
+      FakePlayer.instances[0].emit('ready', { device_id: 'web' });
+      FakePlayer.instances[0].emit('not_ready', { device_id: 'web' });
+
+      expect(onDeviceChange.mock.calls).toEqual([['web'], [null]]);
+    });
+  });
 });
