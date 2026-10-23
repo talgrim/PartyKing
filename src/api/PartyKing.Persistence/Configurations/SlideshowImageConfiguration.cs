@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using PartyKing.Domain.Entities;
 
@@ -12,6 +12,11 @@ public class SlideshowImageConfiguration : IEntityTypeConfiguration<SlideshowIma
         builder.Property(x => x.ImageName);
         builder.Property(x => x.ImageUrl);
         builder.Property(x => x.ContentType);
-
+        builder.HasIndex(x => new { x.SessionId, x.Id });
+        builder
+            .HasOne<Session>()
+            .WithMany()
+            .HasForeignKey(x => x.SessionId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

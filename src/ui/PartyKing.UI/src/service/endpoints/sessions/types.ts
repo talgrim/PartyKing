@@ -16,9 +16,27 @@ export type ViewerRoleDto = {
   isAdmin: boolean;
 };
 
+// Mirrors PartyKing.Contract.V1.Sessions.JoinTokenDto
+export type JoinTokenDto = {
+  /** Signed token that unlocks the session without its password. */
+  token: string;
+  /** ISO timestamp after which the token stops working. */
+  expiresAt: string;
+};
+
 export type UserDto = {
   id: string;
   accessToken: string;
   /** The session the login claimed. */
   sessionId: string;
+};
+
+// Mirrors PartyKing.Contract.V1.Slideshow.SlideshowSettingsDto
+export type SlideshowSettingsDto = {
+  /** Start over after the last photo. */
+  autoRepeat: boolean;
+  /** Show photos that were already presented again. */
+  startFromBeginning: boolean;
+  /** How long a photo stays, as a .NET TimeSpan ("00:00:20"). */
+  slideTime: string;
 };

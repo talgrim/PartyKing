@@ -9,11 +9,12 @@ public class SessionCleanupTests
     private readonly FakeSessionsRepository _sessions = new();
     private readonly PlayerStateStore _playerStates = new(new FakeClock());
     private readonly FakeHostTokenProvider _tokens = new();
+    private readonly FakeSlideshowService _slideshows = new();
     private readonly SessionService _service;
 
     public SessionCleanupTests()
     {
-        _service = new SessionService(_sessions, new PasswordHasher(), _playerStates, _tokens);
+        _service = new SessionService(_sessions, new PasswordHasher(), _playerStates, _tokens, _slideshows, JoinTokens.Create(new FakeClock()), new FakeClock());
     }
 
     [Fact]
@@ -27,6 +28,26 @@ public class SessionCleanupTests
         Assert.False(result.IsError);
         Assert.False(_playerStates.Get(session.Id).Connected);
         Assert.Equal(["host-profile"], _tokens.Invalidated);
+    }
+
+    [Fact]
+    public async Task DeletingASession_DeletesItsSlideshow()
+    {
+        var session = _sessions.AddSession();
+
+        var result = await _service.DeleteAsync(session.Id, CancellationToken.None);
+
+        Assert.False(result.IsError);
+        Assert.Equal([session.Id], _slideshows.DeletedSessions);
+    }
+
+    [Fact]
+    public async Task DeletingAnUnknownSession_KeepsEverySlideshow()
+    {
+        var result = await _service.DeleteAsync(Guid.NewGuid(), CancellationToken.None);
+
+        Assert.True(result.IsError);
+        Assert.Empty(_slideshows.DeletedSessions);
     }
 
     [Fact]

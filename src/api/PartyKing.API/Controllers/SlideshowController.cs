@@ -1,10 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.Extensions.Options;
 using PartyKing.API.Authorization;
-using PartyKing.Application.Configuration;
-using PartyKing.Application.Mappings;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Contract.V1.Slideshow;
 
@@ -19,32 +16,31 @@ public class SlideshowController : CoreController
 
     private readonly ISlideshowService _slideshowService;
     private readonly ILogger<SlideshowController> _logger;
-    private readonly IWebHostEnvironment _webHostEnvironment;
-    private readonly SlideshowConfiguration _slideshowSettings;
 
     public SlideshowController(
         IHttpContextAccessor httpContextAccessor,
         ISlideshowService slideshowService,
-        IOptions<SlideshowConfiguration> slideshowSettingsOptions,
-        IWebHostEnvironment webHostEnvironment,
         ILogger<SlideshowController> logger)
         : base(httpContextAccessor)
     {
         _slideshowService = slideshowService;
-        _slideshowSettings = slideshowSettingsOptions.Value;
-        _webHostEnvironment = webHostEnvironment;
         _logger = logger;
     }
 
-    [HttpPut("upload-photo/{deleteAfterPresentation:bool}")]
+    [HttpPut("sessions/{sessionId:guid}/photos/{deleteAfterPresentation:bool}")]
+    [RequireSessionAccess]
     [EnableRateLimiting(UploadRateLimitPolicy)]
     [RequestSizeLimit(MaxUploadRequestBytes)]
     [RequestFormLimits(MultipartBodyLengthLimit = MaxUploadRequestBytes)]
-    public async Task<IActionResult> UploadPhoto([Required] IFormFile[] files, bool deleteAfterPresentation, CancellationToken cancellationToken)
+    public async Task<IActionResult> UploadPhoto(
+        Guid sessionId,
+        [Required] IFormFile[] files,
+        bool deleteAfterPresentation,
+        CancellationToken cancellationToken)
     {
         try
         {
-            await _slideshowService.UploadImagesAsync(files, deleteAfterPresentation, cancellationToken);
+            await _slideshowService.UploadImagesAsync(sessionId, files, deleteAfterPresentation, cancellationToken);
             return Ok();
         }
         catch (InvalidUploadException e)
@@ -53,54 +49,43 @@ public class SlideshowController : CoreController
         }
     }
 
-    [HttpGet("get-photo")]
+    /// <summary>The photo the session's slideshow shows now; 204 when nothing was uploaded.</summary>
+    [HttpGet("sessions/{sessionId:guid}/photos/current")]
+    [RequireSessionAccess]
     [ProducesResponseType<SlideshowImageDto>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetPhoto(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetCurrentPhoto(Guid sessionId, CancellationToken cancellationToken)
     {
-        var result = await _slideshowService.GetImageAsync(cancellationToken);
+        var result = await _slideshowService.GetImageAsync(sessionId, cancellationToken);
 
         if (result is null)
         {
-            _logger.LogWarning("No image found to display");
+            _logger.LogDebug("Session {SessionId} has no image to display", sessionId);
             return NoContent();
         }
 
         return Ok(result);
     }
 
-    [HttpGet("get-all")]
+    [HttpGet("admin/sessions/{sessionId:guid}/slideshow-settings")]
     [AuthorizeAdmin]
-    [ProducesResponseType<IEnumerable<ImageDataDto>>(StatusCodes.Status200OK)]
-    public IActionResult GetAll()
+    [ProducesResponseType<SlideshowSettingsDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetSettings(Guid sessionId, CancellationToken cancellationToken)
     {
-        return Ok(GetUploadedImages());
+        var result = await _slideshowService.GetSettingsAsync(sessionId, cancellationToken);
+
+        return result.Match(Ok, Problem);
     }
 
-    [HttpGet("get-configuration")]
+    [HttpPut("admin/sessions/{sessionId:guid}/slideshow-settings")]
     [AuthorizeAdmin]
-    [ProducesResponseType<SlideshowConfiguration>(StatusCodes.Status200OK)]
-    public IActionResult GetConfiguration()
-    {
-        return Ok(_slideshowSettings);
-    }
-
-    [HttpPost("update-configuration")]
-    [AuthorizeAdmin]
-    public async Task<IActionResult> UpdateConfiguration(
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> UpdateSettings(
+        Guid sessionId,
         [FromBody] SlideshowSettingsDto settings,
         CancellationToken cancellationToken)
     {
-        var mappedSettings = settings.ToDomain(_slideshowSettings.SlideTime);
-        await _slideshowService.UpdateSettingsAsync(mappedSettings, cancellationToken);
-        return Ok();
-    }
+        var result = await _slideshowService.UpdateSettingsAsync(sessionId, settings, cancellationToken);
 
-    private ImageDataDto[] GetUploadedImages()
-    {
-        var content = _webHostEnvironment.WebRootFileProvider.GetDirectoryContents(
-            _slideshowSettings.UploadedPhotosDirectory);
-
-        return content.Select(x => new ImageDataDto
-            { Path = Path.Combine(_slideshowSettings.UploadedPhotosDirectory, x.Name), FileName = x.Name }).ToArray();
+        return result.Match(_ => NoContent(), Problem);
     }
 }
