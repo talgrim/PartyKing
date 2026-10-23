@@ -10,6 +10,7 @@ public static class DependencyInjection
     public static void RegisterSpotifyInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<SpotifyConfiguration>(configuration.GetSection(SpotifyConfiguration.SectionName));
+        services.AddHttpClient(SpotifyClientFactory.HttpClientName);
         services.AddSingleton<ISpotifyClientFactory, SpotifyClientFactory>();
         services.AddScoped<ISpotifyIntegrationClient, SpotifyIntegrationClient>();
     }

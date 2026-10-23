@@ -60,7 +60,7 @@ internal class SpotifyIntegrationClient : ISpotifyIntegrationClient
 
     public async Task<AuthenticationResult> AuthenticateAsync(string code, CancellationToken cancellationToken)
     {
-        var oauth = new OAuthClient();
+        var oauth = _clientFactory.CreateOAuthClient();
         var request =
             new AuthorizationCodeTokenRequest(_config.ClientId, _config.ClientSecret, code, _config.RedirectUri);
 
@@ -80,7 +80,7 @@ internal class SpotifyIntegrationClient : ISpotifyIntegrationClient
         string refreshToken,
         CancellationToken cancellationToken)
     {
-        var oauth = new OAuthClient();
+        var oauth = _clientFactory.CreateOAuthClient();
         var request =
             new AuthorizationCodeRefreshRequest(_config.ClientId, _config.ClientSecret, refreshToken);
 
