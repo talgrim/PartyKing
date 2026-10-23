@@ -13,7 +13,7 @@ export const ImageUploader = (): ReactNode => {
     const [files, setFiles] = useState<File[]>([]);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploadStatus, setUploadStatus] = useState<UploadStatus>('waiting');
-    const fileInput = useRef(null);
+    const fileInput = useRef<HTMLInputElement>(null);
     const [deleteAfterPresentation, setChecked] = React.useState(false);
 
     let API_URL = makeUrlWithParams(`${envVariables.apiUrl}/upload-photo/${deleteAfterPresentation}`);
@@ -28,7 +28,7 @@ export const ImageUploader = (): ReactNode => {
         setUploadStatus('waiting');
 
         setFiles([
-            ...e.target.files
+            ...(e.target.files ?? [])
         ]);
     }
 
@@ -58,7 +58,7 @@ export const ImageUploader = (): ReactNode => {
 
             setUploadStatus('success');
             setUploadProgress(0);
-            fileInput.current.value = null;
+            if (fileInput.current) fileInput.current.value = '';
             setFiles([]);
 
             console.log(response);

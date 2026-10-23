@@ -3,7 +3,7 @@ import ReactPlayer from 'react-player';
 
 type PlayerProps = {
     songUrl: string,
-    onEnded?: Function,
+    onEnded?: () => void,
     mute: boolean
 }
 

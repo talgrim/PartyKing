@@ -38,10 +38,12 @@ export default defineConfig({
     coverage: {
       reporter: ['text', 'text-summary', 'json-summary', 'html'],
       reportsDirectory: './coverage',
-      lines: 80,
-      functions: 68,
-      branches: 85,
-      statements: 80,
+      thresholds: {
+        lines: 80,
+        functions: 68,
+        branches: 85,
+        statements: 80,
+      },
       exclude: [
         'src/routes/**',
         'src/constants/**',

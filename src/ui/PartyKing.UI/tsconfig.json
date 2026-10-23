@@ -10,7 +10,9 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
-    "moduleResolution": "Node",
+    "moduleResolution": "Bundler",
+    // @splidejs/react-splide ships its types outside its package.json "exports"
+    "resolvePackageJsonExports": false,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
@@ -28,5 +30,6 @@
     "plugins": [{ "name": "typescript-plugin-css-modules" }],
     "types": ["vitest/globals"]
   },
-  //  "include": ["src", "test", "testSetup.ts", "testGlobalSetup.ts", "e2e"]
+  // vite.config.ts is left out: it needs package "exports" resolution, which is turned off above.
+  "include": ["src"]
 }
