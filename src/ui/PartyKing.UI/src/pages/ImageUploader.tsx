@@ -5,7 +5,7 @@ import {Alert, Backdrop, Checkbox, FormControlLabel, FormGroup, LinearProgress} 
 import { UploadedImagePreview } from "@/components/UploadedImagePreview";
 import { PageNavigation } from "@/components/common/PageNavigation";
 import { SessionPasswordForm } from "@/components/Music/SessionPasswordForm";
-import { ROUTE_PATHS, sessionPath, sessionSlideshowPath } from "@/router/constants";
+import { ROUTE_PATHS, sessionPath } from "@/router/constants";
 import { HTTP_STATUS_CODE } from "@/service/constants";
 import { sessionsApi } from "@/service/endpoints/sessions/sessionsApi";
 
@@ -75,7 +75,6 @@ export const ImageUploader = (): ReactNode => {
 
     const navigation = (
         <PageNavigation links={[
-            { to: sessionSlideshowPath(sessionId), label: "Slideshow" },
             { to: sessionPath(sessionId), label: "Session" },
             { to: ROUTE_PATHS.HOME, label: "Sessions" },
         ]}/>

@@ -1,7 +1,6 @@
 import {SplideSlide} from "@splidejs/react-splide";
 import envVariables from "@/envVariables";
-import {ApiImage} from "@/pages/Slideshow/Slideshow";
-import {Options} from "@splidejs/splide";
+import {ApiImage} from "@/pages/Slideshow/SlideshowView";
 
 const API_URL = envVariables.apiUrl;
 

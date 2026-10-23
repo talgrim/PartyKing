@@ -1,9 +1,9 @@
 import CloseIcon from '@mui/icons-material/Close';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { ChangeEvent, FormEvent, ReactNode, useEffect, useRef, useState } from 'react';
-import useSWR from 'swr';
+import { QueueList } from '@/components/Music/QueueList';
 import { looksLikeSongLink, queueApi } from '@/service/endpoints/queue/queueApi';
-import { SongDto, SpotifyTrackDto } from '@/service/endpoints/queue/types';
+import { useQueueSongs } from '@/service/endpoints/queue/useQueueSongs';
+import { SpotifyTrackDto } from '@/service/endpoints/queue/types';
 
 type Props = {
   sessionId: string;
@@ -26,9 +26,7 @@ export const Queue = ({ sessionId, canRemove = false }: Props): ReactNode => {
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const { data: queue, mutate } = useSWR<SongDto[]>(['queue-songs', sessionId], () => queueApi.getQueue(sessionId), {
-    refreshInterval: 3000,
-  });
+  const { data: queue, mutate } = useQueueSongs(sessionId);
 
   // The server leaves the song that is playing out of the queue
   const upNext = queue ?? [];
@@ -67,17 +65,6 @@ export const Queue = ({ sessionId, canRemove = false }: Props): ReactNode => {
       const { [uri]: _removed, ...rest } = current;
       return state ? { ...rest, [uri]: state } : rest;
     });
-
-  const removeSong = async (songId: number) => {
-    try {
-      await queueApi.remove(sessionId, songId);
-      setMessage(null);
-    } catch (error) {
-      setMessage(errorMessage(error));
-    }
-    // Also after a failure: the song may be gone or already playing
-    void mutate();
-  };
 
   const enqueue = async (value: string) => {
     setBusy(true);
@@ -205,37 +192,7 @@ export const Queue = ({ sessionId, canRemove = false }: Props): ReactNode => {
         )}
       </div>
 
-      <h2 className="px-2 pt-2 font-semibold">Up next</h2>
-      {upNext.length === 0 ? (
-        <p className="px-2 pb-4 text-sm text-slate-500">The queue is empty</p>
-      ) : (
-        <ol className="px-2 pb-4">
-          {upNext.map((song, index) => {
-            const label = song.artists ? `${song.artists} - ${song.name}` : song.name;
-            return (
-              <li
-                key={song.id}
-                className="flex items-center gap-3 border-b border-slate-700/60 py-1 last:border-b-0 hover:bg-slate-800/60"
-              >
-                <span className="w-6 shrink-0 text-right text-slate-500">{index + 1}.</span>
-                <span className="min-w-0 flex-1 truncate" title={label}>
-                  {label}
-                </span>
-                {canRemove && (
-                  <button
-                    type="button"
-                    aria-label={`Remove ${song.name} from the queue`}
-                    onClick={() => void removeSong(song.id)}
-                    className="shrink-0 rounded p-1 text-red-500 hover:bg-red-500/10 hover:text-red-400 cursor-pointer"
-                  >
-                    <DeleteOutlineIcon fontSize="small" />
-                  </button>
-                )}
-              </li>
-            );
-          })}
-        </ol>
-      )}
+      <QueueList sessionId={sessionId} canRemove={canRemove} />
     </>
   );
 };
