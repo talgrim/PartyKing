@@ -84,10 +84,10 @@ describe('Queue', () => {
 
     pending = [];
 
-    // the queue is polled every 3 seconds
-    await waitFor(() => expect(inQueue).toHaveTextContent('Add'), { timeout: 5000 });
+    // the queue is polled every 5 seconds
+    await waitFor(() => expect(inQueue).toHaveTextContent('Add'), { timeout: 7000 });
     expect(inQueue).toBeEnabled();
-  });
+  }, 10_000);
 
   it('shows the error on the failed row and lets it be retried', async () => {
     mocks.enqueue.mockRejectedValueOnce({ message: 'Session has no host yet' });
