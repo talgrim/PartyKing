@@ -33,7 +33,7 @@ Backend to .NET 9 (ASP.NET Core) zorkiestrowany przez .NET Aspire, frontend to S
   (wiele plików naraz, obsługiwane rozszerzenia: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`).
 - Opcja **„Usuń po wyświetleniu"** — zdjęcie zostaje skasowane (plik + rekord w bazie)
   natychmiast po tym, jak zejdzie z ekranu.
-- Ekran prezentacyjny (`/s/<id>/slideshow`, też za hasłem sesji) pokazuje zdjęcia jedno po drugim, w kolejności wrzucania.
+- Slideshow jest częścią strony sesji (`/s/<id>`, za hasłem sesji) i widzą go tylko gospodarz oraz admin: domyślnie jako panel po lewej stronie, który można ukryć, albo po kliknięciu „Maximize" na cały ekran (tylko tytuł i wykonawca bieżącego utworu oraz kolejka po prawej; wyjście przyciskiem lub klawiszem Esc). Zdjęcia pokazywane są jedno po drugim, w kolejności wrzucania.
 - Gdy sesja nie ma żadnych zdjęć do pokazania, ekran wyświetla „No photos yet" (nie ma zdjęć zastępczych).
 - Admin ustawia dla każdej sesji czas slajdu i opcje powtarzania w panelu `/admin` („Slideshow settings").
 - Zdjęcia sesji leżą w `wwwroot/Images/Uploaded/<id sesji>/` i są usuwane razem z sesją.
@@ -69,7 +69,7 @@ a stan prezentacji przeżywa odświeżenie strony.
 
 ```
 [telefon gościa]                              [ekran prezentacyjny]
- /s/<id>/upload                                 /s/<id>/slideshow
+ /s/<id>/upload                                 /s/<id> (gospodarz / admin)
       |                                              |
       | PUT /sessions/<id>/photos/{deleteAfterPresentation} | GET /sessions/<id>/photos/current (co 5 s)
       v                                              v
@@ -153,13 +153,12 @@ Strony frontendu (`src/ui/PartyKing.UI/src/pages`):
 
 | Ścieżka | Strona | Opis |
 |---|---|---|
-| `/s/:sessionId/slideshow` | `Slideshow` | Ekran prezentacyjny sesji — to okno pokazuje się na telewizorze / ekranie LED (wymaga hasła sesji) |
 | `/s/:sessionId/upload` | `ImageUploader` | Wysyłanie zdjęć do slideshow sesji z podglądem miniatur i paskiem postępu (wymaga hasła sesji) |
-| `/s/:sessionId` | `MusicQueue` | Strona sesji: co gra, wyszukiwanie / wklejanie linku i lista kolejki (bez logowania); dla gospodarza dodatkowo odtwarzacz (Spotify + YouTube), dla admina przyciski sterowania |
+| `/s/:sessionId` | `MusicQueue` | Strona sesji: co gra, wyszukiwanie / wklejanie linku i lista kolejki (bez logowania); dla gospodarza dodatkowo odtwarzacz (Spotify + YouTube), dla admina przyciski sterowania; gospodarz i admin widzą też slideshow (panel po lewej, ukrywalny, albo widok na cały ekran z tytułem, wykonawcą i kolejką) |
 | `/callback` | `Callback` | Powrót ze Spotify po zalogowaniu gospodarza; potem przekierowanie na stronę sesji |
 | `/` | `Home` | Ekran startowy |
 
-Na stronach slideshow, wysyłania zdjęć i kolejki są przyciski nawigacji między nimi.
+Na stronach wysyłania zdjęć i kolejki są przyciski nawigacji między nimi.
 
 ## Wymagania
 
@@ -232,7 +231,7 @@ czyli bez Swaggera i bez endpointów `/health` i `/alive`.
 
 | Adres | Co to |
 |---|---|
-| `http://<host-ui>:2137/s/<id>/slideshow` | Ekran prezentacyjny sesji |
+| `http://<host-ui>:2137/s/<id>` | Strona sesji; dla gospodarza i admina także slideshow (można go zmaksymalizować na ekran prezentacyjny) |
 | `http://<host-ui>:2137/s/<id>/upload` | Strona do wrzucania zdjęć do sesji (ten link dajesz gościom) |
 | `http://<host-ui>:2137/s/<id>` | Strona sesji z kolejką muzyki dla gości (drugi link dla gości); gospodarz loguje się tu przez „Log in as host with Spotify" |
 | `http://<host-api>/swagger` | Swagger UI (tylko w Development) |
@@ -388,7 +387,7 @@ Odpowiedzi: `200 OK` (puste ciało), `400 Bad Request` z powodem (np. nieobsług
 #### `GET /sessions/{sessionId}/photos/current`
 
 Zwraca zdjęcie, które ma być aktualnie na ekranie sesji, wraz z momentem jego wygaśnięcia
-(UTC). To ten endpoint odpytuje strona `/s/<id>/slideshow` co 5 sekund.
+(UTC). To ten endpoint odpytuje slideshow na stronie sesji (`/s/<id>`) co 5 sekund.
 
 ```bash
 curl -b cookies.txt "$API/sessions/$SESSION/photos/current"
@@ -410,7 +409,7 @@ curl -O "$API/Images/Uploaded/<id sesji>/01988512-f059-73dd-ae67-29b2edf9f268.jp
 
 Gdy sesja nie ma żadnego zdjęcia do pokazania (nic nie wrzucono albo wszystkie zostały już wyświetlone,
 a `AutoRepeat` i `StartFromBeginning` zostały wyłączone), endpoint zwraca `204 No Content`,
-a strona slideshow pokazuje „No photos yet".
+a slideshow pokazuje „No photos yet".
 
 #### `GET /admin/sessions/{sessionId}/slideshow-settings`
 
