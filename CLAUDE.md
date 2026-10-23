@@ -12,7 +12,7 @@ Backend (run from `src/api`):
 - Run everything (API + UI via Aspire): `dotnet run --project PartyKing.AppHost`
 - Run the API only: `dotnet run --project PartyKing.API` (the `http` launch profile binds to `http://127.0.0.1:4200`)
 - Add an EF migration: `dotnet ef migrations add <Name> --project PartyKing.Persistence --startup-project PartyKing.Persistence --context WriterDbContext`
-- Migrations are applied automatically at API startup (`MigrateDb()` in `Program.cs`). The SQLite file is `PartyKing.db`, relative to the working directory.
+- Migrations are applied automatically at API startup (`MigrateDb()` in `Program.cs`). The SQLite file is `PartyKing.db` relative to the working directory, or `PARTYKING_DATABASE_PATH` when set.
 
 Frontend (from `src/ui/PartyKing.UI`):
 - `npm install`, then `npm start` (Vite dev server on port 2137, host `0.0.0.0`, polling watch for WSL2/Windows HMR)
@@ -21,11 +21,15 @@ Frontend (from `src/ui/PartyKing.UI`):
 
 Backend tests: `dotnet test PartyKing.Application.Tests` (from `src/api`) (xunit; currently covers `SongInputParser`).
 
+## Deployment (Docker / Fly.io)
+
+`Dockerfile` (repo root) builds one image: nginx (`docker/nginx.conf`) serves the UI build and proxies `/api/*` to Kestrel on `127.0.0.1:5000` (prefix stripped); `docker/entrypoint.sh` runs both. `fly.toml` targets `party.talgrim.dev`, one always-on machine (SQLite and in-memory singletons), and the `/data` volume that holds `PartyKing.db` (`PARTYKING_DATABASE_PATH`), Data Protection keys (`DataProtection__KeysDirectory`) and uploaded photos (`ASPNETCORE_WEBROOT`). Secrets (`SpotifySettings__*`, `AdminSettings__*`) come from `fly secrets`. The image ships no photos; `get-photo` returns 204 when there is nothing to show. The UI's `apiUrl` is `/api` in production builds and `http://127.0.0.1:4200` in dev (`VITE_API_URL` overrides). **Uploads are untrusted input**: `PUT /upload-photo` is anonymous (guests), so `UploadedImageValidator` allows only jpg/jpeg/png/gif/webp, checks the magic bytes, caps a file at 20 MB (100 MB per request via `[RequestSizeLimit]`; Kestrel's default applies elsewhere), and stores the extension and content type of the *detected* format, never the client's. The upload endpoint is rate limited (60/min per IP), static files are served only for those image types with `nosniff`, and nginx adds a sandbox CSP on `/api/SampleImages/`. `get-all`, `get-configuration` and `update-configuration` are `[AuthorizeAdmin]`. CORS exists in Development only (production is same-origin). nginx trusts `Fly-Client-IP`/`X-Forwarded-Proto` only when `TRUST_FLY_CLIENT_IP=1` (set in `fly.toml`); `/health` is served on the internal port 8182, which Fly's check uses, and answers 404 on the public port. The Data Protection keys on `/data/keys` are stored unencrypted (accepted: anyone who can read the volume could forge cookies). See the README section "Wdrożenie".
+
 ## Architecture
 
 Project dependencies (layered, top → bottom):
 - **AppHost**: Aspire host. Starts `PartyKing.API` and the UI as an npm app on port 2137.
-- **API**: controllers plus `Program.cs`. CORS allows any origin with credentials. Static files from `wwwroot` serve the images (`wwwroot/SampleImages/{Uploaded,Placeholder}`).
+- **API**: controllers plus `Program.cs`. CORS allows any origin with credentials. Static files from the web root serve the images (`SampleImages/{Uploaded,Placeholder}`, created at startup and not in git).
 - **Application**: services (`SlideshowService`, `QueueService`, `SessionService`, `AdminService`, `SpotifyService`, `HostTokenProvider`), options binding (`SlideshowConfiguration` ← `SlideshowSettings`, `AdminConfiguration` ← `AdminSettings`), and DTO mappings. References Contract and Infrastructure.
 - **Contract**: public DTOs under `V1/`, returned by controllers.
 - **Infrastructure**: repositories that wrap EF Core. References Persistence and Domain.
@@ -37,7 +41,7 @@ Each layer registers its own services through a `DependencyInjection.cs` extensi
 
 Key patterns and gotchas:
 - **Reader/Writer DbContexts**: `ReaderDbContext` and `WriterDbContext` both derive from `PartyKingDbContextBase`, which hardcodes `UseSqlite("Data Source=PartyKing.db")` in `OnConfiguring`. They're registered with `AddDbContextFactory`. Repositories are **singletons** and create short-lived contexts through the factories. Migrations target `WriterDbContext`, and the snapshot file is `WriterDbContextModelSnapshot.cs`.
-- **Stateful singletons**: `SlideshowService` and `SlideshowImagesRepository` are singletons that hold in-memory state: the current image and its expiration time, loaded placeholders, and current settings. `SlideshowController`'s constructor kicks off `InitializeAsync` without awaiting it (fire-and-forget) if the repository isn't initialized yet. This scans the placeholder directory under `WebRootPath` and loads settings from the DB.
+- **Stateful singletons**: `SlideshowService` and `SlideshowImagesRepository` are singletons that hold in-memory state: the current image and its expiration time, loaded placeholders, and current settings. `Program.cs` awaits `ISlideshowService.InitializeAsync` once at startup, after the migration and admin seed: it creates the `SampleImages/{Uploaded,Placeholder}` folders under `WebRootPath`, scans the placeholders and loads settings from the DB (a failure stops the boot).
 - **Slideshow flow**: `get-photo` returns the current image until `SlideTime` expires. It then advances to the next uploaded image from the DB, falling back to a random placeholder. When an image with `DeleteAfterPresentation` is rotated out, it gets deleted.
 - **Settings live in the DB**: slide time and other settings are stored in the `SlideshowSettings` table (migration `MovedConfigurationToDatabase`) and edited through `get-configuration`/`update-configuration`. Directory paths still come from appsettings.
 - **Errors**: `CoreController` maps `ErrorOr` errors to ProblemDetails (Validation→400, Unauthorized→401, NotFound→404, Conflict→409).

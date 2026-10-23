@@ -1,6 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
+using PartyKing.API.Authorization;
 using PartyKing.Application.Configuration;
 using PartyKing.Application.Mappings;
 using PartyKing.Application.Slideshow.Services;
@@ -10,6 +12,11 @@ namespace PartyKing.API.Controllers;
 
 public class SlideshowController : CoreController
 {
+    public const string UploadRateLimitPolicy = "photo-upload";
+
+    // Limits for one upload request (a guest can pick several photos); the per-file limit is checked by the service
+    private const long MaxUploadRequestBytes = 100L * 1024 * 1024;
+
     private readonly ISlideshowService _slideshowService;
     private readonly ILogger<SlideshowController> _logger;
     private readonly IWebHostEnvironment _webHostEnvironment;
@@ -27,14 +34,12 @@ public class SlideshowController : CoreController
         _slideshowSettings = slideshowSettingsOptions.Value;
         _webHostEnvironment = webHostEnvironment;
         _logger = logger;
-
-        if (!_slideshowService.IsInitialized())
-        {
-            _ = _slideshowService.InitializeAsync(GetPhysicalRoot(), CancellationToken.None);
-        }
     }
 
     [HttpPut("upload-photo/{deleteAfterPresentation:bool}")]
+    [EnableRateLimiting(UploadRateLimitPolicy)]
+    [RequestSizeLimit(MaxUploadRequestBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = MaxUploadRequestBytes)]
     public async Task<IActionResult> UploadPhoto([Required] IFormFile[] files, bool deleteAfterPresentation, CancellationToken cancellationToken)
     {
         try
@@ -42,7 +47,7 @@ public class SlideshowController : CoreController
             await _slideshowService.UploadImagesAsync(files, deleteAfterPresentation, cancellationToken);
             return Ok();
         }
-        catch (Exception e)
+        catch (InvalidUploadException e)
         {
             return BadRequest(e.Message);
         }
@@ -64,6 +69,7 @@ public class SlideshowController : CoreController
     }
 
     [HttpGet("get-all")]
+    [AuthorizeAdmin]
     [ProducesResponseType<IEnumerable<ImageDataDto>>(StatusCodes.Status200OK)]
     public IActionResult GetAll()
     {
@@ -71,6 +77,7 @@ public class SlideshowController : CoreController
     }
 
     [HttpGet("get-configuration")]
+    [AuthorizeAdmin]
     [ProducesResponseType<SlideshowConfiguration>(StatusCodes.Status200OK)]
     public IActionResult GetConfiguration()
     {
@@ -78,6 +85,7 @@ public class SlideshowController : CoreController
     }
 
     [HttpPost("update-configuration")]
+    [AuthorizeAdmin]
     public async Task<IActionResult> UpdateConfiguration(
         [FromBody] SlideshowSettingsDto settings,
         CancellationToken cancellationToken)
@@ -85,17 +93,6 @@ public class SlideshowController : CoreController
         var mappedSettings = settings.ToDomain(_slideshowSettings.SlideTime);
         await _slideshowService.UpdateSettingsAsync(mappedSettings, cancellationToken);
         return Ok();
-    }
-
-    private string GetPhysicalRoot()
-    {
-        var result = _webHostEnvironment.WebRootPath;
-        if (!Directory.Exists(result))
-        {
-            Directory.CreateDirectory(result);
-        }
-
-        return result;
     }
 
     private ImageDataDto[] GetUploadedImages()

@@ -9,10 +9,22 @@ import { ROUTE_PATHS } from "@/router/constants";
 
 type UploadStatus = 'waiting' | 'uploading' | 'success' | 'error';
 
+// The API answers 400 with a readable reason (unsupported format, file too big) and 429 when a guest uploads too often
+const describeUploadError = (error: unknown): string => {
+    const response = (error as { response?: { status?: number; data?: unknown } })?.response;
+
+    if (response?.status === 400 && typeof response.data === 'string' && response.data) return response.data;
+    if (response?.status === 429) return 'Zbyt wiele prób. Spróbuj ponownie za minutę.';
+    if (response?.status === 413) return 'Pliki są za duże (maks. 20 MB na zdjęcie, 100 MB naraz).';
+
+    return 'Nie udało się wrzucić plików. Spróbuj ponownie.';
+};
+
 export const ImageUploader = (): ReactNode => {
     const [files, setFiles] = useState<File[]>([]);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploadStatus, setUploadStatus] = useState<UploadStatus>('waiting');
+    const [errorMessage, setErrorMessage] = useState('');
     const fileInput = useRef<HTMLInputElement>(null);
     const [deleteAfterPresentation, setChecked] = React.useState(false);
 
@@ -26,6 +38,7 @@ export const ImageUploader = (): ReactNode => {
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         setUploadStatus('waiting');
+        setErrorMessage('');
 
         setFiles([
             ...(e.target.files ?? [])
@@ -64,6 +77,7 @@ export const ImageUploader = (): ReactNode => {
             console.log(response);
         } catch (error) {
             setUploadStatus('error');
+            setErrorMessage(describeUploadError(error));
 
             console.log(error);
         }
@@ -90,12 +104,18 @@ export const ImageUploader = (): ReactNode => {
                 </Alert>
             }
 
+            { uploadStatus === 'error' &&
+                <Alert variant="filled" severity="error">
+                    {errorMessage}
+                </Alert>
+            }
+
             <div className="flex-flex-col rounded-xl bg-white-400 border-2 border-slate-500 border-dashed w-full font-bold text-slate-500 text-center p-5 relative">
                 Wybierz zdjęcia
                 <svg xmlns="http://www.w3.org/2000/svg" className="justify-self-center mt-6 w-12 h-12" height="2rem" viewBox="0 -960 960 960" width="2rem" fill="currentColor">
                     <path d="M480-480ZM200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h320v80H200v560h560v-320h80v320q0 33-23.5 56.5T760-120H200Zm40-160h480L570-480 450-320l-90-120-120 160Zm440-320v-80h-80v-80h80v-80h80v80h80v80h-80v80h-80Z"/>
                 </svg>
-                <input ref={fileInput} id="file" type="file" onChange={handleChange} multiple={true} className="opacity-0 cursor-pointer absolute top-0 left-0 w-full h-full" accept=".jpg,.png,.bmp,.gif,.jpeg"/>
+                <input ref={fileInput} id="file" type="file" onChange={handleChange} multiple={true} className="opacity-0 cursor-pointer absolute top-0 left-0 w-full h-full" accept=".jpg,.jpeg,.png,.gif,.webp"/>
             </div>
 
             <FormGroup>

@@ -2,7 +2,8 @@ class EnvVariables {
   private readonly _apiUrl: string;
 
   constructor() {
-    this._apiUrl = "http://127.0.0.1:4200";
+    // The container serves the UI and proxies the API under /api, so production builds use the same origin
+    this._apiUrl = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "http://127.0.0.1:4200" : "/api");
   }
 
   get apiUrl() {

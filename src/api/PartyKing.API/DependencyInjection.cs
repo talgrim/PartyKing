@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using PartyKing.API.Authentication;
 using PartyKing.API.Authentication.Cookie;
 using PartyKing.Application;
@@ -13,7 +14,13 @@ public static class DependencyInjection
     public static void RegisterServices(this IServiceCollection services, IConfigurationManager configuration)
     {
         services.AddHttpContextAccessor();
-        services.AddDataProtection();
+        var dataProtection = services.AddDataProtection().SetApplicationName("PartyKing");
+        var keysDirectory = configuration["DataProtection:KeysDirectory"];
+        if (!string.IsNullOrWhiteSpace(keysDirectory))
+        {
+            dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keysDirectory));
+        }
+
         services.RegisterApplication(configuration);
         services.RegisterInfrastructure();
         services.RegisterSpotifyInfrastructure(configuration);
@@ -25,7 +32,7 @@ public static class DependencyInjection
     private static void AddConfigurations(
         IConfigurationManager configuration)
     {
-        configuration.AddJsonFile("appsettings.Local.json");
+        configuration.AddJsonFile("appsettings.Local.json", optional: true);
     }
 
     private static void AddAuthorization(this IServiceCollection services)

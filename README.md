@@ -18,6 +18,7 @@ Backend to .NET 9 (ASP.NET Core) zorkiestrowany przez .NET Aspire, frontend to S
 - [Instalacja i uruchomienie](#instalacja-i-uruchomienie)
 - [Konfiguracja](#konfiguracja)
 - [Baza danych](#baza-danych)
+- [Wdrożenie (Docker / Fly.io)](#wdrożenie-docker--flyio)
 - [API](#api)
 - [Testy](#testy)
 - [Znane ograniczenia](#znane-ograniczenia)
@@ -300,8 +301,7 @@ SQLite, plik `PartyKing.db` tworzony w katalogu roboczym procesu API
 
 - Migracje (`src/api/PartyKing.Persistence/Migrations`) są **stosowane automatycznie przy starcie API**
   przez `app.Services.MigrateDb()` — nie trzeba nic robić ręcznie.
-- Dane startowe: 19 przykładowych zdjęć (`SlideshowImageSeedHelper`) oraz domyślny wiersz
-  ustawień slideshow (`SlideTime` = 20 s, `AutoRepeat` i `StartFromBeginning` wyłączone).
+- Dane startowe: domyślny wiersz ustawień slideshow (`SlideTime` = 20 s, `AutoRepeat` i `StartFromBeginning` wyłączone).
 - Aby zacząć od czystej bazy, wystarczy usunąć plik `PartyKing.db` i zrestartować API.
 
 Dodanie nowej migracji (z katalogu `src/api`; wymaga `dotnet tool install --global dotnet-ef`) — ponieważ w projekcie
@@ -313,6 +313,35 @@ dotnet ef migrations add NazwaMigracji \
   --startup-project PartyKing.Persistence \
   --context WriterDbContext
 ```
+
+## Wdrożenie (Docker / Fly.io)
+
+Jeden obraz (`Dockerfile`) zawiera nginx i API: nginx serwuje zbudowany frontend (z fallbackiem SPA) i przekazuje
+`/api/*` do Kestrela (prefiks `/api` jest obcinany), więc całość działa pod jednym adresem i ciasteczka nie wymagają CORS.
+Frontend w buildzie produkcyjnym używa względnego `/api` (nadpisanie: `VITE_API_URL`).
+
+Wszystko, co ma przetrwać redeploy, leży na wolumenie `/data`: baza (`PARTYKING_DATABASE_PATH`), klucze Data Protection
+(`DataProtection__KeysDirectory`, bez nich po redeployu wylogowałoby to hosta i admina) i zdjęcia (`ASPNETCORE_WEBROOT=/data/wwwroot`).
+Obraz nie zawiera żadnych zdjęć — bez wgranych zdjęć slideshow pokazuje „No photos yet”.
+
+Pierwsze wdrożenie na Fly.io (aplikacja musi działać na **jednej** maszynie: SQLite i stan w pamięci):
+
+```bash
+fly launch --no-deploy --copy-config
+fly volumes create partyking_data --size 1
+fly secrets set \
+  SpotifySettings__ClientId=... SpotifySettings__ClientSecret=... \
+  AdminSettings__Username=admin AdminSettings__PasswordHash=...   # hash: dotnet run --project PartyKing.API -- hash-password
+fly deploy
+fly certs add party.talgrim.dev   # + rekord CNAME party -> <app>.fly.dev
+```
+
+Klucze Data Protection (`/data/keys`) leżą na wolumenie **bez szyfrowania** — kto ma dostęp do wolumenu lub jego backupu,
+mógłby podrobić ciasteczka. Na Fly to akceptowalne; `/health` jest dostępne tylko na wewnętrznym porcie 8182 (używa go check z `fly.toml`).
+
+W panelu Spotify dodaj redirect URI `https://party.talgrim.dev/callback` (ustawiony też w `fly.toml`).
+Lokalny test obrazu: `docker build -t partyking .` i `docker run -p 8181:8181 -v partyking-data:/data partyking`
+(Spotify wymaga wtedy loopbacku/HTTPS, więc logowanie hosta lokalnie nie zadziała).
 
 ## API
 
@@ -331,13 +360,17 @@ Wysłanie jednego lub wielu zdjęć. Dane w formacie `multipart/form-data`, pole
 (powtórzone dla każdego pliku). Parametr `deleteAfterPresentation` (`true`/`false`) decyduje,
 czy zdjęcia mają być usuwane po wyświetleniu.
 
+Endpoint jest publiczny (goście wrzucają zdjęcia bez logowania), więc go ograniczono: dozwolone są tylko
+`jpg`, `jpeg`, `png`, `gif` i `webp` (sprawdzane po rozszerzeniu i bajtach pliku, typ z nagłówka klienta jest ignorowany),
+maks. 20 MB na zdjęcie i 100 MB na żądanie, limit 60 żądań na minutę z jednego IP (`429`).
+
 ```bash
 curl -X PUT "$API/upload-photo/false" \
   -F "files=@zdjecie1.jpg" \
   -F "files=@zdjecie2.png"
 ```
 
-Odpowiedzi: `200 OK` (puste ciało) albo `400 Bad Request` z tekstem błędu.
+Odpowiedzi: `200 OK` (puste ciało), `400 Bad Request` z powodem (np. nieobsługiwany format) albo `429 Too Many Requests`.
 
 #### `GET /get-photo`
 
@@ -372,10 +405,12 @@ zawierają **wiodący separator**, bo są wyliczane względem katalogu `wwwroot`
 }
 ```
 
-Endpoint w praktyce zawsze zwraca `200 OK` — przewidziana w kontrolerze odpowiedź
-`204 No Content` jest nieosiągalna, bo serwis zawsze ma w zapasie placeholdery.
+Gdy nie ma żadnego zdjęcia (ani wrzuconego, ani placeholdera) endpoint zwraca `204 No Content`,
+a strona slideshow pokazuje „No photos yet”.
 
 #### `GET /get-all`
+
+Wymaga zalogowanego admina (ciasteczko admina).
 
 Lista plików znajdujących się w katalogu wrzuconych zdjęć (czytana z dysku, nie z bazy).
 
@@ -392,6 +427,8 @@ curl "$API/get-all"
 
 #### `GET /get-configuration`
 
+Wymaga zalogowanego admina.
+
 Konfiguracja wczytana z `appsettings.json`.
 
 ```bash
@@ -407,6 +444,8 @@ curl "$API/get-configuration"
 ```
 
 #### `POST /update-configuration`
+
+Wymaga zalogowanego admina.
 
 Zapisuje ustawienia slideshow w bazie danych.
 
