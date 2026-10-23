@@ -34,6 +34,11 @@ primary_region = 'fra'
     port = 8182
     path = '/health'
 
+[metrics]
+  # nginx proxies this port to Kestrel's Prometheus endpoint; Fly shows it in its managed Grafana
+  port = 8183
+  path = '/metrics'
+
 [[vm]]
   size = 'shared-cpu-1x'
   memory = '512mb'
