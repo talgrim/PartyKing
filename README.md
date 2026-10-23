@@ -336,6 +336,9 @@ fly deploy
 fly certs add party.talgrim.dev   # + rekord CNAME party -> <app>.fly.dev
 ```
 
+Klucze Data Protection (`/data/keys`) leżą na wolumenie **bez szyfrowania** — kto ma dostęp do wolumenu lub jego backupu,
+mógłby podrobić ciasteczka. Na Fly to akceptowalne; `/health` jest dostępne tylko na wewnętrznym porcie 8182 (używa go check z `fly.toml`).
+
 W panelu Spotify dodaj redirect URI `https://party.talgrim.dev/callback` (ustawiony też w `fly.toml`).
 Lokalny test obrazu: `docker build -t partyking .` i `docker run -p 8181:8181 -v partyking-data:/data partyking`
 (Spotify wymaga wtedy loopbacku/HTTPS, więc logowanie hosta lokalnie nie zadziała).
@@ -357,13 +360,17 @@ Wysłanie jednego lub wielu zdjęć. Dane w formacie `multipart/form-data`, pole
 (powtórzone dla każdego pliku). Parametr `deleteAfterPresentation` (`true`/`false`) decyduje,
 czy zdjęcia mają być usuwane po wyświetleniu.
 
+Endpoint jest publiczny (goście wrzucają zdjęcia bez logowania), więc go ograniczono: dozwolone są tylko
+`jpg`, `jpeg`, `png`, `gif` i `webp` (sprawdzane po rozszerzeniu i bajtach pliku, typ z nagłówka klienta jest ignorowany),
+maks. 20 MB na zdjęcie i 100 MB na żądanie, limit 60 żądań na minutę z jednego IP (`429`).
+
 ```bash
 curl -X PUT "$API/upload-photo/false" \
   -F "files=@zdjecie1.jpg" \
   -F "files=@zdjecie2.png"
 ```
 
-Odpowiedzi: `200 OK` (puste ciało) albo `400 Bad Request` z tekstem błędu.
+Odpowiedzi: `200 OK` (puste ciało), `400 Bad Request` z powodem (np. nieobsługiwany format) albo `429 Too Many Requests`.
 
 #### `GET /get-photo`
 
@@ -398,10 +405,12 @@ zawierają **wiodący separator**, bo są wyliczane względem katalogu `wwwroot`
 }
 ```
 
-Endpoint w praktyce zawsze zwraca `200 OK` — przewidziana w kontrolerze odpowiedź
-`204 No Content` jest nieosiągalna, bo serwis zawsze ma w zapasie placeholdery.
+Gdy nie ma żadnego zdjęcia (ani wrzuconego, ani placeholdera) endpoint zwraca `204 No Content`,
+a strona slideshow pokazuje „No photos yet”.
 
 #### `GET /get-all`
+
+Wymaga zalogowanego admina (ciasteczko admina).
 
 Lista plików znajdujących się w katalogu wrzuconych zdjęć (czytana z dysku, nie z bazy).
 
@@ -418,6 +427,8 @@ curl "$API/get-all"
 
 #### `GET /get-configuration`
 
+Wymaga zalogowanego admina.
+
 Konfiguracja wczytana z `appsettings.json`.
 
 ```bash
@@ -433,6 +444,8 @@ curl "$API/get-configuration"
 ```
 
 #### `POST /update-configuration`
+
+Wymaga zalogowanego admina.
 
 Zapisuje ustawienia slideshow w bazie danych.
 
