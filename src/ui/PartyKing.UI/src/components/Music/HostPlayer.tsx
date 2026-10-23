@@ -5,6 +5,7 @@ import { HTTP_STATUS_CODE } from '@/service/constants';
 import { playerApi } from '@/service/endpoints/player/playerApi';
 import { useNowPlaying } from '@/service/endpoints/player/useNowPlaying';
 import { queueApi } from '@/service/endpoints/queue/queueApi';
+import { useQueueSongs } from '@/service/endpoints/queue/useQueueSongs';
 import { SongDto, SongSource } from '@/service/endpoints/queue/types';
 import { ErrorLog, ErrorLogEntry } from './ErrorLog';
 import { PlayerControls } from './PlayerControls';
@@ -19,7 +20,7 @@ const MAX_LOGGED_ERRORS = 50;
 const MAX_CONSECUTIVE_YOUTUBE_FAILURES = 2;
 const TOKEN_REFRESH_MS = 30 * 60 * 1000;
 // The server treats a player that has not reported for ~10 s as gone, so report well within that.
-const STATE_REPORT_INTERVAL_MS = 2000;
+const STATE_REPORT_INTERVAL_MS = 3000;
 // A host login that comes back to this page and is still rejected within this window is a loop.
 const LOGIN_LOOP_WINDOW_MS = 30 * 1000;
 
@@ -108,9 +109,7 @@ export const HostPlayer = ({ sessionId, isAdmin }: Props): ReactNode => {
     if (token) sessionStorage.removeItem(loginAttemptKey(sessionId));
   }, [token, sessionId]);
 
-  const { data: queue } = useSWR(['queue-songs', sessionId], () => queueApi.getQueue(sessionId), {
-    refreshInterval: 3000,
-  });
+  const { data: queue } = useQueueSongs(sessionId);
 
   // Tells the server which song this player thinks is playing, so it only advances when that is still true.
   // When it is not (an admin skipped meanwhile), the song really playing comes back and nothing advances.
