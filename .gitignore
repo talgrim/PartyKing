@@ -400,3 +400,5 @@ FodyWeavers.xsd
 *.db-wal
 
 PartyKing.API/wwwroot/
+
+CLAUDE.Local.md
