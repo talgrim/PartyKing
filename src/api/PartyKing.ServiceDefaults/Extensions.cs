@@ -58,7 +58,8 @@ public static class Extensions
                     .AddRuntimeInstrumentation()
                     .AddMeter("PartyKing.API")
                     .AddMeter("PartyKing.Infrastructure.Spotify")
-                    .AddMeter("PartyKing.Infrastructure");
+                    .AddMeter("PartyKing.Infrastructure")
+                    .AddPrometheusExporter();
             })
             .WithTracing(tracing =>
             {
@@ -115,6 +116,9 @@ public static class Extensions
         {
             Predicate = r => r.Tags.Contains("live")
         });
+
+        // Prometheus scrape endpoint for Fly's metrics; nginx blocks it on the public port (see docker/nginx.conf)
+        app.MapPrometheusScrapingEndpoint("/metrics");
 
         return app;
     }
