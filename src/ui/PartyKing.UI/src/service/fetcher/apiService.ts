@@ -16,10 +16,12 @@ export const makeUrlWithParams = (
     url: string,
     params?: Record<string, string>,
 ) => {
-    if (!params) return new URL(url);
+    // The base makes relative API URLs (e.g. /api/...) work
+    const base = window.location.origin;
+    if (!params) return new URL(url, base);
     const searchParams = new URLSearchParams(params).toString();
-    if (!searchParams) return new URL(url);
-    return new URL(`${url}?${searchParams}`);
+    if (!searchParams) return new URL(url, base);
+    return new URL(`${url}?${searchParams}`, base);
 };
 
 export interface FetchFromApiOptions {

@@ -50,12 +50,22 @@ export const Slideshow = () => {
 
   if (error) {
     console.log(error);
+    return <p className="p-4 text-center">Could not load the slideshow.</p>;
   }
 
-  if(!data) return (
-    <Backdrop open>
-      <CircularProgress />
-    </Backdrop>
+  // 204 No Content (nothing uploaded and no placeholders) arrives as an empty string
+  if (!data) return (
+    <div className="flex h-screen flex-col items-center justify-center gap-2 text-center">
+      <PageNavigation
+        className="fixed top-2 right-2 z-10 opacity-30 hover:opacity-100"
+        links={[
+          {to: ROUTE_PATHS.IMAGE_UPLOADER, label: 'Upload photos'},
+          {to: ROUTE_PATHS.HOME, label: 'Sessions'},
+        ]}
+      />
+      <h1 className="text-2xl font-semibold">No photos yet</h1>
+      <p>Upload some photos and they will show up here.</p>
+    </div>
   )
 
   return (
