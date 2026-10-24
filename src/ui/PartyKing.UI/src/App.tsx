@@ -8,7 +8,7 @@ import {createTheme, CssBaseline, ThemeProvider} from "@mui/material";
 const themeDark = createTheme({
   palette: {
     background: {
-      default: "#000000"
+      default: "#1e293b"
     },
     text: {
       primary: "#ffffff",
