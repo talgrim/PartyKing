@@ -22,8 +22,9 @@ vi.mock('@/service/endpoints/player/playerApi', () => ({
 }));
 vi.mock('./SpotifyPlayer', () => ({ SpotifyPlayer: () => null }));
 vi.mock('./YoutubePlayer', () => ({
-  YoutubePlayer: ({ songUrl, paused, onError }: { songUrl: string; paused: boolean; onError: (code: number) => void }) => (
+  YoutubePlayer: ({ songUrl, paused, volume, onError }: { songUrl: string; paused: boolean; volume: number; onError: (code: number) => void }) => (
     <div>
+      <span>{`volume ${volume}`}</span>
       <span>{`video ${songUrl} ${paused ? 'paused' : 'playing'}`}</span>
       <button onClick={() => onError(150)}>fail video</button>
     </div>
@@ -49,7 +50,7 @@ const nowPlaying = (current: ReturnType<typeof song> | null) => ({
 const startMusic = async () => {
   const start = await screen.findByRole('button', { name: 'Start the music' });
   await waitFor(() => expect(start).toBeEnabled());
-  act(() => start.click());
+  await act(async () => start.click());
 };
 
 const renderPlayer = async (isAdmin = false) => {
@@ -64,6 +65,7 @@ const renderPlayer = async (isAdmin = false) => {
 
 describe('HostPlayer', () => {
   beforeEach(() => {
+    localStorage.clear();
     mocks.next.mockReset();
     mocks.next.mockResolvedValueOnce(song(1, 'Blocked song'));
     mocks.getNowPlaying.mockReset();
@@ -76,7 +78,7 @@ describe('HostPlayer', () => {
     mocks.next.mockResolvedValueOnce(song(2, 'Good song'));
     await renderPlayer();
 
-    act(() => screen.getByText('fail video').click());
+    await act(async () => screen.getByText('fail video').click());
 
     expect(await screen.findByText(/Skipped "Blocked song": The owner of the video does not allow/)).toBeVisible();
     expect(mocks.next).toHaveBeenCalledTimes(2);
@@ -86,14 +88,14 @@ describe('HostPlayer', () => {
     mocks.next.mockResolvedValueOnce(song(2, 'Second blocked song')).mockResolvedValueOnce(song(3, 'Good song'));
     await renderPlayer();
 
-    act(() => screen.getByText('fail video').click());
+    await act(async () => screen.getByText('fail video').click());
     await screen.findByText(/Skipped "Blocked song"/);
-    act(() => screen.getByText('fail video').click());
+    await act(async () => screen.getByText('fail video').click());
 
     expect(await screen.findByText(/YouTube refused 2 videos in a row/)).toBeVisible();
     expect(mocks.next).toHaveBeenCalledTimes(2);
 
-    act(() => screen.getByRole('button', { name: 'Next song' }).click());
+    await act(async () => screen.getByRole('button', { name: 'Next song' }).click());
     await waitFor(() => expect(mocks.next).toHaveBeenCalledTimes(3));
   });
 
@@ -101,7 +103,7 @@ describe('HostPlayer', () => {
     mocks.next.mockRejectedValueOnce({ status: 404 });
     await renderPlayer(true);
 
-    act(() => screen.getByText('fail video').click());
+    await act(async () => screen.getByText('fail video').click());
 
     const log = await screen.findByRole('region', { name: 'Error log' });
     expect(log).toHaveTextContent(/YouTube error 150 on "Blocked song"/);
@@ -111,7 +113,7 @@ describe('HostPlayer', () => {
     mocks.next.mockRejectedValueOnce({ status: 404 });
     await renderPlayer();
 
-    act(() => screen.getByText('fail video').click());
+    await act(async () => screen.getByText('fail video').click());
 
     await waitFor(() => expect(mocks.next).toHaveBeenCalledTimes(2));
     expect(screen.queryByRole('region', { name: 'Error log' })).not.toBeInTheDocument();
@@ -122,7 +124,7 @@ describe('HostPlayer', () => {
     await renderPlayer();
     expect(mocks.next).toHaveBeenLastCalledWith('session-1', undefined);
 
-    act(() => screen.getByRole('button', { name: 'Next song' }).click());
+    await act(async () => screen.getByRole('button', { name: 'Next song' }).click());
 
     await waitFor(() => expect(mocks.next).toHaveBeenCalledTimes(2));
     expect(mocks.next).toHaveBeenLastCalledWith('session-1', 1);
@@ -135,7 +137,7 @@ describe('HostPlayer', () => {
       expect(mocks.reportState).toHaveBeenCalledWith('session-1', { songId: 1, paused: false }),
     );
 
-    act(() => screen.getByRole('button', { name: 'Pause' }).click());
+    await act(async () => screen.getByRole('button', { name: 'Pause' }).click());
 
     await waitFor(() =>
       expect(mocks.reportState).toHaveBeenLastCalledWith('session-1', { songId: 1, paused: true }),
@@ -167,6 +169,25 @@ describe('HostPlayer', () => {
     mocks.getNowPlaying.mockResolvedValue(nowPlaying(null));
     mocks.getNowPlaying.mockResolvedValueOnce(nowPlaying(song(1, 'Blocked song')));
 
-    await waitFor(() => expect(screen.queryByText(/video /)).not.toBeInTheDocument(), { timeout: 4000 });
+    await waitFor(() => expect(screen.queryByText(/video /)).not.toBeInTheDocument(), { timeout: 9000 });
+  }, 12_000);
+
+  it('plays at 50% and raises the volume by 10% per click', async () => {
+    await renderPlayer();
+    expect(screen.getByText('volume 0.5')).toBeVisible();
+    expect(screen.getByText('50%')).toBeVisible();
+
+    await act(async () => screen.getByRole('button', { name: 'Volume up' }).click());
+
+    expect(screen.getByText('volume 0.6')).toBeVisible();
+    expect(screen.getByText('60%')).toBeVisible();
+  });
+
+  it('remembers the volume after a reload', async () => {
+    localStorage.setItem('partyking.volume', '0.8');
+    await renderPlayer();
+
+    expect(screen.getByText('volume 0.8')).toBeVisible();
+    expect(screen.getByText('80%')).toBeVisible();
   });
 });

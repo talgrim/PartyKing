@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { JoinQrCode } from './JoinQrCode';
 
@@ -47,7 +47,7 @@ describe('JoinQrCode', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Show QR code' }));
       expect((await screen.findByTestId('qr')).getAttribute('data-value')).toContain('first');
 
-      await vi.advanceTimersByTimeAsync(31_000);
+      await act(() => vi.advanceTimersByTimeAsync(31_000));
 
       expect((await screen.findByTestId('qr')).getAttribute('data-value')).toContain('second');
     } finally {

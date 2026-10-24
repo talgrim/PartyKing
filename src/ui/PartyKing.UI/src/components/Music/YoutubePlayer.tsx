@@ -5,6 +5,8 @@ type PlayerProps = {
     songUrl: string,
     onEnded?: () => void,
     mute: boolean,
+    /** 0 to 1. */
+    volume?: number,
     paused?: boolean,
     // Fired when playback is paused or resumed, including through the player's own controls.
     onPausedChange?: (paused: boolean) => void,
@@ -12,7 +14,7 @@ type PlayerProps = {
     onError?: (code: number | undefined) => void
 }
 
-export const YoutubePlayer = ({songUrl, mute, paused = false, onPausedChange, onEnded, onError}: PlayerProps) => {
+export const YoutubePlayer = ({songUrl, mute, volume = 0.5, paused = false, onPausedChange, onEnded, onError}: PlayerProps) => {
     const player = useRef(null);
 
     return (
@@ -21,7 +23,7 @@ export const YoutubePlayer = ({songUrl, mute, paused = false, onPausedChange, on
             src={songUrl}
             className="w-full h-full max-h-screen aspect-video"
             playing={!paused}
-            volume={0.02}
+            volume={volume}
             controls={true}
             muted={mute}
             onReady={() => {

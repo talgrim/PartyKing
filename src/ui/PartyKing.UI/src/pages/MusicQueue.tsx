@@ -37,7 +37,7 @@ export const MusicQueue = (): ReactNode => {
   const { data: nowPlaying, mutate: refreshNowPlaying } = useNowPlaying(sessionId);
 
   const { data: session, error } = useSWR(['session', sessionId], () => sessionsApi.getSession(sessionId), {
-    refreshInterval: 10000,
+    refreshInterval: 30000,
     shouldRetryOnError: false,
   });
 

@@ -19,8 +19,9 @@ class FakePlayer {
   activateElement = vi.fn().mockResolvedValue(undefined);
   connect = vi.fn().mockResolvedValue(true);
   disconnect = vi.fn();
+  setVolume = vi.fn().mockResolvedValue(undefined);
 
-  constructor() {
+  constructor(public options: { volume?: number } = {}) {
     FakePlayer.instances.push(this);
   }
 
@@ -43,18 +44,48 @@ const state = (paused: boolean, position: number, current: string, previous: str
   },
 });
 
-const renderPlayer = async (uri: string | null = TRACK) => {
+const renderPlayer = async (uri: string | null = TRACK, volume?: number) => {
   const handlers = { onEnded: vi.fn(), onPausedChange: vi.fn(), onError: vi.fn() };
   const handle = createRef<SpotifyPlayerHandle>();
-  render(<SpotifyPlayer uri={uri} handle={handle} {...handlers} />);
+  const view = render(<SpotifyPlayer uri={uri} handle={handle} volume={volume} {...handlers} />);
   await waitFor(() => expect(FakePlayer.instances).toHaveLength(1));
-  return { ...handlers, handle, player: FakePlayer.instances[0] };
+  return { ...handlers, handle, view, player: FakePlayer.instances[0] };
 };
 
 describe('SpotifyPlayer', () => {
   beforeEach(() => {
     FakePlayer.instances = [];
     window.Spotify = { Player: FakePlayer } as unknown as typeof Spotify;
+  });
+
+  describe('volume', () => {
+    it('starts at 50% by default', async () => {
+      const { player } = await renderPlayer();
+
+      expect(player.options.volume).toBe(0.5);
+    });
+
+    it('starts at the given volume', async () => {
+      const { player } = await renderPlayer(TRACK, 0.8);
+
+      expect(player.options.volume).toBe(0.8);
+    });
+
+    it('applies a changed volume to the SDK player', async () => {
+      const { player, view, handle, ...handlers } = await renderPlayer(TRACK, 0.5);
+
+      view.rerender(<SpotifyPlayer uri={TRACK} handle={handle} volume={0.7} {...handlers} />);
+
+      expect(player.setVolume).toHaveBeenLastCalledWith(0.7);
+    });
+
+    it('applies the volume again when the device becomes ready', async () => {
+      const { player } = await renderPlayer(TRACK, 0.3);
+
+      player.emit('ready', { device_id: 'device-1' });
+
+      await waitFor(() => expect(player.setVolume).toHaveBeenLastCalledWith(0.3));
+    });
   });
 
   it('toggles playback of the SDK player through the handle', async () => {
