@@ -1,3 +1,4 @@
+using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.DataProtection;
 using PartyKing.API.Authentication;
 using PartyKing.API.Authentication.Cookie;
@@ -23,6 +24,13 @@ public static class DependencyInjection
         if (!string.IsNullOrWhiteSpace(keysDirectory))
         {
             dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keysDirectory));
+
+            // Keys on disk are encrypted with a certificate, so reading the volume or a backup is not enough to forge cookies.
+            // Keys written before the certificate was configured stay readable and are replaced as they expire.
+            var certificate = LoadKeyEncryptionCertificate(configuration)
+                ?? throw new InvalidOperationException(
+                    "DataProtection:KeysDirectory is set, so DataProtection:CertificateBase64 (a base64 PFX) is required to encrypt the keys.");
+            dataProtection.ProtectKeysWithCertificate(certificate);
         }
 
         services.RegisterApplication(configuration);
@@ -31,6 +39,19 @@ public static class DependencyInjection
         services.RegisterYoutubeInfrastructure();
         services.AddAuthorization();
         AddConfigurations(configuration);
+    }
+
+    private static X509Certificate2? LoadKeyEncryptionCertificate(IConfiguration configuration)
+    {
+        var base64 = configuration["DataProtection:CertificateBase64"];
+        if (string.IsNullOrWhiteSpace(base64))
+        {
+            return null;
+        }
+
+        return X509CertificateLoader.LoadPkcs12(
+            Convert.FromBase64String(base64),
+            configuration["DataProtection:CertificatePassword"]);
     }
 
     private static void AddConfigurations(
