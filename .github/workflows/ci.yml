@@ -14,7 +14,7 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x
-      - run: dotnet test PartyKing.Application.Tests
+      - run: dotnet test PartyKing.sln
 
   frontend:
     runs-on: ubuntu-latest
@@ -29,6 +29,5 @@ jobs:
           cache: npm
           cache-dependency-path: src/ui/PartyKing.UI/package-lock.json
       - run: npm ci
-      # src/App.test.js is a stale CRA leftover that fails, so run the Music tests only
-      - run: npx vitest run src/components/Music
+      - run: npm test
       - run: npm run build
