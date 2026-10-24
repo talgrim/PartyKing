@@ -20,6 +20,8 @@ type Props = {
   /** Continue `uri` from `positionMs` instead of from the start, once, when it is taken over from another device. */
   takeover?: { uri: string; positionMs: number } | null;
   handle?: Ref<SpotifyPlayerHandle>;
+  /** 0 to 1. */
+  volume?: number;
 };
 
 const SDK_URL = 'https://sdk.scdn.co/spotify-player.js';
@@ -49,6 +51,7 @@ export const SpotifyPlayer = ({
   onDeviceChange,
   takeover,
   handle,
+  volume = 0.5,
 }: Props) => {
   const playerRef = useRef<Spotify.Player | null>(null);
   const [deviceId, setDeviceId] = useState<string | null>(null);
@@ -62,6 +65,8 @@ export const SpotifyPlayer = ({
   const usedTakeoverRef = useRef<Props['takeover']>(null);
   const currentUriRef = useRef<string | null>(uri);
   const endedUriRef = useRef<string | null>(null);
+  const volumeRef = useRef(volume);
+  volumeRef.current = volume;
   onEndedRef.current = onEnded;
   onPausedChangeRef.current = onPausedChange;
   onErrorRef.current = onError;
@@ -78,6 +83,11 @@ export const SpotifyPlayer = ({
     },
   }));
 
+  // The device id changes when the SDK connects, so re-apply the volume then as well.
+  useEffect(() => {
+    void playerRef.current?.setVolume(volume);
+  }, [volume, deviceId]);
+
   useEffect(() => {
     let disposed = false;
     let player: Spotify.Player | null = null;
@@ -87,7 +97,7 @@ export const SpotifyPlayer = ({
 
       player = new window.Spotify.Player({
         name: 'PartyKing',
-        volume: 0.5,
+        volume: volumeRef.current,
         getOAuthToken: (callback) => {
           queueApi
             .getSpotifyToken()
