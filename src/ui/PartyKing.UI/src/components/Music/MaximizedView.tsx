@@ -26,8 +26,8 @@ export const MaximizedView = ({ sessionId, nowPlaying, onExit }: Props): ReactNo
   }, [onExit]);
 
   return (
-    <div role="dialog" aria-label="Slideshow" className="fixed inset-0 z-50 flex bg-black text-slate-400">
-      <div className="relative flex min-w-0 flex-1 flex-col">
+    <div role="dialog" aria-label="Slideshow" className="fixed inset-0 z-50 flex flex-col bg-black text-slate-400 md:flex-row">
+      <div className="relative flex h-[45dvh] min-w-0 shrink-0 flex-col md:h-auto md:flex-1 md:shrink">
         <div className="min-h-0 flex-1">
           <SlideshowView sessionId={sessionId} />
         </div>
@@ -41,7 +41,7 @@ export const MaximizedView = ({ sessionId, nowPlaying, onExit }: Props): ReactNo
           <CloseIcon />
         </button>
       </div>
-      <aside aria-label="Queue" className="w-80 shrink-0 overflow-y-auto bg-slate-800 pt-4 lg:w-96">
+      <aside aria-label="Queue" className="min-h-0 w-full flex-1 overflow-y-auto bg-slate-800 pt-4 md:w-80 md:flex-none md:shrink-0 lg:w-96">
         <QueueList sessionId={sessionId} large />
       </aside>
     </div>
