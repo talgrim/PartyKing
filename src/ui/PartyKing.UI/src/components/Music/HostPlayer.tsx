@@ -14,6 +14,7 @@ import { YoutubePlayer } from './YoutubePlayer';
 import { getPlaybackState } from '@/service/endpoints/spotify/spotifyPlaybackApi';
 import { takeoverPositionMs, useTakeoverAvailable } from './takeover';
 import { describeYoutubeError } from './youtubeErrors';
+import { usePersistedNumber } from '@/utils/usePersistedNumber';
 
 const MAX_LOGGED_ERRORS = 50;
 // After this many YouTube failures in a row something is wrong beyond a single video, so stop skipping.
@@ -23,6 +24,9 @@ const TOKEN_REFRESH_MS = 30 * 60 * 1000;
 const STATE_REPORT_INTERVAL_MS = 3000;
 // A host login that comes back to this page and is still rejected within this window is a loop.
 const LOGIN_LOOP_WINDOW_MS = 30 * 1000;
+
+const VOLUME_STORAGE_KEY = 'partyking.volume';
+const DEFAULT_VOLUME = 0.5;
 
 const loginAttemptKey = (sessionId: string) => `host-login-attempt:${sessionId}`;
 
@@ -51,6 +55,7 @@ export const HostPlayer = ({ sessionId, isAdmin }: Props): ReactNode => {
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [takeover, setTakeover] = useState<{ uri: string; positionMs: number } | null>(null);
   const [errorLog, setErrorLog] = useState<ErrorLogEntry[]>([]);
+  const [volume, setVolume] = usePersistedNumber(VOLUME_STORAGE_KEY, DEFAULT_VOLUME, 0, 1);
 
   // Callbacks that fire at arbitrary times (timers, the Spotify SDK) read the latest state through these.
   const songRef = useRef(song);
@@ -290,6 +295,7 @@ export const HostPlayer = ({ sessionId, isAdmin }: Props): ReactNode => {
             key={song.id}
             songUrl={song.url}
             mute={false}
+            volume={volume}
             paused={paused}
             onPausedChange={handlePausedChange}
             onEnded={playNext}
@@ -307,6 +313,7 @@ export const HostPlayer = ({ sessionId, isAdmin }: Props): ReactNode => {
             onError={reportError}
             onDeviceChange={setDeviceId}
             takeover={takeover}
+            volume={volume}
           />
         )}
 
@@ -319,6 +326,8 @@ export const HostPlayer = ({ sessionId, isAdmin }: Props): ReactNode => {
         hasSong={song !== null}
         onToggle={togglePlay}
         onNext={playNextManually}
+        volume={volume}
+        onVolumeChange={setVolume}
       />
 
       {isAdmin && (
