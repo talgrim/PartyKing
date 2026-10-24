@@ -1,5 +1,6 @@
 import VolumeDownIcon from '@mui/icons-material/VolumeDown';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
+import { pillClass, roundedClass } from './controlStyles';
 
 export const VOLUME_STEP = 0.1;
 
@@ -13,11 +14,11 @@ type Props = {
 const step = (volume: number, delta: number) => Math.min(1, Math.max(0, Math.round((volume + delta) * 100) / 100));
 
 const buttonClass =
-  'h-8 w-8 rounded-full text-slate-200 cursor-pointer inline-flex items-center justify-center hover:bg-slate-600 disabled:opacity-40 disabled:cursor-default disabled:hover:bg-transparent';
+  `h-8 w-8 ${roundedClass} text-slate-200 cursor-pointer inline-flex items-center justify-center hover:bg-slate-600 disabled:opacity-40 disabled:cursor-default disabled:hover:bg-transparent`;
 
 /** Lowers or raises the volume of the player in steps of 10%, and shows it in between. */
 export const VolumeControl = ({ volume, onChange }: Props) => (
-  <div className="inline-flex h-10 items-center gap-1 rounded-full bg-slate-700 px-1" role="group" aria-label="Volume">
+  <div className={`${pillClass} gap-1 px-1`} role="group" aria-label="Volume">
     <button
       type="button"
       aria-label="Volume down"

@@ -1,5 +1,7 @@
 import { ReactNode } from 'react';
 import { PlayPauseButton } from './PlayPauseButton';
+import SkipNextIcon from '@mui/icons-material/SkipNext';
+import { iconButtonClass } from './controlStyles';
 import { VolumeControl } from './VolumeControl';
 
 type Props = {
@@ -24,15 +26,17 @@ export const PlayerControls = ({
   volume,
   onVolumeChange,
 }: Props): ReactNode => (
-  <div className="flex items-center gap-4 px-2 pt-2">
+  <div className="flex items-center justify-center gap-4 px-2 pt-2">
     {volume !== undefined && onVolumeChange && <VolumeControl volume={volume} onChange={onVolumeChange} />}
     <PlayPauseButton paused={paused} disabled={disabled || !hasSong} onToggle={onToggle} />
     <button
       onClick={onNext}
+      aria-label="Next song"
+      title="Next song"
       disabled={disabled}
-      className="h-10 px-3 bg-amber-600 text-slate-200 rounded-md cursor-pointer disabled:opacity-50 inline-flex items-center justify-center"
+      className={iconButtonClass}
     >
-      Next song
+      <SkipNextIcon fontSize="small" />
     </button>
   </div>
 );
