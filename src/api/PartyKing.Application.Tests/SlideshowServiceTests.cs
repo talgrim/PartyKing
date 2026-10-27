@@ -3,8 +3,7 @@ using Microsoft.Extensions.Options;
 using PartyKing.Application.Configuration;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Contract.V1.Slideshow;
-using PartyKing.Domain.Entities;
-using PartyKing.Domain.Models.Slideshow;
+using PartyKing.Domain.Entities.Slideshow;
 using PartyKing.Infrastructure.Repositories;
 using PartyKing.Infrastructure.Results;
 
