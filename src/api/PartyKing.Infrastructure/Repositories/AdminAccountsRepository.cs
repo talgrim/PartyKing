@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using PartyKing.Domain.Entities;
+using PartyKing.Domain.Entities.Auth;
 using PartyKing.Persistence.Database;
 
 namespace PartyKing.Infrastructure.Repositories;

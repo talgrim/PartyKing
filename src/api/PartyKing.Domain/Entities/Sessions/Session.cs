@@ -1,4 +1,6 @@
-namespace PartyKing.Domain.Entities;
+using PartyKing.Domain.Entities.Spotify;
+
+namespace PartyKing.Domain.Entities.Sessions;
 
 public class Session
 {

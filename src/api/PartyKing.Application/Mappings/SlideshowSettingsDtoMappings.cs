@@ -1,5 +1,5 @@
 using PartyKing.Contract.V1.Slideshow;
-using PartyKing.Domain.Entities;
+using PartyKing.Domain.Entities.Slideshow;
 
 namespace PartyKing.Application.Mappings;
 

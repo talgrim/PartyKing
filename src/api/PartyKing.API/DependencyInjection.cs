@@ -2,8 +2,10 @@ using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.DataProtection;
 using PartyKing.API.Authentication;
 using PartyKing.API.Authentication.Cookie;
+using PartyKing.API.Hubs;
 using PartyKing.API.Metrics;
 using PartyKing.Application;
+using PartyKing.Application.Realtime;
 using PartyKing.Infrastructure;
 using PartyKing.Infrastructure.Authentication;
 using PartyKing.Infrastructure.Spotify;
@@ -33,6 +35,7 @@ public static class DependencyInjection
             dataProtection.ProtectKeysWithCertificate(certificate);
         }
 
+        services.RegisterHubs();
         services.RegisterApplication(configuration);
         services.RegisterInfrastructure();
         services.RegisterSpotifyInfrastructure(configuration);
@@ -78,5 +81,11 @@ public static class DependencyInjection
                 policy.AddAuthenticationSchemes(Constants.AdminScheme);
                 policy.RequireAuthenticatedUser();
             });
+    }
+
+    private static void RegisterHubs(this IServiceCollection services)
+    {
+        services.AddSignalR();
+        services.AddSingleton<ISessionMusicNotifier, SignalRSessionMusicNotifier>();
     }
 }

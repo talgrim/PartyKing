@@ -1,4 +1,4 @@
-using PartyKing.Domain.Entities;
+using PartyKing.Domain.Entities.Sessions;
 using PartyKing.Domain.Enums;
 using PartyKing.Infrastructure.Repositories;
 

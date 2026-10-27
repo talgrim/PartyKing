@@ -1,9 +1,10 @@
 using ErrorOr;
 using PartyKing.Application.Mappings;
 using PartyKing.Application.Queue.Helpers;
+using PartyKing.Application.Realtime;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Contract.V1.Queue;
-using PartyKing.Domain.Entities;
+using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Enums;
 using PartyKing.Domain.Results;
 using PartyKing.Infrastructure.Repositories;
@@ -14,15 +15,15 @@ namespace PartyKing.Application.Queue.Services;
 
 public interface IQueueService
 {
-    Task<ErrorOr<SongDataDto>> EnqueueAsync(Guid sessionId, string? input, CancellationToken cancellationToken);
-    Task<ErrorOr<IReadOnlyList<SongDataDto>>> GetQueueAsync(Guid sessionId, CancellationToken cancellationToken);
+    Task<ErrorOr<QueueItemDto>> EnqueueAsync(Guid sessionId, string? input, CancellationToken cancellationToken);
+    Task<ErrorOr<IReadOnlyList<QueueItemDto>>> GetQueueAsync(Guid sessionId, CancellationToken cancellationToken);
 
     /// <summary>
     /// Host only: forbidden unless <paramref name="hostProfileId"/> hosts the session. <paramref name="currentSongId"/>
     /// is the song the player thinks is playing (null: none); when it is outdated, nothing advances and the song
     /// that is really playing is returned.
     /// </summary>
-    Task<ErrorOr<SongDataDto>> GetNextAsync(
+    Task<ErrorOr<QueueItemDto>> GetNextAsync(
         Guid sessionId,
         string hostProfileId,
         int? currentSongId,
@@ -47,22 +48,25 @@ internal class QueueService : IQueueService
     private readonly IYoutubeOEmbedClient _youtubeClient;
     private readonly IHostTokenProvider _hostTokenProvider;
     private readonly ISessionsRepository _sessionsRepository;
+    private readonly ISessionMusicNotifier _musicNotifier;
 
     public QueueService(
         IQueueRepository queueRepository,
         ISessionsRepository sessionsRepository,
         ISpotifyIntegrationClient spotifyClient,
         IYoutubeOEmbedClient youtubeClient,
-        IHostTokenProvider hostTokenProvider)
+        IHostTokenProvider hostTokenProvider,
+        ISessionMusicNotifier musicNotifier)
     {
         _queueRepository = queueRepository;
         _sessionsRepository = sessionsRepository;
         _spotifyClient = spotifyClient;
         _youtubeClient = youtubeClient;
         _hostTokenProvider = hostTokenProvider;
+        _musicNotifier = musicNotifier;
     }
 
-    public async Task<ErrorOr<SongDataDto>> EnqueueAsync(
+    public async Task<ErrorOr<QueueItemDto>> EnqueueAsync(
         Guid sessionId,
         string? input,
         CancellationToken cancellationToken)
@@ -89,11 +93,13 @@ internal class QueueService : IQueueService
         }
 
         var saved = await _queueRepository.AddAsync(item.Value, cancellationToken);
+        var dto = saved.ToDto();
+        await _musicNotifier.SongAddedAsync(sessionId, dto, cancellationToken);
 
-        return saved.ToDto();
+        return dto;
     }
 
-    public async Task<ErrorOr<IReadOnlyList<SongDataDto>>> GetQueueAsync(
+    public async Task<ErrorOr<IReadOnlyList<QueueItemDto>>> GetQueueAsync(
         Guid sessionId,
         CancellationToken cancellationToken)
     {
@@ -107,7 +113,7 @@ internal class QueueService : IQueueService
         return items.Select(x => x.ToDto()).ToList();
     }
 
-    public async Task<ErrorOr<SongDataDto>> GetNextAsync(
+    public async Task<ErrorOr<QueueItemDto>> GetNextAsync(
         Guid sessionId,
         string hostProfileId,
         int? currentSongId,
@@ -124,14 +130,7 @@ internal class QueueService : IQueueService
             return Error.Forbidden(description: "Only the host of this session can advance its queue");
         }
 
-        var next = await _queueRepository.AdvanceAsync(sessionId, currentSongId, cancellationToken);
-
-        if (next is null)
-        {
-            return Error.NotFound(description: "The queue is empty");
-        }
-
-        return next.ToDto();
+        return await AdvanceAndNotifyAsync(sessionId, currentSongId, cancellationToken);
     }
 
     public async Task<ErrorOr<Success>> RemoveAsync(
@@ -153,12 +152,45 @@ internal class QueueService : IQueueService
             return Error.Forbidden(description: "Only the host or an admin can remove songs from the queue");
         }
 
-        return await _queueRepository.RemoveAsync(sessionId, songId, cancellationToken) switch
+        var removal = await _queueRepository.RemoveAsync(sessionId, songId, cancellationToken);
+
+        if (removal == QueueItemRemoval.Removed)
         {
-            QueueItemRemoval.Removed => Result.Success,
+            await _musicNotifier.SongRemovedAsync(sessionId, songId, cancellationToken);
+            return Result.Success;
+        }
+
+        return removal switch
+        {
             QueueItemRemoval.NotQueued => Error.Conflict(description: "The song is no longer waiting in the queue"),
             _ => Error.NotFound(description: "The song was not found in the queue")
         };
+    }
+
+    /// <summary>
+    /// Advances only when <paramref name="currentSongId"/> matches the song Playing now (same rule as the
+    /// repository). A real advance is pushed to listeners even when the queue then becomes empty.
+    /// </summary>
+    internal async Task<ErrorOr<QueueItemDto>> AdvanceAndNotifyAsync(
+        Guid sessionId,
+        int? currentSongId,
+        CancellationToken cancellationToken)
+    {
+        var playingBefore = await _queueRepository.GetPlayingAsync(sessionId, cancellationToken);
+        var next = await _queueRepository.AdvanceAsync(sessionId, currentSongId, cancellationToken);
+
+        if (playingBefore?.Id == currentSongId)
+        {
+            await _musicNotifier.QueueAdvancedAsync(
+                sessionId,
+                playingBefore?.Id,
+                next?.ToDto(),
+                cancellationToken);
+        }
+
+        return next is null
+            ? Error.NotFound(description: "The queue is empty")
+            : next.ToDto();
     }
 
     private static Error SessionNotFound() => Error.NotFound(description: "The session was not found");

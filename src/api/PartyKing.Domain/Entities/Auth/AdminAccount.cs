@@ -1,4 +1,4 @@
-namespace PartyKing.Domain.Entities;
+namespace PartyKing.Domain.Entities.Auth;
 
 public class AdminAccount
 {

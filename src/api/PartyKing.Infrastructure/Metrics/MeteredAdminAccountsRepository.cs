@@ -1,4 +1,4 @@
-using PartyKing.Domain.Entities;
+using PartyKing.Domain.Entities.Auth;
 using PartyKing.Infrastructure.Repositories;
 
 namespace PartyKing.Infrastructure.Metrics;

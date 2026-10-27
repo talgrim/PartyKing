@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
-using PartyKing.Domain.Entities;
+using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Enums;
 using PartyKing.Infrastructure.Metrics;
 using PartyKing.Persistence.Database;

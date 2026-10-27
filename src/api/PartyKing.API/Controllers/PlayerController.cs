@@ -66,7 +66,7 @@ public class PlayerController : CoreController
     [HttpPost("admin/sessions/{sessionId:guid}/songs/next")]
     [RequireSessionAccess]
     [AuthorizeAdmin]
-    [ProducesResponseType<SongDataDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<QueueItemDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Skip(
         Guid sessionId,
         [FromQuery] int? currentSongId,
