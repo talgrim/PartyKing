@@ -17,6 +17,7 @@ import { HTTP_STATUS_CODE } from '@/service/constants';
 import { useNowPlaying } from '@/service/endpoints/player/useNowPlaying';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 import { useViewerRole } from '@/service/endpoints/sessions/useViewerRole';
+import { useSessionMusicHub } from '@/service/realtime/useSessionMusicHub';
 import { usePersistedFlag } from '@/utils/usePersistedFlag';
 
 const JOIN_PARAM = 'join';
@@ -70,6 +71,8 @@ export const MusicQueue = (): ReactNode => {
   const canViewSlideshow = isHost || isAdmin;
 
   const locked = (error as { status?: number } | undefined)?.status === HTTP_STATUS_CODE.UNAUTHORIZED;
+
+  useSessionMusicHub(sessionId, Boolean(session && !locked));
 
   return (
     <div className="w-full min-h-full bg-slate-800 text-slate-400 md:flex">
