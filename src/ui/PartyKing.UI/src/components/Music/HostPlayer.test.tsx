@@ -1,7 +1,8 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
-import { SWRConfig } from 'swr';
+import { mutate, SWRConfig } from 'swr';
 import { HostPlayer } from './HostPlayer';
 import { SongSource } from '@/service/endpoints/queue/types';
+import { nowPlayingKey } from '@/service/realtime/sessionMusicEvents';
 
 const mocks = vi.hoisted(() => ({
   next: vi.fn(),
@@ -156,9 +157,9 @@ describe('HostPlayer', () => {
     await renderPlayer();
     expect(screen.getByText(/watch\?v=1 playing/)).toBeVisible();
 
-    mocks.getNowPlaying.mockResolvedValue(nowPlaying(song(2, 'Skipped to')));
+    await mutate(nowPlayingKey('session-1'), nowPlaying(song(2, 'Skipped to')), { revalidate: false });
 
-    expect(await screen.findByText(/watch\?v=2 playing/, undefined, { timeout: 4000 })).toBeVisible();
+    expect(await screen.findByText(/watch\?v=2 playing/)).toBeVisible();
     // The admin's skip is not the player's own advance
     expect(mocks.next).toHaveBeenCalledTimes(1);
   });
@@ -166,11 +167,10 @@ describe('HostPlayer', () => {
   it('stops when an admin skips past the last song', async () => {
     await renderPlayer();
 
-    mocks.getNowPlaying.mockResolvedValue(nowPlaying(null));
-    mocks.getNowPlaying.mockResolvedValueOnce(nowPlaying(song(1, 'Blocked song')));
+    await mutate(nowPlayingKey('session-1'), nowPlaying(null), { revalidate: false });
 
-    await waitFor(() => expect(screen.queryByText(/video /)).not.toBeInTheDocument(), { timeout: 9000 });
-  }, 12_000);
+    await waitFor(() => expect(screen.queryByText(/video /)).not.toBeInTheDocument());
+  });
 
   it('plays at 50% and raises the volume by 10% per click', async () => {
     await renderPlayer();

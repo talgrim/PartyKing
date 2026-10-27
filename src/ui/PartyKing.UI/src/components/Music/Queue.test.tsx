@@ -1,8 +1,17 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { SWRConfig } from 'swr';
+import { useEffect } from 'react';
+import { ScopedMutator, SWRConfig, useSWRConfig } from 'swr';
 import { Queue } from './Queue';
 import { SongSource } from '@/service/endpoints/queue/types';
+import { queueSongsKey } from '@/service/realtime/sessionMusicEvents';
+
+/** Captures the mutate bound to this SWRConfig provider (the global one cannot see it). */
+const MutateCapture = ({ onReady }: { onReady: (mutate: ScopedMutator) => void }) => {
+  const { mutate } = useSWRConfig();
+  useEffect(() => onReady(mutate), [mutate, onReady]);
+  return null;
+};
 
 const mocks = vi.hoisted(() => ({
   getQueue: vi.fn(),
@@ -36,15 +45,17 @@ const queued = (n: number) => ({
 
 const renderQueue = async () => {
   const user = userEvent.setup();
+  let mutate!: ScopedMutator;
   render(
     <SWRConfig value={{ provider: () => new Map() }}>
+      <MutateCapture onReady={(m) => { mutate = m; }} />
       <Queue sessionId="session" />
     </SWRConfig>,
   );
   await user.type(screen.getByPlaceholderText(/search spotify/i), 'party');
   await user.click(screen.getByRole('button', { name: 'Search' }));
   await screen.findByText('Track 1');
-  return user;
+  return { user, mutate: () => mutate };
 };
 
 describe('Queue', () => {
@@ -83,11 +94,12 @@ describe('Queue', () => {
     const inQueue = await screen.findByRole('button', { name: 'In queue' });
 
     pending = [];
+    // SignalR (or a reconnect revalidate) clears the song from the shared SWR cache
+    await mutate(queueSongsKey('session'), [], { revalidate: false });
 
-    // the queue is polled every 5 seconds
-    await waitFor(() => expect(inQueue).toHaveTextContent('Add'), { timeout: 7000 });
+    await waitFor(() => expect(inQueue).toHaveTextContent('Add'));
     expect(inQueue).toBeEnabled();
-  }, 10_000);
+  });
 
   it('shows the error on the failed row and lets it be retried', async () => {
     mocks.enqueue.mockRejectedValueOnce({ message: 'Session has no host yet' });
