@@ -17,7 +17,7 @@ namespace PartyKing.Persistence.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.8");
 
-            modelBuilder.Entity("PartyKing.Domain.Entities.AdminAccount", b =>
+            modelBuilder.Entity("PartyKing.Domain.Entities.Auth.AdminAccount", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
@@ -38,7 +38,7 @@ namespace PartyKing.Persistence.Migrations
                     b.ToTable("AdminAccounts");
                 });
 
-            modelBuilder.Entity("PartyKing.Domain.Entities.OAuthState", b =>
+            modelBuilder.Entity("PartyKing.Domain.Entities.Auth.OAuthState", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("TEXT");
@@ -58,7 +58,7 @@ namespace PartyKing.Persistence.Migrations
                     b.ToTable("OAuthStates");
                 });
 
-            modelBuilder.Entity("PartyKing.Domain.Entities.QueueItem", b =>
+            modelBuilder.Entity("PartyKing.Domain.Entities.Queue.QueueItem", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -71,6 +71,9 @@ namespace PartyKing.Persistence.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<int?>("DurationMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsFallback")
                         .HasColumnType("INTEGER");
 
                     b.Property<Guid>("SessionId")
@@ -99,7 +102,7 @@ namespace PartyKing.Persistence.Migrations
                     b.ToTable("QueueItems");
                 });
 
-            modelBuilder.Entity("PartyKing.Domain.Entities.Session", b =>
+            modelBuilder.Entity("PartyKing.Domain.Entities.Sessions.Session", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
@@ -110,6 +113,18 @@ namespace PartyKing.Persistence.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("FallbackCursor")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FallbackPlaylistId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FallbackPlaylistName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("FallbackShuffle")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("HostProfileId")
                         .HasColumnType("TEXT");
@@ -133,7 +148,7 @@ namespace PartyKing.Persistence.Migrations
                     b.ToTable("Sessions");
                 });
 
-            modelBuilder.Entity("PartyKing.Domain.Entities.SlideshowImage", b =>
+            modelBuilder.Entity("PartyKing.Domain.Entities.Slideshow.SlideshowImage", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -167,7 +182,7 @@ namespace PartyKing.Persistence.Migrations
                     b.ToTable("Images");
                 });
 
-            modelBuilder.Entity("PartyKing.Domain.Entities.SlideshowSettings", b =>
+            modelBuilder.Entity("PartyKing.Domain.Entities.Slideshow.SlideshowSettings", b =>
                 {
                     b.Property<Guid>("SessionId")
                         .HasColumnType("TEXT");
@@ -186,7 +201,7 @@ namespace PartyKing.Persistence.Migrations
                     b.ToTable("SlideshowSettings");
                 });
 
-            modelBuilder.Entity("PartyKing.Domain.Entities.SpotifyProfile", b =>
+            modelBuilder.Entity("PartyKing.Domain.Entities.Spotify.SpotifyProfile", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("TEXT");
@@ -206,27 +221,27 @@ namespace PartyKing.Persistence.Migrations
                     b.ToTable("SpotifyProfiles");
                 });
 
-            modelBuilder.Entity("PartyKing.Domain.Entities.OAuthState", b =>
+            modelBuilder.Entity("PartyKing.Domain.Entities.Auth.OAuthState", b =>
                 {
-                    b.HasOne("PartyKing.Domain.Entities.Session", null)
+                    b.HasOne("PartyKing.Domain.Entities.Sessions.Session", null)
                         .WithMany()
                         .HasForeignKey("SessionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("PartyKing.Domain.Entities.QueueItem", b =>
+            modelBuilder.Entity("PartyKing.Domain.Entities.Queue.QueueItem", b =>
                 {
-                    b.HasOne("PartyKing.Domain.Entities.Session", null)
+                    b.HasOne("PartyKing.Domain.Entities.Sessions.Session", null)
                         .WithMany()
                         .HasForeignKey("SessionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("PartyKing.Domain.Entities.Session", b =>
+            modelBuilder.Entity("PartyKing.Domain.Entities.Sessions.Session", b =>
                 {
-                    b.HasOne("PartyKing.Domain.Entities.SpotifyProfile", "HostProfile")
+                    b.HasOne("PartyKing.Domain.Entities.Spotify.SpotifyProfile", "HostProfile")
                         .WithMany()
                         .HasForeignKey("HostProfileId")
                         .OnDelete(DeleteBehavior.SetNull);
@@ -234,20 +249,20 @@ namespace PartyKing.Persistence.Migrations
                     b.Navigation("HostProfile");
                 });
 
-            modelBuilder.Entity("PartyKing.Domain.Entities.SlideshowImage", b =>
+            modelBuilder.Entity("PartyKing.Domain.Entities.Slideshow.SlideshowImage", b =>
                 {
-                    b.HasOne("PartyKing.Domain.Entities.Session", null)
+                    b.HasOne("PartyKing.Domain.Entities.Sessions.Session", null)
                         .WithMany()
                         .HasForeignKey("SessionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("PartyKing.Domain.Entities.SlideshowSettings", b =>
+            modelBuilder.Entity("PartyKing.Domain.Entities.Slideshow.SlideshowSettings", b =>
                 {
-                    b.HasOne("PartyKing.Domain.Entities.Session", null)
+                    b.HasOne("PartyKing.Domain.Entities.Sessions.Session", null)
                         .WithOne()
-                        .HasForeignKey("PartyKing.Domain.Entities.SlideshowSettings", "SessionId")
+                        .HasForeignKey("PartyKing.Domain.Entities.Slideshow.SlideshowSettings", "SessionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

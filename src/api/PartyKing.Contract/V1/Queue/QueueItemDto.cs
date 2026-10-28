@@ -10,4 +10,5 @@ public record QueueItemDto(
     string Name,
     string? Artists,
     string? AlbumArtUrl,
-    int? DurationMs);
+    int? DurationMs,
+    bool IsFallback = false);

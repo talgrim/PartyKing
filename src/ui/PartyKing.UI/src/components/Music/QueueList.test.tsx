@@ -46,6 +46,15 @@ describe('QueueList', () => {
     expect(screen.queryByRole('button', { name: /remove/i })).not.toBeInTheDocument();
   });
 
+  it('marks the songs queued from the fallback playlist', async () => {
+    mocks.getQueue.mockResolvedValue([{ ...song(1, 'From list'), isFallback: true }, song(2, 'From guest')]);
+
+    renderList();
+
+    expect(await screen.findByText('Artist - From list')).toBeVisible();
+    expect(screen.getAllByText('from playlist')).toHaveLength(1);
+  });
+
   it('removes a song and shows the error when that fails', async () => {
     mocks.getQueue.mockResolvedValue([song(1, 'First')]);
     mocks.remove.mockRejectedValue({ message: 'The song is no longer waiting in the queue' });

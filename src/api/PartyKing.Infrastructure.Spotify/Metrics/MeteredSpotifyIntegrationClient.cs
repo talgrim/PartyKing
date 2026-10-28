@@ -46,6 +46,29 @@ public sealed class MeteredSpotifyIntegrationClient : ISpotifyIntegrationClient
         return MeasureAsync(nameof(GetTrackAsync), () => _inner.GetTrackAsync(accessToken, trackId, cancellationToken));
     }
 
+    public Task<Playlist?> GetPlaylistAsync(
+        string accessToken,
+        string playlistId,
+        CancellationToken cancellationToken)
+    {
+        return MeasureAsync(nameof(GetPlaylistAsync), () => _inner.GetPlaylistAsync(accessToken, playlistId, cancellationToken));
+    }
+
+    public Task<IReadOnlyList<Playlist>> GetCurrentUserPlaylistsAsync(
+        string accessToken,
+        CancellationToken cancellationToken)
+    {
+        return MeasureAsync(nameof(GetCurrentUserPlaylistsAsync), () => _inner.GetCurrentUserPlaylistsAsync(accessToken, cancellationToken));
+    }
+
+    public Task<IReadOnlyList<Song>> GetPlaylistTracksAsync(
+        string accessToken,
+        string playlistId,
+        CancellationToken cancellationToken)
+    {
+        return MeasureAsync(nameof(GetPlaylistTracksAsync), () => _inner.GetPlaylistTracksAsync(accessToken, playlistId, cancellationToken));
+    }
+
     private async Task<T> MeasureAsync<T>(string operation, Func<Task<T>> call)
     {
         var startTimestamp = Stopwatch.GetTimestamp();

@@ -49,6 +49,7 @@ internal class QueueService : IQueueService
     private readonly IHostTokenProvider _hostTokenProvider;
     private readonly ISessionsRepository _sessionsRepository;
     private readonly ISessionMusicNotifier _musicNotifier;
+    private readonly IFallbackQueueFiller _fallbackFiller;
 
     public QueueService(
         IQueueRepository queueRepository,
@@ -56,7 +57,8 @@ internal class QueueService : IQueueService
         ISpotifyIntegrationClient spotifyClient,
         IYoutubeOEmbedClient youtubeClient,
         IHostTokenProvider hostTokenProvider,
-        ISessionMusicNotifier musicNotifier)
+        ISessionMusicNotifier musicNotifier,
+        IFallbackQueueFiller fallbackFiller)
     {
         _queueRepository = queueRepository;
         _sessionsRepository = sessionsRepository;
@@ -64,6 +66,7 @@ internal class QueueService : IQueueService
         _youtubeClient = youtubeClient;
         _hostTokenProvider = hostTokenProvider;
         _musicNotifier = musicNotifier;
+        _fallbackFiller = fallbackFiller;
     }
 
     public async Task<ErrorOr<QueueItemDto>> EnqueueAsync(
@@ -157,6 +160,9 @@ internal class QueueService : IQueueService
         if (removal == QueueItemRemoval.Removed)
         {
             await _musicNotifier.SongRemovedAsync(sessionId, songId, cancellationToken);
+
+            // Removing the song the fallback playlist queued must not leave "Up next" empty
+            await _fallbackFiller.EnsureQueuedAsync(sessionId, cancellationToken);
             return Result.Success;
         }
 
@@ -176,8 +182,14 @@ internal class QueueService : IQueueService
         int? currentSongId,
         CancellationToken cancellationToken)
     {
+        // An empty queue gets a playlist song first (a previous refill may have failed), so the advance finds one
+        await _fallbackFiller.EnsureQueuedAsync(sessionId, cancellationToken);
+
         var playingBefore = await _queueRepository.GetPlayingAsync(sessionId, cancellationToken);
         var next = await _queueRepository.AdvanceAsync(sessionId, currentSongId, cancellationToken);
+
+        // Queue the playlist song that follows the one now starting, behind whatever guests add meanwhile
+        await _fallbackFiller.EnsureQueuedAsync(sessionId, cancellationToken);
 
         if (playingBefore?.Id == currentSongId)
         {

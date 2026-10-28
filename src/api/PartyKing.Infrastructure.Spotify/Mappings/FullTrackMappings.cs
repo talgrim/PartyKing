@@ -19,6 +19,18 @@ public static class FullTrackMappings
         };
     }
 
+    public static Playlist ToDomain(this FullPlaylist playlist)
+    {
+        return new Playlist
+        {
+            Id = playlist.Id!,
+            Name = playlist.Name ?? string.Empty,
+            OwnerId = playlist.Owner?.Id ?? string.Empty,
+            ImageUrl = playlist.Images?.FirstOrDefault()?.Url,
+            TrackCount = playlist.Tracks?.Total ?? 0
+        };
+    }
+
     public static Album ToDomain(this SimpleAlbum album)
     {
         return new Album

@@ -1,5 +1,6 @@
 import CloseIcon from '@mui/icons-material/Close';
 import { ChangeEvent, FormEvent, ReactNode, useEffect, useRef, useState } from 'react';
+import { CoverImage } from '@/components/Music/CoverImage';
 import { QueueList } from '@/components/Music/QueueList';
 import { looksLikeSongLink, queueApi } from '@/service/endpoints/queue/queueApi';
 import { useQueueSongs } from '@/service/endpoints/queue/useQueueSongs';
@@ -159,34 +160,26 @@ export const Queue = ({ sessionId, canRemove = false }: Props): ReactNode => {
         {message && <p className="pt-2 text-sm text-amber-500">{message}</p>}
 
         {open && results.length > 0 && (
-          <ul className="absolute left-0 right-0 top-full z-10 mt-1 max-h-[60vh] overflow-y-auto p-2 space-y-2 rounded-md border border-slate-700 bg-slate-800 shadow-lg">
+          <ul
+            aria-label="Search results"
+            className="absolute left-0 right-0 top-full z-10 mt-1 max-h-[60vh] overflow-y-auto p-2 space-y-1 rounded-md border border-slate-700 bg-slate-900 shadow-lg"
+          >
             {results.map((track) => {
               const row = rows[track.uri];
               const inQueue = queuedUrls.has(track.uri);
               const adding = row?.status === 'adding';
               return (
-                <li
-                  key={track.uri}
-                  className={`p-2 rounded-md border-l-4 ${
-                    inQueue ? 'bg-slate-900/50 border-slate-600' : 'bg-slate-900 border-amber-600 hover:bg-slate-700'
-                  }`}
-                >
+                <li key={track.uri} className="p-2 rounded-md bg-slate-800 hover:bg-slate-700">
                   <div className="flex items-center gap-3">
-                    {track.albumArtUrl ? (
-                      <img src={track.albumArtUrl} alt="" className="w-12 h-12 rounded-sm shrink-0" />
-                    ) : (
-                      <div className="w-12 h-12 rounded-sm shrink-0 bg-slate-700" />
-                    )}
-                    <div className="grow min-w-0">
-                      <div className={`truncate font-medium ${inQueue ? 'text-slate-500' : 'text-slate-200'}`}>
-                        {track.name}
-                      </div>
-                      <div className="truncate text-sm text-slate-500">{track.artists}</div>
+                    <CoverImage imageUrl={track.albumArtUrl} />
+                    <div className="min-w-0 flex-1">
+                      <div className={`truncate ${inQueue ? 'text-slate-500' : 'text-slate-100'}`}>{track.name}</div>
+                      <div className="truncate text-xs text-slate-400">{track.artists}</div>
                     </div>
                     <button
                       disabled={adding || inQueue}
                       onClick={() => enqueueResult(track.uri)}
-                      className="w-24 shrink-0 px-2 py-2 bg-amber-600 text-slate-100 font-semibold rounded-md cursor-pointer hover:bg-amber-500 disabled:cursor-default disabled:bg-slate-700 disabled:text-slate-400 disabled:hover:bg-slate-700"
+                      className="w-24 shrink-0 px-2 py-1.5 text-sm font-semibold text-slate-100 bg-amber-600 rounded-md cursor-pointer hover:bg-amber-500 disabled:cursor-default disabled:bg-slate-700 disabled:text-slate-400 disabled:hover:bg-slate-700"
                     >
                       {inQueue ? 'In queue' : adding ? 'Adding...' : 'Add'}
                     </button>

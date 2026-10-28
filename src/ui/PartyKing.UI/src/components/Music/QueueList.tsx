@@ -57,6 +57,11 @@ export const QueueList = ({ sessionId, canRemove = false, large = false }: Props
                 <span className="min-w-0 flex-1 truncate" title={label}>
                   {label}
                 </span>
+                {song.isFallback && (
+                  <span className="shrink-0 rounded-full bg-slate-700 px-2 py-0.5 text-xs text-slate-300">
+                    from playlist
+                  </span>
+                )}
                 {canRemove && (
                   <button
                     type="button"

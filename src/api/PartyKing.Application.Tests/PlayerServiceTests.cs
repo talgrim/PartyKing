@@ -1,3 +1,4 @@
+using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Player.Services;
 using PartyKing.Application.Realtime;
 using PartyKing.Contract.V1.Enums;
@@ -23,7 +24,7 @@ public class PlayerServiceTests
     public PlayerServiceTests()
     {
         _store = new PlayerStateStore(_clock);
-        _service = new PlayerService(_sessions, _queue, _store, _notifier, new NullPlayerConnectionWatchdog());
+        _service = new PlayerService(_sessions, _queue, _store, _notifier, new NullPlayerConnectionWatchdog(), new FakeFallbackQueueFiller(), new FallbackStatusStore());
         _session = _sessions.AddSession(HostId);
     }
 

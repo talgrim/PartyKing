@@ -407,7 +407,9 @@ internal class SessionService : ISessionService
             session.Code,
             session.Name,
             session.HostProfile?.DisplayName ?? session.HostProfileId,
-            session.HostProfileId is not null);
+            session.HostProfileId is not null,
+            session.FallbackPlaylistName,
+            session.FallbackShuffle);
     }
 
     private static Error NotFound() => Error.NotFound(description: "The session was not found");

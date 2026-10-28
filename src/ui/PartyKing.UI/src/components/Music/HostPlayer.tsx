@@ -52,6 +52,7 @@ export const HostPlayer = ({ sessionId, isAdmin }: Props): ReactNode => {
   const [song, setSong] = useState<SongDto | null>(null);
   const [paused, setPaused] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fallbackError, setFallbackError] = useState<string | null>(null);
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [takeover, setTakeover] = useState<{ uri: string; positionMs: number } | null>(null);
   const [errorLog, setErrorLog] = useState<ErrorLogEntry[]>([]);
@@ -239,10 +240,11 @@ export const HostPlayer = ({ sessionId, isAdmin }: Props): ReactNode => {
     if (reportInFlightRef.current) return;
     reportInFlightRef.current = true;
     try {
-      const { command } = await playerApi.reportState(sessionId, {
+      const { command, fallbackError: playlistError } = await playerApi.reportState(sessionId, {
         songId: songRef.current?.id ?? null,
         paused: pausedRef.current,
       });
+      setFallbackError(playlistError ?? null);
       const shouldToggle =
         songRef.current !== null &&
         ((command === 'Pause' && !pausedRef.current) || (command === 'Resume' && pausedRef.current));
@@ -318,6 +320,7 @@ export const HostPlayer = ({ sessionId, isAdmin }: Props): ReactNode => {
         )}
 
         {error && <p className="mt-4 text-center text-amber-500">{error}</p>}
+        {fallbackError && <p className="mt-4 text-center text-amber-500">{fallbackError}</p>}
       </div>
 
       <PlayerControls

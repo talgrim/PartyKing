@@ -18,6 +18,11 @@ internal sealed class MeteredQueueRepository : MeteredRepository, IQueueReposito
         return MeasureAsync(nameof(AddAsync), () => _inner.AddAsync(item, cancellationToken));
     }
 
+    public Task<QueueItem?> AddIfNoneQueuedAsync(QueueItem item, CancellationToken cancellationToken)
+    {
+        return MeasureAsync(nameof(AddIfNoneQueuedAsync), () => _inner.AddIfNoneQueuedAsync(item, cancellationToken));
+    }
+
     public Task<IReadOnlyList<QueueItem>> GetPendingAsync(Guid sessionId, CancellationToken cancellationToken)
     {
         return MeasureAsync(nameof(GetPendingAsync), () => _inner.GetPendingAsync(sessionId, cancellationToken));

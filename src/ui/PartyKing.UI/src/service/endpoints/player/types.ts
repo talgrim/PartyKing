@@ -22,4 +22,6 @@ export type PlayerStateRequest = {
 export type PlayerStateResponse = {
   /** A command an admin sent since the last report. */
   command: PlayerCommand | null;
+  /** Why the fallback playlist could not add a song; null when it works or is not set. */
+  fallbackError?: string | null;
 };
