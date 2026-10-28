@@ -16,6 +16,7 @@ class FakePlayer {
 
   listeners = new Map<string, Listener>();
   togglePlay = vi.fn().mockResolvedValue(undefined);
+  pause = vi.fn().mockResolvedValue(undefined);
   activateElement = vi.fn().mockResolvedValue(undefined);
   connect = vi.fn().mockResolvedValue(true);
   disconnect = vi.fn();
@@ -94,6 +95,14 @@ describe('SpotifyPlayer', () => {
     handle.current?.togglePlay();
 
     expect(player.togglePlay).toHaveBeenCalledTimes(1);
+  });
+
+  it('pauses the SDK player when the song is no longer a Spotify track', async () => {
+    const { player, view, handle, ...handlers } = await renderPlayer();
+
+    view.rerender(<SpotifyPlayer uri={null} songId={null} handle={handle} {...handlers} />);
+
+    expect(player.pause).toHaveBeenCalledTimes(1);
   });
 
   it('reports a pause and a resume of the current track', async () => {
