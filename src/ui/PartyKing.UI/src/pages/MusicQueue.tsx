@@ -112,7 +112,7 @@ export const MusicQueue = (): ReactNode => {
         >
           <div className="aspect-video w-full overflow-hidden rounded-sm bg-black">
             {showLyrics ? (
-              <LyricsView lyrics={lyrics} nowPlaying={nowPlaying} />
+              <LyricsView lyrics={lyrics} nowPlaying={nowPlaying} onResync={() => void refreshNowPlaying()} />
             ) : (
               <SlideshowView sessionId={session.id} />
             )}
@@ -199,6 +199,7 @@ export const MusicQueue = (): ReactNode => {
           nowPlaying={nowPlaying}
           showLyrics={showLyrics}
           lyrics={lyrics}
+          onResyncLyrics={() => void refreshNowPlaying()}
           onExit={() => setMaximized(false)}
         />
       )}

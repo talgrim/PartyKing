@@ -1,5 +1,6 @@
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
+import SyncIcon from '@mui/icons-material/Sync';
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { NowPlayingDto } from '@/service/endpoints/player/types';
 import { LyricsState } from '@/service/endpoints/lyrics/useLyrics';
@@ -23,6 +24,8 @@ const TICK_MS = 250;
 type Props = {
   lyrics: LyricsState;
   nowPlaying: NowPlayingDto | undefined;
+  /** Refetches now-playing, called when the window gets back in front so the position is re-read from the server. */
+  onResync?: () => void;
 };
 
 const offsetButtonClass =
@@ -33,15 +36,34 @@ const offsetButtonClass =
  * comes from now-playing: the server's position as of the last response, counted on locally while the song plays.
  * The host can nudge the timing when the sound reaches them late or early.
  */
-export const LyricsView = ({ lyrics, nowPlaying }: Props): ReactNode => (
-  <div className="relative flex h-full w-full flex-col bg-black text-slate-200">
-    {lyrics.status === 'found' ? (
-      <SyncedLyrics lines={lyrics.lines} nowPlaying={nowPlaying} />
-    ) : (
-      <p className="m-auto px-6 text-center text-xl text-slate-400">{emptyMessage(lyrics.status)}</p>
-    )}
-  </div>
-);
+export const LyricsView = ({ lyrics, nowPlaying, onResync }: Props): ReactNode => {
+  // Kept here rather than in SyncedLyrics, which is unmounted while the next song's lyrics load
+  const [offsetMs, setOffsetMs] = usePersistedNumber(OFFSET_STORAGE_KEY, 0, -MAX_OFFSET_MS, MAX_OFFSET_MS);
+
+  // The nudge fits one recording, so the next song starts without it
+  const songId = nowPlaying?.song?.id;
+  const lastSongId = useRef(songId);
+  useEffect(() => {
+    if (songId !== undefined && lastSongId.current !== undefined && songId !== lastSongId.current) setOffsetMs(0);
+    if (songId !== undefined) lastSongId.current = songId;
+  }, [songId, setOffsetMs]);
+
+  return (
+    <div className="relative flex h-full w-full flex-col bg-black text-slate-200">
+      {lyrics.status === 'found' ? (
+        <SyncedLyrics
+          lines={lyrics.lines}
+          nowPlaying={nowPlaying}
+          onResync={onResync}
+          offsetMs={offsetMs}
+          setOffsetMs={setOffsetMs}
+        />
+      ) : (
+        <p className="m-auto px-6 text-center text-xl text-slate-400">{emptyMessage(lyrics.status)}</p>
+      )}
+    </div>
+  );
+};
 
 const emptyMessage = (status: LyricsState['status']) => {
   switch (status) {
@@ -57,11 +79,16 @@ const emptyMessage = (status: LyricsState['status']) => {
 const SyncedLyrics = ({
   lines,
   nowPlaying,
+  onResync,
+  offsetMs,
+  setOffsetMs,
 }: {
   lines: Extract<LyricsState, { status: 'found' }>['lines'];
   nowPlaying: NowPlayingDto | undefined;
+  onResync?: () => void;
+  offsetMs: number;
+  setOffsetMs: (offsetMs: number) => void;
 }): ReactNode => {
-  const [offsetMs, setOffsetMs] = usePersistedNumber(OFFSET_STORAGE_KEY, 0, -MAX_OFFSET_MS, MAX_OFFSET_MS);
   const [fontScale, setFontScale] = usePersistedNumber(
     FONT_SCALE_STORAGE_KEY,
     FONT_SCALE_DEFAULT,
@@ -84,14 +111,37 @@ const SyncedLyrics = ({
   const offsetRef = useRef(offsetMs);
   offsetRef.current = offsetMs;
 
+  const onResyncRef = useRef(onResync);
+  onResyncRef.current = onResync;
+
+  const updateRef = useRef(() => {});
+  const resyncNow = () => {
+    updateRef.current();
+    onResyncRef.current?.();
+  };
+
   useEffect(() => {
     const update = () => {
       const { positionMs: base, at } = anchor.current;
       setPositionMs(base + (running ? performance.now() - at : 0) + offsetRef.current);
     };
+    updateRef.current = update;
     update();
     const timer = setInterval(update, TICK_MS);
-    return () => clearInterval(timer);
+
+    // A hidden tab throttles the timer and may miss pushes (a seek, a pause), so on return catch up at once and ask
+    // the server where the song is now
+    const resync = () => {
+      if (document.visibilityState === 'hidden') return;
+      resyncNow();
+    };
+    window.addEventListener('focus', resync);
+    document.addEventListener('visibilitychange', resync);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('focus', resync);
+      document.removeEventListener('visibilitychange', resync);
+    };
   }, [running, nowPlaying, offsetMs]);
 
   const active = activeLineIndex(lines, positionMs);
@@ -162,6 +212,15 @@ const SyncedLyrics = ({
         aria-label="Lyrics timing"
         className="absolute right-2 bottom-2 flex items-center gap-1 rounded-md bg-black/70 p-1"
       >
+        <button
+          type="button"
+          className={offsetButtonClass}
+          title="Match the lyrics to the current position of the song"
+          aria-label="Resync lyrics"
+          onClick={resyncNow}
+        >
+          <SyncIcon fontSize="small" />
+        </button>
         <button
           type="button"
           className={offsetButtonClass}
