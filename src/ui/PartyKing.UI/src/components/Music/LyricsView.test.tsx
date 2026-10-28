@@ -114,6 +114,30 @@ describe('LyricsView', () => {
     expect(screen.getByRole('button', { name: 'Smaller lyrics' })).toBeDisabled();
   });
 
+  it('asks for the position again and catches up when the window gets focus back', () => {
+    const onResync = vi.fn();
+    render(<LyricsView lyrics={found} nowPlaying={nowPlaying({ positionMs: 2000 })} onResync={onResync} />);
+
+    fireEvent.focus(window);
+
+    expect(onResync).toHaveBeenCalledTimes(1);
+  });
+
+  it('resyncs on the button and zeroes the timing offset when the next song starts', () => {
+    const onResync = vi.fn();
+    const song = (id: number) => nowPlaying({ song: { ...nowPlaying().song!, id } });
+    const { rerender } = render(<LyricsView lyrics={found} nowPlaying={song(1)} onResync={onResync} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Resync lyrics' }));
+    expect(onResync).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show lyrics earlier' }));
+    expect(localStorage.getItem('partyking.lyricsOffsetMs')).not.toBe('0');
+
+    rerender(<LyricsView lyrics={found} nowPlaying={song(2)} onResync={onResync} />);
+    expect(localStorage.getItem('partyking.lyricsOffsetMs')).toBe('0');
+  });
+
   it('opens on the line being sung and jumps there at once, as after moving between drawer and maximized view', () => {
     const scrollTo = vi.fn();
     Element.prototype.scrollTo = scrollTo;
