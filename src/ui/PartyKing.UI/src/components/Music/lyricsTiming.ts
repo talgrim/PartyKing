@@ -2,7 +2,7 @@ import { LyricsLineDto } from '@/service/endpoints/lyrics/types';
 
 /** The host nudges the lyrics by this much per press, to line them up with the sound they hear. */
 export const OFFSET_STEP_MS = 500;
-export const MAX_OFFSET_MS = 10000;
+export const MAX_OFFSET_MS = 100000;
 
 /** The lyrics text size as a percentage of the default, changed by the magnifier buttons. */
 export const FONT_SCALE_DEFAULT = 100;

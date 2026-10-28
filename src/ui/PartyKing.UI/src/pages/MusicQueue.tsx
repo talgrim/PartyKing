@@ -10,6 +10,7 @@ import { PhotoUploadDialog } from '@/components/Music/PhotoUploadDialog';
 import { Queue } from '@/components/Music/Queue';
 import { SessionHeader } from '@/components/Music/SessionHeader';
 import { SlideshowControls } from '@/components/Music/SlideshowControls';
+import { useAutoLyrics } from '@/components/Music/useAutoLyrics';
 import { useUploadDialog } from '@/components/Music/useUploadDialog';
 import { SessionPasswordForm } from '@/components/Music/SessionPasswordForm';
 import { PageNavigation } from '@/components/common/PageNavigation';
@@ -81,6 +82,17 @@ export const MusicQueue = (): ReactNode => {
 
   // Looked up even while the slideshow is shown, so the lyrics button can tell whether this song has any
   const lyrics = useLyrics(sessionId, nowPlaying?.song?.id, canViewSlideshow && Boolean(session) && !locked);
+
+  // With the automatic mode on, each song shows its lyrics once they are found and the slideshow while they are
+  // searched for or missing. The toggle still works; the next result overrides it.
+  const [autoLyrics] = useAutoLyrics();
+  useEffect(() => {
+    if (!autoLyrics || (lyrics.status !== 'found' && lyrics.status !== 'none')) return;
+    setShowLyrics(lyrics.status === 'found');
+    // Only a new result matters, not a change of the setter's identity
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoLyrics, lyrics.status, nowPlaying?.song?.id]);
+
   const lyricsControls = {
     lyricsActive: showLyrics,
     lyricsAvailable: lyrics.status !== 'none',
