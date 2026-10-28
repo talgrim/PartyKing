@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   changePassword: vi.fn(),
   getSlideshowSettings: vi.fn(),
   updateSlideshowSettings: vi.fn(),
+  getHostPlaylists: vi.fn(),
+  setFallbackPlaylist: vi.fn(),
 }));
 
 vi.mock('@/service/endpoints/sessions/sessionsApi', () => ({
@@ -15,6 +17,8 @@ vi.mock('@/service/endpoints/sessions/sessionsApi', () => ({
     changePassword: mocks.changePassword,
     getSlideshowSettings: mocks.getSlideshowSettings,
     updateSlideshowSettings: mocks.updateSlideshowSettings,
+    getHostPlaylists: mocks.getHostPlaylists,
+    setFallbackPlaylist: mocks.setFallbackPlaylist,
   },
 }));
 
@@ -32,6 +36,8 @@ describe('SessionSettings', () => {
     mocks.rename.mockReset().mockResolvedValue(undefined);
     mocks.changePassword.mockReset().mockResolvedValue(undefined);
     mocks.updateSlideshowSettings.mockReset().mockResolvedValue(undefined);
+    mocks.getHostPlaylists.mockReset().mockResolvedValue([]);
+    mocks.setFallbackPlaylist.mockReset().mockResolvedValue(undefined);
     mocks.getSlideshowSettings
       .mockReset()
       .mockResolvedValue({ autoRepeat: true, startFromBeginning: false, slideTime: '00:00:10' });

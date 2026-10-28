@@ -156,6 +156,17 @@ describe('HostPlayer', () => {
     );
   });
 
+  it('tells the host why the fallback playlist could not add a song', async () => {
+    mocks.reportState.mockResolvedValue({
+      command: null,
+      fallbackError: 'Fallback playlist: the playlist has no playable tracks',
+    });
+
+    await renderPlayer();
+
+    expect(await screen.findByText('Fallback playlist: the playlist has no playable tracks')).toBeVisible();
+  });
+
   it('pauses when an admin sends the pause command', async () => {
     mocks.reportState.mockResolvedValueOnce({ command: null }).mockResolvedValue({ command: 'Pause' });
     await renderPlayer();
