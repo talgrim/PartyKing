@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using ErrorOr;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Player.Services;
@@ -17,7 +18,7 @@ public class FallbackPlaylistServiceTests
     private readonly FakePlaylistSpotifyClient _spotify = new();
     private readonly FakeHostTokenProvider _tokens = new();
     private readonly FakeFallbackQueueFiller _filler = new();
-    private readonly FallbackStatusStore _status = new();
+    private readonly FallbackStatusStore _status = new(new FakeSessionMusicNotifier(), NullLogger<FallbackStatusStore>.Instance);
     private readonly FallbackPlaylistService _service;
     private readonly Guid _id;
 
@@ -33,7 +34,8 @@ public class FallbackPlaylistServiceTests
             JoinTokens.Create(clock),
             clock,
             new NullSessionMusicNotifier(),
-            new NullPlayerConnectionWatchdog());
+            new NullPlayerConnectionWatchdog(),
+            NullLogger<SessionService>.Instance);
         _service = new FallbackPlaylistService(
             sessionService,
             _sessions,

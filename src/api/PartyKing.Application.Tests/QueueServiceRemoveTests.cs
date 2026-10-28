@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using ErrorOr;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Domain.Entities.Sessions;
@@ -18,7 +19,7 @@ public class QueueServiceRemoveTests
     public QueueServiceRemoveTests()
     {
         // Removing needs neither Spotify, YouTube nor host tokens
-        _service = new QueueService(_queue, _sessions, null!, null!, null!, _notifier, new FakeFallbackQueueFiller());
+        _service = new QueueService(_queue, _sessions, null!, null!, null!, _notifier, new FakeFallbackQueueFiller(), NullLogger<QueueService>.Instance);
         _session = _sessions.AddSession(HostId);
     }
 
