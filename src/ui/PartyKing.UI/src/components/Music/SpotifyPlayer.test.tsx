@@ -47,7 +47,7 @@ const state = (paused: boolean, position: number, current: string, previous: str
 const renderPlayer = async (uri: string | null = TRACK, volume?: number) => {
   const handlers = { onEnded: vi.fn(), onPausedChange: vi.fn(), onError: vi.fn() };
   const handle = createRef<SpotifyPlayerHandle>();
-  const view = render(<SpotifyPlayer uri={uri} handle={handle} volume={volume} {...handlers} />);
+  const view = render(<SpotifyPlayer uri={uri} songId={1} handle={handle} volume={volume} {...handlers} />);
   await waitFor(() => expect(FakePlayer.instances).toHaveLength(1));
   return { ...handlers, handle, view, player: FakePlayer.instances[0] };
 };
@@ -74,7 +74,7 @@ describe('SpotifyPlayer', () => {
     it('applies a changed volume to the SDK player', async () => {
       const { player, view, handle, ...handlers } = await renderPlayer(TRACK, 0.5);
 
-      view.rerender(<SpotifyPlayer uri={TRACK} handle={handle} volume={0.7} {...handlers} />);
+      view.rerender(<SpotifyPlayer uri={TRACK} songId={1} handle={handle} volume={0.7} {...handlers} />);
 
       expect(player.setVolume).toHaveBeenLastCalledWith(0.7);
     });
@@ -140,6 +140,18 @@ describe('SpotifyPlayer', () => {
     expect(onPausedChange).not.toHaveBeenCalled();
   });
 
+  it('reports the end of the same track again when it is queued as a new song', async () => {
+    const { player, onEnded, view, handle, onPausedChange, onError } = await renderPlayer();
+
+    player.emit('player_state_changed', state(true, 0, TRACK, [TRACK]));
+    view.rerender(
+      <SpotifyPlayer uri={TRACK} songId={2} handle={handle} onEnded={onEnded} onPausedChange={onPausedChange} onError={onError} />,
+    );
+    player.emit('player_state_changed', state(true, 0, TRACK, [TRACK]));
+
+    expect(onEnded).toHaveBeenCalledTimes(2);
+  });
+
   describe('playing a track', () => {
     const fetchMock = vi.fn();
 
@@ -161,9 +173,21 @@ describe('SpotifyPlayer', () => {
       await waitFor(() => expect(playBodies()).toEqual([{ uris: [TRACK] }]));
     });
 
+    it('plays the same track again when it is queued as a new song', async () => {
+      const { player, view, handle, onEnded, onPausedChange, onError } = await renderPlayer();
+      player.emit('ready', { device_id: 'web' });
+      await waitFor(() => expect(playBodies()).toEqual([{ uris: [TRACK] }]));
+
+      view.rerender(
+        <SpotifyPlayer uri={TRACK} songId={2} handle={handle} onEnded={onEnded} onPausedChange={onPausedChange} onError={onError} />,
+      );
+
+      await waitFor(() => expect(playBodies()).toEqual([{ uris: [TRACK] }, { uris: [TRACK] }]));
+    });
+
     it('continues from the position it takes the track over at, in the same call', async () => {
       const handlers = { onEnded: vi.fn(), onPausedChange: vi.fn(), onError: vi.fn() };
-      render(<SpotifyPlayer uri={TRACK} takeover={{ uri: TRACK, positionMs: 42_000.4 }} {...handlers} />);
+      render(<SpotifyPlayer uri={TRACK} songId={1} takeover={{ uri: TRACK, positionMs: 42_000.4 }} {...handlers} />);
       await waitFor(() => expect(FakePlayer.instances).toHaveLength(1));
 
       FakePlayer.instances[0].emit('ready', { device_id: 'web' });
@@ -173,7 +197,7 @@ describe('SpotifyPlayer', () => {
 
     it('ignores a takeover meant for another track', async () => {
       const handlers = { onEnded: vi.fn(), onPausedChange: vi.fn(), onError: vi.fn() };
-      render(<SpotifyPlayer uri={TRACK} takeover={{ uri: OTHER_TRACK, positionMs: 42_000 }} {...handlers} />);
+      render(<SpotifyPlayer uri={TRACK} songId={1} takeover={{ uri: OTHER_TRACK, positionMs: 42_000 }} {...handlers} />);
       await waitFor(() => expect(FakePlayer.instances).toHaveLength(1));
 
       FakePlayer.instances[0].emit('ready', { device_id: 'web' });
@@ -184,7 +208,7 @@ describe('SpotifyPlayer', () => {
     it('reports its device id', async () => {
       const onDeviceChange = vi.fn();
       const handlers = { onEnded: vi.fn(), onPausedChange: vi.fn(), onError: vi.fn() };
-      render(<SpotifyPlayer uri={null} onDeviceChange={onDeviceChange} {...handlers} />);
+      render(<SpotifyPlayer uri={null} songId={null} onDeviceChange={onDeviceChange} {...handlers} />);
       await waitFor(() => expect(FakePlayer.instances).toHaveLength(1));
 
       FakePlayer.instances[0].emit('ready', { device_id: 'web' });

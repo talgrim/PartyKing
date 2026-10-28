@@ -337,6 +337,7 @@ export const HostPlayer = ({ sessionId, isAdmin, pushHandlers }: Props): ReactNo
           <SpotifyPlayer
             handle={spotifyPlayer}
             uri={song?.source === SongSource.Spotify ? song.url : null}
+            songId={song?.source === SongSource.Spotify ? song.id : null}
             onEnded={playNext}
             onPausedChange={handlePausedChange}
             onError={reportError}
