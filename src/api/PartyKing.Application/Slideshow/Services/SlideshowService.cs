@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using PartyKing.Application.Configuration;
 using PartyKing.Application.Mappings;
+using PartyKing.Application.Realtime;
 using PartyKing.Application.System;
 using PartyKing.Contract.V1.Slideshow;
 using PartyKing.Domain.Entities.Slideshow;
@@ -25,7 +26,18 @@ public interface ISlideshowService
         IFormFile[] files,
         bool deleteAfterPresentation,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The slide on display. While a viewer watches the session the server timer rotates it; otherwise the first
+    /// read after the expiration does, so clients without a live connection still see the slideshow advance.
+    /// </summary>
     Task<SlideshowImageDto?> GetImageAsync(Guid sessionId, CancellationToken cancellationToken);
+
+    /// <summary>Starts the server timer for the session (if it was idle) on behalf of a displaying connection.</summary>
+    Task WatchAsync(Guid sessionId, string connectionId, CancellationToken cancellationToken);
+
+    /// <summary>Stops the connection watching; the timer stops with the last watcher.</summary>
+    void Unwatch(string connectionId);
 
     /// <summary>Drops the slideshow state and the uploaded files of a deleted session.</summary>
     Task DeleteSessionAsync(Guid sessionId);
@@ -40,6 +52,9 @@ internal class SlideshowService : ISlideshowService
     private readonly ISlideshowImagesRepository _imagesRepository;
     private readonly ISessionsRepository _sessionsRepository;
     private readonly SlideshowConfiguration _slideshowConfiguration;
+    private readonly ISlideshowWatchers _watchers;
+    private readonly ISlideshowScheduler _scheduler;
+    private readonly ISessionMusicNotifier _notifier;
 
     private readonly ConcurrentDictionary<Guid, SessionSlide> _slides = new();
 
@@ -47,12 +62,18 @@ internal class SlideshowService : ISlideshowService
         IDateTimeProvider dateTimeProvider,
         ISlideshowImagesRepository imagesRepository,
         ISessionsRepository sessionsRepository,
-        IOptions<SlideshowConfiguration> slideshowSettingsOptions)
+        IOptions<SlideshowConfiguration> slideshowSettingsOptions,
+        ISlideshowWatchers watchers,
+        ISlideshowScheduler scheduler,
+        ISessionMusicNotifier notifier)
     {
         _dateTimeProvider = dateTimeProvider;
         _imagesRepository = imagesRepository;
         _sessionsRepository = sessionsRepository;
         _slideshowConfiguration = slideshowSettingsOptions.Value;
+        _watchers = watchers;
+        _scheduler = scheduler;
+        _notifier = notifier;
     }
 
     public Task InitializeAsync(string rootPath, CancellationToken cancellationToken)
@@ -94,6 +115,8 @@ internal class SlideshowService : ISlideshowService
             settings.ToDomain(sessionId, _slideshowConfiguration.SlideTime),
             cancellationToken);
 
+        await RestartSlideAsync(sessionId, cancellationToken);
+
         return Result.Success;
     }
 
@@ -117,17 +140,20 @@ internal class SlideshowService : ISlideshowService
             cancellationToken,
             async (item, stoppingToken) =>
                 await UploadImageAsync(sessionId, item.File, item.Image, deleteAfterPresentation, stoppingToken));
+
+        await ShowFirstUploadAsync(sessionId, cancellationToken);
     }
 
     public async Task<SlideshowImageDto?> GetImageAsync(Guid sessionId, CancellationToken cancellationToken)
     {
         var slide = _slides.GetOrAdd(sessionId, _ => new SessionSlide());
 
-        // One client rotates the image at a time, so two polls can't skip or delete the same image twice
+        // One caller rotates the image at a time, so two of them can't skip or delete the same image twice
         await slide.Lock.WaitAsync(cancellationToken);
         try
         {
-            if (!slide.Expiration.HasValue || slide.Expiration < _dateTimeProvider.UtcNow)
+            // A watched session is rotated by the timer; reading it must not race with that
+            if (!slide.Expiration.HasValue || (IsExpired(slide) && !_watchers.IsWatched(sessionId)))
             {
                 await RotateAsync(sessionId, slide, cancellationToken);
             }
@@ -150,15 +176,56 @@ internal class SlideshowService : ISlideshowService
         }
     }
 
+    public async Task WatchAsync(Guid sessionId, string connectionId, CancellationToken cancellationToken)
+    {
+        _watchers.Watch(sessionId, connectionId);
+
+        var slide = _slides.GetOrAdd(sessionId, _ => new SessionSlide());
+        var changed = false;
+
+        await slide.Lock.WaitAsync(cancellationToken);
+        try
+        {
+            // Nobody rotated the slide while the session was unwatched: catch up once, then let the timer take over
+            if (IsExpired(slide))
+            {
+                changed = await RotateAsync(sessionId, slide, cancellationToken);
+            }
+
+            Arm(sessionId, slide);
+        }
+        finally
+        {
+            slide.Lock.Release();
+        }
+
+        if (changed)
+        {
+            await _notifier.SlideshowChangedAsync(sessionId, cancellationToken);
+        }
+    }
+
+    public void Unwatch(string connectionId)
+    {
+        if (_watchers.Unwatch(connectionId) is { Count: 0 } left)
+        {
+            _scheduler.Cancel(left.SessionId);
+        }
+    }
+
     public async Task DeleteSessionAsync(Guid sessionId)
     {
         _slides.TryRemove(sessionId, out _);
+        _scheduler.Cancel(sessionId);
 
         await _imagesRepository.DeleteSessionFilesAsync(SessionDirectory(sessionId));
     }
 
-    private async Task RotateAsync(Guid sessionId, SessionSlide slide, CancellationToken cancellationToken)
+    /// <summary>Moves to the next image. Returns whether the image on display is a different one.</summary>
+    private async Task<bool> RotateAsync(Guid sessionId, SessionSlide slide, CancellationToken cancellationToken)
     {
+        var previousUrl = slide.Current?.Data?.ImageUrl;
+
         if (slide.Current?.Data is { DeleteAfterPresentation: true })
         {
             await _imagesRepository.DeleteImageAsync(slide.Current, cancellationToken);
@@ -174,6 +241,106 @@ internal class SlideshowService : ISlideshowService
             slide.Current?.ImageId,
             settings,
             cancellationToken);
+
+        return slide.Current?.Data?.ImageUrl != previousUrl;
+    }
+
+    private async Task OnTimerAsync(Guid sessionId)
+    {
+        if (!_watchers.IsWatched(sessionId) || !_slides.TryGetValue(sessionId, out var slide))
+        {
+            return;
+        }
+
+        var changed = false;
+
+        await slide.Lock.WaitAsync();
+        try
+        {
+            // A settings change or an upload may have moved the expiration since this timer was armed
+            if (IsExpired(slide))
+            {
+                changed = await RotateAsync(sessionId, slide, CancellationToken.None);
+            }
+
+            Arm(sessionId, slide);
+        }
+        finally
+        {
+            slide.Lock.Release();
+        }
+
+        if (changed)
+        {
+            await _notifier.SlideshowChangedAsync(sessionId, CancellationToken.None);
+        }
+    }
+
+    /// <summary>A new slide time applies to the slide on display right away, counted from now.</summary>
+    private async Task RestartSlideAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        if (!_slides.TryGetValue(sessionId, out var slide))
+        {
+            return;
+        }
+
+        await slide.Lock.WaitAsync(cancellationToken);
+        try
+        {
+            if (slide.Expiration.HasValue)
+            {
+                var settings = await LoadSettingsAsync(sessionId, cancellationToken);
+                slide.Expiration = _dateTimeProvider.UtcNow.Add(settings.SlideTime);
+                Arm(sessionId, slide);
+            }
+        }
+        finally
+        {
+            slide.Lock.Release();
+        }
+    }
+
+    /// <summary>An empty slideshow shows the first uploaded photo at once instead of after its empty slide.</summary>
+    private async Task ShowFirstUploadAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        if (!_slides.TryGetValue(sessionId, out var slide))
+        {
+            return;
+        }
+
+        var changed = false;
+
+        await slide.Lock.WaitAsync(cancellationToken);
+        try
+        {
+            if (slide.Expiration.HasValue && slide.Current?.Data is null)
+            {
+                changed = await RotateAsync(sessionId, slide, cancellationToken);
+                Arm(sessionId, slide);
+            }
+        }
+        finally
+        {
+            slide.Lock.Release();
+        }
+
+        if (changed)
+        {
+            await _notifier.SlideshowChangedAsync(sessionId, cancellationToken);
+        }
+    }
+
+    private void Arm(Guid sessionId, SessionSlide slide)
+    {
+        if (slide.Expiration is { } expiration && _watchers.IsWatched(sessionId))
+        {
+            _scheduler.Schedule(sessionId, expiration, () => OnTimerAsync(sessionId));
+        }
+    }
+
+    private bool IsExpired(SessionSlide slide)
+    {
+        return !slide.Expiration.HasValue || slide.Expiration < _dateTimeProvider.UtcNow;
     }
 
     private async Task<SlideshowSettings> LoadSettingsAsync(Guid sessionId, CancellationToken cancellationToken)

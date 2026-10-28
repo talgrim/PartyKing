@@ -205,6 +205,27 @@ internal class FakeSlideshowService : ISlideshowService
 
     public Task<SlideshowImageDto?> GetImageAsync(Guid sessionId, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
+
+    public Task WatchAsync(Guid sessionId, string connectionId, CancellationToken cancellationToken) =>
+        throw new NotSupportedException();
+
+    public void Unwatch(string connectionId) => throw new NotSupportedException();
+}
+
+internal class FakeSlideshowScheduler : ISlideshowScheduler
+{
+    public Dictionary<Guid, (DateTimeOffset At, Func<Task> Callback)> Scheduled { get; } = [];
+    public List<Guid> Cancelled { get; } = [];
+
+    public void Schedule(Guid sessionId, DateTimeOffset at, Func<Task> callback) => Scheduled[sessionId] = (at, callback);
+
+    public void Cancel(Guid sessionId)
+    {
+        Scheduled.Remove(sessionId);
+        Cancelled.Add(sessionId);
+    }
+
+    public Task FireAsync(Guid sessionId) => Scheduled[sessionId].Callback();
 }
 
 internal static class JoinTokens
@@ -221,6 +242,7 @@ internal class FakeSessionMusicNotifier : ISessionMusicNotifier
     public List<(Guid SessionId, PlayerStateChangedDto State)> PlayerStateChanged { get; } = [];
     public List<(Guid SessionId, PlayerCommandDto Command)> PlayerCommands { get; } = [];
     public List<(Guid SessionId, FallbackErrorDto Error)> FallbackErrors { get; } = [];
+    public List<Guid> SlideshowChanges { get; } = [];
 
     public Task SongAddedAsync(Guid sessionId, QueueItemDto song, CancellationToken cancellationToken)
     {
@@ -265,6 +287,12 @@ internal class FakeSessionMusicNotifier : ISessionMusicNotifier
         CancellationToken cancellationToken)
     {
         FallbackErrors.Add((sessionId, error));
+        return Task.CompletedTask;
+    }
+
+    public Task SlideshowChangedAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        SlideshowChanges.Add(sessionId);
         return Task.CompletedTask;
     }
 }

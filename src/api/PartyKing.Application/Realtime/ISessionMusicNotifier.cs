@@ -27,4 +27,7 @@ public interface ISessionMusicNotifier
     Task PlayerCommandAsync(Guid sessionId, PlayerCommandDto command, CancellationToken cancellationToken);
 
     Task FallbackErrorChangedAsync(Guid sessionId, FallbackErrorDto error, CancellationToken cancellationToken);
+
+    /// <summary>The image on display in the session's slideshow changed; clients fetch the current one.</summary>
+    Task SlideshowChangedAsync(Guid sessionId, CancellationToken cancellationToken);
 }

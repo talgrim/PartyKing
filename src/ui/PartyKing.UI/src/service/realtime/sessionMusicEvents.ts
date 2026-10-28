@@ -8,6 +8,13 @@ export const SESSION_MUSIC_EVENTS = {
   PlayerStateChanged: 'PlayerStateChanged',
   PlayerCommand: 'PlayerCommand',
   FallbackErrorChanged: 'FallbackErrorChanged',
+  SlideChanged: 'SlideChanged',
+} as const;
+
+/** Hub methods the client calls: tells the server this connection displays the slideshow (its timer runs only then). */
+export const SESSION_HUB_METHODS = {
+  WatchSlideshow: 'WatchSlideshow',
+  StopWatchingSlideshow: 'StopWatchingSlideshow',
 } as const;
 
 export type SongRemovedEvent = { songId: number };
@@ -36,6 +43,7 @@ export type HostPlayerPushHandlers = {
 
 export const queueSongsKey = (sessionId: string) => ['queue-songs', sessionId] as const;
 export const nowPlayingKey = (sessionId: string) => ['now-playing', sessionId] as const;
+export const slideshowKey = (sessionId: string) => ({ endpoint: `/sessions/${sessionId}/photos/current` });
 
 export const applySongAdded = (queue: SongDto[] | undefined, song: SongDto): SongDto[] => {
   if (!queue) return [song];

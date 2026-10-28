@@ -29,7 +29,7 @@ vi.mock('@/components/Music/QueueList', () => ({ QueueList: () => <div>queue lis
 vi.mock('@/pages/Slideshow/SlideshowView', () => ({ SlideshowView: () => <div>slideshow</div> }));
 vi.mock('@/components/Music/HostPlayer', () => ({ HostPlayer: () => <div>host player</div> }));
 vi.mock('@/components/Music/AdminPlayerControls', () => ({ AdminPlayerControls: () => <div>admin controls</div> }));
-vi.mock('@/service/realtime/useSessionMusicHub', () => ({ useSessionMusicHub: () => undefined }));
+vi.mock('@/service/realtime/useSessionMusicHub', () => ({ useSessionMusicHub: () => ({ connection: undefined, connected: false }) }));
 
 const renderPage = async () => {
   render(
