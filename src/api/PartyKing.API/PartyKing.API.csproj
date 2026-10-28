@@ -23,6 +23,7 @@
       <ProjectReference Include="..\PartyKing.ServiceDefaults\PartyKing.ServiceDefaults.csproj" />
       <ProjectReference Include="..\PartyKing.Infrastructure.Youtube\PartyKing.Infrastructure.Youtube.csproj" />
       <ProjectReference Include="..\PartyKing.Infrastructure.Lyrics\PartyKing.Infrastructure.Lyrics.csproj" />
+      <ProjectReference Include="..\PartyKing.Infrastructure.Llm\PartyKing.Infrastructure.Llm.csproj" />
     </ItemGroup>
 
 </Project>
