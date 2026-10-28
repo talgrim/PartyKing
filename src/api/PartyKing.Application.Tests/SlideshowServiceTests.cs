@@ -16,6 +16,8 @@ public class SlideshowServiceTests
     private readonly FakeClock _clock = new();
     private readonly FakeSlideshowImagesRepository _repository = new();
     private readonly FakeSessionsRepository _sessions = new();
+    private readonly FakeSlideshowScheduler _scheduler = new();
+    private readonly FakeSessionMusicNotifier _notifier = new();
     private readonly SlideshowService _service;
     private readonly Guid _sessionId;
 
@@ -26,7 +28,14 @@ public class SlideshowServiceTests
             UploadedPhotosDirectory = "Images/Uploaded",
             SlideTime = TimeSpan.FromSeconds(5)
         };
-        _service = new SlideshowService(_clock, _repository, _sessions, Options.Create(configuration));
+        _service = new SlideshowService(
+            _clock,
+            _repository,
+            _sessions,
+            Options.Create(configuration),
+            new SlideshowWatchers(),
+            _scheduler,
+            _notifier);
         _sessionId = _sessions.AddSession().Id;
     }
 
@@ -211,6 +220,185 @@ public class SlideshowServiceTests
         // The slide was forgotten, so the next poll looks the image up again instead of serving the old one
         _repository.NextImages.Remove(_sessionId);
         Assert.Null(await _service.GetImageAsync(_sessionId, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Watch_ArmsTheTimerAtTheExpirationOfTheSlide()
+    {
+        _repository.NextImages[_sessionId] = Image("a.jpg");
+
+        await _service.WatchAsync(_sessionId, "conn", CancellationToken.None);
+
+        Assert.Equal(_clock.UtcNow.AddSeconds(5), _scheduler.Scheduled[_sessionId].At);
+    }
+
+    [Fact]
+    public async Task Watch_WithAnExpiredSlide_CatchesUpOnceAndNotifies()
+    {
+        _repository.NextImages[_sessionId] = Image("a.jpg");
+
+        await _service.WatchAsync(_sessionId, "conn", CancellationToken.None);
+
+        Assert.Equal([_sessionId], _notifier.SlideshowChanges);
+    }
+
+    [Fact]
+    public async Task Watch_WithASlideStillOnDisplay_DoesNotRotateIt()
+    {
+        _repository.NextImages[_sessionId] = Image("a.jpg");
+        await _service.GetImageAsync(_sessionId, CancellationToken.None);
+
+        _repository.NextImages[_sessionId] = Image("b.jpg");
+        await _service.WatchAsync(_sessionId, "conn", CancellationToken.None);
+
+        Assert.Empty(_notifier.SlideshowChanges);
+        Assert.Equal("Images/Uploaded/a.jpg", (await _service.GetImageAsync(_sessionId, CancellationToken.None))!.FileName);
+    }
+
+    [Fact]
+    public async Task Timer_RotatesTheSlideNotifiesAndArmsTheNextOne()
+    {
+        _repository.NextImages[_sessionId] = Image("a.jpg");
+        await _service.WatchAsync(_sessionId, "conn", CancellationToken.None);
+        _notifier.SlideshowChanges.Clear();
+
+        _clock.Advance(TimeSpan.FromSeconds(6));
+        _repository.NextImages[_sessionId] = Image("b.jpg");
+        await _scheduler.FireAsync(_sessionId);
+
+        Assert.Equal([_sessionId], _notifier.SlideshowChanges);
+        Assert.Equal("Images/Uploaded/b.jpg", (await _service.GetImageAsync(_sessionId, CancellationToken.None))!.FileName);
+        Assert.Equal(_clock.UtcNow.AddSeconds(5), _scheduler.Scheduled[_sessionId].At);
+    }
+
+    [Fact]
+    public async Task Timer_WithTheSameImageAgain_DoesNotNotify()
+    {
+        _repository.NextImages[_sessionId] = Image("a.jpg");
+        await _service.WatchAsync(_sessionId, "conn", CancellationToken.None);
+        _notifier.SlideshowChanges.Clear();
+
+        _clock.Advance(TimeSpan.FromSeconds(6));
+        await _scheduler.FireAsync(_sessionId);
+
+        Assert.Empty(_notifier.SlideshowChanges);
+    }
+
+    [Fact]
+    public async Task Timer_FiringBeforeTheExpiration_RotatesNothing()
+    {
+        _repository.NextImages[_sessionId] = Image("a.jpg");
+        await _service.WatchAsync(_sessionId, "conn", CancellationToken.None);
+        _notifier.SlideshowChanges.Clear();
+
+        _repository.NextImages[_sessionId] = Image("b.jpg");
+        await _scheduler.FireAsync(_sessionId);
+
+        Assert.Empty(_notifier.SlideshowChanges);
+    }
+
+    [Fact]
+    public async Task Timer_FiringAfterTheLastWatcherLeft_RotatesNothing()
+    {
+        _repository.NextImages[_sessionId] = Image("a.jpg");
+        await _service.WatchAsync(_sessionId, "conn", CancellationToken.None);
+        var callback = _scheduler.Scheduled[_sessionId].Callback;
+        _service.Unwatch("conn");
+        _notifier.SlideshowChanges.Clear();
+
+        _clock.Advance(TimeSpan.FromSeconds(6));
+        _repository.NextImages[_sessionId] = Image("b.jpg");
+        await callback();
+
+        Assert.Empty(_notifier.SlideshowChanges);
+    }
+
+    [Fact]
+    public async Task Unwatch_OfTheLastWatcher_CancelsTheTimer()
+    {
+        await _service.WatchAsync(_sessionId, "conn", CancellationToken.None);
+
+        _service.Unwatch("conn");
+
+        Assert.Equal([_sessionId], _scheduler.Cancelled);
+    }
+
+    [Fact]
+    public async Task Unwatch_WhileAnotherConnectionWatches_KeepsTheTimer()
+    {
+        await _service.WatchAsync(_sessionId, "one", CancellationToken.None);
+        await _service.WatchAsync(_sessionId, "two", CancellationToken.None);
+
+        _service.Unwatch("one");
+
+        Assert.Empty(_scheduler.Cancelled);
+        Assert.True(_scheduler.Scheduled.ContainsKey(_sessionId));
+    }
+
+    [Fact]
+    public async Task GetImage_OfAWatchedSession_LeavesRotationToTheTimer()
+    {
+        _repository.NextImages[_sessionId] = Image("a.jpg");
+        await _service.WatchAsync(_sessionId, "conn", CancellationToken.None);
+
+        _clock.Advance(TimeSpan.FromSeconds(6));
+        _repository.NextImages[_sessionId] = Image("b.jpg");
+        var result = await _service.GetImageAsync(_sessionId, CancellationToken.None);
+
+        Assert.Equal("Images/Uploaded/a.jpg", result!.FileName);
+    }
+
+    [Fact]
+    public async Task UpdateSettings_RestartsTheSlideOnDisplayWithTheNewSlideTime()
+    {
+        _repository.NextImages[_sessionId] = Image("a.jpg");
+        await _service.WatchAsync(_sessionId, "conn", CancellationToken.None);
+        _clock.Advance(TimeSpan.FromSeconds(2));
+
+        await _service.UpdateSettingsAsync(
+            _sessionId,
+            new SlideshowSettingsDto { SlideTime = TimeSpan.FromSeconds(30) },
+            CancellationToken.None);
+
+        Assert.Equal(_clock.UtcNow.AddSeconds(30), _scheduler.Scheduled[_sessionId].At);
+        Assert.Equal(
+            _clock.UtcNow.AddSeconds(30),
+            (await _service.GetImageAsync(_sessionId, CancellationToken.None))!.ExpirationDate);
+    }
+
+    [Fact]
+    public async Task Upload_ToAnEmptySlideshow_ShowsThePhotoAtOnceAndNotifies()
+    {
+        await _service.GetImageAsync(_sessionId, CancellationToken.None);
+
+        _repository.NextImages[_sessionId] = Image("a.jpg");
+        await _service.UploadImagesAsync(_sessionId, [File("a.jpg", JpegBytes)], deleteAfterPresentation: false, CancellationToken.None);
+
+        Assert.Equal([_sessionId], _notifier.SlideshowChanges);
+        Assert.Equal("Images/Uploaded/a.jpg", (await _service.GetImageAsync(_sessionId, CancellationToken.None))!.FileName);
+    }
+
+    [Fact]
+    public async Task Upload_WhileAPhotoIsOnDisplay_WaitsForTheNextSlide()
+    {
+        _repository.NextImages[_sessionId] = Image("a.jpg");
+        await _service.GetImageAsync(_sessionId, CancellationToken.None);
+
+        _repository.NextImages[_sessionId] = Image("b.jpg");
+        await _service.UploadImagesAsync(_sessionId, [File("b.jpg", JpegBytes)], deleteAfterPresentation: false, CancellationToken.None);
+
+        Assert.Empty(_notifier.SlideshowChanges);
+        Assert.Equal("Images/Uploaded/a.jpg", (await _service.GetImageAsync(_sessionId, CancellationToken.None))!.FileName);
+    }
+
+    [Fact]
+    public async Task DeleteSession_CancelsItsTimer()
+    {
+        await _service.WatchAsync(_sessionId, "conn", CancellationToken.None);
+
+        await _service.DeleteSessionAsync(_sessionId);
+
+        Assert.Contains(_sessionId, _scheduler.Cancelled);
     }
 
     private class FakeFormFile(string fileName, byte[] content) : IFormFile
