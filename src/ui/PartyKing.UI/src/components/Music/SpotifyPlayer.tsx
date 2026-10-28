@@ -173,6 +173,18 @@ export const SpotifyPlayer = ({
     };
   }, []);
 
+  // The song moved on to something that is not a Spotify track (a YouTube video, or nothing): the SDK keeps playing
+  // the old track on its own, so stop it.
+  const hadUriRef = useRef(false);
+  useEffect(() => {
+    if (uri) {
+      hadUriRef.current = true;
+    } else if (hadUriRef.current) {
+      hadUriRef.current = false;
+      void playerRef.current?.pause();
+    }
+  }, [uri]);
+
   useEffect(() => {
     if (!uri || !deviceId) return;
 
