@@ -115,7 +115,7 @@ public class SessionJoinTokenTests
         var id = await CreateSessionAsync();
         var token = (await _service.CreateJoinTokenAsync(id, HostId, false, CancellationToken.None)).Value;
 
-        await _service.ChangePasswordAsync(id, "new-secret", CancellationToken.None);
+        await _service.ChangePasswordAsync(id, "new-secret", HostId, false, CancellationToken.None);
         var result = await _service.JoinWithTokenAsync(id, token.Token, CancellationToken.None);
 
         Assert.Equal(ErrorType.Unauthorized, result.FirstError.Type);

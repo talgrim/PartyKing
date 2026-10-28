@@ -55,7 +55,18 @@ internal class FakeSessionsRepository : ISessionsRepository
     }
 
     public Task<IReadOnlyList<Session>> GetAllAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
-    public Task<bool> RenameAsync(Guid id, string name, CancellationToken cancellationToken) => throw new NotSupportedException();
+    public List<(Guid Id, string Name)> Renamed { get; } = [];
+
+    public Task<bool> RenameAsync(Guid id, string name, CancellationToken cancellationToken)
+    {
+        var session = _sessions.FirstOrDefault(x => x.Id == id);
+        if (session is not null)
+        {
+            Renamed.Add((id, name));
+        }
+
+        return Task.FromResult(session is not null);
+    }
     public Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken) =>
         Task.FromResult(_sessions.RemoveAll(x => x.Id == id) > 0);
     public Task<SessionClaimResult> TryClaimAsync(Guid id, string profileId, CancellationToken cancellationToken) => throw new NotSupportedException();
