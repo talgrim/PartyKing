@@ -6,6 +6,8 @@ export type SpotifyPlayerHandle = {
   activate: () => void;
   /** Pauses the current track, or resumes it when it is paused. */
   togglePlay: () => void;
+  /** Where in the track the player is right now, or null when the SDK has no state. */
+  getPositionMs: () => Promise<number | null>;
 };
 
 type Props = {
@@ -16,6 +18,8 @@ type Props = {
   onEnded: () => void;
   /** Reports the real playback state of `uri`, including pauses made from other Spotify clients. */
   onPausedChange: (paused: boolean) => void;
+  /** Reports where in `uri` the player is every time the SDK reports a state of it, to notice seeks. */
+  onPositionChange?: (positionMs: number, paused: boolean) => void;
   onError: (message: string) => void;
   /** Reports the id of this browser's Spotify device once it is ready, and null when it goes away. */
   onDeviceChange?: (deviceId: string | null) => void;
@@ -50,6 +54,7 @@ export const SpotifyPlayer = ({
   songId,
   onEnded,
   onPausedChange,
+  onPositionChange,
   onError,
   onDeviceChange,
   takeover,
@@ -62,6 +67,7 @@ export const SpotifyPlayer = ({
   // The SDK callbacks are registered once, so keep the latest props in refs.
   const onEndedRef = useRef(onEnded);
   const onPausedChangeRef = useRef(onPausedChange);
+  const onPositionChangeRef = useRef(onPositionChange);
   const onErrorRef = useRef(onError);
   const onDeviceChangeRef = useRef(onDeviceChange);
   const takeoverRef = useRef(takeover);
@@ -73,6 +79,7 @@ export const SpotifyPlayer = ({
   volumeRef.current = volume;
   onEndedRef.current = onEnded;
   onPausedChangeRef.current = onPausedChange;
+  onPositionChangeRef.current = onPositionChange;
   onErrorRef.current = onError;
   onDeviceChangeRef.current = onDeviceChange;
   takeoverRef.current = takeover;
@@ -85,6 +92,10 @@ export const SpotifyPlayer = ({
     },
     togglePlay: () => {
       void playerRef.current?.togglePlay();
+    },
+    getPositionMs: async () => {
+      const state = await playerRef.current?.getCurrentState?.();
+      return state ? state.position : null;
     },
   }));
 
@@ -146,6 +157,7 @@ export const SpotifyPlayer = ({
 
         // Ignore states of a previous track that arrive after the next one was requested.
         if (state.track_window.current_track.uri === current) {
+          onPositionChangeRef.current?.(state.position, state.paused);
           onPausedChangeRef.current(state.paused);
         }
       });

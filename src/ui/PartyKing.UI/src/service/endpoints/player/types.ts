@@ -8,6 +8,8 @@ export type NowPlayingDto = {
   paused: boolean;
   /** The host's player reported in recently, i.e. someone is listening. */
   playerConnected: boolean;
+  /** Where in the song the player is as of this response (the server counts on while it plays); 0 when unknown. */
+  positionMs?: number;
 };
 
 // Mirrors PartyKing.Contract.V1.Enums.PlayerCommand, which the API serializes as a string.
@@ -17,6 +19,10 @@ export type PlayerStateRequest = {
   /** The song the player is playing; null when it is idle. */
   songId: number | null;
   paused: boolean;
+  /** Where in the song the player is. */
+  positionMs: number;
+  /** The player jumped to another position since its previous report. */
+  seeked: boolean;
 };
 
 export type PlayerStateResponse = {

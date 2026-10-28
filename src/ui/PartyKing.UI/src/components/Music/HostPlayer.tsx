@@ -10,7 +10,8 @@ import { SongDto, SongSource } from '@/service/endpoints/queue/types';
 import { ErrorLog, ErrorLogEntry } from './ErrorLog';
 import { PlayerControls } from './PlayerControls';
 import { SpotifyPlayer, SpotifyPlayerHandle } from './SpotifyPlayer';
-import { YoutubePlayer } from './YoutubePlayer';
+import { YoutubePlayer, YoutubePlayerHandle } from './YoutubePlayer';
+import { createPositionTracker } from './playbackPosition';
 import { getPlaybackState } from '@/service/endpoints/spotify/spotifyPlaybackApi';
 import { takeoverPositionMs, useTakeoverAvailable } from './takeover';
 import { describeYoutubeError } from './youtubeErrors';
@@ -49,6 +50,10 @@ type Props = {
  */
 export const HostPlayer = ({ sessionId, isAdmin, pushHandlers }: Props): ReactNode => {
   const spotifyPlayer = useRef<SpotifyPlayerHandle>(null);
+  const youtubePlayer = useRef<YoutubePlayerHandle>(null);
+  const positionTracker = useRef(createPositionTracker());
+  // A seek that has not been reported yet; the next report carries it so viewers move their lyrics at once
+  const seekedRef = useRef(false);
   const advancing = useRef(false);
   const failedSongId = useRef<number | null>(null);
   const consecutiveYoutubeFailures = useRef(0);
@@ -251,15 +256,39 @@ export const HostPlayer = ({ sessionId, isAdmin, pushHandlers }: Props): ReactNo
     [togglePlay],
   );
 
+  const readPositionMs = useCallback(async (): Promise<number> => {
+    switch (songRef.current?.source) {
+      case SongSource.Spotify:
+        return Math.round((await spotifyPlayer.current?.getPositionMs()) ?? 0);
+      case SongSource.Youtube:
+        return youtubePlayer.current?.getPositionMs() ?? 0;
+      default:
+        return 0;
+    }
+  }, []);
+
   const reportInFlightRef = useRef(false);
+  // Something changed while a report was on its way, so that report is out of date
+  const reportAgainRef = useRef(false);
   const reportState = useCallback(async () => {
-    // A hung server must not pile up requests: wait for the previous report to finish or time out.
-    if (reportInFlightRef.current) return;
+    // A hung server must not pile up requests: wait for the previous report to finish or time out, then send one more.
+    if (reportInFlightRef.current) {
+      reportAgainRef.current = true;
+      return;
+    }
     reportInFlightRef.current = true;
     try {
+      const songId = songRef.current?.id ?? null;
+      const paused = pausedRef.current;
+      const positionMs = await readPositionMs();
+      const seeked = seekedRef.current;
+      seekedRef.current = false;
+
       const { command, fallbackError: playlistError } = await playerApi.reportState(sessionId, {
-        songId: songRef.current?.id ?? null,
-        paused: pausedRef.current,
+        songId,
+        paused,
+        positionMs,
+        seeked,
       });
       setFallbackError(playlistError ?? null);
       applyCommand(command);
@@ -267,8 +296,30 @@ export const HostPlayer = ({ sessionId, isAdmin, pushHandlers }: Props): ReactNo
       // The next report tries again; meanwhile the server shows the player as not connected
     } finally {
       reportInFlightRef.current = false;
+      if (reportAgainRef.current) {
+        reportAgainRef.current = false;
+        void reportState();
+      }
     }
-  }, [sessionId, applyCommand]);
+  }, [sessionId, applyCommand, readPositionMs]);
+
+  // A jump in the song is reported at once, so lyrics follow it without waiting for the keepalive
+  const handleSeeked = useCallback(() => {
+    seekedRef.current = true;
+    void reportState();
+  }, [reportState]);
+
+  const handleSpotifyPosition = useCallback(
+    (positionMs: number, isPaused: boolean) => {
+      if (positionTracker.current.observe(positionMs, isPaused)) handleSeeked();
+    },
+    [handleSeeked],
+  );
+
+  // Another song starts from its own beginning, which is no seek
+  useEffect(() => {
+    positionTracker.current.reset();
+  }, [song?.id]);
 
   // What the server pushes needs no report to arrive; after a reconnect something may have been missed, so report.
   useEffect(() => {
@@ -328,6 +379,8 @@ export const HostPlayer = ({ sessionId, isAdmin, pushHandlers }: Props): ReactNo
             paused={paused}
             onPausedChange={handlePausedChange}
             onEnded={playNext}
+            onSeeked={handleSeeked}
+            handle={youtubePlayer}
             onError={(code) => void skipFailedYoutubeSong(song, code)}
           />
         )}
@@ -340,6 +393,7 @@ export const HostPlayer = ({ sessionId, isAdmin, pushHandlers }: Props): ReactNo
             songId={song?.source === SongSource.Spotify ? song.id : null}
             onEnded={playNext}
             onPausedChange={handlePausedChange}
+            onPositionChange={handleSpotifyPosition}
             onError={reportError}
             onDeviceChange={setDeviceId}
             takeover={takeover}
