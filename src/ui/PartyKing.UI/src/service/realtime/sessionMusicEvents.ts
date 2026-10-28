@@ -28,6 +28,7 @@ export type PlayerStateChangedEvent = {
   songId: number | null;
   paused: boolean;
   playerConnected: boolean;
+  positionMs?: number;
 };
 
 export type PlayerCommandEvent = { command: PlayerCommand };
@@ -71,6 +72,7 @@ export const applyQueueAdvancedToNowPlaying = (
   song: event.nowPlaying,
   paused: false,
   playerConnected: current?.playerConnected ?? false,
+  positionMs: 0,
 });
 
 export const applyPlayerStateChanged = (
@@ -83,5 +85,6 @@ export const applyPlayerStateChanged = (
     song,
     paused,
     playerConnected: event.playerConnected,
+    positionMs: song != null && event.songId === song.id ? (event.positionMs ?? 0) : 0,
   };
 };

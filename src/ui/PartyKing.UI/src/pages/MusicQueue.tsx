@@ -2,6 +2,7 @@ import { ReactNode, useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import useSWR, { useSWRConfig } from 'swr';
 import { AdminPlayerControls } from '@/components/Music/AdminPlayerControls';
+import { LyricsView } from '@/components/Music/LyricsView';
 import { MaximizedView } from '@/components/Music/MaximizedView';
 import { HostPlayer } from '@/components/Music/HostPlayer';
 import { NowPlayingCard } from '@/components/Music/NowPlayingCard';
@@ -15,6 +16,7 @@ import { PageNavigation } from '@/components/common/PageNavigation';
 import { SlideshowView } from '@/pages/Slideshow/SlideshowView';
 import { ROUTE_PATHS } from '@/router/constants';
 import { HTTP_STATUS_CODE } from '@/service/constants';
+import { useLyrics } from '@/service/endpoints/lyrics/useLyrics';
 import { useNowPlaying } from '@/service/endpoints/player/useNowPlaying';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 import { useViewerRole } from '@/service/endpoints/sessions/useViewerRole';
@@ -36,6 +38,7 @@ export const MusicQueue = (): ReactNode => {
 
   const { mutate } = useSWRConfig();
   const [slideshowOpen, setSlideshowOpen] = usePersistedFlag('partyking.slideshowOpen', true);
+  const [showLyrics, setShowLyrics] = usePersistedFlag('partyking.showLyrics', false);
   const [maximized, setMaximized] = useState(false);
   const { isHost, isAdmin } = useViewerRole(sessionId);
   const uploadDialog = useUploadDialog();
@@ -76,6 +79,14 @@ export const MusicQueue = (): ReactNode => {
 
   const locked = (error as { status?: number } | undefined)?.status === HTTP_STATUS_CODE.UNAUTHORIZED;
 
+  // Looked up even while the slideshow is shown, so the lyrics button can tell whether this song has any
+  const lyrics = useLyrics(sessionId, nowPlaying?.song?.id, canViewSlideshow && Boolean(session) && !locked);
+  const lyricsControls = {
+    lyricsActive: showLyrics,
+    lyricsAvailable: lyrics.status !== 'none',
+    onToggleLyrics: () => setShowLyrics(!showLyrics),
+  };
+
   const hostPlayerPush = useRef<HostPlayerPushHandlers>({});
   const hub = useSessionMusicHub(sessionId, Boolean(session && !locked), hostPlayerPush);
 
@@ -84,16 +95,21 @@ export const MusicQueue = (): ReactNode => {
     <div className="w-full min-h-full bg-slate-800 text-slate-400 md:flex">
       {canViewSlideshow && session && !locked && slideshowOpen && !maximized && (
         <aside
-          aria-label="Slideshow"
+          aria-label={showLyrics ? 'Lyrics' : 'Slideshow'}
           className="relative m-2 rounded-md border-2 border-slate-400 md:w-[calc(50%-1rem)] md:shrink-0"
         >
           <div className="aspect-video w-full overflow-hidden rounded-sm bg-black">
-            <SlideshowView sessionId={session.id} />
+            {showLyrics ? (
+              <LyricsView lyrics={lyrics} nowPlaying={nowPlaying} />
+            ) : (
+              <SlideshowView sessionId={session.id} />
+            )}
           </div>
           <SlideshowControls
             open
             onToggle={() => setSlideshowOpen(false)}
             onMaximize={() => setMaximized(true)}
+            {...lyricsControls}
             className="absolute top-1/2 right-2 -translate-y-1/2 md:-right-5"
           />
         </aside>
@@ -103,6 +119,7 @@ export const MusicQueue = (): ReactNode => {
           open={false}
           onToggle={() => setSlideshowOpen(true)}
           onMaximize={() => setMaximized(true)}
+          {...lyricsControls}
           className="fixed top-1/2 left-1 z-10 -translate-y-1/2"
         />
       )}
@@ -165,7 +182,13 @@ export const MusicQueue = (): ReactNode => {
         )}
       </div>
       {canViewSlideshow && session && !locked && maximized && (
-        <MaximizedView sessionId={session.id} nowPlaying={nowPlaying} onExit={() => setMaximized(false)} />
+        <MaximizedView
+          sessionId={session.id}
+          nowPlaying={nowPlaying}
+          showLyrics={showLyrics}
+          lyrics={lyrics}
+          onExit={() => setMaximized(false)}
+        />
       )}
     </div>
     </SessionHubContext.Provider>

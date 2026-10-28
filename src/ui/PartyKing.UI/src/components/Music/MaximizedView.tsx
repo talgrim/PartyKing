@@ -1,22 +1,27 @@
 import CloseIcon from '@mui/icons-material/Close';
 import { ReactNode, useEffect } from 'react';
 import { NowPlayingOverlay } from '@/components/Music/NowPlayingOverlay';
+import { LyricsView } from '@/components/Music/LyricsView';
 import { QueueList } from '@/components/Music/QueueList';
 import { SlideshowView } from '@/pages/Slideshow/SlideshowView';
+import { LyricsState } from '@/service/endpoints/lyrics/useLyrics';
 import { NowPlayingDto } from '@/service/endpoints/player/types';
 
 type Props = {
   sessionId: string;
   nowPlaying: NowPlayingDto | undefined;
+  /** Show the lyrics instead of the slideshow. */
+  showLyrics: boolean;
+  lyrics: LyricsState;
   onExit: () => void;
 };
 
 /**
- * The slideshow across the whole screen with only the artist and title of the song and the queue on the right, for
+ * The slideshow (or the lyrics, as chosen in the drawer) across the whole screen with only the artist and title of the song and the queue on the right, for
  * a screen at the party. It covers the session page without replacing it, so the host's player underneath keeps
  * playing.
  */
-export const MaximizedView = ({ sessionId, nowPlaying, onExit }: Props): ReactNode => {
+export const MaximizedView = ({ sessionId, nowPlaying, showLyrics, lyrics, onExit }: Props): ReactNode => {
   useEffect(() => {
     const exitOnEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onExit();
@@ -26,10 +31,10 @@ export const MaximizedView = ({ sessionId, nowPlaying, onExit }: Props): ReactNo
   }, [onExit]);
 
   return (
-    <div role="dialog" aria-label="Slideshow" className="fixed inset-0 z-50 flex flex-col bg-black text-slate-400 md:flex-row">
+    <div role="dialog" aria-label={showLyrics ? 'Lyrics' : 'Slideshow'} className="fixed inset-0 z-50 flex flex-col bg-black text-slate-400 md:flex-row">
       <div className="relative flex h-[45dvh] min-w-0 shrink-0 flex-col md:h-auto md:flex-1 md:shrink">
         <div className="min-h-0 flex-1">
-          <SlideshowView sessionId={sessionId} />
+          {showLyrics ? <LyricsView lyrics={lyrics} nowPlaying={nowPlaying} /> : <SlideshowView sessionId={sessionId} />}
         </div>
         <NowPlayingOverlay nowPlaying={nowPlaying} />
         <button

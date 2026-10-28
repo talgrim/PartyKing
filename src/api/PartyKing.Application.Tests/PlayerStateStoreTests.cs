@@ -154,4 +154,50 @@ public class PlayerStateStoreTests
         Assert.False(_store.Get(_sessionId).Connected);
         Assert.Null(_store.Get(_sessionId).SongId);
     }
+
+    [Fact]
+    public void Get_CountsTheReportedPositionOnWhileThePlayerPlays()
+    {
+        _store.Report(_sessionId, 5, paused: false, positionMs: 10_000);
+
+        _clock.Advance(TimeSpan.FromSeconds(4));
+
+        Assert.Equal(14_000, _store.Get(_sessionId).PositionMs);
+    }
+
+    [Fact]
+    public void Get_KeepsThePositionWhilePaused()
+    {
+        _store.Report(_sessionId, 5, paused: true, positionMs: 10_000);
+
+        _clock.Advance(TimeSpan.FromSeconds(4));
+
+        Assert.Equal(10_000, _store.Get(_sessionId).PositionMs);
+    }
+
+    [Fact]
+    public void Report_ANegativePosition_IsStoredAsZero()
+    {
+        _store.Report(_sessionId, 5, paused: true, positionMs: -300);
+
+        Assert.Equal(0, _store.Get(_sessionId).PositionMs);
+    }
+
+    [Fact]
+    public void Report_OnlyAMovedOnPosition_IsNotAChange()
+    {
+        _store.Report(_sessionId, 5, paused: false, positionMs: 10_000);
+        _clock.Advance(TimeSpan.FromSeconds(10));
+
+        Assert.False(_store.Report(_sessionId, 5, paused: false, positionMs: 20_000).Changed);
+        Assert.Equal(20_000, _store.Get(_sessionId).PositionMs);
+    }
+
+    [Fact]
+    public void Report_ASeek_IsAChange()
+    {
+        _store.Report(_sessionId, 5, paused: false, positionMs: 10_000);
+
+        Assert.True(_store.Report(_sessionId, 5, paused: false, positionMs: 90_000, seeked: true).Changed);
+    }
 }

@@ -146,13 +146,13 @@ describe('HostPlayer', () => {
     await renderPlayer();
 
     await waitFor(() =>
-      expect(mocks.reportState).toHaveBeenCalledWith('session-1', { songId: 1, paused: false }),
+      expect(mocks.reportState).toHaveBeenCalledWith('session-1', { songId: 1, paused: false, positionMs: 0, seeked: false }),
     );
 
     await act(async () => screen.getByRole('button', { name: 'Pause' }).click());
 
     await waitFor(() =>
-      expect(mocks.reportState).toHaveBeenLastCalledWith('session-1', { songId: 1, paused: true }),
+      expect(mocks.reportState).toHaveBeenLastCalledWith('session-1', { songId: 1, paused: true, positionMs: 0, seeked: false }),
     );
   });
 
