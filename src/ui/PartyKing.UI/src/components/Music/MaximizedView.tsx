@@ -13,6 +13,7 @@ type Props = {
   /** Show the lyrics instead of the slideshow. */
   showLyrics: boolean;
   lyrics: LyricsState;
+  onResyncLyrics?: () => void;
   onExit: () => void;
 };
 
@@ -21,7 +22,7 @@ type Props = {
  * a screen at the party. It covers the session page without replacing it, so the host's player underneath keeps
  * playing.
  */
-export const MaximizedView = ({ sessionId, nowPlaying, showLyrics, lyrics, onExit }: Props): ReactNode => {
+export const MaximizedView = ({ sessionId, nowPlaying, showLyrics, lyrics, onResyncLyrics, onExit }: Props): ReactNode => {
   useEffect(() => {
     const exitOnEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onExit();
@@ -34,7 +35,7 @@ export const MaximizedView = ({ sessionId, nowPlaying, showLyrics, lyrics, onExi
     <div role="dialog" aria-label={showLyrics ? 'Lyrics' : 'Slideshow'} className="fixed inset-0 z-50 flex flex-col bg-black text-slate-400 md:flex-row">
       <div className="relative flex h-[45dvh] min-w-0 shrink-0 flex-col md:h-auto md:flex-1 md:shrink">
         <div className="min-h-0 flex-1">
-          {showLyrics ? <LyricsView lyrics={lyrics} nowPlaying={nowPlaying} /> : <SlideshowView sessionId={sessionId} />}
+          {showLyrics ? <LyricsView lyrics={lyrics} nowPlaying={nowPlaying} onResync={onResyncLyrics} /> : <SlideshowView sessionId={sessionId} />}
         </div>
         <NowPlayingOverlay nowPlaying={nowPlaying} />
         <button
