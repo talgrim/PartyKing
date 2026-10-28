@@ -1,5 +1,5 @@
 import { axios } from '@/service/request';
-import { JoinTokenDto, SessionDto, SlideshowSettingsDto, UserDto, ViewerRoleDto } from './types';
+import { JoinTokenDto, PlaylistDto, SessionDto, SlideshowSettingsDto, UserDto, ViewerRoleDto } from './types';
 
 // The axios response interceptor unwraps `response.data`, so these resolve to the payload itself.
 const unwrap = <T>(promise: Promise<unknown>) => promise as Promise<T>;
@@ -45,6 +45,18 @@ export const sessionsApi = {
 
   updateSlideshowSettings: (sessionId: string, settings: SlideshowSettingsDto) =>
     unwrap<void>(axios.put(`/sessions/${sessionId}/slideshow-settings`, settings, { withCredentials: true })),
+
+  /**
+   * Host or admin only. Sets the playlist (link or spotify:playlist: URI) played when the queue is empty, or clears
+   * it when `playlist` is null. Rejects with 400 for a playlist the host does not own, 403 for anyone else and 409
+   * when the session has no host.
+   */
+  setFallbackPlaylist: (sessionId: string, playlist: string | null, shuffle: boolean) =>
+    unwrap<void>(axios.put(`/sessions/${sessionId}/fallback-playlist`, { playlist, shuffle }, { withCredentials: true })),
+
+  /** The playlists the logged-in host owns. Rejects with 403 for anyone but the host, 409 when the host must log in again. */
+  getHostPlaylists: (sessionId: string) =>
+    unwrap<PlaylistDto[]>(axios.get(`/sessions/${sessionId}/host-playlists`, { withCredentials: true })),
 
   /** What the logged-in visitor (host or admin, if any) may do in the session. */
   getViewerRole: (sessionId: string) =>

@@ -7,6 +7,18 @@ export type SessionDto = {
   /** Spotify display name of the host; null until the session is claimed. */
   hostName: string | null;
   hasHost: boolean;
+  /** Name of the playlist played when the queue is empty; null when there is none. */
+  fallbackPlaylistName?: string | null;
+  fallbackShuffle?: boolean;
+};
+
+// Mirrors PartyKing.Contract.V1.Spotify.PlaylistDto
+export type PlaylistDto = {
+  /** spotify:playlist:... URI, accepted by the fallback playlist endpoint. */
+  uri: string;
+  name: string;
+  imageUrl: string | null;
+  trackCount: number;
 };
 
 // Mirrors PartyKing.Contract.V1.Sessions.ViewerRoleDto
