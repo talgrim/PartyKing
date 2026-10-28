@@ -11,6 +11,8 @@ export type SpotifyPlayerHandle = {
 type Props = {
   /** Spotify track URI to play, or null when nothing should play. */
   uri: string | null;
+  /** Id of the queue item being played. The same track can be queued again (e.g. a one-track fallback playlist), so `uri` alone can't tell songs apart. */
+  songId: number | null;
   onEnded: () => void;
   /** Reports the real playback state of `uri`, including pauses made from other Spotify clients. */
   onPausedChange: (paused: boolean) => void;
@@ -45,6 +47,7 @@ const loadSdk = () => {
 
 export const SpotifyPlayer = ({
   uri,
+  songId,
   onEnded,
   onPausedChange,
   onError,
@@ -64,7 +67,8 @@ export const SpotifyPlayer = ({
   const takeoverRef = useRef(takeover);
   const usedTakeoverRef = useRef<Props['takeover']>(null);
   const currentUriRef = useRef<string | null>(uri);
-  const endedUriRef = useRef<string | null>(null);
+  const currentSongIdRef = useRef<number | null>(songId);
+  const endedSongIdRef = useRef<number | null>(null);
   const volumeRef = useRef(volume);
   volumeRef.current = volume;
   onEndedRef.current = onEnded;
@@ -73,6 +77,7 @@ export const SpotifyPlayer = ({
   onDeviceChangeRef.current = onDeviceChange;
   takeoverRef.current = takeover;
   currentUriRef.current = uri;
+  currentSongIdRef.current = songId;
 
   useImperativeHandle(handle, () => ({
     activate: () => {
@@ -132,8 +137,8 @@ export const SpotifyPlayer = ({
           state.track_window.previous_tracks.some((track) => track.uri === current);
 
         if (finished) {
-          if (endedUriRef.current !== current) {
-            endedUriRef.current = current;
+          if (endedSongIdRef.current !== currentSongIdRef.current) {
+            endedSongIdRef.current = currentSongIdRef.current;
             onEndedRef.current();
           }
           return;
@@ -195,7 +200,7 @@ export const SpotifyPlayer = ({
     return () => {
       cancelled = true;
     };
-  }, [uri, deviceId]);
+  }, [uri, songId, deviceId]);
 
   return null;
 };
