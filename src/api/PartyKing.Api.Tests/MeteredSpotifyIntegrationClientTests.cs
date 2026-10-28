@@ -25,6 +25,15 @@ public class MeteredSpotifyIntegrationClientTests
 
         public Task<Song?> GetTrackAsync(string accessToken, string trackId, CancellationToken cancellationToken) =>
             Task.FromResult<Song?>(null);
+
+        public Task<Playlist?> GetPlaylistAsync(string accessToken, string playlistId, CancellationToken cancellationToken) =>
+            Task.FromResult<Playlist?>(null);
+
+        public Task<IReadOnlyList<Playlist>> GetCurrentUserPlaylistsAsync(string accessToken, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<Playlist>>([]);
+
+        public Task<IReadOnlyList<Song>> GetPlaylistTracksAsync(string accessToken, string playlistId, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<Song>>([]);
     }
 
     private static List<Dictionary<string, object?>> Capture(Func<MeteredSpotifyIntegrationClient, Task> act, ISpotifyIntegrationClient inner)
