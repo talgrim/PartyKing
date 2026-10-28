@@ -45,4 +45,9 @@ internal sealed class NullSessionMusicNotifier : ISessionMusicNotifier
     {
         return Task.CompletedTask;
     }
+
+    public Task SlideshowChangedAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
 }

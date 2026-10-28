@@ -9,11 +9,17 @@ import {Slide} from "@/pages/Slideshow/Slide";
 import {SessionPasswordForm} from "@/components/Music/SessionPasswordForm";
 import {HTTP_STATUS_CODE} from "@/service/constants";
 import {ROUTE_PATHS} from "@/router/constants";
+import {slideshowKey} from "@/service/realtime/sessionMusicEvents";
+import {useSlideshowWatch} from "@/service/realtime/useSlideshowWatch";
 
 export type ApiImage = {
   fileName: string,
   expirationDate: Date
 }
+
+// Slide changes are pushed while the hub is up; the poll only covers a missed push or a hub that is down
+const LIVE_POLL_MS = 60_000;
+const FALLBACK_POLL_MS = 5_000;
 
 const SliderConfig: Options  = {
   type: 'fade',
@@ -38,14 +44,13 @@ type Props = {
  * box its parent gives it, so the parent decides how big the slideshow is.
  */
 export const SlideshowView = ({ sessionId }: Props) => {
+  const live = useSlideshowWatch();
   const {data, isLoading, error, mutate} = useSWR<ApiImage, ApiError>(
-    {
-      endpoint: `/sessions/${sessionId}/photos/current`,
-    },
+    slideshowKey(sessionId),
     fetchFromApi,
     {
       revalidateOnFocus: false,
-      refreshInterval: 5000,
+      refreshInterval: live ? LIVE_POLL_MS : FALLBACK_POLL_MS,
       shouldRetryOnError: false,
     },
   );

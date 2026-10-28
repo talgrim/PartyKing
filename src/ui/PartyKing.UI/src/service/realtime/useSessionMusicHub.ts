@@ -1,5 +1,5 @@
 import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } from '@microsoft/signalr';
-import { MutableRefObject, useEffect } from 'react';
+import { MutableRefObject, useEffect, useState } from 'react';
 import { mutate } from 'swr';
 import envVariables from '@/envVariables';
 import { SongDto } from '@/service/endpoints/queue/types';
@@ -18,6 +18,7 @@ import {
   QueueAdvancedEvent,
   queueSongsKey,
   SESSION_MUSIC_EVENTS,
+  slideshowKey,
   SongRemovedEvent,
 } from '@/service/realtime/sessionMusicEvents';
 
@@ -26,20 +27,32 @@ const hubUrl = (sessionId: string) => {
   return `${base}/hubs/session?sessionId=${encodeURIComponent(sessionId)}`;
 };
 
-const revalidateMusic = (sessionId: string) => {
+const revalidateSession = (sessionId: string) => {
   void mutate(queueSongsKey(sessionId));
   void mutate(nowPlayingKey(sessionId));
+  void mutate(slideshowKey(sessionId));
 };
+
+/** The live connection of a session page; `connected` is false while it is starting, reconnecting or down. */
+export type SessionHubHandle = {
+  connection: HubConnection | undefined;
+  connected: boolean;
+};
+
+const DISCONNECTED: SessionHubHandle = { connection: undefined, connected: false };
 
 /**
  * Subscribes to live queue / now-playing deltas for an unlocked session. Initial data still comes from SWR GETs;
- * this hook only patches the shared cache and revalidates after reconnect.
+ * this hook only patches the shared cache and revalidates after reconnect. Returns the connection so a view can
+ * tell the server what it displays.
  */
 export const useSessionMusicHub = (
   sessionId: string | undefined,
   enabled: boolean,
   hostPlayer?: MutableRefObject<HostPlayerPushHandlers>,
-): void => {
+): SessionHubHandle => {
+  const [handle, setHandle] = useState<SessionHubHandle>(DISCONNECTED);
+
   useEffect(() => {
     if (!enabled || !sessionId) return;
 
@@ -96,16 +109,25 @@ export const useSessionMusicHub = (
         hostPlayer?.current.onFallbackError?.(event.error);
       });
 
+      connection.on(SESSION_MUSIC_EVENTS.SlideChanged, () => {
+        void mutate(slideshowKey(sessionId));
+      });
+
+      const built = connection;
+      connection.onreconnecting(() => setHandle({ connection: built, connected: false }));
+      connection.onclose(() => setHandle({ connection: built, connected: false }));
       connection.onreconnected(() => {
-        revalidateMusic(sessionId);
+        revalidateSession(sessionId);
         hostPlayer?.current.onReconnected?.();
+        setHandle({ connection: built, connected: true });
       });
 
       try {
         await connection.start();
+        if (!cancelled) setHandle({ connection: built, connected: true });
       } catch {
         // Silent: REST still works; automatic reconnect will retry. Revalidate once we are up.
-        if (!cancelled) revalidateMusic(sessionId);
+        if (!cancelled) revalidateSession(sessionId);
       }
     };
 
@@ -118,6 +140,9 @@ export const useSessionMusicHub = (
       if (active && active.state !== HubConnectionState.Disconnected) {
         void active.stop();
       }
+      setHandle(DISCONNECTED);
     };
   }, [sessionId, enabled, hostPlayer]);
+
+  return handle;
 };

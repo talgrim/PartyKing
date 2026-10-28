@@ -61,6 +61,8 @@ public static class DependencyInjection
 
     private static void RegisterSlideshow(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddSingleton<ISlideshowWatchers, SlideshowWatchers>();
+        services.AddSingleton<ISlideshowScheduler, SlideshowScheduler>();
         services.AddSingleton<ISlideshowService, SlideshowService>();
         services.Configure<SlideshowConfiguration>(configuration.GetSection(SlideshowConfiguration.SectionName));
     }
