@@ -20,6 +20,7 @@ import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 import { useViewerRole } from '@/service/endpoints/sessions/useViewerRole';
 import { HostPlayerPushHandlers } from '@/service/realtime/sessionMusicEvents';
 import { useSessionMusicHub } from '@/service/realtime/useSessionMusicHub';
+import { SessionHubContext } from '@/service/realtime/SessionHubContext';
 import { usePersistedFlag } from '@/utils/usePersistedFlag';
 
 const JOIN_PARAM = 'join';
@@ -76,9 +77,10 @@ export const MusicQueue = (): ReactNode => {
   const locked = (error as { status?: number } | undefined)?.status === HTTP_STATUS_CODE.UNAUTHORIZED;
 
   const hostPlayerPush = useRef<HostPlayerPushHandlers>({});
-  useSessionMusicHub(sessionId, Boolean(session && !locked), hostPlayerPush);
+  const hub = useSessionMusicHub(sessionId, Boolean(session && !locked), hostPlayerPush);
 
   return (
+    <SessionHubContext.Provider value={hub}>
     <div className="w-full min-h-full bg-slate-800 text-slate-400 md:flex">
       {canViewSlideshow && session && !locked && slideshowOpen && !maximized && (
         <aside
@@ -166,5 +168,6 @@ export const MusicQueue = (): ReactNode => {
         <MaximizedView sessionId={session.id} nowPlaying={nowPlaying} onExit={() => setMaximized(false)} />
       )}
     </div>
+    </SessionHubContext.Provider>
   );
 };
