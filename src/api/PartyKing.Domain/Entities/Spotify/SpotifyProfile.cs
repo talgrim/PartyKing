@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 
 [assembly:InternalsVisibleTo("PartyKing.Persistence")]
 
-namespace PartyKing.Domain.Entities;
+namespace PartyKing.Domain.Entities.Spotify;
 
 public class SpotifyProfile
 {

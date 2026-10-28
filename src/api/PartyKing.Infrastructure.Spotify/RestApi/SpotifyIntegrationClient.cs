@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PartyKing.Application.Configuration;
-using PartyKing.Domain.Models.Spotify;
+using PartyKing.Domain.Entities.Spotify;
 using PartyKing.Domain.Results;
 using PartyKing.Infrastructure.Spotify.Mappings;
 using SpotifyAPI.Web;

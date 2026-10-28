@@ -1,19 +1,19 @@
 using PartyKing.Contract.V1.Enums;
 using PartyKing.Contract.V1.Queue;
 using PartyKing.Contract.V1.Spotify;
-using PartyKing.Domain.Entities;
+using PartyKing.Domain.Entities.Queue;
+using PartyKing.Domain.Entities.Spotify;
 using PartyKing.Domain.Enums;
-using PartyKing.Domain.Models.Spotify;
 
 namespace PartyKing.Application.Mappings;
 
 public static class QueueMappings
 {
-    public static SongDataDto ToDto(this QueueItem item)
+    public static QueueItemDto ToDto(this QueueItem item)
     {
         var source = item.Source == QueueItemSource.Spotify ? SongSource.Spotify : SongSource.Youtube;
 
-        return new SongDataDto(
+        return new QueueItemDto(
             item.Id,
             source,
             item.Url,

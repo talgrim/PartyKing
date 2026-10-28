@@ -1,6 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using PartyKing.Domain.Entities;
-using PartyKing.Domain.Models.Slideshow;
+using PartyKing.Domain.Entities.Auth;
+using PartyKing.Domain.Entities.Queue;
+using PartyKing.Domain.Entities.Sessions;
+using PartyKing.Domain.Entities.Slideshow;
+using PartyKing.Domain.Entities.Spotify;
 
 namespace PartyKing.Persistence.Database;
 

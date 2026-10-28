@@ -1,13 +1,22 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
-import { SWRConfig } from 'swr';
+import { useEffect } from 'react';
+import { ScopedMutator, SWRConfig, useSWRConfig } from 'swr';
 import { HostPlayer } from './HostPlayer';
 import { SongSource } from '@/service/endpoints/queue/types';
+import { nowPlayingKey } from '@/service/realtime/sessionMusicEvents';
 
 const mocks = vi.hoisted(() => ({
   next: vi.fn(),
   getNowPlaying: vi.fn(),
   reportState: vi.fn(),
 }));
+
+/** Captures the mutate bound to this SWRConfig provider (the global one cannot see it). */
+const MutateCapture = ({ onReady }: { onReady: (mutate: ScopedMutator) => void }) => {
+  const { mutate } = useSWRConfig();
+  useEffect(() => onReady(mutate), [mutate, onReady]);
+  return null;
+};
 
 vi.mock('@/service/endpoints/sessions/sessionsApi', () => ({ sessionsApi: {} }));
 vi.mock('@/service/endpoints/queue/queueApi', () => ({
@@ -54,13 +63,16 @@ const startMusic = async () => {
 };
 
 const renderPlayer = async (isAdmin = false) => {
+  let mutate!: ScopedMutator;
   render(
     <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
+      <MutateCapture onReady={(m) => { mutate = m; }} />
       <HostPlayer sessionId="session-1" isAdmin={isAdmin} />
     </SWRConfig>,
   );
   await startMusic();
   await screen.findByText('fail video');
+  return { mutate: () => mutate };
 };
 
 describe('HostPlayer', () => {
@@ -153,24 +165,26 @@ describe('HostPlayer', () => {
   });
 
   it('follows the server when an admin skips to another song', async () => {
-    await renderPlayer();
+    const { mutate } = await renderPlayer();
     expect(screen.getByText(/watch\?v=1 playing/)).toBeVisible();
 
-    mocks.getNowPlaying.mockResolvedValue(nowPlaying(song(2, 'Skipped to')));
+    await act(async () =>
+      mutate()(nowPlayingKey('session-1'), nowPlaying(song(2, 'Skipped to')), { revalidate: false }),
+    );
 
-    expect(await screen.findByText(/watch\?v=2 playing/, undefined, { timeout: 4000 })).toBeVisible();
+    expect(await screen.findByText(/watch\?v=2 playing/)).toBeVisible();
     // The admin's skip is not the player's own advance
     expect(mocks.next).toHaveBeenCalledTimes(1);
   });
 
   it('stops when an admin skips past the last song', async () => {
-    await renderPlayer();
+    mocks.getNowPlaying.mockResolvedValue(nowPlaying(song(1, 'Blocked song')));
+    const { mutate } = await renderPlayer();
 
-    mocks.getNowPlaying.mockResolvedValue(nowPlaying(null));
-    mocks.getNowPlaying.mockResolvedValueOnce(nowPlaying(song(1, 'Blocked song')));
+    await act(async () => mutate()(nowPlayingKey('session-1'), nowPlaying(null), { revalidate: false }));
 
-    await waitFor(() => expect(screen.queryByText(/video /)).not.toBeInTheDocument(), { timeout: 9000 });
-  }, 12_000);
+    await waitFor(() => expect(screen.queryByText(/video /)).not.toBeInTheDocument());
+  });
 
   it('plays at 50% and raises the volume by 10% per click', async () => {
     await renderPlayer();

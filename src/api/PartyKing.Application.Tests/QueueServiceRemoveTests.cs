@@ -1,6 +1,6 @@
 using ErrorOr;
 using PartyKing.Application.Queue.Services;
-using PartyKing.Domain.Entities;
+using PartyKing.Domain.Entities.Sessions;
 using PartyKing.Infrastructure.Repositories;
 
 namespace PartyKing.Application.Tests;
@@ -11,13 +11,14 @@ public class QueueServiceRemoveTests
 
     private readonly FakeSessionsRepository _sessions = new();
     private readonly FakeQueueRepository _queue = new();
+    private readonly FakeSessionMusicNotifier _notifier = new();
     private readonly QueueService _service;
     private readonly Session _session;
 
     public QueueServiceRemoveTests()
     {
         // Removing needs neither Spotify, YouTube nor host tokens
-        _service = new QueueService(_queue, _sessions, null!, null!, null!);
+        _service = new QueueService(_queue, _sessions, null!, null!, null!, _notifier);
         _session = _sessions.AddSession(HostId);
     }
 
@@ -28,6 +29,7 @@ public class QueueServiceRemoveTests
 
         Assert.False(result.IsError);
         Assert.Equal((_session.Id, 4), Assert.Single(_queue.RemoveCalls));
+        Assert.Equal((_session.Id, 4), Assert.Single(_notifier.SongRemoved));
     }
 
     [Fact]
@@ -46,6 +48,7 @@ public class QueueServiceRemoveTests
 
         Assert.Equal(ErrorType.Forbidden, result.FirstError.Type);
         Assert.Empty(_queue.RemoveCalls);
+        Assert.Empty(_notifier.SongRemoved);
     }
 
     [Fact]

@@ -1,0 +1,54 @@
+using Microsoft.AspNetCore.SignalR;
+using PartyKing.Application.Realtime;
+using PartyKing.Contract.V1.Player;
+using PartyKing.Contract.V1.Queue;
+
+namespace PartyKing.API.Hubs;
+
+internal sealed class SignalRSessionMusicNotifier : ISessionMusicNotifier
+{
+    private readonly IHubContext<SessionHub> _hub;
+
+    public SignalRSessionMusicNotifier(IHubContext<SessionHub> hub)
+    {
+        _hub = hub;
+    }
+
+    public Task SongAddedAsync(Guid sessionId, QueueItemDto song, CancellationToken cancellationToken)
+    {
+        return Clients(sessionId).SendAsync(SessionMusicHubEvents.SongAdded, song, cancellationToken);
+    }
+
+    public Task SongRemovedAsync(Guid sessionId, int songId, CancellationToken cancellationToken)
+    {
+        return Clients(sessionId).SendAsync(
+            SessionMusicHubEvents.SongRemoved,
+            new QueueItemRemovedDto(songId),
+            cancellationToken);
+    }
+
+    public Task QueueAdvancedAsync(
+        Guid sessionId,
+        int? previousSongId,
+        QueueItemDto? nowPlaying,
+        CancellationToken cancellationToken)
+    {
+        return Clients(sessionId).SendAsync(
+            SessionMusicHubEvents.QueueAdvanced,
+            new QueueAdvancedDto(previousSongId, nowPlaying),
+            cancellationToken);
+    }
+
+    public Task PlayerStateChangedAsync(
+        Guid sessionId,
+        PlayerStateChangedDto state,
+        CancellationToken cancellationToken)
+    {
+        return Clients(sessionId).SendAsync(SessionMusicHubEvents.PlayerStateChanged, state, cancellationToken);
+    }
+
+    private IClientProxy Clients(Guid sessionId)
+    {
+        return _hub.Clients.Group(SessionHub.GroupName(sessionId));
+    }
+}

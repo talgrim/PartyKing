@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using PartyKing.Domain.Entities;
+using PartyKing.Domain.Entities.Sessions;
+using PartyKing.Domain.Entities.Slideshow;
 
 namespace PartyKing.Persistence.Configurations;
 

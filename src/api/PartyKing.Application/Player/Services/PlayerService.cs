@@ -1,5 +1,6 @@
 using ErrorOr;
 using PartyKing.Application.Mappings;
+using PartyKing.Application.Realtime;
 using PartyKing.Contract.V1.Enums;
 using PartyKing.Contract.V1.Player;
 using PartyKing.Contract.V1.Queue;
@@ -31,7 +32,7 @@ public interface IPlayerService
     /// Admin: skips to the next song, which the host's player then picks up. Conflict when no player is connected;
     /// <paramref name="currentSongId"/> is the song the admin saw playing.
     /// </summary>
-    Task<ErrorOr<SongDataDto>> SkipAsync(Guid sessionId, int? currentSongId, CancellationToken cancellationToken);
+    Task<ErrorOr<QueueItemDto>> SkipAsync(Guid sessionId, int? currentSongId, CancellationToken cancellationToken);
 }
 
 internal class PlayerService : IPlayerService
@@ -39,15 +40,21 @@ internal class PlayerService : IPlayerService
     private readonly ISessionsRepository _sessionsRepository;
     private readonly IQueueRepository _queueRepository;
     private readonly IPlayerStateStore _playerStateStore;
+    private readonly ISessionMusicNotifier _musicNotifier;
+    private readonly IPlayerConnectionWatchdog _connectionWatchdog;
 
     public PlayerService(
         ISessionsRepository sessionsRepository,
         IQueueRepository queueRepository,
-        IPlayerStateStore playerStateStore)
+        IPlayerStateStore playerStateStore,
+        ISessionMusicNotifier musicNotifier,
+        IPlayerConnectionWatchdog connectionWatchdog)
     {
         _sessionsRepository = sessionsRepository;
         _queueRepository = queueRepository;
         _playerStateStore = playerStateStore;
+        _musicNotifier = musicNotifier;
+        _connectionWatchdog = connectionWatchdog;
     }
 
     public async Task<ErrorOr<NowPlayingDto>> GetNowPlayingAsync(Guid sessionId, CancellationToken cancellationToken)
@@ -84,6 +91,11 @@ internal class PlayerService : IPlayerService
         }
 
         var command = _playerStateStore.Report(sessionId, state.SongId, state.Paused);
+        _connectionWatchdog.Arm(sessionId, state.SongId, state.Paused);
+        await _musicNotifier.PlayerStateChangedAsync(
+            sessionId,
+            new PlayerStateChangedDto(state.SongId, state.Paused, PlayerConnected: true),
+            cancellationToken);
 
         return new PlayerStateResponse(command);
     }
@@ -101,7 +113,7 @@ internal class PlayerService : IPlayerService
         return _playerStateStore.TrySendCommand(sessionId, command) ? Result.Success : NoPlayerConnected();
     }
 
-    public async Task<ErrorOr<SongDataDto>> SkipAsync(
+    public async Task<ErrorOr<QueueItemDto>> SkipAsync(
         Guid sessionId,
         int? currentSongId,
         CancellationToken cancellationToken)
@@ -116,9 +128,21 @@ internal class PlayerService : IPlayerService
             return NoPlayerConnected();
         }
 
+        var playingBefore = await _queueRepository.GetPlayingAsync(sessionId, cancellationToken);
         var next = await _queueRepository.AdvanceAsync(sessionId, currentSongId, cancellationToken);
 
-        return next is null ? Error.NotFound(description: "The queue is empty") : next.ToDto();
+        if (playingBefore?.Id == currentSongId)
+        {
+            await _musicNotifier.QueueAdvancedAsync(
+                sessionId,
+                playingBefore?.Id,
+                next?.ToDto(),
+                cancellationToken);
+        }
+
+        return next is null
+            ? Error.NotFound(description: "The queue is empty")
+            : next.ToDto();
     }
 
     private static Error SessionNotFound() => Error.NotFound(description: "The session was not found");

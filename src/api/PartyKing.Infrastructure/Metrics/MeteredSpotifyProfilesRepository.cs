@@ -1,5 +1,5 @@
 using ErrorOr;
-using PartyKing.Domain.Entities;
+using PartyKing.Domain.Entities.Spotify;
 using PartyKing.Domain.Results;
 using PartyKing.Infrastructure.Repositories;
 

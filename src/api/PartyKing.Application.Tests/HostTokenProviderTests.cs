@@ -1,8 +1,7 @@
 using ErrorOr;
 using Microsoft.Extensions.DependencyInjection;
 using PartyKing.Application.Spotify.Services;
-using PartyKing.Domain.Entities;
-using PartyKing.Domain.Models.Spotify;
+using PartyKing.Domain.Entities.Spotify;
 using PartyKing.Domain.Results;
 using PartyKing.Infrastructure.Repositories;
 using PartyKing.Infrastructure.Spotify.RestApi;

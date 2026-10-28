@@ -1,5 +1,4 @@
-using PartyKing.Domain.Entities;
-using PartyKing.Domain.Models.Slideshow;
+using PartyKing.Domain.Entities.Slideshow;
 using PartyKing.Infrastructure.Repositories;
 using PartyKing.Infrastructure.Results;
 

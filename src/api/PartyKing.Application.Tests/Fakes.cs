@@ -1,12 +1,16 @@
 using ErrorOr;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
+using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Slideshow.Services;
+using PartyKing.Contract.V1.Player;
+using PartyKing.Contract.V1.Queue;
 using PartyKing.Contract.V1.Slideshow;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Application.System;
-using PartyKing.Domain.Entities;
+using PartyKing.Domain.Entities.Queue;
+using PartyKing.Domain.Entities.Sessions;
 using PartyKing.Domain.Enums;
 using PartyKing.Infrastructure.Repositories;
 
@@ -141,4 +145,43 @@ internal static class JoinTokens
 {
     public static IJoinTokenProtector Create(IDateTimeProvider clock) =>
         new JoinTokenProtector(new EphemeralDataProtectionProvider(), clock);
+}
+
+internal class FakeSessionMusicNotifier : ISessionMusicNotifier
+{
+    public List<(Guid SessionId, QueueItemDto Song)> SongAdded { get; } = [];
+    public List<(Guid SessionId, int SongId)> SongRemoved { get; } = [];
+    public List<(Guid SessionId, int? PreviousSongId, QueueItemDto? NowPlaying)> QueueAdvanced { get; } = [];
+    public List<(Guid SessionId, PlayerStateChangedDto State)> PlayerStateChanged { get; } = [];
+
+    public Task SongAddedAsync(Guid sessionId, QueueItemDto song, CancellationToken cancellationToken)
+    {
+        SongAdded.Add((sessionId, song));
+        return Task.CompletedTask;
+    }
+
+    public Task SongRemovedAsync(Guid sessionId, int songId, CancellationToken cancellationToken)
+    {
+        SongRemoved.Add((sessionId, songId));
+        return Task.CompletedTask;
+    }
+
+    public Task QueueAdvancedAsync(
+        Guid sessionId,
+        int? previousSongId,
+        QueueItemDto? nowPlaying,
+        CancellationToken cancellationToken)
+    {
+        QueueAdvanced.Add((sessionId, previousSongId, nowPlaying));
+        return Task.CompletedTask;
+    }
+
+    public Task PlayerStateChangedAsync(
+        Guid sessionId,
+        PlayerStateChangedDto state,
+        CancellationToken cancellationToken)
+    {
+        PlayerStateChanged.Add((sessionId, state));
+        return Task.CompletedTask;
+    }
 }

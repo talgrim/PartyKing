@@ -1,9 +1,11 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Configuration;
 using PartyKing.Application.Player.Services;
 using PartyKing.Application.Queue.Services;
+using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Application.Spotify.Services;
@@ -16,6 +18,7 @@ public static class DependencyInjection
     public static void RegisterApplication(this IServiceCollection services, IConfiguration configuration)
     {
         services.RegisterSystem();
+        services.RegisterRealtime();
         services.RegisterSlideshow(configuration);
         services.RegisterSpotify();
         services.RegisterQueue();
@@ -47,6 +50,13 @@ public static class DependencyInjection
     private static void RegisterSystem(this IServiceCollection services)
     {
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
+    }
+
+    private static void RegisterRealtime(this IServiceCollection services)
+    {
+        // The API replaces the notifier with the SignalR implementation; tests keep the no-ops unless they inject a fake
+        services.TryAddSingleton<ISessionMusicNotifier, NullSessionMusicNotifier>();
+        services.TryAddSingleton<IPlayerConnectionWatchdog, PlayerConnectionWatchdog>();
     }
 
     private static void RegisterSlideshow(this IServiceCollection services, IConfiguration configuration)

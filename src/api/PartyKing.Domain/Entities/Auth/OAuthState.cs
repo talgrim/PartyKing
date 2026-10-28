@@ -1,4 +1,4 @@
-namespace PartyKing.Domain.Entities;
+namespace PartyKing.Domain.Entities.Auth;
 
 /// <summary>Short-lived record tying a Spotify OAuth round trip to the session being claimed.</summary>
 public class OAuthState

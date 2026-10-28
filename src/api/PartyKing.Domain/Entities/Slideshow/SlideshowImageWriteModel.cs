@@ -1,4 +1,4 @@
-namespace PartyKing.Domain.Models.Slideshow;
+namespace PartyKing.Domain.Entities.Slideshow;
 
 /// <param name="Path">Directory of the image relative to the web root, using '/' so it works as a URL as well.</param>
 public record SlideshowImageWriteModel(

@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using PartyKing.Domain.Models.Spotify;
+using PartyKing.Domain.Entities.Spotify;
 using PartyKing.Domain.Results;
 using PartyKing.Infrastructure.Spotify.RestApi;
 

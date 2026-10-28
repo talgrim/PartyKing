@@ -1,6 +1,4 @@
-using PartyKing.Domain.Models.Slideshow;
-
-namespace PartyKing.Domain.Entities;
+namespace PartyKing.Domain.Entities.Slideshow;
 
 public class SlideshowImage
 {
