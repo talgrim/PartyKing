@@ -8,6 +8,7 @@ using PartyKing.Application;
 using PartyKing.Application.Realtime;
 using PartyKing.Infrastructure;
 using PartyKing.Infrastructure.Authentication;
+using PartyKing.Infrastructure.Lyrics;
 using PartyKing.Infrastructure.Spotify;
 using PartyKing.Infrastructure.Youtube;
 
@@ -40,6 +41,7 @@ public static class DependencyInjection
         services.RegisterInfrastructure();
         services.RegisterSpotifyInfrastructure(configuration);
         services.RegisterYoutubeInfrastructure();
+        services.RegisterLyricsInfrastructure();
         services.AddAuthorization();
         AddConfigurations(configuration);
     }
