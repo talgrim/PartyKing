@@ -27,14 +27,40 @@ public interface ISessionService
         bool isAdmin,
         CancellationToken cancellationToken);
     Task<ErrorOr<SessionDto>> CreateAsync(string? name, string? password, CancellationToken cancellationToken);
-    Task<ErrorOr<Success>> RenameAsync(Guid id, string? name, CancellationToken cancellationToken);
+
+    /// <summary>Renames the session. Only the host (<paramref name="profileId"/>) or an admin may; anyone else gets Forbidden.</summary>
+    Task<ErrorOr<Success>> RenameAsync(
+        Guid id,
+        string? name,
+        string? profileId,
+        bool isAdmin,
+        CancellationToken cancellationToken);
     Task<ErrorOr<Success>> DeleteAsync(Guid id, CancellationToken cancellationToken);
 
     /// <summary>Removes the host so someone else can claim the session.</summary>
     Task<ErrorOr<Success>> ReleaseAsync(Guid id, CancellationToken cancellationToken);
 
-    /// <summary>Replaces the password; everyone who had unlocked the session has to enter the new one.</summary>
-    Task<ErrorOr<Success>> ChangePasswordAsync(Guid id, string? password, CancellationToken cancellationToken);
+    /// <summary>
+    /// Replaces the password; everyone who had unlocked the session has to enter the new one. Only the host
+    /// (<paramref name="profileId"/>) or an admin may; anyone else gets Forbidden. Returns the access stamp of the
+    /// new password, so the caller can stay unlocked.
+    /// </summary>
+    Task<ErrorOr<string>> ChangePasswordAsync(
+        Guid id,
+        string? password,
+        string? profileId,
+        bool isAdmin,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Succeeds only for the session's host (<paramref name="profileId"/>) or an admin: NotFound for an unknown
+    /// session, Forbidden for anyone else. For settings that live outside this service.
+    /// </summary>
+    Task<ErrorOr<Success>> AuthorizeManagerAsync(
+        Guid id,
+        string? profileId,
+        bool isAdmin,
+        CancellationToken cancellationToken);
 
     /// <summary>
     /// Checks the password. Returns the access stamp to remember, or Unauthorized, the same for a wrong password
@@ -169,8 +195,18 @@ internal class SessionService : ISessionService
         return Error.Failure(description: "Could not generate a unique session code");
     }
 
-    public async Task<ErrorOr<Success>> RenameAsync(Guid id, string? name, CancellationToken cancellationToken)
+    public async Task<ErrorOr<Success>> RenameAsync(
+        Guid id,
+        string? name,
+        string? profileId,
+        bool isAdmin,
+        CancellationToken cancellationToken)
     {
+        if (await AuthorizeManagerAsync(id, profileId, isAdmin, cancellationToken) is { IsError: true } denied)
+        {
+            return denied.Errors;
+        }
+
         if (string.IsNullOrWhiteSpace(name))
         {
             return Error.Validation(description: "The session name must not be empty");
@@ -221,22 +257,47 @@ internal class SessionService : ISessionService
         return Result.Success;
     }
 
-    public async Task<ErrorOr<Success>> ChangePasswordAsync(
+    public async Task<ErrorOr<string>> ChangePasswordAsync(
         Guid id,
         string? password,
+        string? profileId,
+        bool isAdmin,
         CancellationToken cancellationToken)
     {
+        if (await AuthorizeManagerAsync(id, profileId, isAdmin, cancellationToken) is { IsError: true } denied)
+        {
+            return denied.Errors;
+        }
+
         if (ValidatePassword(password) is { } invalid)
         {
             return invalid;
         }
 
-        var updated = await _sessionsRepository.UpdatePasswordHashAsync(
-            id,
-            _passwordHasher.Hash(password!),
-            cancellationToken);
+        var passwordHash = _passwordHasher.Hash(password!);
+        var updated = await _sessionsRepository.UpdatePasswordHashAsync(id, passwordHash, cancellationToken);
 
-        return updated ? Result.Success : NotFound();
+        return updated ? AccessStamp(passwordHash) : NotFound();
+    }
+
+    public async Task<ErrorOr<Success>> AuthorizeManagerAsync(
+        Guid id,
+        string? profileId,
+        bool isAdmin,
+        CancellationToken cancellationToken)
+    {
+        var session = await _sessionsRepository.GetAsync(id, cancellationToken);
+
+        if (session is null)
+        {
+            return NotFound();
+        }
+
+        var isHost = profileId is not null && session.HostProfileId == profileId;
+
+        return isHost || isAdmin
+            ? Result.Success
+            : Error.Forbidden(description: "Only the host or an admin can change the session settings");
     }
 
     public async Task<ErrorOr<string>> JoinAsync(Guid id, string? password, CancellationToken cancellationToken)
