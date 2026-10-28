@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { SWRConfig } from 'swr';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { SlideshowView } from './SlideshowView';
+import { slideshowKey } from '@/service/realtime/sessionMusicEvents';
 
 const mocks = vi.hoisted(() => ({ fetchFromApi: vi.fn() }));
 
@@ -30,6 +31,10 @@ describe('SlideshowView', () => {
     renderPage();
 
     expect(await screen.findByText('No photos yet')).toBeInTheDocument();
+  });
+
+  it('keeps the slideshow key stable so a pushed slide change refreshes the same cache entry', () => {
+    expect(slideshowKey('session-1')).toEqual({ endpoint: '/sessions/session-1/photos/current' });
   });
 
   it('asks the session photos of the route\'s session', async () => {
