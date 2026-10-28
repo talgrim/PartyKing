@@ -24,4 +24,19 @@ describe('SessionHeader', () => {
 
     expect(screen.getByRole('button', { name: 'Log in as host with Spotify' })).toBeVisible();
   });
+
+  it.each([
+    ['the host', { isHost: true, isAdmin: false }],
+    ['an admin', { isHost: false, isAdmin: true }],
+  ])('shows the settings gear to %s', (_, role) => {
+    render(<SessionHeader session={session} {...role} />);
+
+    expect(screen.getByRole('button', { name: 'Session settings' })).toBeVisible();
+  });
+
+  it('hides the settings gear from everyone else', () => {
+    render(<SessionHeader session={session} isHost={false} />);
+
+    expect(screen.queryByRole('button', { name: 'Session settings' })).not.toBeInTheDocument();
+  });
 });

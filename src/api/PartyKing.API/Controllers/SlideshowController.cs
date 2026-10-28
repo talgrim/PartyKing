@@ -1,9 +1,14 @@
 using System.ComponentModel.DataAnnotations;
+using ErrorOr;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using PartyKing.API.Authorization;
+using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Contract.V1.Slideshow;
+using PartyKing.Infrastructure.Authentication;
+using PartyKing.Infrastructure.Authorization;
 
 namespace PartyKing.API.Controllers;
 
@@ -15,15 +20,21 @@ public class SlideshowController : CoreController
     private const long MaxUploadRequestBytes = 100L * 1024 * 1024;
 
     private readonly ISlideshowService _slideshowService;
+    private readonly ISessionService _sessionService;
+    private readonly ICookieAuthorizationHandler _cookieAuthorizationHandler;
     private readonly ILogger<SlideshowController> _logger;
 
     public SlideshowController(
         IHttpContextAccessor httpContextAccessor,
         ISlideshowService slideshowService,
+        ISessionService sessionService,
+        ICookieAuthorizationHandler cookieAuthorizationHandler,
         ILogger<SlideshowController> logger)
         : base(httpContextAccessor)
     {
         _slideshowService = slideshowService;
+        _sessionService = sessionService;
+        _cookieAuthorizationHandler = cookieAuthorizationHandler;
         _logger = logger;
     }
 
@@ -66,26 +77,48 @@ public class SlideshowController : CoreController
         return Ok(result);
     }
 
-    [HttpGet("admin/sessions/{sessionId:guid}/slideshow-settings")]
-    [AuthorizeAdmin]
+    /// <summary>The session's slideshow settings. Host or admin only (403 otherwise).</summary>
+    [HttpGet("sessions/{sessionId:guid}/slideshow-settings")]
+    [RequireSessionAccess]
     [ProducesResponseType<SlideshowSettingsDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetSettings(Guid sessionId, CancellationToken cancellationToken)
     {
+        if (await AuthorizeManagerAsync(sessionId, cancellationToken) is { IsError: true } denied)
+        {
+            return Problem(denied.Errors);
+        }
+
         var result = await _slideshowService.GetSettingsAsync(sessionId, cancellationToken);
 
         return result.Match(Ok, Problem);
     }
 
-    [HttpPut("admin/sessions/{sessionId:guid}/slideshow-settings")]
-    [AuthorizeAdmin]
+    /// <summary>Host or admin only (403 otherwise).</summary>
+    [HttpPut("sessions/{sessionId:guid}/slideshow-settings")]
+    [RequireSessionAccess]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> UpdateSettings(
         Guid sessionId,
         [FromBody] SlideshowSettingsDto settings,
         CancellationToken cancellationToken)
     {
+        if (await AuthorizeManagerAsync(sessionId, cancellationToken) is { IsError: true } denied)
+        {
+            return Problem(denied.Errors);
+        }
+
         var result = await _slideshowService.UpdateSettingsAsync(sessionId, settings, cancellationToken);
 
         return result.Match(_ => NoContent(), Problem);
+    }
+
+    private async Task<ErrorOr<Success>> AuthorizeManagerAsync(
+        Guid sessionId,
+        CancellationToken cancellationToken)
+    {
+        var profileId = _cookieAuthorizationHandler.TryReadProfileId(Request, out var id) ? id : null;
+        var isAdmin = (await HttpContext.AuthenticateAsync(Constants.AdminScheme)).Succeeded;
+
+        return await _sessionService.AuthorizeManagerAsync(sessionId, profileId, isAdmin, cancellationToken);
     }
 }

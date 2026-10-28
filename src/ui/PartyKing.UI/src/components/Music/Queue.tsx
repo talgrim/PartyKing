@@ -1,5 +1,6 @@
 import CloseIcon from '@mui/icons-material/Close';
 import { ChangeEvent, FormEvent, ReactNode, useEffect, useRef, useState } from 'react';
+import { CoverImage } from '@/components/Music/CoverImage';
 import { QueueList } from '@/components/Music/QueueList';
 import { looksLikeSongLink, queueApi } from '@/service/endpoints/queue/queueApi';
 import { useQueueSongs } from '@/service/endpoints/queue/useQueueSongs';
@@ -23,7 +24,7 @@ export const Queue = ({ sessionId, canRemove = false }: Props): ReactNode => {
   const [message, setMessage] = useState<string | null>(null);
   const [rows, setRows] = useState<Record<string, RowState>>({});
   const [open, setOpen] = useState(false);
-  const searchRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { data: queue, mutate } = useQueueSongs(sessionId);
@@ -120,8 +121,11 @@ export const Queue = ({ sessionId, canRemove = false }: Props): ReactNode => {
 
   return (
     <>
-      <div ref={searchRef} className="relative mt-4 mb-2">
-        <form className="flex px-2" onSubmit={handleSubmit}>
+      <section ref={searchRef} aria-label="Add a song" className="relative mx-2 mt-4 p-3 bg-slate-900 rounded-lg">
+        <h2 className="pb-3 text-xs font-semibold tracking-wider text-slate-400 uppercase">
+          Add a song to the queue
+        </h2>
+        <form className="flex" onSubmit={handleSubmit}>
           <div className="relative grow">
             <input
               ref={inputRef}
@@ -130,7 +134,7 @@ export const Queue = ({ sessionId, canRemove = false }: Props): ReactNode => {
               onChange={(e: ChangeEvent<HTMLInputElement>) => setInput(e.target.value)}
               onFocus={() => setOpen(results.length > 0)}
               onClick={() => setOpen(results.length > 0)}
-              className="w-full pl-2 pr-10 py-2 border-1 border-gray-700 rounded-sm focus:outline-none"
+              className="w-full pl-3 pr-10 py-2 bg-slate-800 border border-slate-700 rounded-l-md placeholder:text-slate-500 focus:outline-none focus:border-amber-600"
               placeholder="Search Spotify, or paste a Spotify / YouTube link"
             />
             {input && (
@@ -144,42 +148,38 @@ export const Queue = ({ sessionId, canRemove = false }: Props): ReactNode => {
               </button>
             )}
           </div>
-          <button type="submit" disabled={busy} className="bg-slate-900 w-20 cursor-pointer disabled:opacity-50">
+          <button
+            type="submit"
+            disabled={busy}
+            className="w-20 font-semibold text-slate-100 bg-amber-600 rounded-r-md cursor-pointer hover:bg-amber-500 disabled:opacity-50"
+          >
             {looksLikeSongLink(input) ? 'Add' : 'Search'}
           </button>
         </form>
 
-        {message && <p className="px-2 pt-2 text-sm text-amber-500">{message}</p>}
+        {message && <p className="pt-2 text-sm text-amber-500">{message}</p>}
 
         {open && results.length > 0 && (
-          <ul className="absolute left-2 right-2 top-full z-10 mt-1 max-h-[60vh] overflow-y-auto p-2 space-y-2 rounded-md border border-slate-700 bg-slate-800 shadow-lg">
+          <ul
+            aria-label="Search results"
+            className="absolute left-0 right-0 top-full z-10 mt-1 max-h-[60vh] overflow-y-auto p-2 space-y-1 rounded-md border border-slate-700 bg-slate-900 shadow-lg"
+          >
             {results.map((track) => {
               const row = rows[track.uri];
               const inQueue = queuedUrls.has(track.uri);
               const adding = row?.status === 'adding';
               return (
-                <li
-                  key={track.uri}
-                  className={`p-2 rounded-md border-l-4 ${
-                    inQueue ? 'bg-slate-900/50 border-slate-600' : 'bg-slate-900 border-amber-600 hover:bg-slate-700'
-                  }`}
-                >
+                <li key={track.uri} className="p-2 rounded-md bg-slate-800 hover:bg-slate-700">
                   <div className="flex items-center gap-3">
-                    {track.albumArtUrl ? (
-                      <img src={track.albumArtUrl} alt="" className="w-12 h-12 rounded-sm shrink-0" />
-                    ) : (
-                      <div className="w-12 h-12 rounded-sm shrink-0 bg-slate-700" />
-                    )}
-                    <div className="grow min-w-0">
-                      <div className={`truncate font-medium ${inQueue ? 'text-slate-500' : 'text-slate-200'}`}>
-                        {track.name}
-                      </div>
-                      <div className="truncate text-sm text-slate-500">{track.artists}</div>
+                    <CoverImage imageUrl={track.albumArtUrl} />
+                    <div className="min-w-0 flex-1">
+                      <div className={`truncate ${inQueue ? 'text-slate-500' : 'text-slate-100'}`}>{track.name}</div>
+                      <div className="truncate text-xs text-slate-400">{track.artists}</div>
                     </div>
                     <button
                       disabled={adding || inQueue}
                       onClick={() => enqueueResult(track.uri)}
-                      className="w-24 shrink-0 px-2 py-2 bg-amber-600 text-slate-100 font-semibold rounded-md cursor-pointer hover:bg-amber-500 disabled:cursor-default disabled:bg-slate-700 disabled:text-slate-400 disabled:hover:bg-slate-700"
+                      className="w-24 shrink-0 px-2 py-1.5 text-sm font-semibold text-slate-100 bg-amber-600 rounded-md cursor-pointer hover:bg-amber-500 disabled:cursor-default disabled:bg-slate-700 disabled:text-slate-400 disabled:hover:bg-slate-700"
                     >
                       {inQueue ? 'In queue' : adding ? 'Adding...' : 'Add'}
                     </button>
@@ -190,7 +190,7 @@ export const Queue = ({ sessionId, canRemove = false }: Props): ReactNode => {
             })}
           </ul>
         )}
-      </div>
+      </section>
 
       <QueueList sessionId={sessionId} canRemove={canRemove} />
     </>

@@ -1,5 +1,5 @@
 import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } from '@microsoft/signalr';
-import { useEffect } from 'react';
+import { MutableRefObject, useEffect } from 'react';
 import { mutate } from 'swr';
 import envVariables from '@/envVariables';
 import { SongDto } from '@/service/endpoints/queue/types';
@@ -10,7 +10,10 @@ import {
   applyQueueAdvancedToQueue,
   applySongAdded,
   applySongRemoved,
+  FallbackErrorChangedEvent,
+  HostPlayerPushHandlers,
   nowPlayingKey,
+  PlayerCommandEvent,
   PlayerStateChangedEvent,
   QueueAdvancedEvent,
   queueSongsKey,
@@ -32,7 +35,11 @@ const revalidateMusic = (sessionId: string) => {
  * Subscribes to live queue / now-playing deltas for an unlocked session. Initial data still comes from SWR GETs;
  * this hook only patches the shared cache and revalidates after reconnect.
  */
-export const useSessionMusicHub = (sessionId: string | undefined, enabled: boolean): void => {
+export const useSessionMusicHub = (
+  sessionId: string | undefined,
+  enabled: boolean,
+  hostPlayer?: MutableRefObject<HostPlayerPushHandlers>,
+): void => {
   useEffect(() => {
     if (!enabled || !sessionId) return;
 
@@ -81,7 +88,18 @@ export const useSessionMusicHub = (sessionId: string | undefined, enabled: boole
         );
       });
 
-      connection.onreconnected(() => revalidateMusic(sessionId));
+      connection.on(SESSION_MUSIC_EVENTS.PlayerCommand, (event: PlayerCommandEvent) => {
+        hostPlayer?.current.onCommand?.(event.command);
+      });
+
+      connection.on(SESSION_MUSIC_EVENTS.FallbackErrorChanged, (event: FallbackErrorChangedEvent) => {
+        hostPlayer?.current.onFallbackError?.(event.error);
+      });
+
+      connection.onreconnected(() => {
+        revalidateMusic(sessionId);
+        hostPlayer?.current.onReconnected?.();
+      });
 
       try {
         await connection.start();
@@ -101,5 +119,5 @@ export const useSessionMusicHub = (sessionId: string | undefined, enabled: boole
         void active.stop();
       }
     };
-  }, [sessionId, enabled]);
+  }, [sessionId, enabled, hostPlayer]);
 };

@@ -1,6 +1,7 @@
 using ErrorOr;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
+using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Slideshow.Services;
@@ -55,7 +56,53 @@ internal class FakeSessionsRepository : ISessionsRepository
     }
 
     public Task<IReadOnlyList<Session>> GetAllAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
-    public Task<bool> RenameAsync(Guid id, string name, CancellationToken cancellationToken) => throw new NotSupportedException();
+    public List<(Guid Id, string Name)> Renamed { get; } = [];
+
+    public Task<bool> RenameAsync(Guid id, string name, CancellationToken cancellationToken)
+    {
+        var session = _sessions.FirstOrDefault(x => x.Id == id);
+        if (session is not null)
+        {
+            Renamed.Add((id, name));
+        }
+
+        return Task.FromResult(session is not null);
+    }
+    public List<(Guid Id, string? PlaylistId, string? Name, bool Shuffle)> FallbackPlaylistSet { get; } = [];
+    public List<(Guid Id, int Cursor)> FallbackCursorSet { get; } = [];
+
+    public Task<bool> SetFallbackPlaylistAsync(
+        Guid id,
+        string? playlistId,
+        string? playlistName,
+        bool shuffle,
+        CancellationToken cancellationToken)
+    {
+        var session = _sessions.FirstOrDefault(x => x.Id == id);
+        if (session is not null)
+        {
+            session.FallbackPlaylistId = playlistId;
+            session.FallbackPlaylistName = playlistName;
+            session.FallbackShuffle = shuffle;
+            session.FallbackCursor = 0;
+            FallbackPlaylistSet.Add((id, playlistId, playlistName, shuffle));
+        }
+
+        return Task.FromResult(session is not null);
+    }
+
+    public Task<bool> SetFallbackCursorAsync(Guid id, int cursor, CancellationToken cancellationToken)
+    {
+        var session = _sessions.FirstOrDefault(x => x.Id == id);
+        if (session is not null)
+        {
+            session.FallbackCursor = cursor;
+            FallbackCursorSet.Add((id, cursor));
+        }
+
+        return Task.FromResult(session is not null);
+    }
+
     public Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken) =>
         Task.FromResult(_sessions.RemoveAll(x => x.Id == id) > 0);
     public Task<SessionClaimResult> TryClaimAsync(Guid id, string profileId, CancellationToken cancellationToken) => throw new NotSupportedException();
@@ -77,8 +124,10 @@ internal class FakeHostTokenProvider : IHostTokenProvider
 
     public void Invalidate(string profileId) => Invalidated.Add(profileId);
 
+    public ErrorOr<string> SessionToken { get; set; } = "token";
+
     public Task<ErrorOr<string>> GetSessionAccessTokenAsync(Guid sessionId, CancellationToken cancellationToken) =>
-        throw new NotSupportedException();
+        Task.FromResult(SessionToken);
 
     public Task<ErrorOr<string>> GetAccessTokenAsync(string profileId, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
@@ -107,8 +156,25 @@ internal class FakeQueueRepository : IQueueRepository
         return Task.FromResult(RemoveResult);
     }
 
+    public List<QueueItem> Pending { get; } = [];
+    public List<QueueItem> Added { get; } = [];
+
+    public Task<QueueItem?> AddIfNoneQueuedAsync(QueueItem item, CancellationToken cancellationToken)
+    {
+        if (Pending.Count > 0)
+        {
+            return Task.FromResult<QueueItem?>(null);
+        }
+
+        Added.Add(item);
+        Pending.Add(item);
+        return Task.FromResult<QueueItem?>(item);
+    }
+
+    public Task<IReadOnlyList<QueueItem>> GetPendingAsync(Guid sessionId, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<QueueItem>>(Pending.ToList());
+
     public Task<QueueItem> AddAsync(QueueItem item, CancellationToken cancellationToken) => throw new NotSupportedException();
-    public Task<IReadOnlyList<QueueItem>> GetPendingAsync(Guid sessionId, CancellationToken cancellationToken) => throw new NotSupportedException();
 }
 
 internal class FakeSlideshowService : ISlideshowService
@@ -153,6 +219,8 @@ internal class FakeSessionMusicNotifier : ISessionMusicNotifier
     public List<(Guid SessionId, int SongId)> SongRemoved { get; } = [];
     public List<(Guid SessionId, int? PreviousSongId, QueueItemDto? NowPlaying)> QueueAdvanced { get; } = [];
     public List<(Guid SessionId, PlayerStateChangedDto State)> PlayerStateChanged { get; } = [];
+    public List<(Guid SessionId, PlayerCommandDto Command)> PlayerCommands { get; } = [];
+    public List<(Guid SessionId, FallbackErrorDto Error)> FallbackErrors { get; } = [];
 
     public Task SongAddedAsync(Guid sessionId, QueueItemDto song, CancellationToken cancellationToken)
     {
@@ -182,6 +250,32 @@ internal class FakeSessionMusicNotifier : ISessionMusicNotifier
         CancellationToken cancellationToken)
     {
         PlayerStateChanged.Add((sessionId, state));
+        return Task.CompletedTask;
+    }
+
+    public Task PlayerCommandAsync(Guid sessionId, PlayerCommandDto command, CancellationToken cancellationToken)
+    {
+        PlayerCommands.Add((sessionId, command));
+        return Task.CompletedTask;
+    }
+
+    public Task FallbackErrorChangedAsync(
+        Guid sessionId,
+        FallbackErrorDto error,
+        CancellationToken cancellationToken)
+    {
+        FallbackErrors.Add((sessionId, error));
+        return Task.CompletedTask;
+    }
+}
+
+internal class FakeFallbackQueueFiller : IFallbackQueueFiller
+{
+    public List<Guid> Ensured { get; } = [];
+
+    public Task EnsureQueuedAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        Ensured.Add(sessionId);
         return Task.CompletedTask;
     }
 }

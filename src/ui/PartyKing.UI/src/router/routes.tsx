@@ -3,7 +3,7 @@ import {ROUTE_PATHS} from './constants';
 import {App} from "@/App";
 import {Callback} from "@/pages/Callback";
 import {Home} from "@/pages/Home";
-import { ImageUploader } from '@/pages/ImageUploader';
+import { UploadRedirect } from '@/pages/UploadRedirect';
 import { MusicQueue } from '@/pages/MusicQueue';
 import { Admin } from '@/pages/Admin/Admin';
 
@@ -14,7 +14,7 @@ export const routes: RouteObject[] = [
     children: [
       {path: '', element: <Home/>},
       {path: ROUTE_PATHS.CALLBACK, element: <Callback/>},
-      {path: ROUTE_PATHS.SESSION_UPLOAD, element: <ImageUploader/>},
+      {path: ROUTE_PATHS.SESSION_UPLOAD, element: <UploadRedirect/>},
       {path: ROUTE_PATHS.ADMIN, element: <Admin/>},
       {path: ROUTE_PATHS.SESSION, element: <MusicQueue/>},
     ],

@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using ErrorOr;
+using Microsoft.Extensions.Logging;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Player.Services;
 using PartyKing.Application.Realtime;
@@ -27,14 +28,40 @@ public interface ISessionService
         bool isAdmin,
         CancellationToken cancellationToken);
     Task<ErrorOr<SessionDto>> CreateAsync(string? name, string? password, CancellationToken cancellationToken);
-    Task<ErrorOr<Success>> RenameAsync(Guid id, string? name, CancellationToken cancellationToken);
+
+    /// <summary>Renames the session. Only the host (<paramref name="profileId"/>) or an admin may; anyone else gets Forbidden.</summary>
+    Task<ErrorOr<Success>> RenameAsync(
+        Guid id,
+        string? name,
+        string? profileId,
+        bool isAdmin,
+        CancellationToken cancellationToken);
     Task<ErrorOr<Success>> DeleteAsync(Guid id, CancellationToken cancellationToken);
 
     /// <summary>Removes the host so someone else can claim the session.</summary>
     Task<ErrorOr<Success>> ReleaseAsync(Guid id, CancellationToken cancellationToken);
 
-    /// <summary>Replaces the password; everyone who had unlocked the session has to enter the new one.</summary>
-    Task<ErrorOr<Success>> ChangePasswordAsync(Guid id, string? password, CancellationToken cancellationToken);
+    /// <summary>
+    /// Replaces the password; everyone who had unlocked the session has to enter the new one. Only the host
+    /// (<paramref name="profileId"/>) or an admin may; anyone else gets Forbidden. Returns the access stamp of the
+    /// new password, so the caller can stay unlocked.
+    /// </summary>
+    Task<ErrorOr<string>> ChangePasswordAsync(
+        Guid id,
+        string? password,
+        string? profileId,
+        bool isAdmin,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Succeeds only for the session's host (<paramref name="profileId"/>) or an admin: NotFound for an unknown
+    /// session, Forbidden for anyone else. For settings that live outside this service.
+    /// </summary>
+    Task<ErrorOr<Success>> AuthorizeManagerAsync(
+        Guid id,
+        string? profileId,
+        bool isAdmin,
+        CancellationToken cancellationToken);
 
     /// <summary>
     /// Checks the password. Returns the access stamp to remember, or Unauthorized, the same for a wrong password
@@ -80,6 +107,7 @@ internal class SessionService : ISessionService
     private readonly IDateTimeProvider _clock;
     private readonly ISessionMusicNotifier _musicNotifier;
     private readonly IPlayerConnectionWatchdog _connectionWatchdog;
+    private readonly ILogger<SessionService> _logger;
 
     // Verified against when the session is unknown, so both failures cost the same time
     private readonly string _dummyHash;
@@ -93,7 +121,8 @@ internal class SessionService : ISessionService
         IJoinTokenProtector joinTokenProtector,
         IDateTimeProvider clock,
         ISessionMusicNotifier musicNotifier,
-        IPlayerConnectionWatchdog connectionWatchdog)
+        IPlayerConnectionWatchdog connectionWatchdog,
+        ILogger<SessionService> logger)
     {
         _sessionsRepository = sessionsRepository;
         _passwordHasher = passwordHasher;
@@ -104,6 +133,7 @@ internal class SessionService : ISessionService
         _clock = clock;
         _musicNotifier = musicNotifier;
         _connectionWatchdog = connectionWatchdog;
+        _logger = logger;
         _dummyHash = passwordHasher.Hash(Guid.NewGuid().ToString());
     }
 
@@ -162,6 +192,7 @@ internal class SessionService : ISessionService
 
             if (await _sessionsRepository.TryAddAsync(session, cancellationToken))
             {
+                _logger.LogInformation("Created session {SessionId} with code {Code}", session.Id, session.Code);
                 return ToDto(session);
             }
         }
@@ -169,8 +200,18 @@ internal class SessionService : ISessionService
         return Error.Failure(description: "Could not generate a unique session code");
     }
 
-    public async Task<ErrorOr<Success>> RenameAsync(Guid id, string? name, CancellationToken cancellationToken)
+    public async Task<ErrorOr<Success>> RenameAsync(
+        Guid id,
+        string? name,
+        string? profileId,
+        bool isAdmin,
+        CancellationToken cancellationToken)
     {
+        if (await AuthorizeManagerAsync(id, profileId, isAdmin, cancellationToken) is { IsError: true } denied)
+        {
+            return denied.Errors;
+        }
+
         if (string.IsNullOrWhiteSpace(name))
         {
             return Error.Validation(description: "The session name must not be empty");
@@ -182,6 +223,11 @@ internal class SessionService : ISessionService
         }
 
         var renamed = await _sessionsRepository.RenameAsync(id, name.Trim(), cancellationToken);
+
+        if (renamed)
+        {
+            _logger.LogInformation("Renamed session {SessionId}", id);
+        }
 
         return renamed ? Result.Success : NotFound();
     }
@@ -198,6 +244,7 @@ internal class SessionService : ISessionService
         }
 
         await ForgetHostAsync(id, hostProfileId, cancellationToken);
+        _logger.LogInformation("Deleted session {SessionId}", id);
 
         // The rows went with the cascade delete; the uploaded files are still on disk
         await _slideshowService.DeleteSessionAsync(id);
@@ -217,26 +264,57 @@ internal class SessionService : ISessionService
         }
 
         await ForgetHostAsync(id, hostProfileId, cancellationToken);
+        _logger.LogInformation("Released the host of session {SessionId}", id);
 
         return Result.Success;
     }
 
-    public async Task<ErrorOr<Success>> ChangePasswordAsync(
+    public async Task<ErrorOr<string>> ChangePasswordAsync(
         Guid id,
         string? password,
+        string? profileId,
+        bool isAdmin,
         CancellationToken cancellationToken)
     {
+        if (await AuthorizeManagerAsync(id, profileId, isAdmin, cancellationToken) is { IsError: true } denied)
+        {
+            return denied.Errors;
+        }
+
         if (ValidatePassword(password) is { } invalid)
         {
             return invalid;
         }
 
-        var updated = await _sessionsRepository.UpdatePasswordHashAsync(
-            id,
-            _passwordHasher.Hash(password!),
-            cancellationToken);
+        var passwordHash = _passwordHasher.Hash(password!);
+        var updated = await _sessionsRepository.UpdatePasswordHashAsync(id, passwordHash, cancellationToken);
 
-        return updated ? Result.Success : NotFound();
+        if (updated)
+        {
+            _logger.LogInformation("Changed the password of session {SessionId}", id);
+        }
+
+        return updated ? AccessStamp(passwordHash) : NotFound();
+    }
+
+    public async Task<ErrorOr<Success>> AuthorizeManagerAsync(
+        Guid id,
+        string? profileId,
+        bool isAdmin,
+        CancellationToken cancellationToken)
+    {
+        var session = await _sessionsRepository.GetAsync(id, cancellationToken);
+
+        if (session is null)
+        {
+            return NotFound();
+        }
+
+        var isHost = profileId is not null && session.HostProfileId == profileId;
+
+        return isHost || isAdmin
+            ? Result.Success
+            : Error.Forbidden(description: "Only the host or an admin can change the session settings");
     }
 
     public async Task<ErrorOr<string>> JoinAsync(Guid id, string? password, CancellationToken cancellationToken)
@@ -247,9 +325,14 @@ internal class SessionService : ISessionService
         var valid = password is { Length: <= MaxPasswordLength }
             && _passwordHasher.Verify(password, session?.PasswordHash ?? _dummyHash);
 
-        return session is null || !valid
-            ? Error.Unauthorized(description: "Wrong session password")
-            : AccessStamp(session.PasswordHash);
+        if (session is null || !valid)
+        {
+            _logger.LogWarning("Failed to join session {SessionId}: wrong password", id);
+            return Error.Unauthorized(description: "Wrong session password");
+        }
+
+        _logger.LogDebug("Joined session {SessionId} with the password", id);
+        return AccessStamp(session.PasswordHash);
     }
 
     public async Task<ErrorOr<JoinTokenDto>> CreateJoinTokenAsync(
@@ -284,12 +367,17 @@ internal class SessionService : ISessionService
         var session = await _sessionsRepository.GetAsync(id, cancellationToken);
 
         // The stamp ties the token to the current password, so changing the password revokes outstanding tokens
-        return session is null
+        if (session is null
             || payload is null
             || payload.SessionId != id
-            || payload.AccessStamp != AccessStamp(session.PasswordHash)
-            ? Error.Unauthorized(description: "Invalid or expired join code")
-            : AccessStamp(session.PasswordHash);
+            || payload.AccessStamp != AccessStamp(session.PasswordHash))
+        {
+            _logger.LogWarning("Failed to join session {SessionId}: invalid or expired join code", id);
+            return Error.Unauthorized(description: "Invalid or expired join code");
+        }
+
+        _logger.LogDebug("Joined session {SessionId} with a join code", id);
+        return AccessStamp(session.PasswordHash);
     }
 
     public async Task<bool> HasAccessAsync(Guid id, string? accessStamp, CancellationToken cancellationToken)
@@ -346,7 +434,9 @@ internal class SessionService : ISessionService
             session.Code,
             session.Name,
             session.HostProfile?.DisplayName ?? session.HostProfileId,
-            session.HostProfileId is not null);
+            session.HostProfileId is not null,
+            session.FallbackPlaylistName,
+            session.FallbackShuffle);
     }
 
     private static Error NotFound() => Error.NotFound(description: "The session was not found");

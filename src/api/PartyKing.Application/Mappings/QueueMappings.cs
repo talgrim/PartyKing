@@ -20,10 +20,11 @@ public static class QueueMappings
             item.Title,
             item.Artists,
             item.AlbumArtUrl,
-            item.DurationMs);
+            item.DurationMs,
+            item.IsFallback);
     }
 
-    public static QueueItem ToQueueItem(this Song song, Guid sessionId)
+    public static QueueItem ToQueueItem(this Song song, Guid sessionId, bool isFallback = false)
     {
         return new QueueItem(
             sessionId,
@@ -32,7 +33,10 @@ public static class QueueMappings
             song.Name,
             song.ArtistsDisplay,
             song.AlbumArtUrl,
-            song.DurationMs);
+            song.DurationMs)
+        {
+            IsFallback = isFallback
+        };
     }
 
     public static SpotifyTrackDto ToDto(this Song song)

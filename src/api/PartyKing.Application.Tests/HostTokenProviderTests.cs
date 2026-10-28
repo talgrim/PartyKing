@@ -77,6 +77,9 @@ public class HostTokenProviderTests
         public Task<AuthenticationResult> AuthenticateAsync(string code, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<IReadOnlyList<Song>> SearchTracksAsync(string accessToken, string query, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<Song?> GetTrackAsync(string accessToken, string trackId, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<Playlist?> GetPlaylistAsync(string accessToken, string playlistId, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<IReadOnlyList<Playlist>> GetCurrentUserPlaylistsAsync(string accessToken, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<IReadOnlyList<Song>> GetPlaylistTracksAsync(string accessToken, string playlistId, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 
     private class FakeProfilesRepository : ISpotifyProfilesRepository

@@ -13,6 +13,8 @@ export type SongDto = {
   artists: string | null;
   albumArtUrl: string | null;
   durationMs: number | null;
+  /** Queued by the server from the session's fallback playlist rather than by a guest. */
+  isFallback?: boolean;
 };
 
 export type SpotifyTrackDto = {

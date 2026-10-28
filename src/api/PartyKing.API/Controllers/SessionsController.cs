@@ -95,6 +95,53 @@ public class SessionsController : CoreController
         return result.Match(Ok, Problem);
     }
 
+    /// <summary>Renames the session. Host or admin only (403 otherwise).</summary>
+    [HttpPatch("sessions/{sessionId:guid}")]
+    [RequireSessionAccess]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> RenameSession(
+        Guid sessionId,
+        [FromBody] RenameSessionRequest request,
+        CancellationToken cancellationToken)
+    {
+        var (profileId, isAdmin) = await ReadCallerAsync();
+
+        var result = await _sessionService.RenameAsync(sessionId, request.Name, profileId, isAdmin, cancellationToken);
+
+        return result.Match(_ => NoContent(), Problem);
+    }
+
+    /// <summary>
+    /// Sets a new password; everyone else has to enter it again to get back in, the caller stays unlocked. Host or
+    /// admin only (403 otherwise).
+    /// </summary>
+    [HttpPut("sessions/{sessionId:guid}/password")]
+    [RequireSessionAccess]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> ChangePassword(
+        Guid sessionId,
+        [FromBody] ChangeSessionPasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        var (profileId, isAdmin) = await ReadCallerAsync();
+
+        var result = await _sessionService.ChangePasswordAsync(
+            sessionId,
+            request.Password,
+            profileId,
+            isAdmin,
+            cancellationToken);
+
+        if (result.IsError)
+        {
+            return Problem(result.Errors);
+        }
+
+        _cookieAuthorizationHandler.GrantSessionAccess(sessionId, result.Value, HttpContext);
+
+        return NoContent();
+    }
+
     [HttpGet("sessions/{sessionId:guid}")]
     [RequireSessionAccess]
     [ProducesResponseType<SessionDto>(StatusCodes.Status200OK)]
@@ -122,5 +169,13 @@ public class SessionsController : CoreController
         var result = await _sessionService.GetViewerRoleAsync(sessionId, profileId, isAdmin, cancellationToken);
 
         return result.Match(Ok, Problem);
+    }
+
+    private async Task<(string? ProfileId, bool IsAdmin)> ReadCallerAsync()
+    {
+        var profileId = _cookieAuthorizationHandler.TryReadProfileId(Request, out var id) ? id : null;
+        var isAdmin = (await HttpContext.AuthenticateAsync(Constants.AdminScheme)).Succeeded;
+
+        return (profileId, isAdmin);
     }
 }

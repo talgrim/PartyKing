@@ -147,6 +147,49 @@ public class QueueRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task AddIfNoneQueued_WithAnEmptyQueue_AddsTheItemAndKeepsTheFallbackFlag()
+    {
+        var added = await _repository.AddIfNoneQueuedAsync(
+            new QueueItem(_sessionId, QueueItemSource.Spotify, "spotify:track:fb", "fallback", null, null, null)
+            {
+                IsFallback = true
+            },
+            CancellationToken.None);
+
+        Assert.NotNull(added);
+        var pending = Assert.Single(await _repository.GetPendingAsync(_sessionId, CancellationToken.None));
+        Assert.True(pending.IsFallback);
+    }
+
+    [Fact]
+    public async Task AddIfNoneQueued_WhileASongWaits_AddsNothing()
+    {
+        await AddSongAsync("guest");
+
+        var added = await _repository.AddIfNoneQueuedAsync(
+            new QueueItem(_sessionId, QueueItemSource.Spotify, "spotify:track:fb", "fallback", null, null, null),
+            CancellationToken.None);
+
+        Assert.Null(added);
+        Assert.Equal(["guest"], await PendingTitlesAsync());
+    }
+
+    [Fact]
+    public async Task AddIfNoneQueued_WhenOnlyASongIsPlaying_AddsTheItemBehindIt()
+    {
+        var first = await AddSongAsync("playing");
+        await AdvanceAsync(null);
+
+        var added = await _repository.AddIfNoneQueuedAsync(
+            new QueueItem(_sessionId, QueueItemSource.Spotify, "spotify:track:fb", "fallback", null, null, null),
+            CancellationToken.None);
+
+        Assert.NotNull(added);
+        Assert.Equal(["fallback"], await PendingTitlesAsync());
+        Assert.Equal(first, (await _repository.GetPlayingAsync(_sessionId, CancellationToken.None))!.Id);
+    }
+
+    [Fact]
     public async Task GetPending_LeavesOutTheSongPlayingAndThosePlayed()
     {
         var first = await AddSongAsync("one");

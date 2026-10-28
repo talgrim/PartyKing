@@ -65,33 +65,6 @@ public class AdminController : CoreController
         return result.Match(Ok, Problem);
     }
 
-    [HttpPatch("admin/sessions/{sessionId:guid}")]
-    [AuthorizeAdmin]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> RenameSession(
-        Guid sessionId,
-        [FromBody] RenameSessionRequest request,
-        CancellationToken cancellationToken)
-    {
-        var result = await _sessionService.RenameAsync(sessionId, request.Name, cancellationToken);
-
-        return result.Match(_ => NoContent(), Problem);
-    }
-
-    /// <summary>Sets a new password; everyone has to enter it again to get back in.</summary>
-    [HttpPut("admin/sessions/{sessionId:guid}/password")]
-    [AuthorizeAdmin]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> ChangeSessionPassword(
-        Guid sessionId,
-        [FromBody] ChangeSessionPasswordRequest request,
-        CancellationToken cancellationToken)
-    {
-        var result = await _sessionService.ChangePasswordAsync(sessionId, request.Password, cancellationToken);
-
-        return result.Match(_ => NoContent(), Problem);
-    }
-
     /// <summary>Deletes the session and its queue.</summary>
     [HttpDelete("admin/sessions/{sessionId:guid}")]
     [AuthorizeAdmin]

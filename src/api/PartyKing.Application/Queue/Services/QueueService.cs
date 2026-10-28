@@ -1,4 +1,5 @@
 using ErrorOr;
+using Microsoft.Extensions.Logging;
 using PartyKing.Application.Mappings;
 using PartyKing.Application.Queue.Helpers;
 using PartyKing.Application.Realtime;
@@ -49,6 +50,8 @@ internal class QueueService : IQueueService
     private readonly IHostTokenProvider _hostTokenProvider;
     private readonly ISessionsRepository _sessionsRepository;
     private readonly ISessionMusicNotifier _musicNotifier;
+    private readonly IFallbackQueueFiller _fallbackFiller;
+    private readonly ILogger<QueueService> _logger;
 
     public QueueService(
         IQueueRepository queueRepository,
@@ -56,7 +59,9 @@ internal class QueueService : IQueueService
         ISpotifyIntegrationClient spotifyClient,
         IYoutubeOEmbedClient youtubeClient,
         IHostTokenProvider hostTokenProvider,
-        ISessionMusicNotifier musicNotifier)
+        ISessionMusicNotifier musicNotifier,
+        IFallbackQueueFiller fallbackFiller,
+        ILogger<QueueService> logger)
     {
         _queueRepository = queueRepository;
         _sessionsRepository = sessionsRepository;
@@ -64,6 +69,8 @@ internal class QueueService : IQueueService
         _youtubeClient = youtubeClient;
         _hostTokenProvider = hostTokenProvider;
         _musicNotifier = musicNotifier;
+        _fallbackFiller = fallbackFiller;
+        _logger = logger;
     }
 
     public async Task<ErrorOr<QueueItemDto>> EnqueueAsync(
@@ -89,11 +96,16 @@ internal class QueueService : IQueueService
 
         if (item.IsError)
         {
+            _logger.LogInformation(
+                "Could not queue a song in session {SessionId}: {Error}",
+                sessionId,
+                item.FirstError.Description);
             return item.FirstError;
         }
 
         var saved = await _queueRepository.AddAsync(item.Value, cancellationToken);
         var dto = saved.ToDto();
+        _logger.LogInformation("Queued song {SongId} ({Source}) in session {SessionId}", saved.Id, saved.Source, sessionId);
         await _musicNotifier.SongAddedAsync(sessionId, dto, cancellationToken);
 
         return dto;
@@ -156,7 +168,11 @@ internal class QueueService : IQueueService
 
         if (removal == QueueItemRemoval.Removed)
         {
+            _logger.LogInformation("Removed song {SongId} from session {SessionId}", songId, sessionId);
             await _musicNotifier.SongRemovedAsync(sessionId, songId, cancellationToken);
+
+            // Removing the song the fallback playlist queued must not leave "Up next" empty
+            await _fallbackFiller.EnsureQueuedAsync(sessionId, cancellationToken);
             return Result.Success;
         }
 
@@ -176,11 +192,22 @@ internal class QueueService : IQueueService
         int? currentSongId,
         CancellationToken cancellationToken)
     {
+        // An empty queue gets a playlist song first (a previous refill may have failed), so the advance finds one
+        await _fallbackFiller.EnsureQueuedAsync(sessionId, cancellationToken);
+
         var playingBefore = await _queueRepository.GetPlayingAsync(sessionId, cancellationToken);
         var next = await _queueRepository.AdvanceAsync(sessionId, currentSongId, cancellationToken);
 
+        // Queue the playlist song that follows the one now starting, behind whatever guests add meanwhile
+        await _fallbackFiller.EnsureQueuedAsync(sessionId, cancellationToken);
+
         if (playingBefore?.Id == currentSongId)
         {
+            _logger.LogInformation(
+                "Session {SessionId} advanced from song {PreviousSongId} to {NextSongId}",
+                sessionId,
+                playingBefore?.Id,
+                next?.Id);
             await _musicNotifier.QueueAdvancedAsync(
                 sessionId,
                 playingBefore?.Id,

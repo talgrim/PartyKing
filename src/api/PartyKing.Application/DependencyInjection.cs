@@ -80,5 +80,9 @@ public static class DependencyInjection
     private static void RegisterQueue(this IServiceCollection services)
     {
         services.AddScoped<IQueueService, QueueService>();
+        services.AddScoped<IFallbackQueueFiller, FallbackQueueFiller>();
+        services.AddScoped<IFallbackPlaylistService, FallbackPlaylistService>();
+        services.AddSingleton<IPlaylistTrackCache, PlaylistTrackCache>();
+        services.AddSingleton<IFallbackStatusStore, FallbackStatusStore>();
     }
 }

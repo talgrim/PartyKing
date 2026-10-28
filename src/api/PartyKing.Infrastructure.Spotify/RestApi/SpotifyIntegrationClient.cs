@@ -16,6 +16,18 @@ public interface ISpotifyIntegrationClient
 
     Task<IReadOnlyList<Song>> SearchTracksAsync(string accessToken, string query, CancellationToken cancellationToken);
     Task<Song?> GetTrackAsync(string accessToken, string trackId, CancellationToken cancellationToken);
+
+    /// <summary>Null when the playlist does not exist or the token may not read it.</summary>
+    Task<Playlist?> GetPlaylistAsync(string accessToken, string playlistId, CancellationToken cancellationToken);
+
+    /// <summary>The playlists of the account the token belongs to, owned and followed alike.</summary>
+    Task<IReadOnlyList<Playlist>> GetCurrentUserPlaylistsAsync(string accessToken, CancellationToken cancellationToken);
+
+    /// <summary>The playable tracks of a playlist, in order. Episodes, local files and removed items are left out.</summary>
+    Task<IReadOnlyList<Song>> GetPlaylistTracksAsync(
+        string accessToken,
+        string playlistId,
+        CancellationToken cancellationToken);
 }
 
 internal class SpotifyIntegrationClient : ISpotifyIntegrationClient
@@ -34,7 +46,9 @@ internal class SpotifyIntegrationClient : ISpotifyIntegrationClient
         Scopes.UserReadEmail,
         Scopes.UserReadPrivate,
         Scopes.UserModifyPlaybackState,
-        Scopes.UserReadPlaybackState
+        Scopes.UserReadPlaybackState,
+        // Lists the host's private playlists, which can serve as the fallback playlist
+        Scopes.PlaylistReadPrivate
     ];
 
     public SpotifyIntegrationClient(
@@ -115,6 +129,56 @@ internal class SpotifyIntegrationClient : ISpotifyIntegrationClient
         {
             return null;
         }
+    }
+
+    public async Task<Playlist?> GetPlaylistAsync(
+        string accessToken,
+        string playlistId,
+        CancellationToken cancellationToken)
+    {
+        var client = _clientFactory.CreateClient(accessToken);
+
+        try
+        {
+            var playlist = await client.Playlists.Get(playlistId, cancellationToken);
+            return playlist.ToDomain();
+        }
+        catch (APIException exception) when (exception.Response?.StatusCode is System.Net.HttpStatusCode.NotFound
+                                                 or System.Net.HttpStatusCode.BadRequest
+                                                 or System.Net.HttpStatusCode.Forbidden)
+        {
+            return null;
+        }
+    }
+
+    public async Task<IReadOnlyList<Playlist>> GetCurrentUserPlaylistsAsync(
+        string accessToken,
+        CancellationToken cancellationToken)
+    {
+        var client = _clientFactory.CreateClient(accessToken);
+
+        var first = await client.Playlists.CurrentUsers(cancellationToken);
+        var all = await client.PaginateAll(first);
+
+        return all.Select(x => x.ToDomain()).ToList();
+    }
+
+    public async Task<IReadOnlyList<Song>> GetPlaylistTracksAsync(
+        string accessToken,
+        string playlistId,
+        CancellationToken cancellationToken)
+    {
+        var client = _clientFactory.CreateClient(accessToken);
+
+        var first = await client.Playlists.GetItems(playlistId, cancellationToken);
+        var all = await client.PaginateAll(first);
+
+        return all
+            .Select(x => x.Track)
+            .OfType<FullTrack>()
+            .Where(x => !x.IsLocal)
+            .Select(x => x.ToDomain())
+            .ToList();
     }
 
     private async Task<PrivateUser> GetProfileAsync(string accessToken, CancellationToken cancellationToken)

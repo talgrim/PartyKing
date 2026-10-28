@@ -11,7 +11,7 @@ type Props = {
 };
 
 export const ErrorLog = ({ entries }: Props): ReactNode => (
-  <section aria-label="Error log" className="max-h-40 overflow-y-auto p-2 bg-slate-900 text-xs font-mono">
+  <section aria-label="Error log" className="max-h-40 overflow-y-auto p-3 bg-slate-900 rounded-lg text-xs font-mono">
     <h2 className="pb-1 font-semibold text-slate-500">Error log</h2>
     {entries.length === 0 ? (
       <p className="text-slate-500">No errors</p>

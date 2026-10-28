@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { ScopedMutator, SWRConfig, useSWRConfig } from 'swr';
 import { HostPlayer } from './HostPlayer';
 import { SongSource } from '@/service/endpoints/queue/types';
-import { nowPlayingKey } from '@/service/realtime/sessionMusicEvents';
+import { HostPlayerPushHandlers, nowPlayingKey } from '@/service/realtime/sessionMusicEvents';
 
 const mocks = vi.hoisted(() => ({
   next: vi.fn(),
@@ -62,12 +62,12 @@ const startMusic = async () => {
   await act(async () => start.click());
 };
 
-const renderPlayer = async (isAdmin = false) => {
+const renderPlayer = async (isAdmin = false, pushHandlers?: { current: HostPlayerPushHandlers }) => {
   let mutate!: ScopedMutator;
   render(
     <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
       <MutateCapture onReady={(m) => { mutate = m; }} />
-      <HostPlayer sessionId="session-1" isAdmin={isAdmin} />
+      <HostPlayer sessionId="session-1" isAdmin={isAdmin} pushHandlers={pushHandlers} />
     </SWRConfig>,
   );
   await startMusic();
@@ -156,12 +156,66 @@ describe('HostPlayer', () => {
     );
   });
 
+  it('tells the host why the fallback playlist could not add a song', async () => {
+    mocks.reportState.mockResolvedValue({
+      command: null,
+      fallbackError: 'Fallback playlist: the playlist has no playable tracks',
+    });
+
+    await renderPlayer();
+
+    expect(await screen.findByText('Fallback playlist: the playlist has no playable tracks')).toBeVisible();
+  });
+
   it('pauses when an admin sends the pause command', async () => {
     mocks.reportState.mockResolvedValueOnce({ command: null }).mockResolvedValue({ command: 'Pause' });
     await renderPlayer();
 
     expect(await screen.findByText(/video .* paused/)).toBeVisible();
     expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument();
+  });
+
+  it('pauses at once when the server pushes the pause command', async () => {
+    const push = { current: {} as HostPlayerPushHandlers };
+    await renderPlayer(false, push);
+    expect(screen.getByText(/video .* playing/)).toBeVisible();
+
+    await act(async () => push.current.onCommand?.('Pause'));
+
+    expect(await screen.findByText(/video .* paused/)).toBeVisible();
+  });
+
+  it('ignores a pushed command that does not change anything', async () => {
+    const push = { current: {} as HostPlayerPushHandlers };
+    await renderPlayer(false, push);
+
+    await act(async () => push.current.onCommand?.('Resume'));
+
+    expect(screen.getByText(/video .* playing/)).toBeVisible();
+  });
+
+  it('shows and clears a fallback error the server pushes', async () => {
+    const push = { current: {} as HostPlayerPushHandlers };
+    await renderPlayer(false, push);
+
+    await act(async () => push.current.onFallbackError?.('Fallback playlist: Spotify could not provide the tracks'));
+    expect(await screen.findByText('Fallback playlist: Spotify could not provide the tracks')).toBeVisible();
+
+    await act(async () => push.current.onFallbackError?.(null));
+    await waitFor(() =>
+      expect(screen.queryByText('Fallback playlist: Spotify could not provide the tracks')).not.toBeInTheDocument(),
+    );
+  });
+
+  it('reports again after the connection to the server was restored', async () => {
+    const push = { current: {} as HostPlayerPushHandlers };
+    await renderPlayer(false, push);
+    await waitFor(() => expect(mocks.reportState).toHaveBeenCalled());
+    const reports = mocks.reportState.mock.calls.length;
+
+    await act(async () => push.current.onReconnected?.());
+
+    await waitFor(() => expect(mocks.reportState.mock.calls.length).toBeGreaterThan(reports));
   });
 
   it('follows the server when an admin skips to another song', async () => {

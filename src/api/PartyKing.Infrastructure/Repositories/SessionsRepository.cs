@@ -15,6 +15,16 @@ public interface ISessionsRepository
     Task<bool> RenameAsync(Guid id, string name, CancellationToken cancellationToken);
     Task<bool> UpdatePasswordHashAsync(Guid id, string passwordHash, CancellationToken cancellationToken);
 
+    /// <summary>Sets the fallback playlist and rewinds it; a null <paramref name="playlistId"/> clears it.</summary>
+    Task<bool> SetFallbackPlaylistAsync(
+        Guid id,
+        string? playlistId,
+        string? playlistName,
+        bool shuffle,
+        CancellationToken cancellationToken);
+
+    Task<bool> SetFallbackCursorAsync(Guid id, int cursor, CancellationToken cancellationToken);
+
     /// <summary>Deletes the session together with its queue.</summary>
     Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken);
 
@@ -102,6 +112,39 @@ internal class SessionsRepository : ISessionsRepository
         return updated > 0;
     }
 
+    public async Task<bool> SetFallbackPlaylistAsync(
+        Guid id,
+        string? playlistId,
+        string? playlistName,
+        bool shuffle,
+        CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        var updated = await dbContext.Sessions
+            .Where(x => x.Id == id)
+            .ExecuteUpdateAsync(
+                x => x
+                    .SetProperty(s => s.FallbackPlaylistId, playlistId)
+                    .SetProperty(s => s.FallbackPlaylistName, playlistName)
+                    .SetProperty(s => s.FallbackShuffle, shuffle)
+                    .SetProperty(s => s.FallbackCursor, 0),
+                cancellationToken);
+
+        return updated > 0;
+    }
+
+    public async Task<bool> SetFallbackCursorAsync(Guid id, int cursor, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        var updated = await dbContext.Sessions
+            .Where(x => x.Id == id)
+            .ExecuteUpdateAsync(x => x.SetProperty(s => s.FallbackCursor, cursor), cancellationToken);
+
+        return updated > 0;
+    }
+
     public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken)
     {
         await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -163,7 +206,15 @@ internal class SessionsRepository : ISessionsRepository
 
         var updated = await dbContext.Sessions
             .Where(x => x.Id == id)
-            .ExecuteUpdateAsync(x => x.SetProperty(s => s.HostProfileId, (string?)null), cancellationToken);
+            .ExecuteUpdateAsync(
+                x => x
+                    .SetProperty(s => s.HostProfileId, (string?)null)
+                    // The playlist belongs to the host who chose it, so the next host starts without one
+                    .SetProperty(s => s.FallbackPlaylistId, (string?)null)
+                    .SetProperty(s => s.FallbackPlaylistName, (string?)null)
+                    .SetProperty(s => s.FallbackShuffle, false)
+                    .SetProperty(s => s.FallbackCursor, 0),
+                cancellationToken);
 
         return updated > 0;
     }

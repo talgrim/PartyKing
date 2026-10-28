@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Player.Services;
 using PartyKing.Application.Realtime;
 using PartyKing.Contract.V1.Enums;
@@ -23,7 +25,7 @@ public class PlayerServiceTests
     public PlayerServiceTests()
     {
         _store = new PlayerStateStore(_clock);
-        _service = new PlayerService(_sessions, _queue, _store, _notifier, new NullPlayerConnectionWatchdog());
+        _service = new PlayerService(_sessions, _queue, _store, _notifier, new NullPlayerConnectionWatchdog(), new FakeFallbackQueueFiller(), new FallbackStatusStore(_notifier, NullLogger<FallbackStatusStore>.Instance), NullLogger<PlayerService>.Instance);
         _session = _sessions.AddSession(HostId);
     }
 
@@ -135,6 +137,39 @@ public class PlayerServiceTests
         Assert.Contains(
             _notifier.PlayerStateChanged,
             x => x.SessionId == _session.Id && x.State is { SongId: 1, Paused: false, PlayerConnected: true });
+    }
+
+    [Fact]
+    public async Task ReportState_RepeatingTheSameState_DoesNotBroadcastAgain()
+    {
+        var request = new PlayerStateRequest(1, false);
+        await _service.ReportStateAsync(_session.Id, HostId, request, CancellationToken.None);
+        await _service.ReportStateAsync(_session.Id, HostId, request, CancellationToken.None);
+
+        Assert.Single(_notifier.PlayerStateChanged);
+
+        await _service.ReportStateAsync(_session.Id, HostId, new PlayerStateRequest(1, true), CancellationToken.None);
+
+        Assert.Equal(2, _notifier.PlayerStateChanged.Count);
+    }
+
+    [Fact]
+    public async Task SendCommand_ToAConnectedPlayer_PushesTheCommand()
+    {
+        await _service.ReportStateAsync(_session.Id, HostId, new PlayerStateRequest(1, false), CancellationToken.None);
+
+        var result = await _service.SendCommandAsync(_session.Id, PlayerCommand.Pause, CancellationToken.None);
+
+        Assert.False(result.IsError);
+        Assert.Single(_notifier.PlayerCommands, x => x.SessionId == _session.Id && x.Command.Command == PlayerCommand.Pause);
+    }
+
+    [Fact]
+    public async Task SendCommand_WithoutAConnectedPlayer_PushesNothing()
+    {
+        await _service.SendCommandAsync(_session.Id, PlayerCommand.Pause, CancellationToken.None);
+
+        Assert.Empty(_notifier.PlayerCommands);
     }
 
     [Fact]

@@ -31,5 +31,15 @@ public class Session
     /// <summary>Spotify profile id of the host; null until someone claims the session.</summary>
     public string? HostProfileId { get; set; }
     public SpotifyProfile? HostProfile { get; set; }
+
+    /// <summary>Spotify id of the host's playlist played whenever the queue runs empty; null when there is none.</summary>
+    public string? FallbackPlaylistId { get; set; }
+    public string? FallbackPlaylistName { get; set; }
+
+    /// <summary>Whether the fallback playlist is shuffled instead of played in order.</summary>
+    public bool FallbackShuffle { get; set; }
+
+    /// <summary>Index in the playlist of the next track to queue when it is played in order.</summary>
+    public int FallbackCursor { get; set; }
     public DateTime CreatedAt { get; set; }
 }

@@ -32,4 +32,17 @@ internal sealed class NullSessionMusicNotifier : ISessionMusicNotifier
     {
         return Task.CompletedTask;
     }
+
+    public Task PlayerCommandAsync(Guid sessionId, PlayerCommandDto command, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task FallbackErrorChangedAsync(
+        Guid sessionId,
+        FallbackErrorDto error,
+        CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
 }
