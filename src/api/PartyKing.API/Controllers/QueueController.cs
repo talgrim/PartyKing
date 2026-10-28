@@ -25,7 +25,7 @@ public class QueueController : CoreController
 
     [HttpPost("sessions/{sessionId:guid}/songs")]
     [RequireSessionAccess]
-    [ProducesResponseType<SongDataDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<QueueItemDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> QueueSong(
         Guid sessionId,
         [FromBody] EnqueueSongRequest request,
@@ -38,7 +38,7 @@ public class QueueController : CoreController
 
     [HttpGet("sessions/{sessionId:guid}/songs")]
     [RequireSessionAccess]
-    [ProducesResponseType<IReadOnlyList<SongDataDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<IReadOnlyList<QueueItemDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetQueue(Guid sessionId, CancellationToken cancellationToken)
     {
         var result = await _queueService.GetQueueAsync(sessionId, cancellationToken);
@@ -54,7 +54,7 @@ public class QueueController : CoreController
     [HttpPost("sessions/{sessionId:guid}/songs/next")]
     [RequireSessionAccess]
     [AuthorizeByCookie]
-    [ProducesResponseType<SongDataDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<QueueItemDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetNext(
         Guid sessionId,
         [FromQuery] int? currentSongId,

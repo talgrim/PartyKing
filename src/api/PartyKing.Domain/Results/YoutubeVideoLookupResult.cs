@@ -1,4 +1,4 @@
-using PartyKing.Domain.Models.Youtube;
+using PartyKing.Domain.Entities.Youtube;
 
 namespace PartyKing.Domain.Results;
 

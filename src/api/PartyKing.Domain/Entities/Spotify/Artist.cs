@@ -1,4 +1,4 @@
-namespace PartyKing.Domain.Models.Spotify;
+namespace PartyKing.Domain.Entities.Spotify;
 
 public class Artist
 {

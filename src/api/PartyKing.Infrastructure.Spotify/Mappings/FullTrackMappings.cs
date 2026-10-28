@@ -1,4 +1,4 @@
-﻿using PartyKing.Domain.Models.Spotify;
+﻿using PartyKing.Domain.Entities.Spotify;
 using SpotifyAPI.Web;
 
 namespace PartyKing.Infrastructure.Spotify.Mappings;

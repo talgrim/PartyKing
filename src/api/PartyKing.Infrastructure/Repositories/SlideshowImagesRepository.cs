@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using PartyKing.Domain.Entities;
-using PartyKing.Domain.Models.Slideshow;
+using PartyKing.Domain.Entities.Slideshow;
 using PartyKing.Infrastructure.Results;
 using PartyKing.Persistence.Database;
 

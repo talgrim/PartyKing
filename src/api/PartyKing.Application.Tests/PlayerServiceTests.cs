@@ -1,7 +1,9 @@
 using PartyKing.Application.Player.Services;
+using PartyKing.Application.Realtime;
 using PartyKing.Contract.V1.Enums;
 using PartyKing.Contract.V1.Player;
-using PartyKing.Domain.Entities;
+using PartyKing.Domain.Entities.Queue;
+using PartyKing.Domain.Entities.Sessions;
 using PartyKing.Domain.Enums;
 
 namespace PartyKing.Application.Tests;
@@ -13,6 +15,7 @@ public class PlayerServiceTests
     private readonly FakeClock _clock = new();
     private readonly FakeSessionsRepository _sessions = new();
     private readonly FakeQueueRepository _queue = new();
+    private readonly FakeSessionMusicNotifier _notifier = new();
     private readonly PlayerStateStore _store;
     private readonly PlayerService _service;
     private readonly Session _session;
@@ -20,7 +23,7 @@ public class PlayerServiceTests
     public PlayerServiceTests()
     {
         _store = new PlayerStateStore(_clock);
-        _service = new PlayerService(_sessions, _queue, _store);
+        _service = new PlayerService(_sessions, _queue, _store, _notifier, new NullPlayerConnectionWatchdog());
         _session = _sessions.AddSession(HostId);
     }
 
@@ -129,6 +132,9 @@ public class PlayerServiceTests
             _session.Id, HostId, new PlayerStateRequest(1, false), CancellationToken.None);
 
         Assert.Equal(PlayerCommand.Pause, result.Value.Command);
+        Assert.Contains(
+            _notifier.PlayerStateChanged,
+            x => x.SessionId == _session.Id && x.State is { SongId: 1, Paused: false, PlayerConnected: true });
     }
 
     [Fact]
@@ -152,22 +158,30 @@ public class PlayerServiceTests
     public async Task Skip_AdvancesFromTheSongTheAdminSaw()
     {
         _store.Report(_session.Id, 1, paused: false);
+        _queue.Playing = Item(1);
         _queue.AdvanceResult = Item(2);
 
         var result = await _service.SkipAsync(_session.Id, 1, CancellationToken.None);
 
         Assert.Equal(2, result.Value.Id);
         Assert.Equal((_session.Id, (int?)1), Assert.Single(_queue.AdvanceCalls));
+        var advanced = Assert.Single(_notifier.QueueAdvanced);
+        Assert.Equal(1, advanced.PreviousSongId);
+        Assert.Equal(2, advanced.NowPlaying?.Id);
     }
 
     [Fact]
     public async Task Skip_PastTheLastSong_IsNotFound()
     {
         _store.Report(_session.Id, 1, paused: false);
+        _queue.Playing = Item(1);
         _queue.AdvanceResult = null;
 
         var result = await _service.SkipAsync(_session.Id, 1, CancellationToken.None);
 
         Assert.Equal(ErrorOr.ErrorType.NotFound, result.FirstError.Type);
+        var advanced = Assert.Single(_notifier.QueueAdvanced);
+        Assert.Equal(1, advanced.PreviousSongId);
+        Assert.Null(advanced.NowPlaying);
     }
 }

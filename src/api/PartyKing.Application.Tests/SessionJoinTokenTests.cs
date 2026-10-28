@@ -1,6 +1,7 @@
 using ErrorOr;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Player.Services;
+using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
 
 namespace PartyKing.Application.Tests;
@@ -22,7 +23,9 @@ public class SessionJoinTokenTests
             new FakeHostTokenProvider(),
             new FakeSlideshowService(),
             JoinTokens.Create(_clock),
-            _clock);
+            _clock,
+            new NullSessionMusicNotifier(),
+            new NullPlayerConnectionWatchdog());
     }
 
     private Task<Guid> CreateSessionAsync() =>

@@ -3,12 +3,14 @@ using System.Text;
 using ErrorOr;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Player.Services;
+using PartyKing.Application.Realtime;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Application.System;
+using PartyKing.Contract.V1.Player;
 using PartyKing.Contract.V1.Sessions;
-using PartyKing.Domain.Entities;
 using PartyKing.Application.Sessions.Helpers;
+using PartyKing.Domain.Entities.Sessions;
 using PartyKing.Infrastructure.Repositories;
 
 namespace PartyKing.Application.Sessions.Services;
@@ -76,6 +78,8 @@ internal class SessionService : ISessionService
     private readonly ISlideshowService _slideshowService;
     private readonly IJoinTokenProtector _joinTokenProtector;
     private readonly IDateTimeProvider _clock;
+    private readonly ISessionMusicNotifier _musicNotifier;
+    private readonly IPlayerConnectionWatchdog _connectionWatchdog;
 
     // Verified against when the session is unknown, so both failures cost the same time
     private readonly string _dummyHash;
@@ -87,7 +91,9 @@ internal class SessionService : ISessionService
         IHostTokenProvider hostTokenProvider,
         ISlideshowService slideshowService,
         IJoinTokenProtector joinTokenProtector,
-        IDateTimeProvider clock)
+        IDateTimeProvider clock,
+        ISessionMusicNotifier musicNotifier,
+        IPlayerConnectionWatchdog connectionWatchdog)
     {
         _sessionsRepository = sessionsRepository;
         _passwordHasher = passwordHasher;
@@ -96,6 +102,8 @@ internal class SessionService : ISessionService
         _slideshowService = slideshowService;
         _joinTokenProtector = joinTokenProtector;
         _clock = clock;
+        _musicNotifier = musicNotifier;
+        _connectionWatchdog = connectionWatchdog;
         _dummyHash = passwordHasher.Hash(Guid.NewGuid().ToString());
     }
 
@@ -189,7 +197,7 @@ internal class SessionService : ISessionService
             return NotFound();
         }
 
-        ForgetHost(id, hostProfileId);
+        await ForgetHostAsync(id, hostProfileId, cancellationToken);
 
         // The rows went with the cascade delete; the uploaded files are still on disk
         await _slideshowService.DeleteSessionAsync(id);
@@ -208,7 +216,7 @@ internal class SessionService : ISessionService
             return NotFound();
         }
 
-        ForgetHost(id, hostProfileId);
+        await ForgetHostAsync(id, hostProfileId, cancellationToken);
 
         return Result.Success;
     }
@@ -297,9 +305,14 @@ internal class SessionService : ISessionService
     }
 
     /// <summary>Drops what the server remembers about the session's player and its host's Spotify token.</summary>
-    private void ForgetHost(Guid sessionId, string? hostProfileId)
+    private async Task ForgetHostAsync(Guid sessionId, string? hostProfileId, CancellationToken cancellationToken)
     {
         _playerStateStore.Remove(sessionId);
+        _connectionWatchdog.Disarm(sessionId);
+        await _musicNotifier.PlayerStateChangedAsync(
+            sessionId,
+            new PlayerStateChangedDto(SongId: null, Paused: false, PlayerConnected: false),
+            cancellationToken);
 
         // The account may host another session by now, but then it just refreshes its token again
         if (hostProfileId is not null)

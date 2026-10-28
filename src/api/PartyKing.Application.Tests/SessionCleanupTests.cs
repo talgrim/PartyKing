@@ -1,5 +1,6 @@
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Player.Services;
+using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
 
 namespace PartyKing.Application.Tests;
@@ -14,7 +15,16 @@ public class SessionCleanupTests
 
     public SessionCleanupTests()
     {
-        _service = new SessionService(_sessions, new PasswordHasher(), _playerStates, _tokens, _slideshows, JoinTokens.Create(new FakeClock()), new FakeClock());
+        _service = new SessionService(
+            _sessions,
+            new PasswordHasher(),
+            _playerStates,
+            _tokens,
+            _slideshows,
+            JoinTokens.Create(new FakeClock()),
+            new FakeClock(),
+            new NullSessionMusicNotifier(),
+            new NullPlayerConnectionWatchdog());
     }
 
     [Fact]

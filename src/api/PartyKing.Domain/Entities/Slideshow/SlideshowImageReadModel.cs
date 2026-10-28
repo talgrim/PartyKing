@@ -1,4 +1,4 @@
-namespace PartyKing.Domain.Models.Slideshow;
+namespace PartyKing.Domain.Entities.Slideshow;
 
 public record SlideshowImageReadModel(
     string ImageName,

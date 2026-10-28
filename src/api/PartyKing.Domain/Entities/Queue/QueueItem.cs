@@ -1,6 +1,6 @@
 using PartyKing.Domain.Enums;
 
-namespace PartyKing.Domain.Entities;
+namespace PartyKing.Domain.Entities.Queue;
 
 public class QueueItem
 {

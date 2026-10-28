@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.StaticFiles;
 using PartyKing.API;
 using PartyKing.API.Controllers;
+using PartyKing.API.Hubs;
 using PartyKing.Application;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Infrastructure;
@@ -117,6 +118,7 @@ app
     .UseStaticFiles(CreateImagesOnlyStaticFiles());
 
 app.MapControllers();
+app.MapHub<SessionHub>(SessionHub.Path);
 
 await app.Services.MigrateDb();
 await app.Services.SeedAdminAsync();

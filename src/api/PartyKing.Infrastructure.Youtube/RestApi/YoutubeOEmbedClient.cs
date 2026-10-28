@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
-using PartyKing.Domain.Models.Youtube;
+using PartyKing.Domain.Entities.Youtube;
 using PartyKing.Domain.Results;
 
 namespace PartyKing.Infrastructure.Youtube.RestApi;

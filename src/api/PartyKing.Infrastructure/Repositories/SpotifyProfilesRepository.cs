@@ -1,6 +1,6 @@
 using ErrorOr;
 using Microsoft.EntityFrameworkCore;
-using PartyKing.Domain.Entities;
+using PartyKing.Domain.Entities.Spotify;
 using PartyKing.Domain.Results;
 using PartyKing.Persistence.Database;
 

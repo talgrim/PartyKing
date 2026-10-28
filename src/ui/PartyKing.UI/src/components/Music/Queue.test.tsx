@@ -1,8 +1,17 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { SWRConfig } from 'swr';
+import { useEffect } from 'react';
+import { ScopedMutator, SWRConfig, useSWRConfig } from 'swr';
 import { Queue } from './Queue';
 import { SongSource } from '@/service/endpoints/queue/types';
+import { queueSongsKey } from '@/service/realtime/sessionMusicEvents';
+
+/** Captures the mutate bound to this SWRConfig provider (the global one cannot see it). */
+const MutateCapture = ({ onReady }: { onReady: (mutate: ScopedMutator) => void }) => {
+  const { mutate } = useSWRConfig();
+  useEffect(() => onReady(mutate), [mutate, onReady]);
+  return null;
+};
 
 const mocks = vi.hoisted(() => ({
   getQueue: vi.fn(),
@@ -36,15 +45,17 @@ const queued = (n: number) => ({
 
 const renderQueue = async () => {
   const user = userEvent.setup();
+  let mutate!: ScopedMutator;
   render(
     <SWRConfig value={{ provider: () => new Map() }}>
+      <MutateCapture onReady={(m) => { mutate = m; }} />
       <Queue sessionId="session" />
     </SWRConfig>,
   );
   await user.type(screen.getByPlaceholderText(/search spotify/i), 'party');
   await user.click(screen.getByRole('button', { name: 'Search' }));
   await screen.findByText('Track 1');
-  return user;
+  return { user, mutate: () => mutate };
 };
 
 describe('Queue', () => {
@@ -63,7 +74,7 @@ describe('Queue', () => {
   afterEach(() => vi.clearAllMocks());
 
   it('keeps the results open so several songs can be added from one search', async () => {
-    const user = await renderQueue();
+    const { user } = await renderQueue();
 
     await user.click(screen.getAllByRole('button', { name: 'Add' })[0]);
     await waitFor(() => expect(screen.getByRole('button', { name: 'In queue' })).toBeDisabled());
@@ -77,21 +88,22 @@ describe('Queue', () => {
   });
 
   it('turns a row back into an Add button once its song leaves the queue', async () => {
-    const user = await renderQueue();
+    const { user, mutate } = await renderQueue();
 
     await user.click(screen.getAllByRole('button', { name: 'Add' })[0]);
     const inQueue = await screen.findByRole('button', { name: 'In queue' });
 
     pending = [];
+    // SignalR (or a reconnect revalidate) clears the song from the shared SWR cache
+    await act(async () => mutate()(queueSongsKey('session'), [], { revalidate: false }));
 
-    // the queue is polled every 5 seconds
-    await waitFor(() => expect(inQueue).toHaveTextContent('Add'), { timeout: 7000 });
+    await waitFor(() => expect(inQueue).toHaveTextContent('Add'));
     expect(inQueue).toBeEnabled();
-  }, 10_000);
+  });
 
   it('shows the error on the failed row and lets it be retried', async () => {
     mocks.enqueue.mockRejectedValueOnce({ message: 'Session has no host yet' });
-    const user = await renderQueue();
+    const { user } = await renderQueue();
 
     await user.click(screen.getAllByRole('button', { name: 'Add' })[0]);
 
@@ -104,7 +116,7 @@ describe('Queue', () => {
   });
 
   it('closes the dropdown on an outside press and reopens it from the search field without clearing the text', async () => {
-    const user = await renderQueue();
+    const { user } = await renderQueue();
 
     await user.click(screen.getByRole('heading', { name: 'Up next' }));
     expect(screen.queryByText('Track 1')).not.toBeInTheDocument();
@@ -115,7 +127,7 @@ describe('Queue', () => {
   });
 
   it('keeps the dropdown open when pressing inside it', async () => {
-    const user = await renderQueue();
+    const { user } = await renderQueue();
 
     await user.click(screen.getByText('Track 2'));
 
@@ -123,7 +135,7 @@ describe('Queue', () => {
   });
 
   it('closes the dropdown on Escape', async () => {
-    const user = await renderQueue();
+    const { user } = await renderQueue();
 
     await user.keyboard('{Escape}');
 
@@ -131,7 +143,7 @@ describe('Queue', () => {
   });
 
   it('clears the search field and the results with the clear button', async () => {
-    const user = await renderQueue();
+    const { user } = await renderQueue();
 
     await user.click(screen.getByRole('button', { name: 'Clear search' }));
 

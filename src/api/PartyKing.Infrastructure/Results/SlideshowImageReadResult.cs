@@ -1,4 +1,4 @@
-﻿using PartyKing.Domain.Models.Slideshow;
+﻿using PartyKing.Domain.Entities.Slideshow;
 
 namespace PartyKing.Infrastructure.Results;
 

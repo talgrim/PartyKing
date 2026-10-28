@@ -1,5 +1,5 @@
 using System.Diagnostics.Metrics;
-using PartyKing.Domain.Entities;
+using PartyKing.Domain.Entities.Auth;
 using PartyKing.Infrastructure.Metrics;
 using PartyKing.Infrastructure.Repositories;
 

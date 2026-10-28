@@ -1,4 +1,4 @@
-namespace PartyKing.Domain.Entities;
+namespace PartyKing.Domain.Entities.Slideshow;
 
 /// <summary>Slideshow settings of one session; a session without a row uses the defaults.</summary>
 public class SlideshowSettings

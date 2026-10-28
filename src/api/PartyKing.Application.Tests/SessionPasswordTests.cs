@@ -1,6 +1,7 @@
 using ErrorOr;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Player.Services;
+using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
 
 namespace PartyKing.Application.Tests;
@@ -12,7 +13,16 @@ public class SessionPasswordTests
 
     public SessionPasswordTests()
     {
-        _service = new SessionService(_sessions, new PasswordHasher(), new PlayerStateStore(new FakeClock()), new FakeHostTokenProvider(), new FakeSlideshowService(), JoinTokens.Create(new FakeClock()), new FakeClock());
+        _service = new SessionService(
+            _sessions,
+            new PasswordHasher(),
+            new PlayerStateStore(new FakeClock()),
+            new FakeHostTokenProvider(),
+            new FakeSlideshowService(),
+            JoinTokens.Create(new FakeClock()),
+            new FakeClock(),
+            new NullSessionMusicNotifier(),
+            new NullPlayerConnectionWatchdog());
     }
 
     [Theory]

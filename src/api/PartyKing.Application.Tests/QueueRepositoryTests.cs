@@ -1,7 +1,8 @@
 using System.Diagnostics.Metrics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using PartyKing.Domain.Entities;
+using PartyKing.Domain.Entities.Queue;
+using PartyKing.Domain.Entities.Sessions;
 using PartyKing.Domain.Enums;
 using PartyKing.Infrastructure.Metrics;
 using PartyKing.Infrastructure.Repositories;

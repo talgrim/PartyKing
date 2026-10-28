@@ -1,10 +1,7 @@
 import useSWR from 'swr';
 import { playerApi } from './playerApi';
+import { nowPlayingKey } from '@/service/realtime/sessionMusicEvents';
 
-const NOW_PLAYING_REFRESH_MS = 4000;
-
-/** The song playing in a session, whether it is paused and whether a player is connected. */
+/** The song playing in a session, whether it is paused and whether a player is connected. Updates arrive over SignalR. */
 export const useNowPlaying = (sessionId: string) =>
-  useSWR(['now-playing', sessionId], () => playerApi.getNowPlaying(sessionId), {
-    refreshInterval: NOW_PLAYING_REFRESH_MS,
-  });
+  useSWR(nowPlayingKey(sessionId), () => playerApi.getNowPlaying(sessionId));
