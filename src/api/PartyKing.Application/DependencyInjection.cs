@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Configuration;
+using PartyKing.Application.Games.Services;
 using PartyKing.Application.Lyrics.Services;
 using PartyKing.Application.Player.Services;
 using PartyKing.Application.Queue.Services;
@@ -25,6 +26,7 @@ public static class DependencyInjection
         services.RegisterQueue();
         services.RegisterPlayer();
         services.RegisterLyrics();
+        services.RegisterGames();
         services.RegisterSessions();
         services.RegisterAdmin(configuration);
     }
@@ -85,6 +87,11 @@ public static class DependencyInjection
     {
         services.AddSingleton<ILyricsCache, LyricsCache>();
         services.AddScoped<ILyricsService, LyricsService>();
+    }
+
+    private static void RegisterGames(this IServiceCollection services)
+    {
+        services.AddScoped<IGameService, GameService>();
     }
 
     private static void RegisterQueue(this IServiceCollection services)
