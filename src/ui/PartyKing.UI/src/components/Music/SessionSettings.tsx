@@ -3,6 +3,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { Dialog, DialogContent, DialogTitle } from '@mui/material';
 import { SessionDto } from '@/service/endpoints/sessions/types';
+import { AutoLyricsForm } from './AutoLyricsForm';
 import { FallbackPlaylistForm } from './FallbackPlaylistForm';
 import { SessionNameForm } from './SessionNameForm';
 import { SessionPasswordChangeForm } from './SessionPasswordChangeForm';
@@ -22,7 +23,7 @@ type Props = {
 };
 
 /**
- * Gear button with the session's settings in a dialog: name, password, fallback playlist and slideshow. Meant for the host and
+ * Gear button with the session's settings in a dialog: name, password, fallback playlist, slideshow and lyrics. Meant for the host and
  * admins only; the API refuses everyone else.
  */
 export const SessionSettings = ({ session, onChanged }: Props): ReactNode => {
@@ -71,6 +72,9 @@ export const SessionSettings = ({ session, onChanged }: Props): ReactNode => {
           </SettingsSection>
           <SettingsSection title="Slideshow">
             <SlideshowSettingsForm sessionId={session.id} />
+          </SettingsSection>
+          <SettingsSection title="Lyrics">
+            <AutoLyricsForm />
           </SettingsSection>
         </DialogContent>
       </Dialog>
