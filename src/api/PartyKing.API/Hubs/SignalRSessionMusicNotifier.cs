@@ -47,6 +47,19 @@ internal sealed class SignalRSessionMusicNotifier : ISessionMusicNotifier
         return Clients(sessionId).SendAsync(SessionMusicHubEvents.PlayerStateChanged, state, cancellationToken);
     }
 
+    public Task PlayerCommandAsync(Guid sessionId, PlayerCommandDto command, CancellationToken cancellationToken)
+    {
+        return Clients(sessionId).SendAsync(SessionMusicHubEvents.PlayerCommand, command, cancellationToken);
+    }
+
+    public Task FallbackErrorChangedAsync(
+        Guid sessionId,
+        FallbackErrorDto error,
+        CancellationToken cancellationToken)
+    {
+        return Clients(sessionId).SendAsync(SessionMusicHubEvents.FallbackErrorChanged, error, cancellationToken);
+    }
+
     private IClientProxy Clients(Guid sessionId)
     {
         return _hub.Clients.Group(SessionHub.GroupName(sessionId));
