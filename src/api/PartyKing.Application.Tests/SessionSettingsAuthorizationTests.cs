@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using ErrorOr;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Player.Services;
@@ -26,7 +27,8 @@ public class SessionSettingsAuthorizationTests
             JoinTokens.Create(clock),
             clock,
             new NullSessionMusicNotifier(),
-            new NullPlayerConnectionWatchdog());
+            new NullPlayerConnectionWatchdog(),
+            NullLogger<SessionService>.Instance);
         _id = _sessions.AddSession(HostId, new PasswordHasher().Hash("secret")).Id;
     }
 

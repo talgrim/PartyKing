@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using ErrorOr;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Player.Services;
@@ -22,7 +23,8 @@ public class SessionPasswordTests
             JoinTokens.Create(new FakeClock()),
             new FakeClock(),
             new NullSessionMusicNotifier(),
-            new NullPlayerConnectionWatchdog());
+            new NullPlayerConnectionWatchdog(),
+            NullLogger<SessionService>.Instance);
     }
 
     [Theory]

@@ -1,4 +1,5 @@
 using ErrorOr;
+using Microsoft.Extensions.Logging;
 using PartyKing.Application.Mappings;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Realtime;
@@ -45,6 +46,7 @@ internal class PlayerService : IPlayerService
     private readonly IPlayerConnectionWatchdog _connectionWatchdog;
     private readonly IFallbackQueueFiller _fallbackFiller;
     private readonly IFallbackStatusStore _fallbackStatusStore;
+    private readonly ILogger<PlayerService> _logger;
 
     public PlayerService(
         ISessionsRepository sessionsRepository,
@@ -53,7 +55,8 @@ internal class PlayerService : IPlayerService
         ISessionMusicNotifier musicNotifier,
         IPlayerConnectionWatchdog connectionWatchdog,
         IFallbackQueueFiller fallbackFiller,
-        IFallbackStatusStore fallbackStatusStore)
+        IFallbackStatusStore fallbackStatusStore,
+        ILogger<PlayerService> logger)
     {
         _sessionsRepository = sessionsRepository;
         _queueRepository = queueRepository;
@@ -62,6 +65,7 @@ internal class PlayerService : IPlayerService
         _connectionWatchdog = connectionWatchdog;
         _fallbackFiller = fallbackFiller;
         _fallbackStatusStore = fallbackStatusStore;
+        _logger = logger;
     }
 
     public async Task<ErrorOr<NowPlayingDto>> GetNowPlayingAsync(Guid sessionId, CancellationToken cancellationToken)
@@ -97,14 +101,19 @@ internal class PlayerService : IPlayerService
             return Error.Forbidden(description: "Only the host of this session can report its player state");
         }
 
-        var command = _playerStateStore.Report(sessionId, state.SongId, state.Paused);
+        var report = _playerStateStore.Report(sessionId, state.SongId, state.Paused);
         _connectionWatchdog.Arm(sessionId, state.SongId, state.Paused);
-        await _musicNotifier.PlayerStateChangedAsync(
-            sessionId,
-            new PlayerStateChangedDto(state.SongId, state.Paused, PlayerConnected: true),
-            cancellationToken);
 
-        return new PlayerStateResponse(command, _fallbackStatusStore.GetError(sessionId));
+        // A heartbeat that changes nothing stays between the host and the server
+        if (report.Changed)
+        {
+            await _musicNotifier.PlayerStateChangedAsync(
+                sessionId,
+                new PlayerStateChangedDto(state.SongId, state.Paused, PlayerConnected: true),
+                cancellationToken);
+        }
+
+        return new PlayerStateResponse(report.Command, _fallbackStatusStore.GetError(sessionId));
     }
 
     public async Task<ErrorOr<Success>> SendCommandAsync(
@@ -117,7 +126,17 @@ internal class PlayerService : IPlayerService
             return SessionNotFound();
         }
 
-        return _playerStateStore.TrySendCommand(sessionId, command) ? Result.Success : NoPlayerConnected();
+        if (!_playerStateStore.TrySendCommand(sessionId, command))
+        {
+            return NoPlayerConnected();
+        }
+
+        _logger.LogInformation("Sent the {Command} command to the player of session {SessionId}", command, sessionId);
+
+        // The next report would hand the command over too, but that can be ~10 s away
+        await _musicNotifier.PlayerCommandAsync(sessionId, new PlayerCommandDto(command), cancellationToken);
+
+        return Result.Success;
     }
 
     public async Task<ErrorOr<QueueItemDto>> SkipAsync(
@@ -144,6 +163,11 @@ internal class PlayerService : IPlayerService
 
         if (playingBefore?.Id == currentSongId)
         {
+            _logger.LogInformation(
+                "An admin skipped session {SessionId} from song {PreviousSongId} to {NextSongId}",
+                sessionId,
+                playingBefore?.Id,
+                next?.Id);
             await _musicNotifier.QueueAdvancedAsync(
                 sessionId,
                 playingBefore?.Id,

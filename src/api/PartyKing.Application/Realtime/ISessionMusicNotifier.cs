@@ -23,4 +23,8 @@ public interface ISessionMusicNotifier
         Guid sessionId,
         PlayerStateChangedDto state,
         CancellationToken cancellationToken);
+
+    Task PlayerCommandAsync(Guid sessionId, PlayerCommandDto command, CancellationToken cancellationToken);
+
+    Task FallbackErrorChangedAsync(Guid sessionId, FallbackErrorDto error, CancellationToken cancellationToken);
 }

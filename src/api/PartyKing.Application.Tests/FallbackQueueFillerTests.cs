@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Entities.Sessions;
@@ -13,7 +14,7 @@ public class FallbackQueueFillerTests
     private readonly FakeQueueRepository _queue = new();
     private readonly FakeHostTokenProvider _tokens = new();
     private readonly FakePlaylistSpotifyClient _spotify = new();
-    private readonly FallbackStatusStore _status = new();
+    private readonly FallbackStatusStore _status = new(new FakeSessionMusicNotifier(), NullLogger<FallbackStatusStore>.Instance);
     private readonly FakeSessionMusicNotifier _notifier = new();
     private readonly FallbackQueueFiller _filler;
     private readonly Session _session;

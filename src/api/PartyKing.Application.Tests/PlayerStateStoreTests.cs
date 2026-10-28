@@ -37,6 +37,38 @@ public class PlayerStateStoreTests
     }
 
     [Fact]
+    public void Report_TheFirstTime_IsAChange()
+    {
+        Assert.True(_store.Report(_sessionId, 5, paused: false).Changed);
+    }
+
+    [Fact]
+    public void Report_RepeatingTheSameState_IsNotAChange()
+    {
+        _store.Report(_sessionId, 5, paused: false);
+
+        Assert.False(_store.Report(_sessionId, 5, paused: false).Changed);
+    }
+
+    [Fact]
+    public void Report_AnotherSongOrPauseState_IsAChange()
+    {
+        _store.Report(_sessionId, 5, paused: false);
+
+        Assert.True(_store.Report(_sessionId, 6, paused: false).Changed);
+        Assert.True(_store.Report(_sessionId, 6, paused: true).Changed);
+    }
+
+    [Fact]
+    public void Report_AfterTheTimeout_IsAChangeEvenForTheSameState()
+    {
+        _store.Report(_sessionId, 5, paused: false);
+        _clock.Advance(PlayerStateStore.ConnectionTimeout + TimeSpan.FromSeconds(1));
+
+        Assert.True(_store.Report(_sessionId, 5, paused: false).Changed);
+    }
+
+    [Fact]
     public void Get_AfterTheConnectionTimeout_IsNotConnected()
     {
         _store.Report(_sessionId, 5, paused: false);
@@ -88,8 +120,8 @@ public class PlayerStateStoreTests
         _store.Report(_sessionId, 5, paused: false);
         Assert.True(_store.TrySendCommand(_sessionId, PlayerCommand.Pause));
 
-        Assert.Equal(PlayerCommand.Pause, _store.Report(_sessionId, 5, paused: false));
-        Assert.Null(_store.Report(_sessionId, 5, paused: true));
+        Assert.Equal(PlayerCommand.Pause, _store.Report(_sessionId, 5, paused: false).Command);
+        Assert.Null(_store.Report(_sessionId, 5, paused: true).Command);
     }
 
     [Fact]
@@ -99,7 +131,7 @@ public class PlayerStateStoreTests
         _store.TrySendCommand(_sessionId, PlayerCommand.Pause);
         _store.TrySendCommand(_sessionId, PlayerCommand.Resume);
 
-        Assert.Equal(PlayerCommand.Resume, _store.Report(_sessionId, 5, paused: false));
+        Assert.Equal(PlayerCommand.Resume, _store.Report(_sessionId, 5, paused: false).Command);
     }
 
     [Fact]

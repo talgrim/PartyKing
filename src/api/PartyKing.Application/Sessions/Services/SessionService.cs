@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using ErrorOr;
+using Microsoft.Extensions.Logging;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Player.Services;
 using PartyKing.Application.Realtime;
@@ -106,6 +107,7 @@ internal class SessionService : ISessionService
     private readonly IDateTimeProvider _clock;
     private readonly ISessionMusicNotifier _musicNotifier;
     private readonly IPlayerConnectionWatchdog _connectionWatchdog;
+    private readonly ILogger<SessionService> _logger;
 
     // Verified against when the session is unknown, so both failures cost the same time
     private readonly string _dummyHash;
@@ -119,7 +121,8 @@ internal class SessionService : ISessionService
         IJoinTokenProtector joinTokenProtector,
         IDateTimeProvider clock,
         ISessionMusicNotifier musicNotifier,
-        IPlayerConnectionWatchdog connectionWatchdog)
+        IPlayerConnectionWatchdog connectionWatchdog,
+        ILogger<SessionService> logger)
     {
         _sessionsRepository = sessionsRepository;
         _passwordHasher = passwordHasher;
@@ -130,6 +133,7 @@ internal class SessionService : ISessionService
         _clock = clock;
         _musicNotifier = musicNotifier;
         _connectionWatchdog = connectionWatchdog;
+        _logger = logger;
         _dummyHash = passwordHasher.Hash(Guid.NewGuid().ToString());
     }
 
@@ -188,6 +192,7 @@ internal class SessionService : ISessionService
 
             if (await _sessionsRepository.TryAddAsync(session, cancellationToken))
             {
+                _logger.LogInformation("Created session {SessionId} with code {Code}", session.Id, session.Code);
                 return ToDto(session);
             }
         }
@@ -219,6 +224,11 @@ internal class SessionService : ISessionService
 
         var renamed = await _sessionsRepository.RenameAsync(id, name.Trim(), cancellationToken);
 
+        if (renamed)
+        {
+            _logger.LogInformation("Renamed session {SessionId}", id);
+        }
+
         return renamed ? Result.Success : NotFound();
     }
 
@@ -234,6 +244,7 @@ internal class SessionService : ISessionService
         }
 
         await ForgetHostAsync(id, hostProfileId, cancellationToken);
+        _logger.LogInformation("Deleted session {SessionId}", id);
 
         // The rows went with the cascade delete; the uploaded files are still on disk
         await _slideshowService.DeleteSessionAsync(id);
@@ -253,6 +264,7 @@ internal class SessionService : ISessionService
         }
 
         await ForgetHostAsync(id, hostProfileId, cancellationToken);
+        _logger.LogInformation("Released the host of session {SessionId}", id);
 
         return Result.Success;
     }
@@ -276,6 +288,11 @@ internal class SessionService : ISessionService
 
         var passwordHash = _passwordHasher.Hash(password!);
         var updated = await _sessionsRepository.UpdatePasswordHashAsync(id, passwordHash, cancellationToken);
+
+        if (updated)
+        {
+            _logger.LogInformation("Changed the password of session {SessionId}", id);
+        }
 
         return updated ? AccessStamp(passwordHash) : NotFound();
     }
@@ -308,9 +325,14 @@ internal class SessionService : ISessionService
         var valid = password is { Length: <= MaxPasswordLength }
             && _passwordHasher.Verify(password, session?.PasswordHash ?? _dummyHash);
 
-        return session is null || !valid
-            ? Error.Unauthorized(description: "Wrong session password")
-            : AccessStamp(session.PasswordHash);
+        if (session is null || !valid)
+        {
+            _logger.LogWarning("Failed to join session {SessionId}: wrong password", id);
+            return Error.Unauthorized(description: "Wrong session password");
+        }
+
+        _logger.LogDebug("Joined session {SessionId} with the password", id);
+        return AccessStamp(session.PasswordHash);
     }
 
     public async Task<ErrorOr<JoinTokenDto>> CreateJoinTokenAsync(
@@ -345,12 +367,17 @@ internal class SessionService : ISessionService
         var session = await _sessionsRepository.GetAsync(id, cancellationToken);
 
         // The stamp ties the token to the current password, so changing the password revokes outstanding tokens
-        return session is null
+        if (session is null
             || payload is null
             || payload.SessionId != id
-            || payload.AccessStamp != AccessStamp(session.PasswordHash)
-            ? Error.Unauthorized(description: "Invalid or expired join code")
-            : AccessStamp(session.PasswordHash);
+            || payload.AccessStamp != AccessStamp(session.PasswordHash))
+        {
+            _logger.LogWarning("Failed to join session {SessionId}: invalid or expired join code", id);
+            return Error.Unauthorized(description: "Invalid or expired join code");
+        }
+
+        _logger.LogDebug("Joined session {SessionId} with a join code", id);
+        return AccessStamp(session.PasswordHash);
     }
 
     public async Task<bool> HasAccessAsync(Guid id, string? accessStamp, CancellationToken cancellationToken)

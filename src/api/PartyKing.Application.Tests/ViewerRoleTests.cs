@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Player.Services;
 using PartyKing.Application.Realtime;
@@ -21,7 +22,8 @@ public class ViewerRoleTests
             JoinTokens.Create(new FakeClock()),
             new FakeClock(),
             new NullSessionMusicNotifier(),
-            new NullPlayerConnectionWatchdog());
+            new NullPlayerConnectionWatchdog(),
+            NullLogger<SessionService>.Instance);
     }
 
     [Fact]

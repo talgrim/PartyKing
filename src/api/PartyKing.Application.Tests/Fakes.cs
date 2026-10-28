@@ -219,6 +219,8 @@ internal class FakeSessionMusicNotifier : ISessionMusicNotifier
     public List<(Guid SessionId, int SongId)> SongRemoved { get; } = [];
     public List<(Guid SessionId, int? PreviousSongId, QueueItemDto? NowPlaying)> QueueAdvanced { get; } = [];
     public List<(Guid SessionId, PlayerStateChangedDto State)> PlayerStateChanged { get; } = [];
+    public List<(Guid SessionId, PlayerCommandDto Command)> PlayerCommands { get; } = [];
+    public List<(Guid SessionId, FallbackErrorDto Error)> FallbackErrors { get; } = [];
 
     public Task SongAddedAsync(Guid sessionId, QueueItemDto song, CancellationToken cancellationToken)
     {
@@ -248,6 +250,21 @@ internal class FakeSessionMusicNotifier : ISessionMusicNotifier
         CancellationToken cancellationToken)
     {
         PlayerStateChanged.Add((sessionId, state));
+        return Task.CompletedTask;
+    }
+
+    public Task PlayerCommandAsync(Guid sessionId, PlayerCommandDto command, CancellationToken cancellationToken)
+    {
+        PlayerCommands.Add((sessionId, command));
+        return Task.CompletedTask;
+    }
+
+    public Task FallbackErrorChangedAsync(
+        Guid sessionId,
+        FallbackErrorDto error,
+        CancellationToken cancellationToken)
+    {
+        FallbackErrors.Add((sessionId, error));
         return Task.CompletedTask;
     }
 }

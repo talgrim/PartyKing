@@ -2,7 +2,7 @@ import { axios } from '@/service/request';
 import { NowPlayingDto, PlayerStateRequest, PlayerStateResponse } from './types';
 
 // The axios response interceptor unwraps `response.data`, so these resolve to the payload itself.
-// Reports come every ~2 s; one that takes longer is dead (the next one tries again)
+// Reports come every ~10 s (and on every change); one that takes longer is dead (the next one tries again)
 const REPORT_TIMEOUT_MS = 8000;
 
 const unwrap = <T>(promise: Promise<unknown>) => promise as Promise<T>;

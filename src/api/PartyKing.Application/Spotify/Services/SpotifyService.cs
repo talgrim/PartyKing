@@ -1,5 +1,6 @@
 using ErrorOr;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using PartyKing.Application.Mappings;
 using PartyKing.Contract.V1.Spotify;
 using PartyKing.Domain.Enums;
@@ -34,6 +35,7 @@ internal class SpotifyService : ISpotifyService
     private readonly IHostTokenProvider _hostTokenProvider;
     private readonly ISessionsRepository _sessionsRepository;
     private readonly IOAuthStatesRepository _oAuthStatesRepository;
+    private readonly ILogger<SpotifyService> _logger;
 
     public SpotifyService(
         ISpotifyIntegrationClient spotifyClient,
@@ -42,7 +44,8 @@ internal class SpotifyService : ISpotifyService
         ISpotifyProfilesRepository spotifyProfilesRepository,
         IHostTokenProvider hostTokenProvider,
         ISessionsRepository sessionsRepository,
-        IOAuthStatesRepository oAuthStatesRepository)
+        IOAuthStatesRepository oAuthStatesRepository,
+        ILogger<SpotifyService> logger)
     {
         _spotifyClient = spotifyClient;
         _httpContextAccessor = httpContextAccessor;
@@ -51,6 +54,7 @@ internal class SpotifyService : ISpotifyService
         _hostTokenProvider = hostTokenProvider;
         _sessionsRepository = sessionsRepository;
         _oAuthStatesRepository = oAuthStatesRepository;
+        _logger = logger;
     }
 
     public async Task<ErrorOr<Uri>> GetHostLoginUrlAsync(Guid sessionId, CancellationToken cancellationToken)
@@ -100,10 +104,14 @@ internal class SpotifyService : ISpotifyService
             case SessionClaimResult.SessionNotFound:
                 return Error.NotFound(description: "The session no longer exists");
             case SessionClaimResult.AlreadyClaimed:
+                _logger.LogWarning("Host login rejected: session {SessionId} already has a host", sessionId);
                 return Error.Conflict(description: "This session already has a host");
             case SessionClaimResult.ProfileHostsAnotherSession:
+                _logger.LogWarning("Host login rejected: the Spotify account already hosts another session ({SessionId})", sessionId);
                 return Error.Conflict(description: "This Spotify account already hosts another session");
         }
+
+        _logger.LogInformation("A host logged in to session {SessionId}", sessionId);
 
         Authorize(result);
 
