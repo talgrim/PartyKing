@@ -88,6 +88,33 @@ describe('MusicQueue', () => {
     expect(screen.queryByRole('link', { name: 'Admin panel' })).not.toBeInTheDocument();
   });
 
+  it('opens the photo upload dialog from the Upload photos button', async () => {
+    mocks.getViewerRole.mockResolvedValue({ isHost: false, isAdmin: false });
+    await renderPage();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Upload photos' }));
+
+    expect(await screen.findByLabelText('Choose photos')).toBeInTheDocument();
+  });
+
+  it('offers no photo upload while the session is locked', async () => {
+    mocks.getSession.mockRejectedValue({ status: 401, message: 'The session password is required' });
+    mocks.getViewerRole.mockResolvedValue({ isHost: false, isAdmin: false });
+
+    render(
+      <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
+        <MemoryRouter initialEntries={['/s/session-1']}>
+          <Routes>
+            <Route path="/s/:sessionId" element={<MusicQueue />} />
+          </Routes>
+        </MemoryRouter>
+      </SWRConfig>,
+    );
+
+    await screen.findByLabelText('Session password');
+    expect(screen.queryByRole('button', { name: 'Upload photos' })).not.toBeInTheDocument();
+  });
+
   it('gives the host the player', async () => {
     mocks.getViewerRole.mockResolvedValue({ isHost: true, isAdmin: false });
 

@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useState } from 'react';
+import QrCode2Icon from '@mui/icons-material/QrCode2';
 import { Dialog, DialogContent, DialogTitle } from '@mui/material';
 import { QRCodeSVG } from 'qrcode.react';
 import { sessionPath } from '@/router/constants';
@@ -13,8 +14,8 @@ type Props = {
 };
 
 /**
- * "Show QR code" button for the host and admins. The dialog shows a QR that lets guests join without the password;
- * its token is short-lived, so it is replaced before it expires for as long as the dialog stays open.
+ * QR icon button for the host and admins. Its dialog shows a QR that lets guests join without the password; its
+ * token is short-lived, so it is replaced before it expires for as long as the dialog stays open.
  */
 export const JoinQrCode = ({ sessionId }: Props): ReactNode => {
   const [open, setOpen] = useState(false);
@@ -53,12 +54,14 @@ export const JoinQrCode = ({ sessionId }: Props): ReactNode => {
   }, [open, sessionId]);
 
   return (
-    <div className="px-2 pt-2">
+    <>
       <button
         onClick={() => setOpen(true)}
-        className="px-3 py-2 bg-amber-600 text-slate-200 rounded-md cursor-pointer"
+        aria-label="Show QR code"
+        title="Show QR code"
+        className="p-1 text-slate-400 hover:text-slate-200 cursor-pointer"
       >
-        Show QR code
+        <QrCode2Icon />
       </button>
 
       <Dialog open={open} onClose={() => setOpen(false)} aria-labelledby="join-qr-title">
@@ -79,6 +82,6 @@ export const JoinQrCode = ({ sessionId }: Props): ReactNode => {
           </button>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 };

@@ -3,16 +3,17 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import useSWR, { useSWRConfig } from 'swr';
 import { AdminPlayerControls } from '@/components/Music/AdminPlayerControls';
 import { MaximizedView } from '@/components/Music/MaximizedView';
-import { JoinQrCode } from '@/components/Music/JoinQrCode';
 import { HostPlayer } from '@/components/Music/HostPlayer';
 import { NowPlayingCard } from '@/components/Music/NowPlayingCard';
+import { PhotoUploadDialog } from '@/components/Music/PhotoUploadDialog';
 import { Queue } from '@/components/Music/Queue';
 import { SessionHeader } from '@/components/Music/SessionHeader';
 import { SlideshowControls } from '@/components/Music/SlideshowControls';
+import { useUploadDialog } from '@/components/Music/useUploadDialog';
 import { SessionPasswordForm } from '@/components/Music/SessionPasswordForm';
 import { PageNavigation } from '@/components/common/PageNavigation';
 import { SlideshowView } from '@/pages/Slideshow/SlideshowView';
-import { ROUTE_PATHS, sessionUploadPath } from '@/router/constants';
+import { ROUTE_PATHS } from '@/router/constants';
 import { HTTP_STATUS_CODE } from '@/service/constants';
 import { useNowPlaying } from '@/service/endpoints/player/useNowPlaying';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
@@ -35,9 +36,10 @@ export const MusicQueue = (): ReactNode => {
   const [slideshowOpen, setSlideshowOpen] = usePersistedFlag('partyking.slideshowOpen', true);
   const [maximized, setMaximized] = useState(false);
   const { isHost, isAdmin } = useViewerRole(sessionId);
+  const uploadDialog = useUploadDialog();
   const { data: nowPlaying, mutate: refreshNowPlaying } = useNowPlaying(sessionId);
 
-  const { data: session, error } = useSWR(['session', sessionId], () => sessionsApi.getSession(sessionId), {
+  const { data: session, error, mutate: refreshSession } = useSWR(['session', sessionId], () => sessionsApi.getSession(sessionId), {
     refreshInterval: 30000,
     shouldRetryOnError: false,
   });
@@ -105,7 +107,8 @@ export const MusicQueue = (): ReactNode => {
           className="px-2 pt-4"
           links={[
             { to: ROUTE_PATHS.HOME, label: 'All sessions' },
-            { to: sessionUploadPath(sessionId), label: 'Upload photos' },
+            // Photos can be added only once the session is unlocked
+            ...(session && !locked ? [{ onClick: uploadDialog.show, label: 'Upload photos' }] : []),
             ...(isAdmin ? [{ to: ROUTE_PATHS.ADMIN, label: 'Admin panel' }] : []),
           ]}
         />
@@ -128,8 +131,12 @@ export const MusicQueue = (): ReactNode => {
 
         {session && !locked && (
           <>
-            <SessionHeader session={session} isHost={isHost} />
-            {canViewSlideshow && <JoinQrCode sessionId={session.id} />}
+            <SessionHeader
+              session={session}
+              isHost={isHost}
+              isAdmin={isAdmin}
+              onSessionChanged={() => void refreshSession()}
+            />
             <NowPlayingCard nowPlaying={nowPlaying} />
             {/* An admin who is also the host plays the music themselves, so only the host's player is shown. */}
             {isHost && <HostPlayer sessionId={session.id} isAdmin={isAdmin} />}
@@ -140,8 +147,16 @@ export const MusicQueue = (): ReactNode => {
                 onChanged={() => void refreshNowPlaying()}
               />
             )}
-            <h2 className="px-2 pt-4 text-xl text-slate-200">Add a song to the queue</h2>
             <Queue sessionId={session.id} canRemove={isHost || isAdmin} />
+            <PhotoUploadDialog
+              sessionId={session.id}
+              open={uploadDialog.open}
+              onClose={uploadDialog.close}
+              onUnauthorized={() => {
+                uploadDialog.close();
+                onJoined();
+              }}
+            />
           </>
         )}
       </div>

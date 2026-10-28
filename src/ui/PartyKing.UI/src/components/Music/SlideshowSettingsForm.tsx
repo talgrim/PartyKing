@@ -1,39 +1,32 @@
-import { FormEvent, ReactNode, useEffect, useState } from 'react';
-import { HTTP_STATUS_CODE } from '@/service/constants';
-import { adminApi } from '@/service/endpoints/admin/adminApi';
+import { FormEvent, ReactNode, useEffect, useRef, useState } from 'react';
+import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 import { secondsToTimeSpan, timeSpanToSeconds } from '@/service/endpoints/sessions/slideTime';
+import { settingsButtonClass, settingsInputClass, settingsMessageClass } from './settingsStyles';
 
 type Props = {
   sessionId: string;
-  /** Called when the admin's login is gone. */
-  onLoggedOut: () => void;
 };
 
 const MIN_SLIDE_SECONDS = 1;
 const MAX_SLIDE_SECONDS = 3600;
 
-const inputClass = 'w-24 px-2 py-1 border-1 border-gray-700 rounded-sm focus:outline-none';
-
 /** Slide time and repeat options of one session's slideshow. */
-export const SlideshowSettingsForm = ({ sessionId, onLoggedOut }: Props): ReactNode => {
+export const SlideshowSettingsForm = ({ sessionId }: Props): ReactNode => {
   const [slideSeconds, setSlideSeconds] = useState<number | null>(null);
   const [autoRepeat, setAutoRepeat] = useState(false);
   const [startFromBeginning, setStartFromBeginning] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const secondsInput = useRef<HTMLInputElement>(null);
 
   const fail = (error: unknown) => {
-    if ((error as { status?: number })?.status === HTTP_STATUS_CODE.UNAUTHORIZED) {
-      onLoggedOut();
-      return;
-    }
     setMessage((error as { message?: string })?.message || 'Something went wrong');
   };
 
   useEffect(() => {
     let cancelled = false;
 
-    adminApi
+    sessionsApi
       .getSlideshowSettings(sessionId)
       .then((settings) => {
         if (cancelled) return;
@@ -49,8 +42,27 @@ export const SlideshowSettingsForm = ({ sessionId, onLoggedOut }: Props): ReactN
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
+  // The wheel changes the seconds while the pointer is over the field, focused or not. React registers wheel
+  // listeners as passive, so this one is attached by hand to be able to stop the dialog from scrolling.
+  const loaded = slideSeconds !== null;
+  useEffect(() => {
+    const input = secondsInput.current;
+    if (!input) return;
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const step = e.deltaY < 0 ? 1 : -1;
+      setSlideSeconds((seconds) =>
+        Math.min(MAX_SLIDE_SECONDS, Math.max(MIN_SLIDE_SECONDS, (seconds ?? MIN_SLIDE_SECONDS) + step)),
+      );
+    };
+
+    input.addEventListener('wheel', onWheel, { passive: false });
+    return () => input.removeEventListener('wheel', onWheel);
+  }, [loaded]);
+
   if (slideSeconds === null) {
-    return <p className="mt-2 text-sm">{message ?? 'Loading the settings…'}</p>;
+    return <p className="text-sm text-slate-400">{message ?? 'Loading the settings…'}</p>;
   }
 
   const valid = slideSeconds >= MIN_SLIDE_SECONDS && slideSeconds <= MAX_SLIDE_SECONDS;
@@ -60,7 +72,7 @@ export const SlideshowSettingsForm = ({ sessionId, onLoggedOut }: Props): ReactN
     setBusy(true);
     setMessage(null);
     try {
-      await adminApi.updateSlideshowSettings(sessionId, {
+      await sessionsApi.updateSlideshowSettings(sessionId, {
         autoRepeat,
         startFromBeginning,
         slideTime: secondsToTimeSpan(slideSeconds),
@@ -74,11 +86,12 @@ export const SlideshowSettingsForm = ({ sessionId, onLoggedOut }: Props): ReactN
   };
 
   return (
-    <form className="mt-2 space-y-2 text-sm" onSubmit={submit}>
-      <label className="flex items-center gap-2">
+    <form className="space-y-3" onSubmit={submit}>
+      <label className="flex items-center justify-between gap-3 text-sm text-slate-300">
         Seconds per photo
         <input
-          className={inputClass}
+          ref={secondsInput}
+          className={`${settingsInputClass} w-24!`}
           type="number"
           min={MIN_SLIDE_SECONDS}
           max={MAX_SLIDE_SECONDS}
@@ -86,26 +99,30 @@ export const SlideshowSettingsForm = ({ sessionId, onLoggedOut }: Props): ReactN
           onChange={(e) => setSlideSeconds(Number(e.target.value))}
         />
       </label>
-      <label className="flex items-center gap-2">
-        <input type="checkbox" checked={autoRepeat} onChange={(e) => setAutoRepeat(e.target.checked)} />
-        Start over after the last photo
-      </label>
-      <label className="flex items-center gap-2">
+      <label className="flex items-center gap-3 text-sm text-slate-300">
         <input
           type="checkbox"
+          className="size-4 accent-amber-600"
+          checked={autoRepeat}
+          onChange={(e) => setAutoRepeat(e.target.checked)}
+        />
+        Start over after the last photo
+      </label>
+      <label className="flex items-center gap-3 text-sm text-slate-300">
+        <input
+          type="checkbox"
+          className="size-4 accent-amber-600"
           checked={startFromBeginning}
           onChange={(e) => setStartFromBeginning(e.target.checked)}
         />
         Show photos that were already presented again
       </label>
-      <button
-        type="submit"
-        disabled={busy || !valid}
-        className="px-2 py-1 bg-amber-600 text-slate-200 rounded-md cursor-pointer disabled:opacity-50"
-      >
-        Save
-      </button>
-      {message && <p className="text-amber-500">{message}</p>}
+      <div className="flex items-center gap-3">
+        <button type="submit" disabled={busy || !valid} className={settingsButtonClass}>
+          Save
+        </button>
+        {message && <p className={settingsMessageClass}>{message}</p>}
+      </div>
     </form>
   );
 };

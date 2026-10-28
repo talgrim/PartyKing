@@ -16,7 +16,7 @@ type Props = {
   onVolumeChange?: (volume: number) => void;
 };
 
-/** Play/Pause and Next song, for whoever is allowed to control the player. */
+/** Play/Pause and Next song (and the volume, when given) in a card, for whoever may control the player. */
 export const PlayerControls = ({
   paused,
   disabled,
@@ -26,7 +26,7 @@ export const PlayerControls = ({
   volume,
   onVolumeChange,
 }: Props): ReactNode => (
-  <div className="flex items-center justify-center gap-4 px-2 pt-2">
+  <div className="flex items-center justify-center gap-4 mx-2 mt-4 p-3 bg-slate-900 rounded-lg">
     {volume !== undefined && onVolumeChange && <VolumeControl volume={volume} onChange={onVolumeChange} />}
     <PlayPauseButton paused={paused} disabled={disabled || !hasSong} onToggle={onToggle} />
     <button

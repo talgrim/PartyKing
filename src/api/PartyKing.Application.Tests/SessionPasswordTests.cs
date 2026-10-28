@@ -110,7 +110,7 @@ public class SessionPasswordTests
         var session = (await _service.CreateAsync("Party", "secret", CancellationToken.None)).Value;
         var oldStamp = (await _service.JoinAsync(session.Id, "secret", CancellationToken.None)).Value;
 
-        var changed = await _service.ChangePasswordAsync(session.Id, "new-secret", CancellationToken.None);
+        var changed = await _service.ChangePasswordAsync(session.Id, "new-secret", null, true, CancellationToken.None);
 
         Assert.False(changed.IsError);
         Assert.False(await _service.HasAccessAsync(session.Id, oldStamp, CancellationToken.None));
@@ -125,7 +125,7 @@ public class SessionPasswordTests
     {
         var session = (await _service.CreateAsync("Party", "secret", CancellationToken.None)).Value;
 
-        var result = await _service.ChangePasswordAsync(session.Id, "abc", CancellationToken.None);
+        var result = await _service.ChangePasswordAsync(session.Id, "abc", null, true, CancellationToken.None);
 
         Assert.Equal(ErrorType.Validation, result.FirstError.Type);
     }
@@ -133,7 +133,7 @@ public class SessionPasswordTests
     [Fact]
     public async Task ChangingThePasswordOfAnUnknownSession_IsNotFound()
     {
-        var result = await _service.ChangePasswordAsync(Guid.NewGuid(), "secret", CancellationToken.None);
+        var result = await _service.ChangePasswordAsync(Guid.NewGuid(), "secret", null, true, CancellationToken.None);
 
         Assert.Equal(ErrorType.NotFound, result.FirstError.Type);
     }

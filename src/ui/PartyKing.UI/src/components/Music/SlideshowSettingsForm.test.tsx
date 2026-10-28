@@ -1,11 +1,11 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SlideshowSettingsForm } from './SlideshowSettingsForm';
 
 const mocks = vi.hoisted(() => ({ get: vi.fn(), update: vi.fn() }));
 
-vi.mock('@/service/endpoints/admin/adminApi', () => ({
-  adminApi: { getSlideshowSettings: mocks.get, updateSlideshowSettings: mocks.update },
+vi.mock('@/service/endpoints/sessions/sessionsApi', () => ({
+  sessionsApi: { getSlideshowSettings: mocks.get, updateSlideshowSettings: mocks.update },
 }));
 
 describe('SlideshowSettingsForm', () => {
@@ -15,7 +15,7 @@ describe('SlideshowSettingsForm', () => {
   });
 
   it('shows the settings of the session', async () => {
-    render(<SlideshowSettingsForm sessionId="s1" onLoggedOut={vi.fn()} />);
+    render(<SlideshowSettingsForm sessionId="s1" />);
 
     expect(await screen.findByLabelText('Seconds per photo')).toHaveValue(20);
     expect(screen.getByLabelText('Start over after the last photo')).not.toBeChecked();
@@ -25,7 +25,7 @@ describe('SlideshowSettingsForm', () => {
 
   it('saves the changed settings', async () => {
     const user = userEvent.setup();
-    render(<SlideshowSettingsForm sessionId="s1" onLoggedOut={vi.fn()} />);
+    render(<SlideshowSettingsForm sessionId="s1" />);
 
     const seconds = await screen.findByLabelText('Seconds per photo');
     await user.clear(seconds);
@@ -43,12 +43,27 @@ describe('SlideshowSettingsForm', () => {
     expect(await screen.findByText('Slideshow settings saved')).toBeInTheDocument();
   });
 
-  it('goes back to the login when the admin session is gone', async () => {
-    const onLoggedOut = vi.fn();
-    mocks.get.mockRejectedValue({ status: 401 });
+  it('changes the seconds with the mouse wheel, within the allowed range', async () => {
+    render(<SlideshowSettingsForm sessionId="s1" />);
 
-    render(<SlideshowSettingsForm sessionId="s1" onLoggedOut={onLoggedOut} />);
+    const seconds = await screen.findByLabelText('Seconds per photo');
+    fireEvent.wheel(seconds, { deltaY: -100 });
+    expect(seconds).toHaveValue(21);
 
-    await waitFor(() => expect(onLoggedOut).toHaveBeenCalled());
+    fireEvent.wheel(seconds, { deltaY: 100 });
+    fireEvent.wheel(seconds, { deltaY: 100 });
+    expect(seconds).toHaveValue(19);
+
+    fireEvent.change(seconds, { target: { value: '1' } });
+    fireEvent.wheel(seconds, { deltaY: 100 });
+    expect(seconds).toHaveValue(1);
+  });
+
+  it('shows why the settings could not be loaded', async () => {
+    mocks.get.mockRejectedValue({ status: 403, message: 'Only the host or an admin can change the session settings' });
+
+    render(<SlideshowSettingsForm sessionId="s1" />);
+
+    expect(await screen.findByText('Only the host or an admin can change the session settings')).toBeVisible();
   });
 });

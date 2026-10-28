@@ -29,7 +29,7 @@ Backend to .NET 9 (ASP.NET Core) zorkiestrowany przez .NET Aspire, frontend to S
 
 ### Slideshow zdjęć
 
-- Każda sesja ma **własny slideshow**. Goście wchodzą na `/s/<id>/upload` (po podaniu hasła sesji), wybierają zdjęcia z telefonu i wysyłają je na serwer
+- Każda sesja ma **własny slideshow**. Goście otwierają sesję `/s/<id>` (po podaniu hasła sesji) i klikają „Upload photos” (okno dialogowe, na telefonie pełnoekranowe), wybierają zdjęcia z telefonu i wysyłają je na serwer
   (wiele plików naraz, obsługiwane rozszerzenia: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`).
 - Opcja **„Usuń po wyświetleniu"** — zdjęcie zostaje skasowane (plik + rekord w bazie)
   natychmiast po tym, jak zejdzie z ekranu.
@@ -45,10 +45,10 @@ Backend to .NET 9 (ASP.NET Core) zorkiestrowany przez .NET Aspire, frontend to S
 ### Kolejka muzyki
 
 - Każda sesja ma **własną kolejkę** (YouTube + Spotify), trzymaną w bazie SQLite — przeżywa restart serwera.
-- Sesje tworzy, zmienia im nazwę, usuwa i zwalnia gospodarza wyłącznie admin (panel `/admin`). Strona główna `/`
+- Sesje tworzy, usuwa i zwalnia gospodarza wyłącznie admin (panel `/admin`); nazwę, hasło i ustawienia slideshow zmienia gospodarz lub admin przyciskiem z ikoną koła zębatego na stronie sesji. Strona główna `/`
   pokazuje listę sesji z wyszukiwarką po kodzie (krótki, unikalny `Code` sesji).
-- Każda sesja jest chroniona hasłem, które admin ustawia przy jej tworzeniu (4-100 znaków; admin może je potem
-  zmienić przyciskiem „Change password"). Każdy, także admin, musi je podać (`POST /sessions/{id}/join`, limit
+- Każda sesja jest chroniona hasłem, które admin ustawia przy jej tworzeniu (4-100 znaków; gospodarz lub admin może je potem
+  zmienić w ustawieniach sesji). Każdy, także admin, musi je podać (`POST /sessions/{id}/join`, limit
   10 prób na minutę z jednego IP), zanim zobaczy sesję; przeglądarka zapamiętuje to w podpisanym cookie.
   Zmiana hasła unieważnia wcześniejsze odblokowania.
 - Gospodarz i admin mogą na stronie sesji kliknąć **„Show QR code"**: w oknie pojawia się kod QR, po zeskanowaniu
@@ -83,7 +83,7 @@ a stan prezentacji przeżywa odświeżenie strony.
 
 ```
 [telefon gościa]                              [ekran prezentacyjny]
- /s/<id>/upload                                 /s/<id> (gospodarz / admin)
+ /s/<id> (Upload photos)                         /s/<id> (gospodarz / admin)
       |                                              |
       | PUT /sessions/<id>/photos/{deleteAfterPresentation} | GET /sessions/<id>/photos/current (co 5 s)
       v                                              v
@@ -174,7 +174,7 @@ Strony frontendu (`src/ui/PartyKing.UI/src/pages`):
 
 | Ścieżka | Strona | Opis |
 |---|---|---|
-| `/s/:sessionId/upload` | `ImageUploader` | Wysyłanie zdjęć do slideshow sesji z podglądem miniatur i paskiem postępu (wymaga hasła sesji) |
+| `/s/:sessionId?upload=1` | `PhotoUploadDialog` | Okno wysyłania zdjęć do slideshow sesji z podglądem miniatur i paskiem postępu (wymaga hasła sesji); stary adres `/s/:sessionId/upload` przekierowuje tutaj |
 | `/s/:sessionId` | `MusicQueue` | Strona sesji: co gra, wyszukiwanie / wklejanie linku i lista kolejki (bez logowania); dla gospodarza dodatkowo odtwarzacz (Spotify + YouTube), dla admina przyciski sterowania; gospodarz i admin widzą też slideshow (panel po lewej, ukrywalny, albo widok na cały ekran z tytułem, wykonawcą i kolejką) |
 | `/callback` | `Callback` | Powrót ze Spotify po zalogowaniu gospodarza; potem przekierowanie na stronę sesji |
 | `/admin` | `Admin` | Logowanie admina i panel sesji: tworzenie, zmiana nazwy, hasła, usuwanie, zwolnienie gospodarza, ustawienia slideshow |
@@ -254,7 +254,7 @@ czyli bez Swaggera i bez CORS.
 | Adres | Co to |
 |---|---|
 | `http://<host-ui>:2137/s/<id>` | Strona sesji; dla gospodarza i admina także slideshow (można go zmaksymalizować na ekran prezentacyjny) |
-| `http://<host-ui>:2137/s/<id>/upload` | Strona do wrzucania zdjęć do sesji (ten link dajesz gościom) |
+| `http://<host-ui>:2137/s/<id>?upload=1` | Strona sesji z otwartym oknem wrzucania zdjęć (ten link możesz dać gościom; `/s/<id>/upload` też działa) |
 | `http://<host-ui>:2137/s/<id>` | Strona sesji z kolejką muzyki dla gości (drugi link dla gości); gospodarz loguje się tu przez „Log in as host with Spotify" |
 | `http://<host-api>/swagger` | Swagger UI (tylko w Development) |
 | `https://localhost:17218` | Dashboard Aspire (wariant A) |
@@ -307,7 +307,7 @@ Spotify. Używa `127.0.0.1`, więc gospodarz musi logować się przez `http://12
 | Klucz | Znaczenie |
 |---|---|
 | `UploadedPhotosDirectory` | Katalog (względem `wwwroot`), do którego trafiają zdjęcia gości; każda sesja ma w nim podkatalog o nazwie swojego id |
-| `SlideTime` | Domyślny czas jednego slajdu — używany w sesji, która nie ustawiła własnego, i gdy `slideTime` nie zostanie podany w `PUT /admin/sessions/{id}/slideshow-settings` |
+| `SlideTime` | Domyślny czas jednego slajdu — używany w sesji, która nie ustawiła własnego, i gdy `slideTime` nie zostanie podany w `PUT /sessions/{id}/slideshow-settings` |
 
 Uwaga: **obowiązujący** czas slajdu, `AutoRepeat` i `StartFromBeginning` są przechowywane
 w bazie danych (tabela `SlideshowSettings`, jeden wiersz na sesję) i zmienia się je przez API
@@ -459,25 +459,25 @@ Gdy sesja nie ma żadnego zdjęcia do pokazania (nic nie wrzucono albo wszystkie
 a `AutoRepeat` i `StartFromBeginning` zostały wyłączone), endpoint zwraca `204 No Content`,
 a slideshow pokazuje „No photos yet".
 
-#### `GET /admin/sessions/{sessionId}/slideshow-settings`
+#### `GET /sessions/{sessionId}/slideshow-settings`
 
-Wymaga zalogowanego admina (hasło sesji nie jest potrzebne). Zwraca ustawienia slideshow sesji;
+Wymaga odblokowanej sesji i roli gospodarza lub admina (inni dostają 403). Zwraca ustawienia slideshow sesji;
 sesja, która nic nie zmieniała, ma wartości domyślne (czas slajdu z `appsettings.json`, `autoRepeat` włączone, `startFromBeginning` wyłączone).
 
 ```bash
-curl -b admin-cookies.txt "$API/admin/sessions/$SESSION/slideshow-settings"
+curl -b cookies.txt "$API/sessions/$SESSION/slideshow-settings"
 ```
 
 ```json
 { "autoRepeat": true, "startFromBeginning": false, "slideTime": "00:00:05" }
 ```
 
-#### `PUT /admin/sessions/{sessionId}/slideshow-settings`
+#### `PUT /sessions/{sessionId}/slideshow-settings`
 
-Wymaga zalogowanego admina. Zapisuje ustawienia slideshow sesji w bazie danych.
+Wymaga odblokowanej sesji i roli gospodarza lub admina. Zapisuje ustawienia slideshow sesji w bazie danych.
 
 ```bash
-curl -b admin-cookies.txt -X PUT "$API/admin/sessions/$SESSION/slideshow-settings" \
+curl -b cookies.txt -X PUT "$API/sessions/$SESSION/slideshow-settings" \
   -H "Content-Type: application/json" \
   -d '{ "autoRepeat": true, "startFromBeginning": false, "slideTime": "00:00:10" }'
 ```
@@ -499,10 +499,10 @@ Nowy czas slajdu zaczyna obowiązywać przy kolejnej zmianie zdjęcia.
 | `POST /sessions/{id}/join` | publiczny, limit 10/min/IP | Body `{ "password": "..." }`; `204` + ciasteczko dostępu, `401` dla złego hasła i nieznanej sesji |
 | `GET /sessions/{id}` | hasło sesji | Szczegóły sesji |
 | `GET /sessions/{id}/me` | hasło sesji | `{ isHost, isAdmin }` — czy pokazywać kontrolki |
+| `PATCH /sessions/{id}` | hasło sesji + gospodarz lub admin | Body `{ "name": "..." }` (do 60 znaków); `204`, `403` dla innych |
+| `PUT /sessions/{id}/password` | hasło sesji + gospodarz lub admin | Body `{ "password": "..." }` (4-100 znaków); unieważnia odblokowania innych i tokeny QR, wywołującemu odnawia ciasteczko dostępu |
 | `POST /admin/login`, `POST /admin/logout`, `GET /admin/me` | login: limit 10/min/IP | Sesja admina (ciasteczko `cookie.partyKing.admin`) |
 | `POST /admin/sessions` | admin | Tworzy sesję (nazwa, hasło 4-100 znaków) |
-| `PATCH /admin/sessions/{id}` | admin | Zmiana nazwy sesji |
-| `PUT /admin/sessions/{id}/password` | admin | Zmiana hasła (unieważnia dotychczasowe odblokowania i tokeny QR) |
 | `DELETE /admin/sessions/{id}` | admin | Usuwa sesję wraz z kolejką, ustawieniami i zdjęciami |
 | `DELETE /admin/sessions/{id}/host` | admin | Zwalnia gospodarza |
 

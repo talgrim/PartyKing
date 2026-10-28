@@ -274,11 +274,11 @@ export const HostPlayer = ({ sessionId, isAdmin }: Props): ReactNode => {
     <>
       <div className="px-2 pt-4">
         {!started && (
-          <div className="text-center">
+          <div className="p-4 text-center bg-slate-900 rounded-lg">
             <button
               onClick={() => void start()}
               disabled={!token}
-              className="p-4 bg-amber-600 text-slate-200 rounded-md cursor-pointer disabled:opacity-50"
+              className="px-5 py-3 font-semibold text-slate-100 bg-amber-600 rounded-md cursor-pointer hover:bg-amber-500 disabled:opacity-50 disabled:hover:bg-amber-600"
             >
               {takeoverAvailable ? 'Play here' : 'Start the music'}
             </button>
@@ -331,7 +331,7 @@ export const HostPlayer = ({ sessionId, isAdmin }: Props): ReactNode => {
       />
 
       {isAdmin && (
-        <div className="pt-4">
+        <div className="px-2 pt-4">
           <ErrorLog entries={errorLog} />
         </div>
       )}
