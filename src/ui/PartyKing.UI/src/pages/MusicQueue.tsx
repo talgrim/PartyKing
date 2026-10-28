@@ -3,7 +3,6 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import useSWR, { useSWRConfig } from 'swr';
 import { AdminPlayerControls } from '@/components/Music/AdminPlayerControls';
 import { MaximizedView } from '@/components/Music/MaximizedView';
-import { JoinQrCode } from '@/components/Music/JoinQrCode';
 import { HostPlayer } from '@/components/Music/HostPlayer';
 import { NowPlayingCard } from '@/components/Music/NowPlayingCard';
 import { Queue } from '@/components/Music/Queue';
@@ -37,7 +36,7 @@ export const MusicQueue = (): ReactNode => {
   const { isHost, isAdmin } = useViewerRole(sessionId);
   const { data: nowPlaying, mutate: refreshNowPlaying } = useNowPlaying(sessionId);
 
-  const { data: session, error } = useSWR(['session', sessionId], () => sessionsApi.getSession(sessionId), {
+  const { data: session, error, mutate: refreshSession } = useSWR(['session', sessionId], () => sessionsApi.getSession(sessionId), {
     refreshInterval: 30000,
     shouldRetryOnError: false,
   });
@@ -128,8 +127,12 @@ export const MusicQueue = (): ReactNode => {
 
         {session && !locked && (
           <>
-            <SessionHeader session={session} isHost={isHost} />
-            {canViewSlideshow && <JoinQrCode sessionId={session.id} />}
+            <SessionHeader
+              session={session}
+              isHost={isHost}
+              isAdmin={isAdmin}
+              onSessionChanged={() => void refreshSession()}
+            />
             <NowPlayingCard nowPlaying={nowPlaying} />
             {/* An admin who is also the host plays the music themselves, so only the host's player is shown. */}
             {isHost && <HostPlayer sessionId={session.id} isAdmin={isAdmin} />}

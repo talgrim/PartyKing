@@ -1,7 +1,7 @@
 import { axios } from '@/service/request';
 import { PlayerCommand } from '../player/types';
 import { SongDto } from '../queue/types';
-import { SessionDto, SlideshowSettingsDto } from '../sessions/types';
+import { SessionDto } from '../sessions/types';
 
 const unwrap = <T>(promise: Promise<unknown>) => promise as Promise<T>;
 
@@ -19,13 +19,6 @@ export const adminApi = {
   createSession: (name: string | undefined, password: string) =>
     unwrap<SessionDto>(axios.post('/admin/sessions', { name: name || null, password }, withCredentials)),
 
-  /** Everyone who had unlocked the session has to enter the new password. */
-  changeSessionPassword: (sessionId: string, password: string) =>
-    unwrap<void>(axios.put(`/admin/sessions/${sessionId}/password`, { password }, withCredentials)),
-
-  renameSession: (sessionId: string, name: string) =>
-    unwrap<void>(axios.patch(`/admin/sessions/${sessionId}`, { name }, withCredentials)),
-
   /** Also deletes the session's queue and uploaded photos. */
   deleteSession: (sessionId: string) =>
     unwrap<void>(axios.delete(`/admin/sessions/${sessionId}`, withCredentials)),
@@ -42,12 +35,6 @@ export const adminApi = {
     unwrap<SongDto>(
       axios.post(`/admin/sessions/${sessionId}/songs/next`, null, { ...withCredentials, params: { currentSongId } }),
     ),
-
-  getSlideshowSettings: (sessionId: string) =>
-    unwrap<SlideshowSettingsDto>(axios.get(`/admin/sessions/${sessionId}/slideshow-settings`, withCredentials)),
-
-  updateSlideshowSettings: (sessionId: string, settings: SlideshowSettingsDto) =>
-    unwrap<void>(axios.put(`/admin/sessions/${sessionId}/slideshow-settings`, settings, withCredentials)),
 
   /** Removes the host so someone else can claim the session. */
   releaseHost: (sessionId: string) =>
