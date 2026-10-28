@@ -1,5 +1,6 @@
 using ErrorOr;
 using PartyKing.Application.Mappings;
+using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Realtime;
 using PartyKing.Contract.V1.Enums;
 using PartyKing.Contract.V1.Player;
@@ -42,19 +43,25 @@ internal class PlayerService : IPlayerService
     private readonly IPlayerStateStore _playerStateStore;
     private readonly ISessionMusicNotifier _musicNotifier;
     private readonly IPlayerConnectionWatchdog _connectionWatchdog;
+    private readonly IFallbackQueueFiller _fallbackFiller;
+    private readonly IFallbackStatusStore _fallbackStatusStore;
 
     public PlayerService(
         ISessionsRepository sessionsRepository,
         IQueueRepository queueRepository,
         IPlayerStateStore playerStateStore,
         ISessionMusicNotifier musicNotifier,
-        IPlayerConnectionWatchdog connectionWatchdog)
+        IPlayerConnectionWatchdog connectionWatchdog,
+        IFallbackQueueFiller fallbackFiller,
+        IFallbackStatusStore fallbackStatusStore)
     {
         _sessionsRepository = sessionsRepository;
         _queueRepository = queueRepository;
         _playerStateStore = playerStateStore;
         _musicNotifier = musicNotifier;
         _connectionWatchdog = connectionWatchdog;
+        _fallbackFiller = fallbackFiller;
+        _fallbackStatusStore = fallbackStatusStore;
     }
 
     public async Task<ErrorOr<NowPlayingDto>> GetNowPlayingAsync(Guid sessionId, CancellationToken cancellationToken)
@@ -97,7 +104,7 @@ internal class PlayerService : IPlayerService
             new PlayerStateChangedDto(state.SongId, state.Paused, PlayerConnected: true),
             cancellationToken);
 
-        return new PlayerStateResponse(command);
+        return new PlayerStateResponse(command, _fallbackStatusStore.GetError(sessionId));
     }
 
     public async Task<ErrorOr<Success>> SendCommandAsync(
@@ -128,8 +135,12 @@ internal class PlayerService : IPlayerService
             return NoPlayerConnected();
         }
 
+        await _fallbackFiller.EnsureQueuedAsync(sessionId, cancellationToken);
+
         var playingBefore = await _queueRepository.GetPlayingAsync(sessionId, cancellationToken);
         var next = await _queueRepository.AdvanceAsync(sessionId, currentSongId, cancellationToken);
+
+        await _fallbackFiller.EnsureQueuedAsync(sessionId, cancellationToken);
 
         if (playingBefore?.Id == currentSongId)
         {

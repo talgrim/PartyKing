@@ -11,6 +11,12 @@ public interface IQueueRepository
 {
     Task<QueueItem> AddAsync(QueueItem item, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Adds the item only when no song of the session is waiting, under the same lock as advancing and removing.
+    /// Returns null (and adds nothing) when one is, e.g. because a guest queued a song in the meantime.
+    /// </summary>
+    Task<QueueItem?> AddIfNoneQueuedAsync(QueueItem item, CancellationToken cancellationToken);
+
     /// <summary>The songs waiting to be played, in order. The song being played is not among them.</summary>
     Task<IReadOnlyList<QueueItem>> GetPendingAsync(Guid sessionId, CancellationToken cancellationToken);
     Task<QueueItem?> GetPlayingAsync(Guid sessionId, CancellationToken cancellationToken);
@@ -65,6 +71,34 @@ internal class QueueRepository : IQueueRepository
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return item;
+    }
+
+    public async Task<QueueItem?> AddIfNoneQueuedAsync(QueueItem item, CancellationToken cancellationToken)
+    {
+        var advanceLock = GetAdvanceLock(item.SessionId);
+
+        await WaitForAdvanceLockAsync(nameof(AddIfNoneQueuedAsync), advanceLock, cancellationToken);
+        try
+        {
+            await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
+
+            var anyQueued = await dbContext.QueueItems
+                .AnyAsync(x => x.SessionId == item.SessionId && x.Status == QueueItemStatus.Queued, cancellationToken);
+
+            if (anyQueued)
+            {
+                return null;
+            }
+
+            await dbContext.QueueItems.AddAsync(item, cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+
+            return item;
+        }
+        finally
+        {
+            advanceLock.Release();
+        }
     }
 
     public async Task<IReadOnlyList<QueueItem>> GetPendingAsync(Guid sessionId, CancellationToken cancellationToken)

@@ -34,6 +34,21 @@ internal sealed class MeteredSessionsRepository : MeteredRepository, ISessionsRe
         return MeasureAsync(nameof(RenameAsync), () => _inner.RenameAsync(id, name, cancellationToken));
     }
 
+    public Task<bool> SetFallbackPlaylistAsync(
+        Guid id,
+        string? playlistId,
+        string? playlistName,
+        bool shuffle,
+        CancellationToken cancellationToken)
+    {
+        return MeasureAsync(nameof(SetFallbackPlaylistAsync), () => _inner.SetFallbackPlaylistAsync(id, playlistId, playlistName, shuffle, cancellationToken));
+    }
+
+    public Task<bool> SetFallbackCursorAsync(Guid id, int cursor, CancellationToken cancellationToken)
+    {
+        return MeasureAsync(nameof(SetFallbackCursorAsync), () => _inner.SetFallbackCursorAsync(id, cursor, cancellationToken));
+    }
+
     public Task<bool> UpdatePasswordHashAsync(Guid id, string passwordHash, CancellationToken cancellationToken)
     {
         return MeasureAsync(nameof(UpdatePasswordHashAsync), () => _inner.UpdatePasswordHashAsync(id, passwordHash, cancellationToken));
