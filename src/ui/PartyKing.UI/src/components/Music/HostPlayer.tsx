@@ -1,4 +1,4 @@
-import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { MutableRefObject, ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import useSWR from 'swr';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 import { HTTP_STATUS_CODE } from '@/service/constants';
@@ -15,13 +15,17 @@ import { getPlaybackState } from '@/service/endpoints/spotify/spotifyPlaybackApi
 import { takeoverPositionMs, useTakeoverAvailable } from './takeover';
 import { describeYoutubeError } from './youtubeErrors';
 import { usePersistedNumber } from '@/utils/usePersistedNumber';
+import { PlayerCommand } from '@/service/endpoints/player/types';
+import { HostPlayerPushHandlers } from '@/service/realtime/sessionMusicEvents';
 
 const MAX_LOGGED_ERRORS = 50;
 // After this many YouTube failures in a row something is wrong beyond a single video, so stop skipping.
 const MAX_CONSECUTIVE_YOUTUBE_FAILURES = 2;
 const TOKEN_REFRESH_MS = 30 * 60 * 1000;
-// The server treats a player that has not reported for ~10 s as gone, so report well within that.
-const STATE_REPORT_INTERVAL_MS = 3000;
+// The server treats a player that has not reported for ~30 s as gone, so this keepalive leaves room for two misses.
+// Changes (song, pause) are reported right away and an admin's command or a fallback error is pushed over SignalR,
+// so the keepalive only has to prove the tab is alive.
+const STATE_REPORT_INTERVAL_MS = 10000;
 // A host login that comes back to this page and is still rejected within this window is a loop.
 const LOGIN_LOOP_WINDOW_MS = 30 * 1000;
 
@@ -34,6 +38,8 @@ type Props = {
   sessionId: string;
   /** Only the admin sees the error log. */
   isAdmin: boolean;
+  /** The page's SignalR connection calls these when the server pushes a command or a fallback error. */
+  pushHandlers?: MutableRefObject<HostPlayerPushHandlers>;
 };
 
 /**
@@ -41,7 +47,7 @@ type Props = {
  * must keep the page open. The server decides which song is current: a song an admin skipped to is picked up from
  * there, and the player reports its pause state back so everyone can see it.
  */
-export const HostPlayer = ({ sessionId, isAdmin }: Props): ReactNode => {
+export const HostPlayer = ({ sessionId, isAdmin, pushHandlers }: Props): ReactNode => {
   const spotifyPlayer = useRef<SpotifyPlayerHandle>(null);
   const advancing = useRef(false);
   const failedSongId = useRef<number | null>(null);
@@ -233,7 +239,18 @@ export const HostPlayer = ({ sessionId, isAdmin }: Props): ReactNode => {
   }, [started, serverSongId]);
 
   // Tell the server what we are doing: that is how guests see the pause state and how it knows we are connected.
-  // An admin's pause or resume comes back as the answer.
+  // An admin's pause or resume and the fallback error also come back as the answer, in case a push was missed.
+  const applyCommand = useCallback(
+    (command: PlayerCommand | null | undefined) => {
+      // Idempotent: a command that arrives both pushed and in a report's answer is applied once
+      const shouldToggle =
+        songRef.current !== null &&
+        ((command === 'Pause' && !pausedRef.current) || (command === 'Resume' && pausedRef.current));
+      if (shouldToggle) togglePlay();
+    },
+    [togglePlay],
+  );
+
   const reportInFlightRef = useRef(false);
   const reportState = useCallback(async () => {
     // A hung server must not pile up requests: wait for the previous report to finish or time out.
@@ -245,16 +262,26 @@ export const HostPlayer = ({ sessionId, isAdmin }: Props): ReactNode => {
         paused: pausedRef.current,
       });
       setFallbackError(playlistError ?? null);
-      const shouldToggle =
-        songRef.current !== null &&
-        ((command === 'Pause' && !pausedRef.current) || (command === 'Resume' && pausedRef.current));
-      if (shouldToggle) togglePlay();
+      applyCommand(command);
     } catch {
       // The next report tries again; meanwhile the server shows the player as not connected
     } finally {
       reportInFlightRef.current = false;
     }
-  }, [sessionId, togglePlay]);
+  }, [sessionId, applyCommand]);
+
+  // What the server pushes needs no report to arrive; after a reconnect something may have been missed, so report.
+  useEffect(() => {
+    if (!pushHandlers) return;
+    pushHandlers.current = {
+      onCommand: applyCommand,
+      onFallbackError: setFallbackError,
+      onReconnected: () => void reportState(),
+    };
+    return () => {
+      pushHandlers.current = {};
+    };
+  }, [pushHandlers, applyCommand, reportState]);
 
   // A change of song or pause state is reported right away rather than at the next tick.
   useEffect(() => {

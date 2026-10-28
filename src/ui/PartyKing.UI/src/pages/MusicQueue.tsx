@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import useSWR, { useSWRConfig } from 'swr';
 import { AdminPlayerControls } from '@/components/Music/AdminPlayerControls';
@@ -18,6 +18,7 @@ import { HTTP_STATUS_CODE } from '@/service/constants';
 import { useNowPlaying } from '@/service/endpoints/player/useNowPlaying';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 import { useViewerRole } from '@/service/endpoints/sessions/useViewerRole';
+import { HostPlayerPushHandlers } from '@/service/realtime/sessionMusicEvents';
 import { useSessionMusicHub } from '@/service/realtime/useSessionMusicHub';
 import { usePersistedFlag } from '@/utils/usePersistedFlag';
 
@@ -74,7 +75,8 @@ export const MusicQueue = (): ReactNode => {
 
   const locked = (error as { status?: number } | undefined)?.status === HTTP_STATUS_CODE.UNAUTHORIZED;
 
-  useSessionMusicHub(sessionId, Boolean(session && !locked));
+  const hostPlayerPush = useRef<HostPlayerPushHandlers>({});
+  useSessionMusicHub(sessionId, Boolean(session && !locked), hostPlayerPush);
 
   return (
     <div className="w-full min-h-full bg-slate-800 text-slate-400 md:flex">
@@ -139,7 +141,7 @@ export const MusicQueue = (): ReactNode => {
             />
             <NowPlayingCard nowPlaying={nowPlaying} />
             {/* An admin who is also the host plays the music themselves, so only the host's player is shown. */}
-            {isHost && <HostPlayer sessionId={session.id} isAdmin={isAdmin} />}
+            {isHost && <HostPlayer sessionId={session.id} isAdmin={isAdmin} pushHandlers={hostPlayerPush} />}
             {!isHost && isAdmin && (
               <AdminPlayerControls
                 sessionId={session.id}

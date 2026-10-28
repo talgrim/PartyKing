@@ -1,11 +1,13 @@
 import { SongDto } from '@/service/endpoints/queue/types';
-import { NowPlayingDto } from '@/service/endpoints/player/types';
+import { NowPlayingDto, PlayerCommand } from '@/service/endpoints/player/types';
 
 export const SESSION_MUSIC_EVENTS = {
   SongAdded: 'SongAdded',
   SongRemoved: 'SongRemoved',
   QueueAdvanced: 'QueueAdvanced',
   PlayerStateChanged: 'PlayerStateChanged',
+  PlayerCommand: 'PlayerCommand',
+  FallbackErrorChanged: 'FallbackErrorChanged',
 } as const;
 
 export type SongRemovedEvent = { songId: number };
@@ -19,6 +21,17 @@ export type PlayerStateChangedEvent = {
   songId: number | null;
   paused: boolean;
   playerConnected: boolean;
+};
+
+export type PlayerCommandEvent = { command: PlayerCommand };
+
+export type FallbackErrorChangedEvent = { error: string | null };
+
+/** What the host's player does with the pushes only it cares about; set by the player, called by the hub hook. */
+export type HostPlayerPushHandlers = {
+  onCommand?: (command: PlayerCommand) => void;
+  onFallbackError?: (error: string | null) => void;
+  onReconnected?: () => void;
 };
 
 export const queueSongsKey = (sessionId: string) => ['queue-songs', sessionId] as const;
