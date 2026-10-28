@@ -39,4 +39,7 @@ public class QueueItem
     public string? AlbumArtUrl { get; set; }
     public int? DurationMs { get; set; }
     public QueueItemStatus Status { get; set; }
+
+    /// <summary>True when the server queued the song from the session's fallback playlist.</summary>
+    public bool IsFallback { get; set; }
 }
