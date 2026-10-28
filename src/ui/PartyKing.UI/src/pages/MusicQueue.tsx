@@ -5,13 +5,15 @@ import { AdminPlayerControls } from '@/components/Music/AdminPlayerControls';
 import { MaximizedView } from '@/components/Music/MaximizedView';
 import { HostPlayer } from '@/components/Music/HostPlayer';
 import { NowPlayingCard } from '@/components/Music/NowPlayingCard';
+import { PhotoUploadDialog } from '@/components/Music/PhotoUploadDialog';
 import { Queue } from '@/components/Music/Queue';
 import { SessionHeader } from '@/components/Music/SessionHeader';
 import { SlideshowControls } from '@/components/Music/SlideshowControls';
+import { useUploadDialog } from '@/components/Music/useUploadDialog';
 import { SessionPasswordForm } from '@/components/Music/SessionPasswordForm';
 import { PageNavigation } from '@/components/common/PageNavigation';
 import { SlideshowView } from '@/pages/Slideshow/SlideshowView';
-import { ROUTE_PATHS, sessionUploadPath } from '@/router/constants';
+import { ROUTE_PATHS } from '@/router/constants';
 import { HTTP_STATUS_CODE } from '@/service/constants';
 import { useNowPlaying } from '@/service/endpoints/player/useNowPlaying';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
@@ -34,6 +36,7 @@ export const MusicQueue = (): ReactNode => {
   const [slideshowOpen, setSlideshowOpen] = usePersistedFlag('partyking.slideshowOpen', true);
   const [maximized, setMaximized] = useState(false);
   const { isHost, isAdmin } = useViewerRole(sessionId);
+  const uploadDialog = useUploadDialog();
   const { data: nowPlaying, mutate: refreshNowPlaying } = useNowPlaying(sessionId);
 
   const { data: session, error, mutate: refreshSession } = useSWR(['session', sessionId], () => sessionsApi.getSession(sessionId), {
@@ -104,7 +107,8 @@ export const MusicQueue = (): ReactNode => {
           className="px-2 pt-4"
           links={[
             { to: ROUTE_PATHS.HOME, label: 'All sessions' },
-            { to: sessionUploadPath(sessionId), label: 'Upload photos' },
+            // Photos can be added only once the session is unlocked
+            ...(session && !locked ? [{ onClick: uploadDialog.show, label: 'Upload photos' }] : []),
             ...(isAdmin ? [{ to: ROUTE_PATHS.ADMIN, label: 'Admin panel' }] : []),
           ]}
         />
@@ -144,6 +148,15 @@ export const MusicQueue = (): ReactNode => {
               />
             )}
             <Queue sessionId={session.id} canRemove={isHost || isAdmin} />
+            <PhotoUploadDialog
+              sessionId={session.id}
+              open={uploadDialog.open}
+              onClose={uploadDialog.close}
+              onUnauthorized={() => {
+                uploadDialog.close();
+                onJoined();
+              }}
+            />
           </>
         )}
       </div>
