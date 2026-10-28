@@ -93,6 +93,29 @@ public class PlayerServiceTests
     }
 
     [Fact]
+    public async Task GetNowPlaying_CountsThePositionOnWhileTheSongPlays()
+    {
+        _queue.Playing = Item(3);
+        _store.Report(_session.Id, 3, paused: false, positionMs: 20_000);
+        _clock.Advance(TimeSpan.FromSeconds(5));
+
+        var nowPlaying = (await _service.GetNowPlayingAsync(_session.Id, CancellationToken.None)).Value;
+
+        Assert.Equal(25_000, nowPlaying.PositionMs);
+    }
+
+    [Fact]
+    public async Task GetNowPlaying_ThePositionOfAnEarlierSongDoesNotCarryOver()
+    {
+        _store.Report(_session.Id, 3, paused: false, positionMs: 20_000);
+        _queue.Playing = Item(4);
+
+        var nowPlaying = (await _service.GetNowPlayingAsync(_session.Id, CancellationToken.None)).Value;
+
+        Assert.Equal(0, nowPlaying.PositionMs);
+    }
+
+    [Fact]
     public async Task GetNowPlaying_AfterThePlayerWentAway_IsNotConnected()
     {
         _queue.Playing = Item(3);
@@ -137,6 +160,38 @@ public class PlayerServiceTests
         Assert.Contains(
             _notifier.PlayerStateChanged,
             x => x.SessionId == _session.Id && x.State is { SongId: 1, Paused: false, PlayerConnected: true });
+    }
+
+    [Fact]
+    public async Task ReportState_BroadcastsThePositionOfAChange()
+    {
+        await _service.ReportStateAsync(
+            _session.Id, HostId, new PlayerStateRequest(1, true, PositionMs: 33_000), CancellationToken.None);
+
+        Assert.Contains(_notifier.PlayerStateChanged, x => x.State is { SongId: 1, Paused: true, PositionMs: 33_000 });
+    }
+
+    [Fact]
+    public async Task ReportState_ASeek_IsBroadcastEvenThoughNothingElseChanged()
+    {
+        await _service.ReportStateAsync(
+            _session.Id, HostId, new PlayerStateRequest(1, false, PositionMs: 10_000), CancellationToken.None);
+        await _service.ReportStateAsync(
+            _session.Id, HostId, new PlayerStateRequest(1, false, PositionMs: 80_000, Seeked: true), CancellationToken.None);
+
+        Assert.Equal(2, _notifier.PlayerStateChanged.Count);
+        Assert.Equal(80_000, _notifier.PlayerStateChanged[1].State.PositionMs);
+    }
+
+    [Fact]
+    public async Task ReportState_AKeepaliveWithAMovedOnPosition_DoesNotBroadcast()
+    {
+        await _service.ReportStateAsync(
+            _session.Id, HostId, new PlayerStateRequest(1, false, PositionMs: 10_000), CancellationToken.None);
+        await _service.ReportStateAsync(
+            _session.Id, HostId, new PlayerStateRequest(1, false, PositionMs: 20_000), CancellationToken.None);
+
+        Assert.Single(_notifier.PlayerStateChanged);
     }
 
     [Fact]

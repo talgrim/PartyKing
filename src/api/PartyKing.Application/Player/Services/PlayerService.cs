@@ -81,7 +81,9 @@ internal class PlayerService : IPlayerService
         // A pause belongs to the song it was reported for, so it can't leak into the next one
         var paused = playing is not null && player.SongId == playing.Id && player.Paused;
 
-        return new NowPlayingDto(playing?.ToDto(), paused, player.Connected);
+        var positionMs = playing is not null && player.SongId == playing.Id ? player.PositionMs : 0;
+
+        return new NowPlayingDto(playing?.ToDto(), paused, player.Connected, positionMs);
     }
 
     public async Task<ErrorOr<PlayerStateResponse>> ReportStateAsync(
@@ -101,7 +103,8 @@ internal class PlayerService : IPlayerService
             return Error.Forbidden(description: "Only the host of this session can report its player state");
         }
 
-        var report = _playerStateStore.Report(sessionId, state.SongId, state.Paused);
+        var positionMs = Math.Max(0, state.PositionMs);
+        var report = _playerStateStore.Report(sessionId, state.SongId, state.Paused, positionMs, state.Seeked);
         _connectionWatchdog.Arm(sessionId, state.SongId, state.Paused);
 
         // A heartbeat that changes nothing stays between the host and the server
@@ -109,7 +112,7 @@ internal class PlayerService : IPlayerService
         {
             await _musicNotifier.PlayerStateChangedAsync(
                 sessionId,
-                new PlayerStateChangedDto(state.SongId, state.Paused, PlayerConnected: true),
+                new PlayerStateChangedDto(state.SongId, state.Paused, PlayerConnected: true, positionMs),
                 cancellationToken);
         }
 

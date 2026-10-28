@@ -43,7 +43,7 @@ describe('sessionMusicEvents', () => {
         { song: song(1), paused: true, playerConnected: true },
         { previousSongId: 1, nowPlaying: song(2) },
       ),
-    ).toEqual({ song: song(2), paused: false, playerConnected: true });
+    ).toEqual({ song: song(2), paused: false, playerConnected: true, positionMs: 0 });
   });
 
   it('applies pause only when the reported song is the one playing', () => {
@@ -52,11 +52,25 @@ describe('sessionMusicEvents', () => {
       song: song(2),
       paused: true,
       playerConnected: true,
+      positionMs: 0,
     });
     expect(applyPlayerStateChanged(current, { songId: 1, paused: true, playerConnected: true })).toEqual({
       song: song(2),
       paused: false,
       playerConnected: true,
+      positionMs: 0,
     });
+  });
+
+  it('takes over the reported position only for the song that is playing', () => {
+    const current = { song: song(2), paused: false, playerConnected: true };
+    expect(
+      applyPlayerStateChanged(current, { songId: 2, paused: false, playerConnected: true, positionMs: 42000 })
+        .positionMs,
+    ).toBe(42000);
+    expect(
+      applyPlayerStateChanged(current, { songId: 1, paused: false, playerConnected: true, positionMs: 42000 })
+        .positionMs,
+    ).toBe(0);
   });
 });

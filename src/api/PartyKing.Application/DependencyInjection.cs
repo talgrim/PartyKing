@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Configuration;
+using PartyKing.Application.Lyrics.Services;
 using PartyKing.Application.Player.Services;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Realtime;
@@ -23,6 +24,7 @@ public static class DependencyInjection
         services.RegisterSpotify();
         services.RegisterQueue();
         services.RegisterPlayer();
+        services.RegisterLyrics();
         services.RegisterSessions();
         services.RegisterAdmin(configuration);
     }
@@ -77,6 +79,12 @@ public static class DependencyInjection
     {
         services.AddSingleton<IPlayerStateStore, PlayerStateStore>();
         services.AddScoped<IPlayerService, PlayerService>();
+    }
+
+    private static void RegisterLyrics(this IServiceCollection services)
+    {
+        services.AddSingleton<ILyricsCache, LyricsCache>();
+        services.AddScoped<ILyricsService, LyricsService>();
     }
 
     private static void RegisterQueue(this IServiceCollection services)

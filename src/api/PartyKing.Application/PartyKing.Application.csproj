@@ -24,6 +24,7 @@
       <ProjectReference Include="..\PartyKing.Infrastructure.Spotify\PartyKing.Infrastructure.Spotify.csproj" />
       <ProjectReference Include="..\PartyKing.Infrastructure\PartyKing.Infrastructure.csproj" />
       <ProjectReference Include="..\PartyKing.Infrastructure.Youtube\PartyKing.Infrastructure.Youtube.csproj" />
+      <ProjectReference Include="..\PartyKing.Infrastructure.Lyrics\PartyKing.Infrastructure.Lyrics.csproj" />
     </ItemGroup>
 
 </Project>

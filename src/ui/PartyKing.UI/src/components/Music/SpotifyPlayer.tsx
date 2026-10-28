@@ -6,14 +6,20 @@ export type SpotifyPlayerHandle = {
   activate: () => void;
   /** Pauses the current track, or resumes it when it is paused. */
   togglePlay: () => void;
+  /** Where in the track the player is right now, or null when the SDK has no state. */
+  getPositionMs: () => Promise<number | null>;
 };
 
 type Props = {
   /** Spotify track URI to play, or null when nothing should play. */
   uri: string | null;
+  /** Id of the queue item being played. The same track can be queued again (e.g. a one-track fallback playlist), so `uri` alone can't tell songs apart. */
+  songId: number | null;
   onEnded: () => void;
   /** Reports the real playback state of `uri`, including pauses made from other Spotify clients. */
   onPausedChange: (paused: boolean) => void;
+  /** Reports where in `uri` the player is every time the SDK reports a state of it, to notice seeks. */
+  onPositionChange?: (positionMs: number, paused: boolean) => void;
   onError: (message: string) => void;
   /** Reports the id of this browser's Spotify device once it is ready, and null when it goes away. */
   onDeviceChange?: (deviceId: string | null) => void;
@@ -45,8 +51,10 @@ const loadSdk = () => {
 
 export const SpotifyPlayer = ({
   uri,
+  songId,
   onEnded,
   onPausedChange,
+  onPositionChange,
   onError,
   onDeviceChange,
   takeover,
@@ -59,20 +67,24 @@ export const SpotifyPlayer = ({
   // The SDK callbacks are registered once, so keep the latest props in refs.
   const onEndedRef = useRef(onEnded);
   const onPausedChangeRef = useRef(onPausedChange);
+  const onPositionChangeRef = useRef(onPositionChange);
   const onErrorRef = useRef(onError);
   const onDeviceChangeRef = useRef(onDeviceChange);
   const takeoverRef = useRef(takeover);
   const usedTakeoverRef = useRef<Props['takeover']>(null);
   const currentUriRef = useRef<string | null>(uri);
-  const endedUriRef = useRef<string | null>(null);
+  const currentSongIdRef = useRef<number | null>(songId);
+  const endedSongIdRef = useRef<number | null>(null);
   const volumeRef = useRef(volume);
   volumeRef.current = volume;
   onEndedRef.current = onEnded;
   onPausedChangeRef.current = onPausedChange;
+  onPositionChangeRef.current = onPositionChange;
   onErrorRef.current = onError;
   onDeviceChangeRef.current = onDeviceChange;
   takeoverRef.current = takeover;
   currentUriRef.current = uri;
+  currentSongIdRef.current = songId;
 
   useImperativeHandle(handle, () => ({
     activate: () => {
@@ -80,6 +92,10 @@ export const SpotifyPlayer = ({
     },
     togglePlay: () => {
       void playerRef.current?.togglePlay();
+    },
+    getPositionMs: async () => {
+      const state = await playerRef.current?.getCurrentState?.();
+      return state ? state.position : null;
     },
   }));
 
@@ -132,8 +148,8 @@ export const SpotifyPlayer = ({
           state.track_window.previous_tracks.some((track) => track.uri === current);
 
         if (finished) {
-          if (endedUriRef.current !== current) {
-            endedUriRef.current = current;
+          if (endedSongIdRef.current !== currentSongIdRef.current) {
+            endedSongIdRef.current = currentSongIdRef.current;
             onEndedRef.current();
           }
           return;
@@ -141,6 +157,7 @@ export const SpotifyPlayer = ({
 
         // Ignore states of a previous track that arrive after the next one was requested.
         if (state.track_window.current_track.uri === current) {
+          onPositionChangeRef.current?.(state.position, state.paused);
           onPausedChangeRef.current(state.paused);
         }
       });
@@ -195,7 +212,7 @@ export const SpotifyPlayer = ({
     return () => {
       cancelled = true;
     };
-  }, [uri, deviceId]);
+  }, [uri, songId, deviceId]);
 
   return null;
 };
