@@ -21,7 +21,9 @@ export const ResistanceTeamCards = ({ members, missionNumber, leaderId }: Props)
           className="relative flex w-[13vw] min-w-32 max-w-60 flex-col items-center gap-2 rounded-xl bg-slate-900 px-3 pb-3 pt-4 ring-2 ring-emerald-400 shadow-lg shadow-emerald-400/20"
         >
           {player.id === leaderId && (
-            <LeaderTokenIcon className="absolute right-2 top-2 h-6 w-6" title="Leader" />
+            <span className="absolute right-2 top-2">
+              <LeaderTokenIcon title="Leader" />
+            </span>
           )}
           <span
             aria-hidden="true"

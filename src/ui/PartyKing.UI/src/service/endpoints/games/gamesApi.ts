@@ -109,6 +109,18 @@ export const gamesApi = {
       withCredentials: true,
     }) as unknown as Promise<ResistanceGameDto>,
 
+  /** A player votes on the submitted team and may change the vote until the last player has voted; 403 for non-players, 409 when no team is up for a vote. */
+  voteResistanceTeam: (sessionId: string, approve: boolean) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/vote`, { approve }, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
+  /** The leader, the host or an admin moves on after a rejected team (next leader picks); 409 unless the team was rejected. */
+  continueResistance: (sessionId: string) =>
+    axios.post(`/sessions/${sessionId}/games/resistance/continue`, null, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
   /** Joins the open game as a player; 409 when the name is taken, the lobby is full or the game started, 400 for a bad name. An admin may omit the name ("admin"). */
   joinResistance: (sessionId: string, name: string) =>
     axios.post(`/sessions/${sessionId}/games/resistance/join`, { name }, {

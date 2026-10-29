@@ -9,18 +9,26 @@ type Props = {
   onEnd: () => void;
   onStart: () => void;
   onOpen: () => void;
+  onContinue: () => void;
 };
 
 const buttonClass =
   'px-3 py-2 text-slate-200 bg-slate-900 rounded-md hover:bg-slate-700 cursor-pointer disabled:opacity-50 disabled:cursor-default';
 
 /** What the host and admins do to the game: manage the players, start, open it to guests (admin) and end it. */
-export const ResistanceManagerControls = ({ game, isAdmin, onManagePlayers, onEnd, onStart, onOpen }: Props): ReactNode => {
+export const ResistanceManagerControls = ({ game, isAdmin, onManagePlayers, onEnd, onStart, onOpen, onContinue }: Props): ReactNode => {
   const started = game.startedAt != null;
   const enough = game.players.length >= MIN_PLAYERS;
 
+  const rejected = game.phase === 'VoteResult' && game.voteApproved === false;
+
   return (
     <>
+      {rejected && (
+        <button type="button" onClick={onContinue} className={buttonClass}>
+          Dalej
+        </button>
+      )}
       {!started && (
         <button type="button" onClick={onManagePlayers} className={buttonClass}>
           Players

@@ -8,10 +8,12 @@ type Props = {
   yourPlayerId: string | null;
   /** The player leading the mission, who gets the crown token; none before the start. */
   leaderId?: string | null;
+  /** Extra badges after a player's name (votes, roles). */
+  marks?: (playerId: string) => ReactNode;
 };
 
 /** The players who joined, seated along the left, bottom and right edges in seating order. */
-export const ResistancePlayers = ({ players, yourPlayerId, leaderId = null }: Props): ReactNode => {
+export const ResistancePlayers = ({ players, yourPlayerId, leaderId = null, marks }: Props): ReactNode => {
   const seats = seatPositions(players.length);
 
   return (
@@ -31,7 +33,7 @@ export const ResistancePlayers = ({ players, yourPlayerId, leaderId = null }: Pr
                 : 'bg-slate-900 text-slate-200'
             }`}
           >
-            {leader && <LeaderTokenIcon className="w-5 h-5 shrink-0" title="Leader" />}
+            {leader && <LeaderTokenIcon title="Leader" />}
             <span className="truncate">
               {player.name}
               {you && <span className="sr-only"> (you)</span>}
@@ -41,6 +43,7 @@ export const ResistancePlayers = ({ players, yourPlayerId, leaderId = null }: Pr
                 Ty
               </span>
             )}
+            {marks?.(player.id)}
           </li>
         );
       })}

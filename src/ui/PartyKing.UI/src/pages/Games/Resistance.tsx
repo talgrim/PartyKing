@@ -43,7 +43,9 @@ const WIDE_QUERY = '(min-width: 1024px)';
  * (the 5-player team sizes are shown dimmed until five joined). Guests who unlocked the session watch once the game is
  * open. The host or an admin starts the game with at least five players: that locks the players, shows the first
  * leader's crown and gives every player a face-down card with their secret role (a spy also sees the other spies).
- * Anyone else only watches. Nothing more is played yet.
+ * Anyone else only watches. The leader picks the team, every player votes on it (a vote can be changed until the
+ * last player has voted; the votes become public then), and a rejected team passes the lead on after "Dalej" (the
+ * leader, host or an admin). Five rejected teams in a row end the game with a spy win. The missions are not played yet.
  *
  * Two layouts share the page. The TV layout (`?tv=1` for the host and admins, and for a host or admin who is not
  * playing) has the manager controls, the board in the middle and the players around the edge, and never shows the
@@ -83,7 +85,7 @@ export const Resistance = (): ReactNode => {
   const showPlayerView = isPlayer && !tv && (wide || !boardView);
   const showBoard = !showPlayerView || wide;
   // The TV tab shares the player's cookies, so it must not show the role or the "Ty" badge of whoever is logged in
-  const shownGame = game && tv ? { ...game, yourPlayerId: null, yourRole: null, fellowSpies: null } : game;
+  const shownGame = game && tv ? { ...game, yourPlayerId: null, yourRole: null, fellowSpies: null, yourVote: null } : game;
 
   const players = game?.players ?? [];
   const started = game?.startedAt != null;
@@ -119,6 +121,24 @@ export const Resistance = (): ReactNode => {
       await mutate(gamesApi.selectResistanceTeam(sessionId, playerIds), { revalidate: false });
     } catch {
       setMessage('Could not submit the team.');
+    }
+  };
+
+  const castVote = async (approve: boolean) => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.voteResistanceTeam(sessionId, approve), { revalidate: false });
+    } catch {
+      setMessage('Could not send the vote.');
+    }
+  };
+
+  const continueGame = async () => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.continueResistance(sessionId), { revalidate: false });
+    } catch {
+      setMessage('Could not move on.');
     }
   };
 
@@ -158,6 +178,7 @@ export const Resistance = (): ReactNode => {
       onEnd={() => setConfirmingEnd(true)}
       onStart={() => void startGame()}
       onOpen={() => void openGame()}
+      onContinue={() => void continueGame()}
     />
   );
 
@@ -235,7 +256,12 @@ export const Resistance = (): ReactNode => {
           <div className={wide ? 'flex items-start gap-6' : undefined}>
             {showPlayerView && game && (
               <div className={wide ? 'w-1/3 shrink-0' : undefined}>
-                <ResistancePlayerView game={game} onSubmitTeam={submitTeam} />
+                <ResistancePlayerView
+                  game={game}
+                  onSubmitTeam={submitTeam}
+                  onVote={castVote}
+                  onContinue={continueGame}
+                />
               </div>
             )}
             {showBoard && (

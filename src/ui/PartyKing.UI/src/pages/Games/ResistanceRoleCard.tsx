@@ -29,11 +29,11 @@ export const ResistanceRoleCard = ({ role, players, fellowSpyIds }: Props): Reac
         onClick={() => setRevealed((value) => !value)}
         aria-label={revealed ? 'Ukryj swoją rolę' : 'Pokaż swoją rolę'}
         aria-pressed={revealed}
-        className="h-28 cursor-pointer"
+        className="cursor-pointer"
       >
-        {!revealed && <CardBackIcon className="h-full" />}
-        {revealed && role === 'Spy' && <SpyCardIcon className="h-full" title="Szpieg" />}
-        {revealed && role === 'Resistance' && <OperativeCardIcon className="h-full" title="Ruch Oporu" />}
+        {!revealed && <CardBackIcon />}
+        {revealed && role === 'Spy' && <SpyCardIcon title="Szpieg" />}
+        {revealed && role === 'Resistance' && <OperativeCardIcon title="Ruch Oporu" />}
       </button>
 
       {revealed && role === 'Spy' && (
@@ -42,7 +42,7 @@ export const ResistanceRoleCard = ({ role, players, fellowSpyIds }: Props): Reac
           <ul aria-label="Fellow spies" className="text-sm">
             {spies.map((spy) => (
               <li key={spy.id} className="flex items-center gap-1">
-                <SpyMarkerIcon className="w-4 h-4" />
+                <SpyMarkerIcon />
                 {spy.name}
               </li>
             ))}

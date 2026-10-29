@@ -1,9 +1,26 @@
-import { ReactNode } from 'react';
+import { KeyboardEvent, ReactNode } from 'react';
 
 type IconProps = {
   className?: string;
   /** Accessible name; the icon is decorative (aria-hidden) when omitted. */
   title?: string;
+};
+
+/** Makes an icon behave as a toggle button: click, Enter and Space activate it, unless it is disabled. */
+type ButtonProps = {
+  onClick?: () => void;
+  pressed?: boolean;
+  disabled?: boolean;
+};
+
+/**
+ * Sizes used when the caller passes no `className`, keyed by the icon's viewBox. They follow the viewport width
+ * (clamped), so the cards, tokens and boards grow and shrink with the screen; a caller can still pin a size.
+ */
+const DEFAULT_SIZE: Record<string, string> = {
+  '0 0 100 140': 'h-[clamp(6rem,22vw,12rem)] w-auto',
+  '0 0 100 100': 'size-[clamp(1rem,3vw,1.75rem)]',
+  '0 0 560 190': 'w-full h-auto',
 };
 
 const COLORS = {
@@ -23,19 +40,37 @@ const Svg = ({
   viewBox,
   className,
   title,
+  onClick,
+  pressed,
+  disabled,
   children,
-}: IconProps & { viewBox: string; children: ReactNode }): ReactNode => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox={viewBox}
-    className={className}
-    role={title ? 'img' : undefined}
-    aria-label={title}
-    aria-hidden={title ? undefined : true}
-  >
-    {children}
-  </svg>
-);
+}: IconProps & ButtonProps & { viewBox: string; children: ReactNode }): ReactNode => {
+  const interactive = onClick !== undefined;
+  const onKeyDown = (event: KeyboardEvent<SVGSVGElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      if (!disabled) onClick?.();
+    }
+  };
+
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox={viewBox}
+      className={className ?? DEFAULT_SIZE[viewBox]}
+      role={interactive ? 'button' : title ? 'img' : undefined}
+      aria-label={title}
+      aria-hidden={title || interactive ? undefined : true}
+      aria-pressed={interactive ? pressed : undefined}
+      aria-disabled={interactive && disabled ? true : undefined}
+      tabIndex={interactive ? (disabled ? -1 : 0) : undefined}
+      onClick={interactive && !disabled ? onClick : undefined}
+      onKeyDown={interactive ? onKeyDown : undefined}
+    >
+      {children}
+    </svg>
+  );
+};
 
 /** A 100x140 playing card frame; `fill` is the card face, `stroke` its border. */
 const CardFrame = ({ fill, stroke }: { fill: string; stroke: string }): ReactNode => (
@@ -163,8 +198,8 @@ export const TeamTokenIcon = ({ className, title }: IconProps): ReactNode => (
 );
 
 /** Vote card: approve the proposed team. */
-export const VoteApproveCardIcon = ({ className, title }: IconProps): ReactNode => (
-  <Svg viewBox="0 0 100 140" className={className} title={title}>
+export const VoteApproveCardIcon = ({ className, title, ...button }: IconProps & ButtonProps): ReactNode => (
+  <Svg viewBox="0 0 100 140" className={className} title={title} {...button}>
     <CardFrame fill={COLORS.paper} stroke={COLORS.success} />
     <circle cx="50" cy="62" r="30" fill={COLORS.success} />
     <Check cx={50} cy={62} size={16} stroke={COLORS.paper} />
@@ -175,8 +210,8 @@ export const VoteApproveCardIcon = ({ className, title }: IconProps): ReactNode 
 );
 
 /** Vote card: reject the proposed team. */
-export const VoteRejectCardIcon = ({ className, title }: IconProps): ReactNode => (
-  <Svg viewBox="0 0 100 140" className={className} title={title}>
+export const VoteRejectCardIcon = ({ className, title, ...button }: IconProps & ButtonProps): ReactNode => (
+  <Svg viewBox="0 0 100 140" className={className} title={title} {...button}>
     <CardFrame fill={COLORS.paper} stroke={COLORS.fail} />
     <circle cx="50" cy="62" r="30" fill={COLORS.fail} />
     <Cross cx={50} cy={62} size={14} stroke={COLORS.paper} />

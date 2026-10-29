@@ -74,9 +74,40 @@ export type ResistanceGameDto = {
   requiredTeamSize: number | null;
   /** The team the leader submitted for the mission; empty until then. Public. */
   teamPlayerIds: string[];
+  /** The step of the round; null before the start. */
+  phase: ResistancePhase | null;
+  /** Teams rejected in a row during the mission; the fifth makes the spies win. */
+  rejectedTeams: number;
+  /** The winning side once the phase is GameOver. */
+  winner: ResistanceRole | null;
+  /** Who has voted on the team (not how) while the vote is on; everybody once it is in. Public. */
+  votedPlayerIds: string[];
+  /** The caller's own vote (true approves); null when they have not voted or are not a player. */
+  yourVote: boolean | null;
+  /** How everybody voted; only once all have voted, otherwise null. */
+  votes: ResistanceVoteDto[] | null;
+  /** Whether the team was approved; only once all have voted, otherwise null. */
+  voteApproved: boolean | null;
+  /** Every player's role; only once the game is over, otherwise null. */
+  revealedRoles: ResistanceRevealedRoleDto[] | null;
 };
 
 export type ResistanceRole = 'Resistance' | 'Spy';
+
+/** SelectingTeam: the leader picks; Voting: the team is up for a vote; VoteResult: the votes are public. */
+export type ResistancePhase = 'SelectingTeam' | 'Voting' | 'VoteResult' | 'GameOver';
+
+// Mirrors PartyKing.Contract.V1.Games.ResistanceVoteDto
+export type ResistanceVoteDto = {
+  playerId: string;
+  approve: boolean;
+};
+
+// Mirrors PartyKing.Contract.V1.Games.ResistanceRevealedRoleDto
+export type ResistanceRevealedRoleDto = {
+  playerId: string;
+  role: ResistanceRole;
+};
 
 // Mirrors PartyKing.Contract.V1.Games.ResistancePlayerDto
 export type ResistancePlayerDto = {

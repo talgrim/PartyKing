@@ -1,6 +1,8 @@
 import { ResistanceGameDto } from '@/service/endpoints/games/types';
 import { MIN_PLAYERS } from './resistanceTeams';
 
+const MAX_REJECTED_TEAMS = 5;
+
 type Viewer = {
   /** Host or admin. */
   canManage: boolean;
@@ -27,17 +29,47 @@ export const resistancePhaseDescription = (
     const mission = game.missionNumber === 1 ? 'pierwszą' : `${game.missionNumber}.`;
     const card = game.yourPlayerId != null ? ' Dotknij swojej karty, żeby poznać swoją rolę.' : '';
 
-    if (game.teamPlayerIds.length > 0) {
-      const names = game.players.filter((player) => game.teamPlayerIds.includes(player.id)).map((player) => player.name);
+    const names = game.players.filter((player) => game.teamPlayerIds.includes(player.id)).map((player) => player.name);
+    const rejected = game.rejectedTeams > 0 ? ` Odrzucone drużyny z rzędu: ${game.rejectedTeams}/${MAX_REJECTED_TEAMS}.` : '';
+    const votes = game.votes ?? [];
+    const approvals = votes.filter((vote) => vote.approve).length;
+    const tally = `za: ${approvals}, przeciw: ${votes.length - approvals}`;
 
-      return `${who} (korona) zgłosił/a drużynę na ${mission} misję: ${names.join(', ')}. Teraz drużyna idzie pod głosowanie.${card}`;
+    if (game.phase === 'GameOver') {
+      return `Koniec gry! ${
+        game.winner === 'Spy'
+          ? `Szpiedzy wygrali: ${MAX_REJECTED_TEAMS} drużyn z rzędu zostało odrzuconych`
+          : 'Ruch Oporu wygrał'
+      } (${tally}). Wszystkie role zostały ujawnione.`;
+    }
+
+    if (game.phase === 'VoteResult') {
+      if (game.voteApproved) {
+        return `Drużyna (${names.join(', ')}) została zatwierdzona (${tally}). Misja nie jest jeszcze gotowa w aplikacji.`;
+      }
+
+      const next = youLead || viewer.canManage ? 'Kliknij „Dalej”' : 'Lider lub host kliknie „Dalej”';
+
+      return `Drużyna (${names.join(', ')}) została odrzucona (${tally}).${rejected} ${next}, żeby przywództwo przeszło na następnego gracza.`;
+    }
+
+    if (game.phase === 'Voting') {
+      const progress = `Zagłosowało ${game.votedPlayerIds.length}/${count}.`;
+      const mine =
+        game.yourPlayerId == null
+          ? ''
+          : game.yourVote == null
+            ? ' Zagłosuj: zatwierdź albo odrzuć drużynę.'
+            : ' Twój głos możesz zmienić, dopóki nie zagłosują wszyscy.';
+
+      return `${who} (korona) zgłosił/a drużynę na ${mission} misję: ${names.join(', ')}. Teraz drużyna idzie pod głosowanie. ${progress}${mine}${card}`;
     }
 
     const task = youLead
       ? `wybierz ${size} osób na ${mission} misję i zgłoś je do głosowania`
       : `wybiera ${size} osób na ${mission} misję`;
 
-    return `Gra się rozpoczęła, nowi gracze nie mogą już dołączyć. ${who} (korona): ${task}. Omówcie to na żywo.${card}`;
+    return `Gra się rozpoczęła, nowi gracze nie mogą już dołączyć. ${who} (korona): ${task}. Omówcie to na żywo.${rejected}${card}`;
   }
 
   if (!game.isOpen) {
