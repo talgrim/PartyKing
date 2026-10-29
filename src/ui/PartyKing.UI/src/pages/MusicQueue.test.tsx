@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
   getNowPlaying: vi.fn(),
   join: vi.fn(),
   joinWithToken: vi.fn(),
+  getRingoLobby: vi.fn(),
+  getResistanceLobby: vi.fn(),
 }));
 
 vi.mock('@/service/endpoints/sessions/sessionsApi', () => ({
@@ -21,6 +23,9 @@ vi.mock('@/service/endpoints/sessions/sessionsApi', () => ({
     joinWithToken: mocks.joinWithToken,
     createJoinToken: vi.fn(),
   },
+}));
+vi.mock('@/service/endpoints/games/gamesApi', () => ({
+  gamesApi: { getRingoLobby: mocks.getRingoLobby, getResistanceLobby: mocks.getResistanceLobby },
 }));
 vi.mock('@/service/endpoints/player/playerApi', () => ({ playerApi: { getNowPlaying: mocks.getNowPlaying } }));
 vi.mock('@/components/Music/JoinQrCode', () => ({ JoinQrCode: () => <button>Show QR code</button> }));
@@ -48,6 +53,9 @@ const renderPage = async () => {
 describe('MusicQueue', () => {
   beforeEach(() => {
     localStorage.clear();
+    sessionStorage.clear();
+    mocks.getRingoLobby.mockRejectedValue({ status: 404 });
+    mocks.getResistanceLobby.mockRejectedValue({ status: 404 });
     mocks.getSession.mockResolvedValue({ id: 'session-1', code: 'ABC123', name: 'Party', hostName: 'H', hasHost: true });
     mocks.getNowPlaying.mockResolvedValue({
       song: {
@@ -75,6 +83,22 @@ describe('MusicQueue', () => {
     expect(screen.queryByText('slideshow')).not.toBeInTheDocument();
     // Guests get the lyrics drawer and its maximized view, never the photos
     expect(await screen.findByRole('button', { name: 'Maximize' })).toBeVisible();
+  });
+
+  it.each([
+    ['the host', { isHost: true, isAdmin: false }, true],
+    ['a guest', { isHost: false, isAdmin: false }, true],
+    ['an admin', { isHost: false, isAdmin: true }, false],
+  ])('invites %s to an open game: %s', async (_, role, invited) => {
+    mocks.getViewerRole.mockResolvedValue(role);
+    mocks.getResistanceLobby.mockResolvedValue({ createdAt: '2026-10-29T10:00:00Z', isOpen: true, joined: false });
+
+    await renderPage();
+
+    await vi.waitFor(() => expect(mocks.getResistanceLobby).toHaveBeenCalled());
+    const invite = screen.queryByText('Nowa gra w Resistance została uruchomiona. Czy chcesz dołączyć?');
+    if (invited) expect(await screen.findByText(/Nowa gra w Resistance/)).toBeInTheDocument();
+    else expect(invite).not.toBeInTheDocument();
   });
 
   it('links an admin to the admin panel, and nobody else', async () => {

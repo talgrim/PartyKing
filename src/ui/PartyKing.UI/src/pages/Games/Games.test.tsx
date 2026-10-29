@@ -3,10 +3,15 @@ import { SWRConfig } from 'swr';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { Games } from './Games';
 
-const mocks = vi.hoisted(() => ({ getGames: vi.fn(), getSuggestions: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getGames: vi.fn(), getSuggestions: vi.fn(), getResistance: vi.fn(), getRingo: vi.fn() }));
 
 vi.mock('@/service/endpoints/games/gamesApi', () => ({
-  gamesApi: { getGames: mocks.getGames, getNeverHaveIEverSuggestions: mocks.getSuggestions },
+  gamesApi: {
+    getGames: mocks.getGames,
+    getNeverHaveIEverSuggestions: mocks.getSuggestions,
+    getResistance: mocks.getResistance,
+    getRingo: mocks.getRingo,
+  },
 }));
 
 const renderPage = () =>
@@ -24,6 +29,10 @@ const renderPage = () =>
 describe('Games', () => {
   beforeEach(() => {
     mocks.getGames.mockReset();
+    mocks.getResistance.mockReset();
+    mocks.getRingo.mockReset();
+    mocks.getResistance.mockRejectedValue({ status: 404 });
+    mocks.getRingo.mockRejectedValue({ status: 404 });
   });
 
   it('lists the games of the session', async () => {
@@ -40,11 +49,20 @@ describe('Games', () => {
     expect(screen.getByRole('link', { name: 'Back to the session' })).toHaveAttribute('href', '/s/session-1');
   });
 
-  it('links to the Resistance board', async () => {
+  it('offers to create the Resistance lobby, and to resume it once it exists', async () => {
     mocks.getGames.mockResolvedValue([{ id: 'resistance', name: 'Resistance', description: 'Gra dedukcji społecznej.' }]);
+    mocks.getResistance.mockRejectedValueOnce({ status: 404 });
     renderPage();
 
-    expect(await screen.findByRole('link', { name: 'Open' })).toHaveAttribute('href', '/s/session-1/games/resistance');
+    expect(await screen.findByRole('button', { name: 'Create' })).toBeInTheDocument();
+  });
+
+  it('links to the Resistance board when the lobby exists', async () => {
+    mocks.getGames.mockResolvedValue([{ id: 'resistance', name: 'Resistance', description: 'Gra dedukcji społecznej.' }]);
+    mocks.getResistance.mockResolvedValue({ isOpen: false, players: [], yourPlayerId: null, maxPlayers: 10 });
+    renderPage();
+
+    expect(await screen.findByRole('link', { name: 'Resume' })).toHaveAttribute('href', '/s/session-1/games/resistance');
   });
 
   it('offers suggestions only for Never have I ever', async () => {
