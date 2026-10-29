@@ -359,6 +359,238 @@ public class ResistanceServiceTests
         Assert.Equal(team.Order(), asHost.Value.TeamPlayerIds.Order());
     }
 
+    [Fact]
+    public async Task Voting_NeedsASubmittedTeamAndAPlayerOfTheGame()
+    {
+        var ct = CancellationToken.None;
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _service.VoteAsync(_id, true, new GameCaller("guest", false), ct)).FirstError.Type);
+        Assert.Equal(ErrorOr.ErrorType.NotFound, (await _service.VoteAsync(_id, true, Host, ct)).FirstError.Type);
+
+        var callers = await OpenGameAndJoinAsync(5);
+        Assert.Equal("Resistance.NotStarted", (await _service.VoteAsync(_id, true, callers[0], ct)).FirstError.Code);
+
+        var started = await _service.StartAsync(_id, Host, ct);
+        Assert.Equal("Resistance.NotVoting", (await _service.VoteAsync(_id, true, callers[0], ct)).FirstError.Code);
+
+        var leader = callers.First(x => x.PlayerId == started.Value.LeaderPlayerId);
+        await _service.SelectTeamAsync(_id, started.Value.Players.Take(2).Select(x => x.Id).ToList(), leader, ct);
+
+        var watcher = await _service.VoteAsync(_id, true, Host, ct);
+        Assert.Equal("Resistance.NotPlayer", watcher.FirstError.Code);
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, watcher.FirstError.Type);
+        Assert.Equal("Resistance.NotPlayer", (await _service.VoteAsync(_id, true, Admin, ct)).FirstError.Code);
+        Assert.False((await _service.VoteAsync(_id, true, callers[0], ct)).IsError);
+    }
+
+    [Fact]
+    public async Task Votes_AreSecretUntilEveryoneVoted()
+    {
+        var ct = CancellationToken.None;
+        var (callers, _) = await StartWithTeamAsync(5);
+        var before = _notifier.ResistanceChanges.Count;
+
+        await _service.VoteAsync(_id, true, callers[0], ct);
+        await _service.VoteAsync(_id, false, callers[1], ct);
+
+        var asVoter = (await _service.GetAsync(_id, callers[0], ct)).Value;
+        var asOther = (await _service.GetAsync(_id, callers[2], ct)).Value;
+        var asHost = (await _service.GetAsync(_id, Host, ct)).Value;
+
+        Assert.Equal(before + 2, _notifier.ResistanceChanges.Count);
+        Assert.Equal(ResistancePhaseDto.Voting, asHost.Phase);
+        Assert.True(asVoter.YourVote);
+        Assert.Null(asOther.YourVote);
+        Assert.Null(asHost.YourVote);
+        foreach (var view in new[] { asVoter, asOther, asHost })
+        {
+            Assert.Equal(2, view.VotedPlayerIds.Count);
+            Assert.Null(view.Votes);
+            Assert.Null(view.VoteApproved);
+        }
+    }
+
+    [Fact]
+    public async Task AVote_CanBeChangedUntilTheLastPlayerVoted()
+    {
+        var ct = CancellationToken.None;
+        var (callers, _) = await StartWithTeamAsync(5);
+
+        await _service.VoteAsync(_id, true, callers[0], ct);
+        var changed = await _service.VoteAsync(_id, false, callers[0], ct);
+        Assert.False(changed.Value.YourVote);
+        Assert.Single(changed.Value.VotedPlayerIds);
+
+        foreach (var caller in callers.Skip(1))
+        {
+            await _service.VoteAsync(_id, true, caller, ct);
+        }
+
+        var late = await _service.VoteAsync(_id, true, callers[0], ct);
+        Assert.Equal("Resistance.NotVoting", late.FirstError.Code);
+    }
+
+    [Fact]
+    public async Task TheLastVote_RevealsEveryVoteToEveryone()
+    {
+        var ct = CancellationToken.None;
+        var (callers, _) = await StartWithTeamAsync(5);
+
+        await VoteAsync(callers, true, true, true, false, false);
+
+        foreach (var viewer in new[] { callers[3], Host, Admin })
+        {
+            var game = (await _service.GetAsync(_id, viewer, ct)).Value;
+            Assert.Equal(ResistancePhaseDto.VoteResult, game.Phase);
+            Assert.True(game.VoteApproved);
+            Assert.Equal(5, game.Votes!.Count);
+            Assert.Equal(3, game.Votes.Count(x => x.Approve));
+            Assert.Equal(0, game.RejectedTeams);
+        }
+    }
+
+    [Fact]
+    public async Task AnApprovedTeam_StaysPutAndCannotBeContinuedFrom()
+    {
+        var ct = CancellationToken.None;
+        var (callers, leader) = await StartWithTeamAsync(5);
+        await VoteAsync(callers, true, true, true, true, true);
+
+        var result = await _service.ContinueAsync(_id, leader, ct);
+
+        Assert.Equal("Resistance.NothingToContinue", result.FirstError.Code);
+        var game = (await _service.GetAsync(_id, Host, ct)).Value;
+        Assert.Equal(2, game.TeamPlayerIds.Count);
+        Assert.Equal(ResistancePhaseDto.VoteResult, game.Phase);
+    }
+
+    [Theory]
+    [InlineData(5)]
+    [InlineData(6)]
+    public async Task ARejectedTeam_AndATie_PassTheLeadershipOnContinue(int playerCount)
+    {
+        var ct = CancellationToken.None;
+        var (callers, leader) = await StartWithTeamAsync(playerCount);
+        var approvals = Enumerable.Range(0, playerCount).Select(i => i < playerCount / 2).ToArray();
+        await VoteAsync(callers, approvals);
+
+        var rejected = (await _service.GetAsync(_id, Host, ct)).Value;
+        Assert.False(rejected.VoteApproved);
+        Assert.Equal(1, rejected.RejectedTeams);
+        Assert.Equal(ResistancePhaseDto.VoteResult, rejected.Phase);
+        Assert.Equal(2, rejected.TeamPlayerIds.Count);
+
+        var continued = (await _service.ContinueAsync(_id, Host, ct)).Value;
+
+        var order = continued.Players.Select(x => x.Id).ToList();
+        Assert.Equal(order[(order.IndexOf(leader.PlayerId!.Value) + 1) % playerCount], continued.LeaderPlayerId);
+        Assert.Equal(ResistancePhaseDto.SelectingTeam, continued.Phase);
+        Assert.Empty(continued.TeamPlayerIds);
+        Assert.Empty(continued.VotedPlayerIds);
+        Assert.Null(continued.Votes);
+        Assert.Equal(1, continued.RejectedTeams);
+        Assert.Equal(1, continued.MissionNumber);
+    }
+
+    [Fact]
+    public async Task TheLeadership_WrapsAroundTheSeatingOrder()
+    {
+        var ct = CancellationToken.None;
+        var callers = await OpenGameAndJoinAsync(5);
+        var started = (await _service.StartAsync(_id, Host, ct)).Value;
+        var order = started.Players.Select(x => x.Id).ToList();
+        var seen = new List<Guid?> { started.LeaderPlayerId };
+
+        for (var i = 0; i < 4; i++)
+        {
+            var leader = callers.First(x => x.PlayerId == seen[^1]);
+            await _service.SelectTeamAsync(_id, order.Take(2).ToList(), leader, ct);
+            await VoteAsync(callers, false, false, false, false, false);
+            seen.Add((await _service.ContinueAsync(_id, Host, ct)).Value.LeaderPlayerId);
+        }
+
+        Assert.Equal(5, seen.Distinct().Count());
+        var start = order.IndexOf(seen[0]!.Value);
+        for (var i = 0; i < seen.Count; i++)
+        {
+            Assert.Equal(order[(start + i) % 5], seen[i]);
+        }
+    }
+
+    [Fact]
+    public async Task Continuing_IsForTheLeaderAndManagersOnly()
+    {
+        var ct = CancellationToken.None;
+        var (callers, leader) = await StartWithTeamAsync(5);
+        Assert.Equal("Resistance.NothingToContinue", (await _service.ContinueAsync(_id, leader, ct)).FirstError.Code);
+        await VoteAsync(callers, false, false, false, false, false);
+
+        var other = callers.First(x => x.PlayerId != leader.PlayerId);
+        var denied = await _service.ContinueAsync(_id, other, ct);
+        Assert.Equal("Resistance.NotAllowed", denied.FirstError.Code);
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, denied.FirstError.Type);
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _service.ContinueAsync(_id, new GameCaller("guest", false), ct)).FirstError.Type);
+        Assert.False((await _service.ContinueAsync(_id, leader, ct)).IsError);
+    }
+
+    [Fact]
+    public async Task FiveRejectedTeamsInARow_GiveTheSpiesTheWinAndEndTheRound()
+    {
+        var ct = CancellationToken.None;
+        var callers = await OpenGameAndJoinAsync(5);
+        var started = (await _service.StartAsync(_id, Host, ct)).Value;
+        var team = started.Players.Take(2).Select(x => x.Id).ToList();
+        var leaderId = started.LeaderPlayerId;
+
+        for (var i = 1; i <= 5; i++)
+        {
+            await _service.SelectTeamAsync(_id, team, callers.First(x => x.PlayerId == leaderId), ct);
+            await VoteAsync(callers, false, false, false, false, false);
+            if (i < 5)
+            {
+                Assert.Equal(i, (await _service.GetAsync(_id, Host, ct)).Value.RejectedTeams);
+                leaderId = (await _service.ContinueAsync(_id, Host, ct)).Value.LeaderPlayerId;
+            }
+        }
+
+        var over = (await _service.GetAsync(_id, callers[0], ct)).Value;
+        Assert.Equal(ResistancePhaseDto.GameOver, over.Phase);
+        Assert.Equal(ResistanceRoleDto.Spy, over.Winner);
+        Assert.Equal(5, over.RejectedTeams);
+        Assert.Equal(5, over.Votes!.Count);
+        Assert.Equal(5, over.RevealedRoles!.Count);
+        Assert.Equal("Resistance.GameOver", (await _service.ContinueAsync(_id, Host, ct)).FirstError.Code);
+        Assert.Equal("Resistance.GameOver", (await _service.VoteAsync(_id, true, callers[0], ct)).FirstError.Code);
+        Assert.Equal("Resistance.GameOver", (await _service.SelectTeamAsync(_id, team, callers.First(x => x.PlayerId == leaderId), ct)).FirstError.Code);
+    }
+
+    [Fact]
+    public async Task AnApproval_ResetsTheRejectionCount()
+    {
+        var ct = CancellationToken.None;
+        var (callers, leader) = await StartWithTeamAsync(5);
+        await VoteAsync(callers, false, false, false, false, false);
+        var next = (await _service.ContinueAsync(_id, Host, ct)).Value;
+        var team = next.Players.Take(2).Select(x => x.Id).ToList();
+        await _service.SelectTeamAsync(_id, team, callers.First(x => x.PlayerId == next.LeaderPlayerId), ct);
+
+        await VoteAsync(callers, true, true, true, true, true);
+
+        Assert.NotEqual(leader.PlayerId, next.LeaderPlayerId);
+        Assert.Equal(0, (await _service.GetAsync(_id, Host, ct)).Value.RejectedTeams);
+    }
+
+    [Fact]
+    public async Task Roles_StayHiddenWhileTheGameIsOn()
+    {
+        var (callers, _) = await StartWithTeamAsync(5);
+        await VoteAsync(callers, false, false, false, false, false);
+
+        var game = (await _service.GetAsync(_id, callers[0], CancellationToken.None)).Value;
+
+        Assert.Null(game.Winner);
+        Assert.Null(game.RevealedRoles);
+    }
+
     [Theory]
     [InlineData(5, 2)]
     [InlineData(6, 2)]
@@ -459,6 +691,27 @@ public class ResistanceServiceTests
     public void TheRole_IsSerializedByNameSoTheUiCanCompareIt(ResistanceRoleDto role, string expected)
     {
         Assert.Equal(expected, global::System.Text.Json.JsonSerializer.Serialize(role));
+    }
+
+    private async Task<(List<GameCaller> Callers, GameCaller Leader)> StartWithTeamAsync(int count)
+    {
+        var ct = CancellationToken.None;
+        var callers = await OpenGameAndJoinAsync(count);
+        var started = (await _service.StartAsync(_id, Host, ct)).Value;
+        var leader = callers.First(x => x.PlayerId == started.LeaderPlayerId);
+        await _service.SelectTeamAsync(_id, started.Players.Take(2).Select(x => x.Id).ToList(), leader, ct);
+
+        return (callers, leader);
+    }
+
+    /// <summary>Every player votes, in joining order.</summary>
+    private async Task VoteAsync(List<GameCaller> callers, params bool[] approvals)
+    {
+        for (var i = 0; i < callers.Count; i++)
+        {
+            var result = await _service.VoteAsync(_id, approvals[i], callers[i], CancellationToken.None);
+            Assert.False(result.IsError);
+        }
     }
 
     private async Task<List<GameCaller>> JoinPlayersAsync(int count)
@@ -649,11 +902,15 @@ public class ResistanceServiceTests
             {
                 status = ResistanceTeamStatus.NotStarted;
             }
+            else if (game.Phase == ResistancePhase.GameOver)
+            {
+                status = ResistanceTeamStatus.GameOver;
+            }
             else if (callerPlayerId is null || callerPlayerId != game.LeaderPlayerId)
             {
                 status = ResistanceTeamStatus.NotLeader;
             }
-            else if (game.IsTeamSubmitted)
+            else if (game.Phase != ResistancePhase.SelectingTeam)
             {
                 status = ResistanceTeamStatus.AlreadySubmitted;
             }
@@ -671,10 +928,84 @@ public class ResistanceServiceTests
                 foreach (var player in game.Players)
                 {
                     player.IsOnTeam = playerIds.Contains(player.PlayerId);
+                    player.Vote = null;
                 }
+
+                game.Phase = ResistancePhase.Voting;
             }
 
             return Task.FromResult(new ResistanceTeamResult(status, game));
+        }
+
+        public Task<ResistanceVoteResult> VoteAsync(
+            Guid sessionId, Guid? callerPlayerId, bool approve, CancellationToken cancellationToken)
+        {
+            _games.TryGetValue(sessionId, out var game);
+            var voter = game?.Players.FirstOrDefault(x => x.PlayerId == callerPlayerId);
+            var status = ResistanceVoteStatus.Voted;
+            if (game is null)
+            {
+                status = ResistanceVoteStatus.NoGame;
+            }
+            else if (!game.IsStarted)
+            {
+                status = ResistanceVoteStatus.NotStarted;
+            }
+            else if (game.Phase == ResistancePhase.GameOver)
+            {
+                status = ResistanceVoteStatus.GameOver;
+            }
+            else if (voter is null)
+            {
+                status = ResistanceVoteStatus.NotPlayer;
+            }
+            else if (game.Phase != ResistancePhase.Voting)
+            {
+                status = ResistanceVoteStatus.NotVoting;
+            }
+            else
+            {
+                voter.Vote = approve;
+                if (game.Players.All(x => x.Vote is not null))
+                {
+                    ResistanceRoles.ResolveVotes(game);
+                }
+            }
+
+            return Task.FromResult(new ResistanceVoteResult(status, game));
+        }
+
+        public Task<ResistanceContinueResult> ContinueAsync(
+            Guid sessionId, Guid? callerPlayerId, bool isManager, CancellationToken cancellationToken)
+        {
+            _games.TryGetValue(sessionId, out var game);
+            var status = ResistanceContinueStatus.Continued;
+            if (game is null)
+            {
+                status = ResistanceContinueStatus.NoGame;
+            }
+            else if (!game.IsStarted)
+            {
+                status = ResistanceContinueStatus.NotStarted;
+            }
+            else if (game.Phase == ResistancePhase.GameOver)
+            {
+                status = ResistanceContinueStatus.GameOver;
+            }
+            else if (!isManager && (callerPlayerId is null || callerPlayerId != game.LeaderPlayerId))
+            {
+                status = ResistanceContinueStatus.NotAllowed;
+            }
+            else if (game.Phase != ResistancePhase.VoteResult || ResistanceRoles.IsApproved(game))
+            {
+                status = ResistanceContinueStatus.NothingToContinue;
+            }
+            else
+            {
+                ResistanceRoles.PassLeadership(game);
+            }
+
+            return Task.FromResult(new ResistanceContinueResult(status, game));
         }
 
         private static Task<LobbyResult<ResistanceGame>> Result(LobbyStatus status, ResistanceGame? game) =>
