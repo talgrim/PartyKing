@@ -156,9 +156,18 @@ export const Resistance = (): ReactNode => {
         )}
 
         {game && (
-          <p className="text-sm text-slate-300 text-center max-w-prose">
-            {resistancePhaseDescription(game, { canManage, isAdmin }, board.teamSizes[0])}
-          </p>
+          <div
+            role="status"
+            className="flex items-center justify-center gap-3 w-full px-5 py-3 rounded-xl border border-amber-400/40
+              bg-gradient-to-r from-slate-900/90 via-slate-800/90 to-slate-900/90
+              shadow-lg shadow-amber-500/10 ring-1 ring-inset ring-white/5"
+          >
+            <span aria-hidden="true" className="w-1.5 self-stretch rounded-full bg-gradient-to-b from-amber-300 to-amber-600" />
+            <p className="flex-1 text-xl sm:text-2xl lg:text-3xl font-semibold leading-snug text-center text-amber-50 tracking-wide drop-shadow">
+              {resistancePhaseDescription(game, { canManage, isAdmin }, board.teamSizes[0])}
+            </p>
+            <span aria-hidden="true" className="w-1.5 self-stretch rounded-full bg-gradient-to-b from-amber-300 to-amber-600" />
+          </div>
         )}
 
         <MissionBoardIcon
