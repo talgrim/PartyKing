@@ -28,6 +28,8 @@ export const Ringo = (): ReactNode => {
   const { data: game, error, mutate } = useRingoGame(sessionId);
   const [confirmingEnd, setConfirmingEnd] = useState(false);
   const [message, setMessage] = useState<string>();
+  // Kept here, not in the overlay, which closes after every card; the server stores no rules
+  const [suggestedRules, setSuggestedRules] = useState<string[]>([]);
   const [historyOpen, setHistoryOpen] = usePersistedFlag('partyking.ringoHistoryOpen', false);
 
   // The server pushes every change of the game (RingoChanged), so other devices stay current without polling
@@ -129,7 +131,14 @@ export const Ringo = (): ReactNode => {
       {game && ending && <RingoGameOver flip={ending} flips={game.flips} onEnd={() => void endGame()} />}
 
       {game?.pendingCardId != null && !ending && (
-        <RingoCardOverlay cardId={game.pendingCardId} flips={game.flips} onContinue={() => void continueGame()} />
+        <RingoCardOverlay
+          sessionId={sessionId}
+          cardId={game.pendingCardId}
+          flips={game.flips}
+          suggestedRules={suggestedRules}
+          onSuggested={(rules) => setSuggestedRules((current) => [...current, ...rules])}
+          onContinue={() => void continueGame()}
+        />
       )}
 
       <Dialog

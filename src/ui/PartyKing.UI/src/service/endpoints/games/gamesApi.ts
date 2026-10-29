@@ -33,6 +33,14 @@ export const gamesApi = {
       withCredentials: true,
     }) as unknown as Promise<RingoGameDto>,
 
+  /** Host or admin: new rules for a flipped ace, none of them among `previousRules`; rejects with status 429 when asked too often. */
+  getRingoRuleSuggestions: (sessionId: string, previousRules: string[]) =>
+    axios.post(
+      `/sessions/${sessionId}/games/ringo/rule-suggestions`,
+      { previousRules },
+      { withCredentials: true },
+    ) as unknown as Promise<GameSuggestionsDto>,
+
   /** Host or admin: ends the session's Ringo game. */
   endRingo: (sessionId: string) =>
     axios.delete(`/sessions/${sessionId}/games/ringo`, { withCredentials: true }) as unknown as Promise<void>,
