@@ -1,4 +1,6 @@
 using ErrorOr;
+using PartyKing.Application.Realtime;
+using PartyKing.Application.Sessions.Services;
 using PartyKing.Contract.V1.Lyrics;
 using PartyKing.Domain.Entities.Lyrics;
 using PartyKing.Domain.Results;
@@ -14,22 +16,46 @@ public interface ILyricsService
     /// is playing or no matching lyrics exist.
     /// </summary>
     Task<ErrorOr<LyricsDto>> GetForPlayingSongAsync(Guid sessionId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Saves the timing offset of the song being played for every session and pushes it to this session's viewers.
+    /// Only the host (<paramref name="profileId"/>) or an admin may; anyone else gets Forbidden. NotFound when
+    /// nothing is playing, Validation when the offset is out of range.
+    /// </summary>
+    Task<ErrorOr<Success>> SetOffsetAsync(
+        Guid sessionId,
+        int offsetMs,
+        string? profileId,
+        bool isAdmin,
+        CancellationToken cancellationToken);
 }
 
 internal class LyricsService : ILyricsService
 {
+    // Matches MAX_OFFSET_MS in the UI's lyricsTiming.ts
+    private const int MaxOffsetMs = 100_000;
+
     private readonly IQueueRepository _queueRepository;
     private readonly ILrclibClient _lrclibClient;
     private readonly ILyricsCache _cache;
+    private readonly ILyricsOffsetsRepository _offsetsRepository;
+    private readonly ISessionService _sessionService;
+    private readonly ISessionMusicNotifier _notifier;
 
     public LyricsService(
         IQueueRepository queueRepository,
         ILrclibClient lrclibClient,
-        ILyricsCache cache)
+        ILyricsCache cache,
+        ILyricsOffsetsRepository offsetsRepository,
+        ISessionService sessionService,
+        ISessionMusicNotifier notifier)
     {
         _queueRepository = queueRepository;
         _lrclibClient = lrclibClient;
         _cache = cache;
+        _offsetsRepository = offsetsRepository;
+        _sessionService = sessionService;
+        _notifier = notifier;
     }
 
     public async Task<ErrorOr<LyricsDto>> GetForPlayingSongAsync(Guid sessionId, CancellationToken cancellationToken)
@@ -52,9 +78,50 @@ internal class LyricsService : ILyricsService
             }
         }
 
-        return lines is null
-            ? Error.NotFound(description: "No synchronized lyrics were found for this song")
-            : new LyricsDto(playing.Id, lines.Select(line => new LyricsLineDto(line.TimeMs, line.Text)).ToList());
+        if (lines is null)
+        {
+            return Error.NotFound(description: "No synchronized lyrics were found for this song");
+        }
+
+        var offsetMs = await _offsetsRepository.GetAsync(playing.Url, cancellationToken);
+
+        return new LyricsDto(
+            playing.Id,
+            lines.Select(line => new LyricsLineDto(line.TimeMs, line.Text)).ToList(),
+            offsetMs);
+    }
+
+    public async Task<ErrorOr<Success>> SetOffsetAsync(
+        Guid sessionId,
+        int offsetMs,
+        string? profileId,
+        bool isAdmin,
+        CancellationToken cancellationToken)
+    {
+        var authorized = await _sessionService.AuthorizeManagerAsync(sessionId, profileId, isAdmin, cancellationToken);
+        if (authorized.IsError)
+        {
+            return authorized.Errors;
+        }
+
+        if (Math.Abs((long)offsetMs) > MaxOffsetMs)
+        {
+            return Error.Validation(description: $"The offset must be within {MaxOffsetMs / 1000} seconds");
+        }
+
+        var playing = await _queueRepository.GetPlayingAsync(sessionId, cancellationToken);
+        if (playing is null)
+        {
+            return Error.NotFound(description: "Nothing is playing");
+        }
+
+        await _offsetsRepository.SaveAsync(playing.Url, offsetMs, cancellationToken);
+        await _notifier.LyricsOffsetChangedAsync(
+            sessionId,
+            new LyricsOffsetChangedDto(playing.Id, offsetMs),
+            cancellationToken);
+
+        return Result.Success;
     }
 
     private async Task<(IReadOnlyList<LyricsLine>? Lines, bool Searched)> FindAsync(

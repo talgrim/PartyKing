@@ -8,5 +8,6 @@ internal static class SessionMusicHubEvents
     public const string PlayerStateChanged = "PlayerStateChanged";
     public const string PlayerCommand = "PlayerCommand";
     public const string FallbackErrorChanged = "FallbackErrorChanged";
+    public const string LyricsOffsetChanged = "LyricsOffsetChanged";
     public const string SlideChanged = "SlideChanged";
 }
