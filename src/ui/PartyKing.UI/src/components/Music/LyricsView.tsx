@@ -1,3 +1,4 @@
+import CheckIcon from '@mui/icons-material/Check';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import SyncIcon from '@mui/icons-material/Sync';
@@ -16,7 +17,6 @@ import {
   formatOffset,
 } from './lyricsTiming';
 
-const OFFSET_STORAGE_KEY = 'partyking.lyricsOffsetMs';
 const FONT_SCALE_STORAGE_KEY = 'partyking.lyricsFontScale';
 // Lines change every few seconds, so a few checks a second are plenty
 const TICK_MS = 250;
@@ -26,6 +26,10 @@ type Props = {
   nowPlaying: NowPlayingDto | undefined;
   /** Refetches now-playing, called when the window gets back in front so the position is re-read from the server. */
   onResync?: () => void;
+  /**
+   * Saves the timing for everyone watching this song. Only the host and admins get it, and with it the save button.
+   */
+  onSaveOffset?: (offsetMs: number) => Promise<void>;
 };
 
 const offsetButtonClass =
@@ -34,19 +38,19 @@ const offsetButtonClass =
 /**
  * The lyrics of the song playing, with the line being sung highlighted and scrolled to the middle. Where the song is
  * comes from now-playing: the server's position as of the last response, counted on locally while the song plays.
- * The host can nudge the timing when the sound reaches them late or early.
+ * Anyone can nudge the timing when the sound reaches them late or early; the host and admins can save it for the
+ * song, which is then the starting point of every viewer, now and the next time the song plays.
  */
-export const LyricsView = ({ lyrics, nowPlaying, onResync }: Props): ReactNode => {
-  // Kept here rather than in SyncedLyrics, which is unmounted while the next song's lyrics load
-  const [offsetMs, setOffsetMs] = usePersistedNumber(OFFSET_STORAGE_KEY, 0, -MAX_OFFSET_MS, MAX_OFFSET_MS);
+export const LyricsView = ({ lyrics, nowPlaying, onResync, onSaveOffset }: Props): ReactNode => {
+  // The saved offset of the song on display; 0 while there are no lyrics
+  const savedOffsetMs = lyrics.status === 'found' ? lyrics.offsetMs : 0;
+  const foundSongId = lyrics.status === 'found' ? lyrics.songId : undefined;
 
-  // The nudge fits one recording, so the next song starts without it
-  const songId = nowPlaying?.song?.id;
-  const lastSongId = useRef(songId);
-  useEffect(() => {
-    if (songId !== undefined && lastSongId.current !== undefined && songId !== lastSongId.current) setOffsetMs(0);
-    if (songId !== undefined) lastSongId.current = songId;
-  }, [songId, setOffsetMs]);
+  // Kept here rather than in SyncedLyrics, which is unmounted while the next song's lyrics load. It starts at the
+  // saved offset of each song, and a newly saved one (by this viewer or by the host) replaces whatever was nudged.
+  const [offsetMs, setDraftMs] = useState(savedOffsetMs);
+  useEffect(() => setDraftMs(savedOffsetMs), [foundSongId, savedOffsetMs]);
+  const setOffsetMs = (value: number) => setDraftMs(Math.min(MAX_OFFSET_MS, Math.max(-MAX_OFFSET_MS, value)));
 
   return (
     <div className="relative flex h-full w-full flex-col bg-black text-slate-200">
@@ -57,6 +61,8 @@ export const LyricsView = ({ lyrics, nowPlaying, onResync }: Props): ReactNode =
           onResync={onResync}
           offsetMs={offsetMs}
           setOffsetMs={setOffsetMs}
+          savedOffsetMs={savedOffsetMs}
+          onSaveOffset={onSaveOffset}
         />
       ) : (
         <p className="m-auto px-6 text-center text-xl text-slate-400">{emptyMessage(lyrics.status)}</p>
@@ -82,13 +88,29 @@ const SyncedLyrics = ({
   onResync,
   offsetMs,
   setOffsetMs,
+  savedOffsetMs,
+  onSaveOffset,
 }: {
   lines: Extract<LyricsState, { status: 'found' }>['lines'];
   nowPlaying: NowPlayingDto | undefined;
   onResync?: () => void;
   offsetMs: number;
   setOffsetMs: (offsetMs: number) => void;
+  savedOffsetMs: number;
+  onSaveOffset?: (offsetMs: number) => Promise<void>;
 }): ReactNode => {
+  const [saving, setSaving] = useState(false);
+  const saveOffset = async () => {
+    if (!onSaveOffset) return;
+    setSaving(true);
+    try {
+      await onSaveOffset(offsetMs);
+    } catch {
+      // The draft stays unsaved, so the button is still there to try again
+    } finally {
+      setSaving(false);
+    }
+  };
   const [fontScale, setFontScale] = usePersistedNumber(
     FONT_SCALE_STORAGE_KEY,
     FONT_SCALE_DEFAULT,
@@ -248,6 +270,18 @@ const SyncedLyrics = ({
         >
           +
         </button>
+        {onSaveOffset && (
+          <button
+            type="button"
+            className={offsetButtonClass}
+            title="Save this timing for everyone"
+            aria-label="Save lyrics timing"
+            disabled={saving || offsetMs === savedOffsetMs}
+            onClick={() => void saveOffset()}
+          >
+            <CheckIcon fontSize="small" />
+          </button>
+        )}
       </div>
     </>
   );

@@ -17,11 +17,17 @@ import { PageNavigation } from '@/components/common/PageNavigation';
 import { SlideshowView } from '@/pages/Slideshow/SlideshowView';
 import { ROUTE_PATHS } from '@/router/constants';
 import { HTTP_STATUS_CODE } from '@/service/constants';
+import { lyricsApi } from '@/service/endpoints/lyrics/lyricsApi';
+import { LyricsDto } from '@/service/endpoints/lyrics/types';
 import { useLyrics } from '@/service/endpoints/lyrics/useLyrics';
 import { useNowPlaying } from '@/service/endpoints/player/useNowPlaying';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 import { useViewerRole } from '@/service/endpoints/sessions/useViewerRole';
-import { HostPlayerPushHandlers } from '@/service/realtime/sessionMusicEvents';
+import {
+  applyLyricsOffsetChanged,
+  HostPlayerPushHandlers,
+  lyricsKey,
+} from '@/service/realtime/sessionMusicEvents';
 import { useSessionMusicHub } from '@/service/realtime/useSessionMusicHub';
 import { SessionHubContext } from '@/service/realtime/SessionHubContext';
 import { isMobileDevice } from '@/utils/isMobileDevice';
@@ -95,6 +101,19 @@ export const MusicQueue = (): ReactNode => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoLyrics, lyrics.status, nowPlaying?.song?.id]);
 
+  // Host and admins only (the server refuses everyone else); the push reaches the others, and this viewer is
+  // updated at once rather than when its own push arrives
+  const playingSongId = nowPlaying?.song?.id;
+  const saveLyricsOffset = async (offsetMs: number) => {
+    if (playingSongId == null) return;
+    await lyricsApi.setOffset(sessionId, offsetMs);
+    await mutate(
+      lyricsKey(sessionId, playingSongId),
+      (current: LyricsDto | null | undefined) => applyLyricsOffsetChanged(current, offsetMs),
+      { revalidate: false },
+    );
+  };
+
   const lyricsOnly = !canViewSlideshow;
   const lyricsShown = lyricsOnly || showLyrics;
 
@@ -118,7 +137,12 @@ export const MusicQueue = (): ReactNode => {
         >
           <div className="aspect-video w-full overflow-hidden rounded-sm bg-black">
             {lyricsShown ? (
-              <LyricsView lyrics={lyrics} nowPlaying={nowPlaying} onResync={() => void refreshNowPlaying()} />
+              <LyricsView
+                lyrics={lyrics}
+                nowPlaying={nowPlaying}
+                onResync={() => void refreshNowPlaying()}
+                onSaveOffset={canViewSlideshow ? saveLyricsOffset : undefined}
+              />
             ) : (
               <SlideshowView sessionId={session.id} />
             )}
@@ -206,6 +230,7 @@ export const MusicQueue = (): ReactNode => {
           showLyrics={lyricsShown}
           lyrics={lyrics}
           onResyncLyrics={() => void refreshNowPlaying()}
+          onSaveLyricsOffset={canViewSlideshow ? saveLyricsOffset : undefined}
           onExit={() => setMaximized(false)}
         />
       )}

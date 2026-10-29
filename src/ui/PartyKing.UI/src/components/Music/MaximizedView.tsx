@@ -16,6 +16,7 @@ type Props = {
   showLyrics: boolean;
   lyrics: LyricsState;
   onResyncLyrics?: () => void;
+  onSaveLyricsOffset?: (offsetMs: number) => Promise<void>;
   onExit: () => void;
 };
 
@@ -25,7 +26,7 @@ type Props = {
  * included); either way it can be hidden, and the choice is kept in localStorage. It covers the session page without replacing it, so the host's player underneath keeps
  * playing.
  */
-export const MaximizedView = ({ sessionId, nowPlaying, showLyrics, lyrics, onResyncLyrics, onExit }: Props): ReactNode => {
+export const MaximizedView = ({ sessionId, nowPlaying, showLyrics, lyrics, onResyncLyrics, onSaveLyricsOffset, onExit }: Props): ReactNode => {
   const [queueOpen, setQueueOpen] = usePersistedFlag('partyking.maximizedQueueOpen', true);
 
   useEffect(() => {
@@ -44,7 +45,7 @@ export const MaximizedView = ({ sessionId, nowPlaying, showLyrics, lyrics, onRes
         }`}
       >
         <div className="min-h-0 flex-1">
-          {showLyrics ? <LyricsView lyrics={lyrics} nowPlaying={nowPlaying} onResync={onResyncLyrics} /> : <SlideshowView sessionId={sessionId} />}
+          {showLyrics ? <LyricsView lyrics={lyrics} nowPlaying={nowPlaying} onResync={onResyncLyrics} onSaveOffset={onSaveLyricsOffset} /> : <SlideshowView sessionId={sessionId} />}
         </div>
         <NowPlayingOverlay nowPlaying={nowPlaying} overLyrics={showLyrics} />
         <button
