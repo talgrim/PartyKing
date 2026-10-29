@@ -1,0 +1,132 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using PartyKing.API.Authorization;
+using PartyKing.Application.Games.Services;
+using PartyKing.Contract.V1.Games;
+using PartyKing.Domain.Entities.Games;
+using PartyKing.Infrastructure.Authorization;
+
+namespace PartyKing.API.Controllers.Games;
+
+[Route(GamesRoute + "/resistance")]
+public class ResistanceController : GameControllerBase
+{
+    private readonly IResistanceService _resistanceService;
+
+    public ResistanceController(
+        IHttpContextAccessor httpContextAccessor,
+        IResistanceService resistanceService,
+        ICookieAuthorizationHandler cookieAuthorizationHandler)
+        : base(httpContextAccessor, cookieAuthorizationHandler)
+    {
+        _resistanceService = resistanceService;
+    }
+
+    /// <summary>
+    /// The session's Resistance game. Anyone who unlocked the session may watch it once it is open; until then it is
+    /// 404 for everyone but the host and admins, and 404 when there is no game.
+    /// </summary>
+    [HttpGet]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetResistance(Guid sessionId, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.GetAsync(sessionId, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>Anyone who unlocked the session: whether the Resistance game is open to join and whether the caller did.</summary>
+    [HttpGet("lobby")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceLobbyDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetResistanceLobby(Guid sessionId, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.GetLobbyAsync(sessionId, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>Host or admin: creates the Resistance game (closed to guests), 409 when the session already has one.</summary>
+    [HttpPost]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> CreateResistance(Guid sessionId, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.CreateAsync(sessionId, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>Admin only: opens the Resistance game to guests (idempotent), 403 for the host.</summary>
+    [HttpPost("open")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> OpenResistance(Guid sessionId, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.OpenAsync(sessionId, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>
+    /// Joins the open Resistance game as a player and remembers the player in a cookie. 400 for a bad name, 409 while
+    /// the game is closed or full or the name is taken. The session host's name comes from their Spotify profile, an
+    /// admin without a name joins as "admin".
+    /// </summary>
+    [HttpPost("join")]
+    [RequireSessionAccess]
+    [EnableRateLimiting(SessionsController.JoinRateLimitPolicy)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> JoinResistance(
+        Guid sessionId, [FromBody] ResistanceJoinRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.JoinAsync(
+            sessionId, request.Name, await Caller(sessionId), cancellationToken);
+        if (!result.IsError)
+        {
+            Cookies.GrantGamePlayer(GameKind.Resistance, sessionId, result.Value, HttpContext);
+        }
+
+        return result.Match(_ => NoContent(), Problem);
+    }
+
+    /// <summary>Host or admin: removes a player from the Resistance game, 404 for an unknown game or player.</summary>
+    [HttpDelete("players/{playerId:guid}")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> KickResistancePlayer(
+        Guid sessionId, Guid playerId, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.KickAsync(
+            sessionId, playerId, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>Host or admin: sets the seating order; 409 when the ids are not exactly the players.</summary>
+    [HttpPut("players/order")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ReorderResistancePlayers(
+        Guid sessionId, [FromBody] ResistancePlayersOrderRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.ReorderAsync(
+            sessionId, request.PlayerIds, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>Host or admin: ends the Resistance game, 404 when there is none.</summary>
+    [HttpDelete]
+    [RequireSessionAccess]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> EndResistance(Guid sessionId, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.EndAsync(sessionId, await Caller(sessionId), cancellationToken);
+
+        return result.Match(_ => NoContent(), Problem);
+    }
+
+    private Task<GameCaller> Caller(Guid sessionId) => ReadCallerAsync(GameKind.Resistance, sessionId);
+}

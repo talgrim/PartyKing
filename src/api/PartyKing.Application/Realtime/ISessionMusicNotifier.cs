@@ -40,4 +40,10 @@ public interface ISessionMusicNotifier
 
     /// <summary>An admin opened the session's Ringo game to guests; guests are asked whether to join.</summary>
     Task RingoOpenedAsync(Guid sessionId, CancellationToken cancellationToken);
+
+    /// <summary>The session's Resistance game changed (created, opened, a player joined or left, or ended); clients fetch it again.</summary>
+    Task ResistanceChangedAsync(Guid sessionId, CancellationToken cancellationToken);
+
+    /// <summary>An admin opened the session's Resistance game to guests; guests are asked whether to join.</summary>
+    Task ResistanceOpenedAsync(Guid sessionId, CancellationToken cancellationToken);
 }

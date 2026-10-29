@@ -93,6 +93,7 @@ public static class DependencyInjection
     {
         services.AddScoped<IGameService, GameService>();
         services.AddScoped<IRingoService, RingoService>();
+        services.AddScoped<IResistanceService, ResistanceService>();
         services.AddScoped<INeverHaveIEverSuggestionService, NeverHaveIEverSuggestionService>();
         services.AddScoped<IRingoRuleSuggestionService, RingoRuleSuggestionService>();
     }

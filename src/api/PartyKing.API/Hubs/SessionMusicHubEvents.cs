@@ -12,4 +12,6 @@ internal static class SessionMusicHubEvents
     public const string SlideChanged = "SlideChanged";
     public const string RingoChanged = "RingoChanged";
     public const string RingoOpened = "RingoOpened";
+    public const string ResistanceChanged = "ResistanceChanged";
+    public const string ResistanceOpened = "ResistanceOpened";
 }
