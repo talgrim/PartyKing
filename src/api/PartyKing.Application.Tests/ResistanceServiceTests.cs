@@ -260,6 +260,106 @@ public class ResistanceServiceTests
     }
 
     [Theory]
+    [InlineData(5, 1, 2)]
+    [InlineData(5, 3, 2)]
+    [InlineData(6, 3, 4)]
+    [InlineData(7, 4, 4)]
+    [InlineData(8, 1, 3)]
+    [InlineData(10, 5, 5)]
+    public void TeamSize_FollowsTheMissionTable(int players, int mission, int size)
+    {
+        Assert.Equal(size, ResistanceRoles.TeamSize(players, mission));
+    }
+
+    [Fact]
+    public async Task AfterStarting_TheDtoTellsTheRequiredTeamSizeAndHasNoTeam()
+    {
+        await OpenGameAsync();
+        var callers = await JoinPlayersAsync(8);
+        var started = await _service.StartAsync(_id, Host, CancellationToken.None);
+
+        Assert.Equal(1, started.Value.MissionNumber);
+        Assert.Equal(3, started.Value.RequiredTeamSize);
+        Assert.Empty(started.Value.TeamPlayerIds);
+        Assert.Equal(8, callers.Count);
+    }
+
+    [Fact]
+    public async Task SelectingATeam_IsOnlyForTheLeaderAndNeedsAStartedGame()
+    {
+        var ct = CancellationToken.None;
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _service.SelectTeamAsync(_id, [], new GameCaller("guest", false), ct)).FirstError.Type);
+        Assert.Equal(ErrorOr.ErrorType.NotFound, (await _service.SelectTeamAsync(_id, [], Host, ct)).FirstError.Type);
+
+        var callers = await OpenGameAndJoinAsync(5);
+        Assert.Equal("Resistance.NotStarted", (await _service.SelectTeamAsync(_id, [], Host, ct)).FirstError.Code);
+
+        var started = await _service.StartAsync(_id, Host, ct);
+        var ids = started.Value.Players.Select(x => x.Id).ToList();
+        var notLeader = callers.First(x => x.PlayerId != started.Value.LeaderPlayerId);
+
+        var denied = await _service.SelectTeamAsync(_id, ids.Take(2).ToList(), notLeader, ct);
+        var manager = await _service.SelectTeamAsync(_id, ids.Take(2).ToList(), Admin, ct);
+
+        Assert.Equal("Resistance.NotLeader", denied.FirstError.Code);
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, denied.FirstError.Type);
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, manager.FirstError.Type);
+    }
+
+    [Fact]
+    public async Task SelectingATeam_NeedsExactlyTheRequiredNumberOfDistinctPlayers()
+    {
+        var ct = CancellationToken.None;
+        var callers = await OpenGameAndJoinAsync(5);
+        var started = await _service.StartAsync(_id, Host, ct);
+        var leader = callers.First(x => x.PlayerId == started.Value.LeaderPlayerId);
+        var ids = started.Value.Players.Select(x => x.Id).ToList();
+
+        Assert.Equal("Resistance.WrongTeamSize", (await _service.SelectTeamAsync(_id, ids.Take(1).ToList(), leader, ct)).FirstError.Code);
+        Assert.Equal("Resistance.WrongTeamSize", (await _service.SelectTeamAsync(_id, ids.Take(3).ToList(), leader, ct)).FirstError.Code);
+        Assert.Equal("Resistance.WrongTeamSize", (await _service.SelectTeamAsync(_id, [ids[0], ids[0]], leader, ct)).FirstError.Code);
+        Assert.Equal("Resistance.WrongTeamSize", (await _service.SelectTeamAsync(_id, null, leader, ct)).FirstError.Code);
+        Assert.Equal("Resistance.UnknownPlayer", (await _service.SelectTeamAsync(_id, [ids[0], Guid.NewGuid()], leader, ct)).FirstError.Code);
+    }
+
+    [Fact]
+    public async Task SelectingATeam_LetsTheLeaderPickThemselvesAndLocksTheTeam()
+    {
+        var ct = CancellationToken.None;
+        var callers = await OpenGameAndJoinAsync(5);
+        var started = await _service.StartAsync(_id, Host, ct);
+        var leader = callers.First(x => x.PlayerId == started.Value.LeaderPlayerId);
+        var other = started.Value.Players.First(x => x.Id != leader.PlayerId).Id;
+        var before = _notifier.ResistanceChanges.Count;
+
+        var result = await _service.SelectTeamAsync(_id, [leader.PlayerId!.Value, other], leader, ct);
+
+        Assert.False(result.IsError);
+        Assert.Equal(2, result.Value.TeamPlayerIds.Count);
+        Assert.Contains(leader.PlayerId!.Value, result.Value.TeamPlayerIds);
+        Assert.Contains(other, result.Value.TeamPlayerIds);
+        Assert.Equal(before + 1, _notifier.ResistanceChanges.Count);
+        Assert.Equal("Resistance.TeamSubmitted", (await _service.SelectTeamAsync(_id, [leader.PlayerId.Value, other], leader, ct)).FirstError.Code);
+    }
+
+    [Fact]
+    public async Task SelectedTeam_IsVisibleToEveryone()
+    {
+        var ct = CancellationToken.None;
+        var callers = await OpenGameAndJoinAsync(5);
+        var started = await _service.StartAsync(_id, Host, ct);
+        var leader = callers.First(x => x.PlayerId == started.Value.LeaderPlayerId);
+        var team = started.Value.Players.Take(2).Select(x => x.Id).ToList();
+        await _service.SelectTeamAsync(_id, team, leader, ct);
+
+        var asOther = await _service.GetAsync(_id, callers.First(x => x.PlayerId != leader.PlayerId), ct);
+        var asHost = await _service.GetAsync(_id, Host, ct);
+
+        Assert.Equal(team.Order(), asOther.Value.TeamPlayerIds.Order());
+        Assert.Equal(team.Order(), asHost.Value.TeamPlayerIds.Order());
+    }
+
+    [Theory]
     [InlineData(5, 2)]
     [InlineData(6, 2)]
     [InlineData(7, 3)]
@@ -370,6 +470,13 @@ public class ResistanceServiceTests
         }
 
         return callers;
+    }
+
+    private async Task<List<GameCaller>> OpenGameAndJoinAsync(int count)
+    {
+        await OpenGameAsync();
+
+        return await JoinPlayersAsync(count);
     }
 
     private async Task OpenGameAsync()
@@ -527,6 +634,47 @@ public class ResistanceServiceTests
             }
 
             return Task.FromResult(new ResistanceStartResult(status, game));
+        }
+
+        public Task<ResistanceTeamResult> SelectTeamAsync(
+            Guid sessionId, Guid? callerPlayerId, IReadOnlyList<Guid> playerIds, CancellationToken cancellationToken)
+        {
+            _games.TryGetValue(sessionId, out var game);
+            var status = ResistanceTeamStatus.Selected;
+            if (game is null)
+            {
+                status = ResistanceTeamStatus.NoGame;
+            }
+            else if (!game.IsStarted)
+            {
+                status = ResistanceTeamStatus.NotStarted;
+            }
+            else if (callerPlayerId is null || callerPlayerId != game.LeaderPlayerId)
+            {
+                status = ResistanceTeamStatus.NotLeader;
+            }
+            else if (game.IsTeamSubmitted)
+            {
+                status = ResistanceTeamStatus.AlreadySubmitted;
+            }
+            else if (playerIds.Count != ResistanceRoles.TeamSize(game.Players.Count, game.MissionNumber)
+                || playerIds.Distinct().Count() != playerIds.Count)
+            {
+                status = ResistanceTeamStatus.WrongSize;
+            }
+            else if (playerIds.Any(id => game.Players.All(x => x.PlayerId != id)))
+            {
+                status = ResistanceTeamStatus.UnknownPlayer;
+            }
+            else
+            {
+                foreach (var player in game.Players)
+                {
+                    player.IsOnTeam = playerIds.Contains(player.PlayerId);
+                }
+            }
+
+            return Task.FromResult(new ResistanceTeamResult(status, game));
         }
 
         private static Task<LobbyResult<ResistanceGame>> Result(LobbyStatus status, ResistanceGame? game) =>
