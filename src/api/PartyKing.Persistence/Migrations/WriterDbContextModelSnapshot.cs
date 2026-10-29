@@ -69,6 +69,12 @@ namespace PartyKing.Persistence.Migrations
                     b.Property<bool>("IsOpen")
                         .HasColumnType("INTEGER");
 
+                    b.Property<Guid?>("LeaderPlayerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("SessionId");
 
                     b.ToTable("ResistanceGames");
@@ -100,6 +106,9 @@ namespace PartyKing.Persistence.Migrations
 
                     b.Property<string>("ProfileId")
                         .HasColumnType("TEXT");
+
+                    b.Property<int?>("Role")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("SessionId", "PlayerId");
 

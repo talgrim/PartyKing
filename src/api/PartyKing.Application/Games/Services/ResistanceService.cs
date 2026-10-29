@@ -34,6 +34,12 @@ public interface IResistanceService
     Task<ErrorOr<Guid>> JoinAsync(
         Guid sessionId, string? name, GameCaller caller, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Host or admin: starts the open game once at least 5 players joined, which deals the roles, picks the first
+    /// leader and locks the players. NotFound without a game, Conflict while it is closed, started or short of players.
+    /// </summary>
+    Task<ErrorOr<ResistanceGameDto>> StartAsync(Guid sessionId, GameCaller caller, CancellationToken cancellationToken);
+
     /// <summary>Host or admin: removes a player. NotFound for an unknown game or player.</summary>
     Task<ErrorOr<ResistanceGameDto>> KickAsync(
         Guid sessionId, Guid playerId, GameCaller caller, CancellationToken cancellationToken);
@@ -94,7 +100,10 @@ internal class ResistanceService : IResistanceService
         return game is null
             ? _lobby.NoGame
             : new ResistanceLobbyDto(
-                game.CreatedAt, game.IsOpen, GameLobby<ResistanceGame, ResistancePlayer>.IsPlayer(game, caller));
+                game.CreatedAt,
+                game.IsOpen,
+                game.IsStarted,
+                GameLobby<ResistanceGame, ResistancePlayer>.IsPlayer(game, caller));
     }
 
     public async Task<ErrorOr<ResistanceGameDto>> CreateAsync(
@@ -122,6 +131,34 @@ internal class ResistanceService : IResistanceService
         var result = await _lobby.OpenAsync(sessionId, caller, cancellationToken);
 
         return result.IsError ? result.Errors : ToDto(result.Value, caller);
+    }
+
+    public async Task<ErrorOr<ResistanceGameDto>> StartAsync(
+        Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
+    {
+        if (await _lobby.AuthorizeAsync(sessionId, caller, cancellationToken) is { IsError: true } denied)
+        {
+            return denied.Errors;
+        }
+
+        var result = await _games.StartAsync(sessionId, _clock.UtcNow, cancellationToken);
+        switch (result.Status)
+        {
+            case ResistanceStartStatus.NoGame:
+                return _lobby.NoGame;
+            case ResistanceStartStatus.NotOpen:
+                return Error.Conflict("Resistance.NotOpen", "The game is not open to guests yet.");
+            case ResistanceStartStatus.AlreadyStarted:
+                return Error.Conflict("Resistance.AlreadyStarted", "The game has already started.");
+            case ResistanceStartStatus.NotEnoughPlayers:
+                return Error.Conflict(
+                    "Resistance.NotEnoughPlayers",
+                    $"The game needs at least {ResistanceGame.MinPlayers} players to start.");
+        }
+
+        await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
+
+        return ToDto(result.Game!, caller);
     }
 
     public Task<ErrorOr<Guid>> JoinAsync(
@@ -171,12 +208,28 @@ internal class ResistanceService : IResistanceService
             .Select(x => new ResistancePlayerDto(x.PlayerId, x.DisplayName))
             .ToList();
 
+        var you = GameLobby<ResistanceGame, ResistancePlayer>.IsPlayer(game, caller)
+            ? game.Players.First(x => x.PlayerId == caller.PlayerId)
+            : null;
+        var yourRole = game.IsStarted ? you?.Role : null;
+        var fellowSpies = yourRole == ResistanceRole.Spy
+            ? game.Players
+                .Where(x => x.Role == ResistanceRole.Spy && x.PlayerId != you!.PlayerId)
+                .OrderBy(x => x.Order)
+                .Select(x => x.PlayerId)
+                .ToList()
+            : null;
+
         return new ResistanceGameDto(
             game.CreatedAt,
             game.IsOpen,
             players,
-            GameLobby<ResistanceGame, ResistancePlayer>.IsPlayer(game, caller) ? caller.PlayerId : null,
-            ResistanceGame.MaxPlayers);
+            you?.PlayerId,
+            ResistanceGame.MaxPlayers,
+            game.StartedAt,
+            game.LeaderPlayerId,
+            yourRole is { } role ? (ResistanceRoleDto)role : null,
+            fellowSpies);
     }
 
     private sealed class ResistanceLobbyNotifier : IGameLobbyNotifier

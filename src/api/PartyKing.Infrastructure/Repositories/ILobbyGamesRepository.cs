@@ -6,6 +6,9 @@ public enum LobbyStatus
 {
     NoGame,
     NotOpen,
+
+    /// <summary>The game has started, so its players no longer change.</summary>
+    Started,
     NameTaken,
 
     /// <summary>The game already has as many players as it allows.</summary>

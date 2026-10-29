@@ -55,6 +55,9 @@ internal class GameLobby<TGame, TPlayer>
 
     public Error NoGame => Error.NotFound($"{_options.Name}.NotFound", $"The session has no {_options.Name} game.");
 
+    private Error StartedError =>
+        Error.Conflict($"{_options.Name}.Started", "The game has started, its players can no longer change.");
+
     /// <summary>Host or admin; Forbidden or NotFound otherwise.</summary>
     public Task<ErrorOr<Success>> AuthorizeAsync(
         Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
@@ -174,6 +177,8 @@ internal class GameLobby<TGame, TPlayer>
                 return NoGame;
             case LobbyStatus.NotOpen:
                 return Error.Conflict($"{_options.Name}.NotOpen", "The game is not open to guests.");
+            case LobbyStatus.Started:
+                return StartedError;
             case LobbyStatus.NameTaken:
                 return Error.Conflict($"{_options.Name}.NameTaken", "Another player already uses this name.");
             case LobbyStatus.Full:
@@ -199,6 +204,11 @@ internal class GameLobby<TGame, TPlayer>
         if (result.Status == LobbyStatus.NoGame)
         {
             return NoGame;
+        }
+
+        if (result.Status == LobbyStatus.Started)
+        {
+            return StartedError;
         }
 
         if (result.Status == LobbyStatus.NoPlayer)
@@ -229,6 +239,11 @@ internal class GameLobby<TGame, TPlayer>
         if (result.Status == LobbyStatus.NoGame)
         {
             return NoGame;
+        }
+
+        if (result.Status == LobbyStatus.Started)
+        {
+            return StartedError;
         }
 
         if (result.Status == LobbyStatus.OrderMismatch)

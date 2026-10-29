@@ -26,6 +26,9 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
     /// <summary>How many players may join.</summary>
     protected virtual int MaxPlayers => int.MaxValue;
 
+    /// <summary>Whether the game's players are locked, so nobody joins, leaves or moves.</summary>
+    protected virtual bool IsLocked(TGame game) => false;
+
     /// <summary>The game's table with everything the game needs loaded, including its players.</summary>
     protected abstract IQueryable<TGame> Games(PartyKingDbContextBase dbContext);
 
@@ -115,6 +118,11 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
             return new LobbyResult<TGame>(LobbyStatus.NotOpen, game);
         }
 
+        if (IsLocked(game))
+        {
+            return new LobbyResult<TGame>(LobbyStatus.Started, game);
+        }
+
         if (game.Players.Any(x => x.NormalizedName == player.NormalizedName))
         {
             return new LobbyResult<TGame>(LobbyStatus.NameTaken, game);
@@ -154,6 +162,11 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
             return new LobbyResult<TGame>(LobbyStatus.NoGame, null);
         }
 
+        if (IsLocked(game))
+        {
+            return new LobbyResult<TGame>(LobbyStatus.Started, game);
+        }
+
         var kicked = game.Players.FirstOrDefault(x => x.PlayerId == playerId);
         if (kicked is null)
         {
@@ -184,6 +197,11 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
         if (game is null)
         {
             return new LobbyResult<TGame>(LobbyStatus.NoGame, null);
+        }
+
+        if (IsLocked(game))
+        {
+            return new LobbyResult<TGame>(LobbyStatus.Started, game);
         }
 
         if (playerIds.Count != game.Players.Count

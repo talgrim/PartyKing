@@ -70,6 +70,20 @@ public class ResistanceController : GameControllerBase
     }
 
     /// <summary>
+    /// Host or admin: starts the open Resistance game (deals the roles, picks the first leader, locks the players).
+    /// 409 while it is closed or already started or has fewer than 5 players.
+    /// </summary>
+    [HttpPost("start")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> StartResistance(Guid sessionId, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.StartAsync(sessionId, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>
     /// Joins the open Resistance game as a player and remembers the player in a cookie. 400 for a bad name, 409 while
     /// the game is closed or full or the name is taken. The session host's name comes from their Spotify profile, an
     /// admin without a name joins as "admin".
