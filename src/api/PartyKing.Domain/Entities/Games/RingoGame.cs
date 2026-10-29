@@ -6,8 +6,18 @@ public class RingoGame
     public Guid SessionId { get; set; }
     public int Seed { get; set; }
 
-    /// <summary>Card ids (0-51) in the order they were flipped, comma separated.</summary>
-    public string FlippedCards { get; set; } = string.Empty;
+    /// <summary>The last flipped card until the host or an admin continues; null when none awaits that.</summary>
+    public int? PendingCardId { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
+
+    public List<RingoFlip> Flips { get; set; } = [];
+
+    /// <summary>The fourth king ends the game: nothing can be flipped any more.</summary>
+    public bool IsOver => Flips.Count(x => x.CardId % 13 == KingRankIndex) >= KingsToEnd;
+
+    public const int KingsToEnd = 4;
+
+    // Card ids run by suit, 13 ranks each, 2 to ace, so the king is the rank at index 11
+    private const int KingRankIndex = 11;
 }

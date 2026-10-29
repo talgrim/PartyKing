@@ -23,9 +23,17 @@ internal sealed class MeteredRingoGamesRepository : MeteredRepository, IRingoGam
         return MeasureAsync(nameof(TryCreateAsync), () => _inner.TryCreateAsync(game, cancellationToken));
     }
 
-    public Task<RingoGame?> FlipAsync(Guid sessionId, int cardId, CancellationToken cancellationToken)
+    public Task<RingoFlipResult> FlipAsync(
+        Guid sessionId, int cardId, string flippedBy, DateTimeOffset flippedAt, CancellationToken cancellationToken)
     {
-        return MeasureAsync(nameof(FlipAsync), () => _inner.FlipAsync(sessionId, cardId, cancellationToken));
+        return MeasureAsync(
+            nameof(FlipAsync),
+            () => _inner.FlipAsync(sessionId, cardId, flippedBy, flippedAt, cancellationToken));
+    }
+
+    public Task<RingoGame?> ContinueAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        return MeasureAsync(nameof(ContinueAsync), () => _inner.ContinueAsync(sessionId, cancellationToken));
     }
 
     public Task<bool> DeleteAsync(Guid sessionId, CancellationToken cancellationToken)

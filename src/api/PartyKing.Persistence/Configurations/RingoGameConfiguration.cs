@@ -17,5 +17,10 @@ public class RingoGameConfiguration : IEntityTypeConfiguration<RingoGame>
             .WithOne()
             .HasForeignKey<RingoGame>(x => x.SessionId)
             .OnDelete(DeleteBehavior.Cascade);
+        builder
+            .HasMany(x => x.Flips)
+            .WithOne()
+            .HasForeignKey(x => x.SessionId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

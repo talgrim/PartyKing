@@ -58,6 +58,33 @@ namespace PartyKing.Persistence.Migrations
                     b.ToTable("OAuthStates");
                 });
 
+            modelBuilder.Entity("PartyKing.Domain.Entities.Games.RingoFlip", b =>
+                {
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CardId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("FlippedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FlippedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("SessionId", "Order");
+
+                    b.HasIndex("SessionId", "CardId")
+                        .IsUnique();
+
+                    b.ToTable("RingoFlips");
+                });
+
             modelBuilder.Entity("PartyKing.Domain.Entities.Games.RingoGame", b =>
                 {
                     b.Property<Guid>("SessionId")
@@ -66,9 +93,8 @@ namespace PartyKing.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("FlippedCards")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                    b.Property<int?>("PendingCardId")
+                        .HasColumnType("INTEGER");
 
                     b.Property<int>("Seed")
                         .HasColumnType("INTEGER");
@@ -263,6 +289,15 @@ namespace PartyKing.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("PartyKing.Domain.Entities.Games.RingoFlip", b =>
+                {
+                    b.HasOne("PartyKing.Domain.Entities.Games.RingoGame", null)
+                        .WithMany("Flips")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("PartyKing.Domain.Entities.Games.RingoGame", b =>
                 {
                     b.HasOne("PartyKing.Domain.Entities.Sessions.Session", null)
@@ -307,6 +342,11 @@ namespace PartyKing.Persistence.Migrations
                         .HasForeignKey("PartyKing.Domain.Entities.Slideshow.SlideshowSettings", "SessionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("PartyKing.Domain.Entities.Games.RingoGame", b =>
+                {
+                    b.Navigation("Flips");
                 });
 #pragma warning restore 612, 618
         }

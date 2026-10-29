@@ -53,4 +53,5 @@ public class PartyKingDbContextBase : DbContext
     public DbSet<OAuthState> OAuthStates { get; set; } = null!;
     public DbSet<LyricsOffset> LyricsOffsets { get; set; } = null!;
     public DbSet<RingoGame> RingoGames { get; set; } = null!;
+    public DbSet<RingoFlip> RingoFlips { get; set; } = null!;
 }

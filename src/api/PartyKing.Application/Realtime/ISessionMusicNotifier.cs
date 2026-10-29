@@ -34,4 +34,7 @@ public interface ISessionMusicNotifier
 
     /// <summary>The image on display in the session's slideshow changed; clients fetch the current one.</summary>
     Task SlideshowChangedAsync(Guid sessionId, CancellationToken cancellationToken);
+
+    /// <summary>The session's Ringo game changed (started, flipped, continued or ended); clients fetch it again.</summary>
+    Task RingoChangedAsync(Guid sessionId, CancellationToken cancellationToken);
 }

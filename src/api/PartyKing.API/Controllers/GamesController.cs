@@ -90,7 +90,7 @@ public class GamesController : CoreController
         return result.Match(Ok, Problem);
     }
 
-    /// <summary>Host or admin: flips a card (0-51), idempotent.</summary>
+    /// <summary>Host or admin: flips a card (0-51), idempotent; 409 while another card is pending.</summary>
     [HttpPost("sessions/{sessionId:guid}/games/ringo/cards/{cardId:int}/flip")]
     [RequireSessionAccess]
     [ProducesResponseType<RingoGameDto>(StatusCodes.Status200OK)]
@@ -99,6 +99,19 @@ public class GamesController : CoreController
         var (profileId, isAdmin) = await ReadCallerAsync();
 
         var result = await _ringoService.FlipAsync(sessionId, cardId, profileId, isAdmin, cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>Host or admin: continues past the pending card, 404 when there is no game.</summary>
+    [HttpPost("sessions/{sessionId:guid}/games/ringo/continue")]
+    [RequireSessionAccess]
+    [ProducesResponseType<RingoGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ContinueRingo(Guid sessionId, CancellationToken cancellationToken)
+    {
+        var (profileId, isAdmin) = await ReadCallerAsync();
+
+        var result = await _ringoService.ContinueAsync(sessionId, profileId, isAdmin, cancellationToken);
 
         return result.Match(Ok, Problem);
     }
