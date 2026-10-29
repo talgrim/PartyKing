@@ -16,6 +16,7 @@ public class GamesController : CoreController
     private readonly IGameService _gameService;
     private readonly IRingoService _ringoService;
     private readonly INeverHaveIEverSuggestionService _suggestionService;
+    private readonly IRingoRuleSuggestionService _ruleSuggestionService;
     private readonly ICookieAuthorizationHandler _cookieAuthorizationHandler;
 
     public GamesController(
@@ -23,12 +24,14 @@ public class GamesController : CoreController
         IGameService gameService,
         IRingoService ringoService,
         INeverHaveIEverSuggestionService suggestionService,
+        IRingoRuleSuggestionService ruleSuggestionService,
         ICookieAuthorizationHandler cookieAuthorizationHandler)
         : base(httpContextAccessor)
     {
         _gameService = gameService;
         _ringoService = ringoService;
         _suggestionService = suggestionService;
+        _ruleSuggestionService = ruleSuggestionService;
         _cookieAuthorizationHandler = cookieAuthorizationHandler;
     }
 
@@ -112,6 +115,27 @@ public class GamesController : CoreController
         var (profileId, isAdmin) = await ReadCallerAsync();
 
         var result = await _ringoService.ContinueAsync(sessionId, profileId, isAdmin, cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>
+    /// Host or admin: new rules in Polish for a flipped ace from the language model, or from a built-in list when it is
+    /// unavailable, none of them among the previous rules in the body. 400 for an oversized list, 403 for guests.
+    /// </summary>
+    [HttpPost("sessions/{sessionId:guid}/games/ringo/rule-suggestions")]
+    [RequireSessionAccess]
+    [EnableRateLimiting(SuggestionsRateLimitPolicy)]
+    [ProducesResponseType<GameSuggestionsDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetRingoRuleSuggestions(
+        Guid sessionId,
+        [FromBody] RingoRuleSuggestionsRequest request,
+        CancellationToken cancellationToken)
+    {
+        var (profileId, isAdmin) = await ReadCallerAsync();
+
+        var result = await _ruleSuggestionService.SuggestAsync(
+            sessionId, request.PreviousRules, profileId, isAdmin, cancellationToken);
 
         return result.Match(Ok, Problem);
     }
