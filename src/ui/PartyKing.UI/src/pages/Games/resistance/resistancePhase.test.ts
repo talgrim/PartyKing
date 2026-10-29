@@ -11,6 +11,9 @@ const game = (count: number, extra: Partial<ResistanceGameDto> = {}): Resistance
   leaderPlayerId: null,
   yourRole: null,
   fellowSpies: null,
+  missionNumber: 1,
+  requiredTeamSize: null,
+  teamPlayerIds: [],
   ...extra,
 });
 
@@ -56,5 +59,22 @@ describe('resistancePhaseDescription', () => {
     expect(text).toMatch(/wybierz 2 osób/);
     expect(text).toMatch(/Dotknij swojej karty/);
     expect(text).not.toMatch(/szpieg|Szpieg|Ruch Oporu/);
+  });
+
+  it('takes the team size from the game when it tells one', () => {
+    const started = game(8, { startedAt: '2026-10-29T11:00:00Z', leaderPlayerId: 'p1', requiredTeamSize: 3 });
+
+    expect(resistancePhaseDescription(started, guest, 2)).toMatch(/wybiera 3 osób/);
+  });
+
+  it('names the submitted team', () => {
+    const started = game(5, {
+      startedAt: '2026-10-29T11:00:00Z',
+      leaderPlayerId: 'p1',
+      requiredTeamSize: 2,
+      teamPlayerIds: ['p0', 'p3'],
+    });
+
+    expect(resistancePhaseDescription(started, guest, 2)).toMatch(/zgłosił\/a drużynę na pierwszą misję: Gracz 0, Gracz 3/);
   });
 });

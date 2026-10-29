@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   getResistance: vi.fn(),
   openResistance: vi.fn(),
   startResistance: vi.fn(),
+  selectResistanceTeam: vi.fn(),
   endResistance: vi.fn(),
 }));
 
@@ -19,6 +20,7 @@ vi.mock('@/service/endpoints/games/gamesApi', () => ({
     getResistance: mocks.getResistance,
     openResistance: mocks.openResistance,
     startResistance: mocks.startResistance,
+    selectResistanceTeam: mocks.selectResistanceTeam,
     endResistance: mocks.endResistance,
   },
 }));
@@ -33,12 +35,16 @@ const lobby = (names: string[], isOpen = false) => ({
   leaderPlayerId: null,
   yourRole: null,
   fellowSpies: null,
+  missionNumber: 1,
+  requiredTeamSize: null,
+  teamPlayerIds: [] as string[],
 });
 
 const started = (names: string[], extra: object = {}) => ({
   ...lobby(names, true),
   startedAt: '2026-10-29T11:00:00Z',
   leaderPlayerId: 'p1',
+  requiredTeamSize: 2,
   ...extra,
 });
 
@@ -61,6 +67,7 @@ describe('Resistance', () => {
     mocks.getResistance.mockReset();
     mocks.openResistance.mockReset();
     mocks.startResistance.mockReset();
+    mocks.selectResistanceTeam.mockReset();
     mocks.endResistance.mockReset();
     mocks.getResistance.mockResolvedValue(lobby([]));
     localStorage.clear();
@@ -384,6 +391,94 @@ describe('Resistance', () => {
 
       expect(await screen.findByRole('button', { name: 'Pokaż swoją rolę' })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'End game' })).not.toBeInTheDocument();
+    });
+  });
+  describe('team selection', () => {
+    const five = ['A', 'B', 'C', 'D', 'E'];
+    const leading = (extra: object = {}) =>
+      started(five, { yourPlayerId: 'p1', yourRole: 'Resistance', ...extra });
+
+    beforeEach(() => {
+      mocks.role = { isHost: false, isAdmin: false };
+    });
+
+    it('gives the leader a picker that needs exactly the required number of players', async () => {
+      mocks.getResistance.mockResolvedValue(leading());
+      renderPage();
+
+      const submit = await screen.findByRole('button', { name: 'Zgłoś drużynę do głosowania' });
+      expect(submit).toBeDisabled();
+
+      await userEvent.click(screen.getByRole('checkbox', { name: 'A' }));
+      expect(submit).toBeDisabled();
+      await userEvent.click(screen.getByRole('checkbox', { name: 'B' }));
+
+      expect(submit).toBeEnabled();
+      expect(screen.getByRole('checkbox', { name: 'C' })).toBeDisabled();
+    });
+
+    it('keeps the picks local and sends them only on submit', async () => {
+      mocks.getResistance.mockResolvedValue(leading());
+      mocks.selectResistanceTeam.mockResolvedValue(leading({ teamPlayerIds: ['p0', 'p1'] }));
+      renderPage();
+
+      await userEvent.click(await screen.findByRole('checkbox', { name: 'A' }));
+      await userEvent.click(screen.getByRole('checkbox', { name: 'B' }));
+      expect(mocks.selectResistanceTeam).not.toHaveBeenCalled();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Zgłoś drużynę do głosowania' }));
+
+      expect(mocks.selectResistanceTeam).toHaveBeenCalledWith('session-1', ['p0', 'p1']);
+      await waitFor(() => expect(screen.queryByRole('checkbox', { name: 'A' })).not.toBeInTheDocument());
+    });
+
+    it('shows the picker to the leader only, and not once a team was submitted', async () => {
+      mocks.getResistance.mockResolvedValue(started(five, { yourPlayerId: 'p2', yourRole: 'Resistance' }));
+      const view = renderPage();
+      await screen.findByRole('button', { name: 'Pokaż swoją rolę' });
+      expect(screen.queryByRole('checkbox', { name: 'A' })).not.toBeInTheDocument();
+      view.unmount();
+
+      mocks.getResistance.mockResolvedValue(leading({ teamPlayerIds: ['p0', 'p1'] }));
+      renderPage();
+      await screen.findByRole('button', { name: 'Pokaż swoją rolę' });
+      expect(screen.queryByRole('checkbox', { name: 'A' })).not.toBeInTheDocument();
+    });
+
+    it('hides the picker in the TV tab even for the leader', async () => {
+      mocks.role = { isHost: true, isAdmin: false };
+      mocks.getResistance.mockResolvedValue(leading());
+      renderPage('/s/session-1/games/resistance?tv=1');
+
+      await screen.findByRole('img', { name: 'Mission board' });
+      expect(screen.queryByRole('checkbox', { name: 'A' })).not.toBeInTheDocument();
+    });
+
+    it('shows the submitted team as cards under the board in the TV view', async () => {
+      mocks.role = { isHost: true, isAdmin: false };
+      mocks.getResistance.mockResolvedValue(started(five, { teamPlayerIds: ['p0', 'p3'] }));
+      renderPage('/s/session-1/games/resistance?tv=1');
+
+      const team = await screen.findByRole('region', { name: 'Team' });
+      expect(within(team).getAllByRole('listitem').map((item) => item.getAttribute('title'))).toEqual(['A', 'D']);
+      expect(within(team).getByText('Drużyna na misję 1')).toBeInTheDocument();
+    });
+
+    it('shows no team cards before a team was submitted', async () => {
+      mocks.role = { isHost: true, isAdmin: false };
+      mocks.getResistance.mockResolvedValue(started(five));
+      renderPage('/s/session-1/games/resistance?tv=1');
+
+      await screen.findByRole('img', { name: 'Mission board' });
+      expect(screen.queryByRole('region', { name: 'Team' })).not.toBeInTheDocument();
+    });
+
+    it('shows the submitted team to everyone on the board', async () => {
+      mocks.getResistance.mockResolvedValue(started(five, { teamPlayerIds: ['p0', 'p3'] }));
+      renderPage();
+
+      const list = await screen.findByRole('list', { name: 'Players' });
+      expect(within(list).getAllByText('W drużynie')).toHaveLength(2);
     });
   });
 });
