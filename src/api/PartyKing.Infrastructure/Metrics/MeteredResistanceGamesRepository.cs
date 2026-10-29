@@ -14,6 +14,13 @@ internal sealed class MeteredResistanceGamesRepository
         _inner = inner;
     }
 
+    public Task<ResistanceRulesResult> RefreshRulesAsync(
+        Guid sessionId, ResistanceRules rules, CancellationToken cancellationToken)
+    {
+        return MeasureAsync(
+            nameof(RefreshRulesAsync), () => _inner.RefreshRulesAsync(sessionId, rules, cancellationToken));
+    }
+
     public Task<ResistanceStartResult> StartAsync(
         Guid sessionId, DateTimeOffset startedAt, CancellationToken cancellationToken)
     {

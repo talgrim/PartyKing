@@ -37,7 +37,17 @@ public record ResistanceGameDto(
     bool? YourVote,
     IReadOnlyList<ResistanceVoteDto>? Votes,
     bool? VoteApproved,
-    IReadOnlyList<ResistanceRevealedRoleDto>? RevealedRoles);
+    IReadOnlyList<ResistanceRevealedRoleDto>? RevealedRoles,
+    ResistanceRulesDto Rules);
+
+/// <summary>
+/// The numbers the game was created with (copied from the server configuration, refreshed on request until the game
+/// is open): for every player count the spies, the team size of each mission and the fails each mission needs.
+/// </summary>
+public record ResistanceRulesDto(IReadOnlyList<ResistanceCountRulesDto> PlayerCounts);
+
+public record ResistanceCountRulesDto(
+    int PlayerCount, int Spies, IReadOnlyList<int> TeamSizes, IReadOnlyList<int> RequiredFails);
 
 /// <summary>Serialized by name, which the UI compares against.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter))]

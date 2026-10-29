@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Configuration;
 using PartyKing.Application.Games.Services;
@@ -26,7 +27,7 @@ public static class DependencyInjection
         services.RegisterQueue();
         services.RegisterPlayer();
         services.RegisterLyrics();
-        services.RegisterGames();
+        services.RegisterGames(configuration);
         services.RegisterSessions();
         services.RegisterAdmin(configuration);
     }
@@ -89,11 +90,14 @@ public static class DependencyInjection
         services.AddScoped<ILyricsService, LyricsService>();
     }
 
-    private static void RegisterGames(this IServiceCollection services)
+    private static void RegisterGames(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<IGameService, GameService>();
         services.AddScoped<IRingoService, RingoService>();
         services.AddScoped<IResistanceService, ResistanceService>();
+        services.AddSingleton<IResistanceRulesProvider, ResistanceRulesProvider>();
+        services.AddSingleton<IValidateOptions<ResistanceConfiguration>, ResistanceConfigurationValidator>();
+        services.Configure<ResistanceConfiguration>(configuration.GetSection(ResistanceConfiguration.SectionName));
         services.AddScoped<INeverHaveIEverSuggestionService, NeverHaveIEverSuggestionService>();
         services.AddScoped<IRingoRuleSuggestionService, RingoRuleSuggestionService>();
     }

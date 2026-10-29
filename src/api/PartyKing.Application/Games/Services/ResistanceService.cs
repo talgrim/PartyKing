@@ -63,6 +63,13 @@ public interface IResistanceService
     Task<ErrorOr<ResistanceGameDto>> ContinueAsync(
         Guid sessionId, GameCaller caller, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Host or admin: replaces the game's rules with the current server configuration. NotFound without a game,
+    /// Conflict once the game is open or started.
+    /// </summary>
+    Task<ErrorOr<ResistanceGameDto>> RefreshRulesAsync(
+        Guid sessionId, GameCaller caller, CancellationToken cancellationToken);
+
     /// <summary>Host or admin: removes a player. NotFound for an unknown game or player.</summary>
     Task<ErrorOr<ResistanceGameDto>> KickAsync(
         Guid sessionId, Guid playerId, GameCaller caller, CancellationToken cancellationToken);
@@ -80,6 +87,7 @@ internal class ResistanceService : IResistanceService
     private readonly IResistanceGamesRepository _games;
     private readonly IDateTimeProvider _clock;
     private readonly ISessionMusicNotifier _notifier;
+    private readonly IResistanceRulesProvider _rulesProvider;
     private readonly GameLobby<ResistanceGame, ResistancePlayer> _lobby;
 
     public ResistanceService(
@@ -87,9 +95,11 @@ internal class ResistanceService : IResistanceService
         ISessionsRepository sessions,
         IResistanceGamesRepository games,
         IDateTimeProvider clock,
-        ISessionMusicNotifier notifier)
+        ISessionMusicNotifier notifier,
+        IResistanceRulesProvider rulesProvider)
     {
         _games = games;
+        _rulesProvider = rulesProvider;
         _clock = clock;
         _notifier = notifier;
         _lobby = new GameLobby<ResistanceGame, ResistancePlayer>(
@@ -137,7 +147,7 @@ internal class ResistanceService : IResistanceService
             return denied.Errors;
         }
 
-        var game = new ResistanceGame { SessionId = sessionId, CreatedAt = _clock.UtcNow };
+        var game = new ResistanceGame { SessionId = sessionId, CreatedAt = _clock.UtcNow, Rules = _rulesProvider.Current() };
         if (!await _games.TryCreateAsync(game, cancellationToken))
         {
             return Error.Conflict("Resistance.AlreadyCreated", "The session already has a Resistance game.");
@@ -146,6 +156,29 @@ internal class ResistanceService : IResistanceService
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
 
         return ToDto(game, caller);
+    }
+
+    public async Task<ErrorOr<ResistanceGameDto>> RefreshRulesAsync(
+        Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
+    {
+        if (await _lobby.AuthorizeAsync(sessionId, caller, cancellationToken) is { IsError: true } denied)
+        {
+            return denied.Errors;
+        }
+
+        var result = await _games.RefreshRulesAsync(sessionId, _rulesProvider.Current(), cancellationToken);
+        switch (result.Status)
+        {
+            case ResistanceRulesStatus.NoGame:
+                return _lobby.NoGame;
+            case ResistanceRulesStatus.NotEditable:
+                return Error.Conflict(
+                    "Resistance.RulesLocked", "The rules can only be refreshed before the game is opened.");
+        }
+
+        await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
+
+        return ToDto(result.Game!, caller);
     }
 
     public async Task<ErrorOr<ResistanceGameDto>> OpenAsync(
@@ -214,7 +247,7 @@ internal class ResistanceService : IResistanceService
             case ResistanceTeamStatus.WrongSize:
                 return Error.Validation(
                     "Resistance.WrongTeamSize",
-                    $"The team needs exactly {ResistanceRoles.TeamSize(result.Game!.Players.Count, result.Game.MissionNumber)} different players.");
+                    $"The team needs exactly {result.Game!.Rules.TeamSize(result.Game.Players.Count, result.Game.MissionNumber)} different players.");
             case ResistanceTeamStatus.UnknownPlayer:
                 return Error.Validation("Resistance.UnknownPlayer", "The team has a player who is not in the game.");
         }
@@ -367,7 +400,7 @@ internal class ResistanceService : IResistanceService
             yourRole is { } role ? (ResistanceRoleDto)role : null,
             fellowSpies,
             game.MissionNumber,
-            game.IsStarted ? ResistanceRoles.TeamSize(game.Players.Count, game.MissionNumber) : null,
+            game.IsStarted ? game.Rules.TeamSize(game.Players.Count, game.MissionNumber) : null,
             game.Players.Where(x => x.IsOnTeam).OrderBy(x => x.Order).Select(x => x.PlayerId).ToList(),
             game.IsStarted ? (ResistancePhaseDto)game.Phase : null,
             game.RejectedTeams,
@@ -381,7 +414,12 @@ internal class ResistanceService : IResistanceService
                     .OrderBy(x => x.Order)
                     .Select(x => new ResistanceRevealedRoleDto(x.PlayerId, (ResistanceRoleDto)x.Role!.Value))
                     .ToList()
-                : null);
+                : null,
+            new ResistanceRulesDto(
+                game.Rules.PlayerCounts
+                    .OrderBy(x => x.Key)
+                    .Select(x => new ResistanceCountRulesDto(x.Key, x.Value.Spies, x.Value.TeamSizes, x.Value.RequiredFails))
+                    .ToList()));
     }
 
     private sealed class ResistanceLobbyNotifier : IGameLobbyNotifier

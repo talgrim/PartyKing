@@ -7,6 +7,13 @@ namespace PartyKing.Infrastructure.Repositories;
 public interface IResistanceGamesRepository : ILobbyGamesRepository<ResistanceGame, ResistancePlayer>
 {
     /// <summary>
+    /// Replaces the game's rules with the given ones. Only while the game is still closed and not started, so the
+    /// players never see the numbers change under them.
+    /// </summary>
+    Task<ResistanceRulesResult> RefreshRulesAsync(
+        Guid sessionId, ResistanceRules rules, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Starts the open game: deals the roles and picks the first leader (see <see cref="ResistanceRoles"/>), which
     /// locks the players. Atomic with the players joining, so a join either makes it into the roles or is rejected.
     /// </summary>
@@ -35,6 +42,17 @@ public interface IResistanceGamesRepository : ILobbyGamesRepository<ResistanceGa
         Guid sessionId, Guid? callerPlayerId, bool isManager, CancellationToken cancellationToken);
 }
 
+public enum ResistanceRulesStatus
+{
+    NoGame,
+
+    /// <summary>The game is already open to guests or started.</summary>
+    NotEditable,
+    Refreshed,
+}
+
+public record ResistanceRulesResult(ResistanceRulesStatus Status, ResistanceGame? Game);
+
 public enum ResistanceTeamStatus
 {
     NoGame,
@@ -45,7 +63,7 @@ public enum ResistanceTeamStatus
     NotLeader,
     AlreadySubmitted,
 
-    /// <summary>Not exactly <see cref="ResistanceRoles.TeamSize"/> distinct players.</summary>
+    /// <summary>Not exactly <see cref="ResistanceRules.TeamSize"/> distinct players.</summary>
     WrongSize,
     UnknownPlayer,
     Selected,
@@ -122,6 +140,28 @@ internal class ResistanceGamesRepository
     protected override DbSet<ResistancePlayer> PlayersOf(PartyKingDbContextBase dbContext) =>
         dbContext.ResistancePlayers;
 
+    public async Task<ResistanceRulesResult> RefreshRulesAsync(
+        Guid sessionId, ResistanceRules rules, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await CreateWriterAsync(cancellationToken);
+
+        var game = await LoadAsync(dbContext, sessionId, cancellationToken);
+        if (game is null)
+        {
+            return new ResistanceRulesResult(ResistanceRulesStatus.NoGame, null);
+        }
+
+        if (game.IsOpen || game.IsStarted)
+        {
+            return new ResistanceRulesResult(ResistanceRulesStatus.NotEditable, game);
+        }
+
+        game.Rules = rules;
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return new ResistanceRulesResult(ResistanceRulesStatus.Refreshed, game);
+    }
+
     public async Task<ResistanceStartResult> StartAsync(
         Guid sessionId, DateTimeOffset startedAt, CancellationToken cancellationToken)
     {
@@ -186,7 +226,7 @@ internal class ResistanceGamesRepository
             return new ResistanceTeamResult(ResistanceTeamStatus.AlreadySubmitted, game);
         }
 
-        if (playerIds.Count != ResistanceRoles.TeamSize(game.Players.Count, game.MissionNumber)
+        if (playerIds.Count != game.Rules.TeamSize(game.Players.Count, game.MissionNumber)
             || playerIds.Distinct().Count() != playerIds.Count)
         {
             return new ResistanceTeamResult(ResistanceTeamStatus.WrongSize, game);

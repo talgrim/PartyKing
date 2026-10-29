@@ -16,7 +16,7 @@ public class ResistanceGame : LobbyGame<ResistancePlayer>
     /// <summary>The player leading the current mission; null until the game is started.</summary>
     public Guid? LeaderPlayerId { get; set; }
 
-    /// <summary>The mission being played, from 1; the leader picks its team (see <see cref="ResistanceRoles.TeamSize"/>).</summary>
+    /// <summary>The mission being played, from 1; the leader picks its team (see <see cref="ResistanceRules.TeamSize"/>).</summary>
     public int MissionNumber { get; set; } = 1;
 
     /// <summary>The step of the current round; <see cref="ResistancePhase.SelectingTeam"/> until the leader submits a team.</summary>
@@ -27,6 +27,12 @@ public class ResistanceGame : LobbyGame<ResistancePlayer>
 
     /// <summary>The winning side once <see cref="Phase"/> is <see cref="ResistancePhase.GameOver"/>.</summary>
     public ResistanceRole? Winner { get; set; }
+
+    /// <summary>
+    /// The numbers of this game (spies, team sizes, fails needed), copied from the server configuration when the game
+    /// is created and refreshed on request until it is open.
+    /// </summary>
+    public ResistanceRules Rules { get; set; } = ResistanceRules.Default();
 
     public bool IsStarted => StartedAt is not null;
 

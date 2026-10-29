@@ -58,6 +58,20 @@ public class ResistanceController : GameControllerBase
         return result.Match(Ok, Problem);
     }
 
+    /// <summary>
+    /// Host or admin: replaces the game's rules (spies, team sizes, fails needed) with the current server
+    /// configuration. 409 once the game is open or started.
+    /// </summary>
+    [HttpPost("rules/refresh")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> RefreshResistanceRules(Guid sessionId, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.RefreshRulesAsync(sessionId, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
     /// <summary>Admin only: opens the Resistance game to guests (idempotent), 403 for the host.</summary>
     [HttpPost("open")]
     [RequireSessionAccess]

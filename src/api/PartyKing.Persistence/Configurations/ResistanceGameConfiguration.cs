@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using PartyKing.Domain.Entities.Games;
@@ -12,6 +13,11 @@ public class ResistanceGameConfiguration : IEntityTypeConfiguration<ResistanceGa
         builder.HasKey(x => x.SessionId);
         builder.Property(x => x.SessionId)
             .ValueGeneratedNever();
+        builder.Property(x => x.Rules)
+            .HasConversion(
+                x => JsonSerializer.Serialize(x, (JsonSerializerOptions?)null),
+                x => JsonSerializer.Deserialize<ResistanceRules>(x, (JsonSerializerOptions?)null)!)
+            .HasDefaultValue(ResistanceRules.Default());
         builder
             .HasOne<Session>()
             .WithOne()
