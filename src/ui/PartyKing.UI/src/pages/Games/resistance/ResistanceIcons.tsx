@@ -227,6 +227,8 @@ type MissionBoardProps = {
   rejectedTeams: number;
   /** Mission 4 needs two Fail cards (7 or more players). */
   fourthMissionNeedsTwoFails: boolean;
+  /** Draws the team sizes faded: they are only a guess until enough players joined. */
+  dimmed?: boolean;
   className?: string;
   title?: string;
 };
@@ -241,6 +243,7 @@ export const MissionBoardIcon = ({
   currentMission,
   rejectedTeams,
   fourthMissionNeedsTwoFails,
+  dimmed = false,
   className,
   title,
 }: MissionBoardProps): ReactNode => (
@@ -264,7 +267,16 @@ export const MissionBoardIcon = ({
           {result === 'success' && <Check cx={cx} cy={70} size={18} stroke={COLORS.paper} />}
           {result === 'fail' && <Cross cx={cx} cy={70} size={16} stroke={COLORS.paper} />}
           {result === null && (
-            <text x={cx} y={84} textAnchor="middle" fontSize="40" fontWeight="700" fill={COLORS.paper} fontFamily="sans-serif">
+            <text
+              x={cx}
+              y={84}
+              textAnchor="middle"
+              fontSize="40"
+              fontWeight="700"
+              fill={COLORS.paper}
+              fontFamily="sans-serif"
+              opacity={dimmed ? 0.35 : 1}
+            >
               {teamSizes[i]}
             </text>
           )}

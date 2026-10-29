@@ -6,6 +6,7 @@ export const ROUTE_PATHS = {
   SESSION_UPLOAD: '/s/:sessionId/upload',
   SESSION_GAMES: '/s/:sessionId/games',
   SESSION_GAMES_RESISTANCE: '/s/:sessionId/games/resistance',
+  SESSION_GAMES_RESISTANCE_JOIN: '/s/:sessionId/games/resistance/join',
   SESSION_GAMES_RINGO: '/s/:sessionId/games/ringo',
   SESSION_GAMES_RINGO_JOIN: '/s/:sessionId/games/ringo/join',
 };
@@ -27,3 +28,6 @@ export const sessionRingoJoinPath = (sessionId: string) => `/s/${sessionId}/game
 
 /** The Resistance board of a session. */
 export const sessionResistancePath = (sessionId: string) => `/s/${sessionId}/games/resistance`;
+
+/** Where a guest enters a name to join the open Resistance game, and then sees the board. */
+export const sessionResistanceJoinPath = (sessionId: string) => `/s/${sessionId}/games/resistance/join`;

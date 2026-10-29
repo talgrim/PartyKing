@@ -48,6 +48,36 @@ export type RingoLobbyDto = {
   joined: boolean;
 };
 
+// Mirrors PartyKing.Contract.V1.Games.ResistanceGameDto
+export type ResistanceGameDto = {
+  /** ISO timestamp. */
+  createdAt: string;
+  /** True once an admin opened the game to guests. */
+  isOpen: boolean;
+  /** The players in join/seat order. */
+  players: ResistancePlayerDto[];
+  /** The caller's own player id; null when the caller is not a player. */
+  yourPlayerId: string | null;
+  /** The lobby cap. */
+  maxPlayers: number;
+};
+
+// Mirrors PartyKing.Contract.V1.Games.ResistancePlayerDto
+export type ResistancePlayerDto = {
+  id: string;
+  /** Carries the "(host)" suffix for the session host. */
+  name: string;
+};
+
+// Mirrors PartyKing.Contract.V1.Games.ResistanceLobbyDto
+export type ResistanceLobbyDto = {
+  /** ISO timestamp of the game's creation, which tells one game from the next. */
+  createdAt: string;
+  isOpen: boolean;
+  /** Whether the caller already joined. */
+  joined: boolean;
+};
+
 // Mirrors PartyKing.Contract.V1.Games.RingoFlipDto
 export type RingoFlipDto = {
   /** Card id (0-51). */

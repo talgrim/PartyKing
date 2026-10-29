@@ -1,5 +1,6 @@
 import { ReactNode, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { mutate as mutateGlobal } from 'swr';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -9,38 +10,107 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { PageNavigation } from '@/components/common/PageNavigation';
 import { MissionBoardIcon } from '@/pages/Games/resistance/ResistanceIcons';
 import { RESISTANCE_RULES } from '@/pages/Games/resistance/resistanceRules';
-import { sessionGamesPath, sessionPath } from '@/router/constants';
+import { missionBoardFor } from '@/pages/Games/resistance/resistanceTeams';
+import { sessionGamesPath, sessionPath, sessionResistanceJoinPath } from '@/router/constants';
+import { HTTP_STATUS_CODE } from '@/service/constants';
+import { gamesApi } from '@/service/endpoints/games/gamesApi';
+import { useResistanceGame } from '@/service/endpoints/games/useResistanceGame';
 import { useViewerRole } from '@/service/endpoints/sessions/useViewerRole';
+import { resistanceLobbyKey } from '@/service/realtime/sessionMusicEvents';
+import { useSessionMusicHub } from '@/service/realtime/useSessionMusicHub';
+import { ResistancePlayers } from './ResistancePlayers';
+import { ResistanceSettings } from './ResistanceSettings';
 
-// Mocked until the game is stored per session: a table for 5 players with nothing played yet
-const TEAM_SIZES = [2, 3, 2, 3, 3];
 const NO_RESULTS = [null, null, null, null, null] as const;
 
 const navClass = 'px-3 py-2 text-slate-200 bg-slate-900 rounded-md';
 
 /**
- * The Resistance page: the mission board and the rules summary behind the "i" button. The admin's "Open the game"
- * button is disabled for now, there is no game state on the server yet.
+ * The Resistance page: the mission board for the players who joined so far, the players around the edge and the
+ * rules summary behind the "i" button. The host and admins manage the players, an admin opens the game to guests
+ * (the 5-player team sizes are shown dimmed until five joined). Guests who unlocked the session watch once the game is
+ * open. Nothing is played yet: starting the game (roles, spies) is not built.
  */
 export const Resistance = (): ReactNode => {
   const { sessionId = '' } = useParams();
+  const navigate = useNavigate();
+  const { data: game, error, mutate } = useResistanceGame(sessionId);
   const { isHost, isAdmin } = useViewerRole(sessionId);
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [managingPlayers, setManagingPlayers] = useState(false);
+  const [confirmingEnd, setConfirmingEnd] = useState(false);
+  const [message, setMessage] = useState<string>();
 
-  const back = isHost || isAdmin
+  // The server pushes every change of the lobby (ResistanceChanged), so other devices stay current without polling
+  useSessionMusicHub(sessionId, game !== undefined);
+
+  const canManage = isHost || isAdmin;
+  const status = (error as { status?: number } | undefined)?.status;
+
+  // No lobby yet (or not open to guests): the games list for the host and admins, the session page for the rest
+  if (status === HTTP_STATUS_CODE.NOT_FOUND) {
+    return <Navigate to={canManage ? sessionGamesPath(sessionId) : sessionPath(sessionId)} replace />;
+  }
+
+  const players = game?.players ?? [];
+  const board = missionBoardFor(players.length);
+
+  const back = canManage
     ? { to: sessionGamesPath(sessionId), label: 'Back to the games' }
     : { to: sessionPath(sessionId), label: 'Back to the session' };
 
+  const openGame = async () => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.openResistance(sessionId), { revalidate: false });
+      void mutateGlobal(resistanceLobbyKey(sessionId));
+    } catch {
+      setMessage('Could not open the game.');
+    }
+  };
+
+  const endGame = async () => {
+    try {
+      await gamesApi.endResistance(sessionId);
+      await mutate(undefined, { revalidate: false });
+      void mutateGlobal(resistanceLobbyKey(sessionId));
+      navigate(sessionGamesPath(sessionId), { replace: true });
+    } catch {
+      setConfirmingEnd(false);
+      setMessage('Could not end the game.');
+    }
+  };
+
   return (
-    <div className="w-full min-h-full bg-slate-800 text-slate-400">
+    <div className="relative w-full min-h-screen bg-slate-800 text-slate-400">
       <div className="w-full max-w-3xl mx-auto px-2 pt-4">
         <div className="flex items-center gap-2">
-          <PageNavigation links={[back]} />
-          {isAdmin && (
-            <button type="button" disabled className={`${navClass} opacity-50`}>
+          <PageNavigation
+            links={[
+              back,
+              ...(game && canManage && game.isOpen && game.yourPlayerId == null
+                ? [{ to: sessionResistanceJoinPath(sessionId), label: 'Join as a player' }]
+                : []),
+              ...(game && canManage ? [{ onClick: () => setManagingPlayers(true), label: 'Players' }] : []),
+              ...(game && canManage ? [{ onClick: () => setConfirmingEnd(true), label: 'End game' }] : []),
+            ]}
+          />
+          {game && isAdmin && (
+            <button
+              type="button"
+              onClick={() => void openGame()}
+              disabled={game.isOpen}
+              className={`${navClass} cursor-pointer disabled:opacity-50 disabled:cursor-default`}
+            >
               Open the game
             </button>
           )}
+          {game && (
+            <span className="text-slate-400">
+              {players.length}/{game.maxPlayers} graczy
+            </span>
+          )}
+          {message && <span className="text-amber-500">{message}</span>}
           <button
             type="button"
             onClick={() => setRulesOpen(true)}
@@ -52,16 +122,45 @@ export const Resistance = (): ReactNode => {
           </button>
         </div>
 
+        {board.provisional && game && (
+          <p className="pt-4 text-sm text-slate-400">
+            Potrzeba co najmniej 5 graczy. Pokazane rozmiary drużyn dotyczą gry w 5 osób.
+          </p>
+        )}
+
         <MissionBoardIcon
           className="w-full mt-6"
           title="Mission board"
-          teamSizes={TEAM_SIZES}
+          teamSizes={board.teamSizes}
           results={NO_RESULTS}
           currentMission={null}
           rejectedTeams={0}
-          fourthMissionNeedsTwoFails={false}
+          fourthMissionNeedsTwoFails={board.fourthMissionNeedsTwoFails}
+          dimmed={board.provisional}
         />
       </div>
+
+      {game && players.length > 0 && <ResistancePlayers players={players} yourPlayerId={game.yourPlayerId} />}
+
+      {canManage && (
+        <ResistanceSettings sessionId={sessionId} open={managingPlayers} onClose={() => setManagingPlayers(false)} />
+      )}
+
+      <Dialog
+        open={confirmingEnd}
+        onClose={() => setConfirmingEnd(false)}
+        aria-labelledby="end-resistance-title"
+        slotProps={{ paper: { className: 'bg-slate-800! text-slate-200!' } }}
+      >
+        <DialogTitle id="end-resistance-title">End the game?</DialogTitle>
+        <DialogContent>The players are sent away and the game can't be resumed. A new one can be created afterwards.</DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmingEnd(false)}>Cancel</Button>
+          <Button color="error" onClick={() => void endGame()}>
+            End game
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={rulesOpen}

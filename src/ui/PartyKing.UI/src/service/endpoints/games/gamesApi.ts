@@ -1,5 +1,5 @@
 import { axios } from '@/service/request';
-import { GameDto, GameSuggestionsDto, RingoGameDto, RingoLobbyDto } from './types';
+import { GameDto, GameSuggestionsDto, ResistanceGameDto, ResistanceLobbyDto, RingoGameDto, RingoLobbyDto } from './types';
 
 // The axios response interceptor unwraps `response.data`, so this resolves to the payload itself.
 export const gamesApi = {
@@ -72,4 +72,52 @@ export const gamesApi = {
   /** Host or admin: ends the session's Ringo game. */
   endRingo: (sessionId: string) =>
     axios.delete(`/sessions/${sessionId}/games/ringo`, { withCredentials: true }) as unknown as Promise<void>,
+
+  /** The session's Resistance lobby as host, admin or player (guests who unlocked the session observe once it is open); 404 when there is none or it is closed to them. */
+  getResistance: (sessionId: string) =>
+    axios.get(`/sessions/${sessionId}/games/resistance`, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
+  /** Anyone in the session: whether the Resistance game is open to join and whether the caller did; 404 without a game. */
+  getResistanceLobby: (sessionId: string) =>
+    axios.get(`/sessions/${sessionId}/games/resistance/lobby`, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceLobbyDto>,
+
+  /** Host or admin: creates the Resistance lobby; rejects with status 409 when the session already has one. */
+  createResistance: (sessionId: string) =>
+    axios.post(`/sessions/${sessionId}/games/resistance`, null, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
+  /** Admin only: opens the Resistance game to guests. */
+  openResistance: (sessionId: string) =>
+    axios.post(`/sessions/${sessionId}/games/resistance/open`, null, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
+  /** Joins the open game as a player; 409 when the name is taken or the lobby is full, 400 for a bad name. An admin may omit the name ("admin"). */
+  joinResistance: (sessionId: string, name: string) =>
+    axios.post(`/sessions/${sessionId}/games/resistance/join`, { name }, {
+      withCredentials: true,
+    }) as unknown as Promise<void>,
+
+  /** Host or admin: removes a player. */
+  kickResistancePlayer: (sessionId: string, playerId: string) =>
+    axios.delete(`/sessions/${sessionId}/games/resistance/players/${playerId}`, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
+  /** Host or admin: sets the seat order; rejects with 409 when the players changed meanwhile. */
+  reorderResistancePlayers: (sessionId: string, playerIds: string[]) =>
+    axios.put(
+      `/sessions/${sessionId}/games/resistance/players/order`,
+      { playerIds },
+      { withCredentials: true },
+    ) as unknown as Promise<ResistanceGameDto>,
+
+  /** Host or admin: ends the session's Resistance game. */
+  endResistance: (sessionId: string) =>
+    axios.delete(`/sessions/${sessionId}/games/resistance`, { withCredentials: true }) as unknown as Promise<void>,
 };
