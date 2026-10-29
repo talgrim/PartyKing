@@ -82,9 +82,9 @@ export const Resistance = (): ReactNode => {
   };
 
   return (
-    <div className="relative w-full min-h-screen bg-slate-800 text-slate-400">
-      <div className="w-full max-w-3xl mx-auto px-2 pt-4">
-        <div className="flex items-center gap-2">
+    <div className="relative w-full h-screen bg-slate-800 text-slate-400">
+      <nav className="absolute inset-x-0 top-0 h-[10%] px-[10%] flex items-center">
+        <div className="flex items-center gap-2 w-full">
           <PageNavigation
             links={[
               back,
@@ -121,15 +121,18 @@ export const Resistance = (): ReactNode => {
             <InfoOutlinedIcon />
           </button>
         </div>
+      </nav>
 
+      {/* The board keeps to the middle 80%; the players sit in the margins around it */}
+      <div className="absolute inset-[10%] flex flex-col items-center justify-center gap-4 overflow-hidden">
         {board.provisional && game && (
-          <p className="pt-4 text-sm text-slate-400">
+          <p className="text-sm text-slate-400">
             Potrzeba co najmniej 5 graczy. Pokazane rozmiary drużyn dotyczą gry w 5 osób.
           </p>
         )}
 
         <MissionBoardIcon
-          className="w-full mt-6"
+          className="w-full max-h-full"
           title="Mission board"
           teamSizes={board.teamSizes}
           results={NO_RESULTS}
