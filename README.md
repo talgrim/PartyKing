@@ -74,6 +74,15 @@ Backend to .NET 9 (ASP.NET Core) zorkiestrowany przez .NET Aspire, frontend to S
   jest kontynuowany od tej samej pozycji (wymaga zakresu `user-read-playback-state`; starsi gospodarze muszą się
   zalogować ponownie).
 
+### Gry
+
+Gospodarz i admin mają stronę gier sesji (`/s/{sessionId}/games`) z listą: Resistance, Ringo i „Never have I ever".
+
+- **Resistance** (`/s/{sessionId}/games/resistance`): gra dedukcji społecznej dla 5-10 osób (Ruch Oporu kontra
+  Szpiedzy). Na razie to makieta bez stanu na serwerze: strona pokazuje tylko planszę misji (dla 5 graczy, bez
+  rozegranych misji) oraz przycisk „i" z podsumowaniem zasad. Admin widzi nieaktywny przycisk „Open the game" —
+  otwieranie gry dla gości dojdzie razem ze stanem gry.
+
 ## Jak to działa
 
 Kluczowa decyzja architektoniczna: **o tym, które zdjęcie jest aktualnie „na ekranie", decyduje
