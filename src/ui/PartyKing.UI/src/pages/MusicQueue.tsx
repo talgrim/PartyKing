@@ -24,6 +24,7 @@ import { useViewerRole } from '@/service/endpoints/sessions/useViewerRole';
 import { HostPlayerPushHandlers } from '@/service/realtime/sessionMusicEvents';
 import { useSessionMusicHub } from '@/service/realtime/useSessionMusicHub';
 import { SessionHubContext } from '@/service/realtime/SessionHubContext';
+import { isMobileDevice } from '@/utils/isMobileDevice';
 import { usePersistedFlag } from '@/utils/usePersistedFlag';
 
 const JOIN_PARAM = 'join';
@@ -32,13 +33,13 @@ const JOIN_PARAM = 'join';
  * Page of a session, behind the session password. Anyone who entered it (admins included) sees what is playing and
  * can search for or paste songs to add to the queue, no login needed. The host also gets the player, and an admin
  * the controls to pause and skip. Everyone gets a drawer on the left with the lyrics of the song playing, which
- * can be hidden or maximized; the host and admins can also switch it to the slideshow.
+ * can be hidden (hidden by default on a phone or tablet) or maximized; the host and admins can also switch it to the slideshow.
  */
 export const MusicQueue = (): ReactNode => {
   const { sessionId = '' } = useParams();
 
   const { mutate } = useSWRConfig();
-  const [slideshowOpen, setSlideshowOpen] = usePersistedFlag('partyking.slideshowOpen', true);
+  const [slideshowOpen, setSlideshowOpen] = usePersistedFlag('partyking.slideshowOpen', !isMobileDevice());
   const [showLyrics, setShowLyrics] = usePersistedFlag('partyking.showLyrics', false);
   const [maximized, setMaximized] = useState(false);
   const { isHost, isAdmin } = useViewerRole(sessionId);
