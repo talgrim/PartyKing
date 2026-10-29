@@ -170,6 +170,13 @@ describe('Resistance', () => {
     expect(screen.queryByRole('button', { name: 'End game' })).not.toBeInTheDocument();
   });
 
+  it('describes the phase above the board', async () => {
+    mocks.getResistance.mockResolvedValue(lobby(['A', 'B'], true));
+    renderPage();
+
+    expect(await screen.findByText(/Czekamy na graczy/)).toBeInTheDocument();
+  });
+
   describe('starting', () => {
     const five = ['A', 'B', 'C', 'D', 'E'];
 
