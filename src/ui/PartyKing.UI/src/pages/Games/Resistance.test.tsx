@@ -305,6 +305,25 @@ describe('Resistance', () => {
       expect(await screen.findByRole('list', { name: 'Players' })).toBeInTheDocument();
     });
 
+    it('shows a player both views side by side on a wide screen, without the switch', async () => {
+      const matchMedia = vi.fn().mockReturnValue({
+        matches: true,
+        media: '',
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+      });
+      vi.stubGlobal('matchMedia', matchMedia);
+      mocks.getResistance.mockResolvedValue(joined());
+      renderPage();
+
+      expect(await screen.findByRole('button', { name: 'Pokaż swoją rolę' })).toBeInTheDocument();
+      expect(screen.getByRole('list', { name: 'Players' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Board' })).not.toBeInTheDocument();
+      vi.unstubAllGlobals();
+    });
+
     it('offers observers the board only', async () => {
       mocks.getResistance.mockResolvedValue(started(['A', 'B', 'C', 'D', 'E']));
       renderPage();
@@ -338,6 +357,10 @@ describe('Resistance', () => {
 
       await userEvent.click(toggle);
       expect(toggle).toHaveAttribute('aria-expanded', 'true');
+      expect(screen.getByRole('link', { name: 'Open TV view' })).toHaveAttribute(
+        'href',
+        '/s/session-1/games/resistance?tv=1',
+      );
       expect(screen.getByRole('button', { name: 'Start game' })).toBeEnabled();
       expect(screen.getByRole('button', { name: 'Players' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'End game' })).toBeInTheDocument();
