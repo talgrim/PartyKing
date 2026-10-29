@@ -13,8 +13,8 @@ namespace PartyKing.Application.Tests;
 /// </summary>
 public class RingoSessionDeletionTests : IAsyncLifetime
 {
-    private readonly string _originalDirectory = Environment.CurrentDirectory;
     private readonly string _directory = Path.Combine(Path.GetTempPath(), $"partyking-tests-{Guid.NewGuid():N}");
+    private string ConnectionString => $"Data Source={Path.Combine(_directory, "PartyKing.db")}";
     private ServiceProvider _provider = null!;
     private IDbContextFactory<WriterDbContext> _writer = null!;
     private RingoGamesRepository _ringo = null!;
@@ -23,11 +23,10 @@ public class RingoSessionDeletionTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         Directory.CreateDirectory(_directory);
-        Environment.CurrentDirectory = _directory;
 
         _provider = new ServiceCollection()
-            .AddDbContextFactory<WriterDbContext>()
-            .AddDbContextFactory<ReaderDbContext>()
+            .AddDbContextFactory<WriterDbContext>(options => options.UseSqlite(ConnectionString))
+            .AddDbContextFactory<ReaderDbContext>(options => options.UseSqlite(ConnectionString))
             .BuildServiceProvider();
 
         _writer = _provider.GetRequiredService<IDbContextFactory<WriterDbContext>>();
@@ -46,7 +45,6 @@ public class RingoSessionDeletionTests : IAsyncLifetime
     {
         await _provider.DisposeAsync();
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
-        Environment.CurrentDirectory = _originalDirectory;
         Directory.Delete(_directory, recursive: true);
     }
 
