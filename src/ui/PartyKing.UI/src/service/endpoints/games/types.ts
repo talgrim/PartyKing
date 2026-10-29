@@ -13,3 +13,11 @@ export type GameSuggestionsDto = {
   /** True when the language model was unavailable and the statements come from the built-in list. */
   fromFallback: boolean;
 };
+
+// Mirrors PartyKing.Contract.V1.Games.RingoGameDto
+export type RingoGameDto = {
+  /** Seed of the card layout; the same seed gives the same layout on every device. */
+  seed: number;
+  /** Ids of the flipped cards (0-51) in flip order. */
+  flippedCards: number[];
+};

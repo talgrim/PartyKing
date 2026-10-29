@@ -7,6 +7,7 @@ import { UploadRedirect } from '@/pages/UploadRedirect';
 import { MusicQueue } from '@/pages/MusicQueue';
 import { Admin } from '@/pages/Admin/Admin';
 import { Games } from '@/pages/Games/Games';
+import { Ringo } from '@/pages/Games/Ringo';
 
 export const routes: RouteObject[] = [
   {
@@ -18,6 +19,7 @@ export const routes: RouteObject[] = [
       {path: ROUTE_PATHS.SESSION_UPLOAD, element: <UploadRedirect/>},
       {path: ROUTE_PATHS.ADMIN, element: <Admin/>},
       {path: ROUTE_PATHS.SESSION_GAMES, element: <Games/>},
+      {path: ROUTE_PATHS.SESSION_GAMES_RINGO, element: <Ringo/>},
       {path: ROUTE_PATHS.SESSION, element: <MusicQueue/>},
     ],
   },
