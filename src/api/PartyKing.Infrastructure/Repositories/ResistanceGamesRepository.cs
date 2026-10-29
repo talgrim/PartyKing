@@ -18,12 +18,28 @@ public interface IResistanceGamesRepository : ILobbyGamesRepository<ResistanceGa
     /// </summary>
     Task<ResistanceTeamResult> SelectTeamAsync(
         Guid sessionId, Guid? callerPlayerId, IReadOnlyList<Guid> playerIds, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// A player votes on the submitted team (a repeated vote replaces the earlier one). The vote that completes the
+    /// round is tallied in the same save: a majority approves, otherwise (a tie too) the team is rejected, which
+    /// counts towards the five that make the spies win.
+    /// </summary>
+    Task<ResistanceVoteResult> VoteAsync(
+        Guid sessionId, Guid? callerPlayerId, bool approve, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Moves on after a rejected team: the next player leads, the team and the votes are cleared. The leader or a
+    /// manager may do it.
+    /// </summary>
+    Task<ResistanceContinueResult> ContinueAsync(
+        Guid sessionId, Guid? callerPlayerId, bool isManager, CancellationToken cancellationToken);
 }
 
 public enum ResistanceTeamStatus
 {
     NoGame,
     NotStarted,
+    GameOver,
 
     /// <summary>The caller is not the player leading the mission.</summary>
     NotLeader,
@@ -36,6 +52,38 @@ public enum ResistanceTeamStatus
 }
 
 public record ResistanceTeamResult(ResistanceTeamStatus Status, ResistanceGame? Game);
+
+public enum ResistanceVoteStatus
+{
+    NoGame,
+    NotStarted,
+    GameOver,
+
+    /// <summary>The caller did not join the game (a host or admin who only watches).</summary>
+    NotPlayer,
+
+    /// <summary>No team is up for a vote: it is not picked yet, or the votes are already in.</summary>
+    NotVoting,
+    Voted,
+}
+
+public record ResistanceVoteResult(ResistanceVoteStatus Status, ResistanceGame? Game);
+
+public enum ResistanceContinueStatus
+{
+    NoGame,
+    NotStarted,
+    GameOver,
+
+    /// <summary>Neither the leader nor a manager.</summary>
+    NotAllowed,
+
+    /// <summary>The votes are not in yet, or the team was approved (the mission itself is not built yet).</summary>
+    NothingToContinue,
+    Continued,
+}
+
+public record ResistanceContinueResult(ResistanceContinueStatus Status, ResistanceGame? Game);
 
 public enum ResistanceStartStatus
 {
@@ -123,12 +171,17 @@ internal class ResistanceGamesRepository
             return new ResistanceTeamResult(ResistanceTeamStatus.NotStarted, game);
         }
 
+        if (game.Phase == ResistancePhase.GameOver)
+        {
+            return new ResistanceTeamResult(ResistanceTeamStatus.GameOver, game);
+        }
+
         if (callerPlayerId is null || callerPlayerId != game.LeaderPlayerId)
         {
             return new ResistanceTeamResult(ResistanceTeamStatus.NotLeader, game);
         }
 
-        if (game.IsTeamSubmitted)
+        if (game.Phase != ResistancePhase.SelectingTeam)
         {
             return new ResistanceTeamResult(ResistanceTeamStatus.AlreadySubmitted, game);
         }
@@ -147,10 +200,92 @@ internal class ResistanceGamesRepository
         foreach (var player in game.Players)
         {
             player.IsOnTeam = playerIds.Contains(player.PlayerId);
+            player.Vote = null;
+        }
+
+        game.Phase = ResistancePhase.Voting;
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return new ResistanceTeamResult(ResistanceTeamStatus.Selected, game);
+    }
+
+    public async Task<ResistanceVoteResult> VoteAsync(
+        Guid sessionId, Guid? callerPlayerId, bool approve, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await CreateWriterAsync(cancellationToken);
+
+        var game = await LoadAsync(dbContext, sessionId, cancellationToken);
+        if (game is null)
+        {
+            return new ResistanceVoteResult(ResistanceVoteStatus.NoGame, null);
+        }
+
+        if (!game.IsStarted)
+        {
+            return new ResistanceVoteResult(ResistanceVoteStatus.NotStarted, game);
+        }
+
+        if (game.Phase == ResistancePhase.GameOver)
+        {
+            return new ResistanceVoteResult(ResistanceVoteStatus.GameOver, game);
+        }
+
+        var voter = game.Players.FirstOrDefault(x => x.PlayerId == callerPlayerId);
+        if (voter is null)
+        {
+            return new ResistanceVoteResult(ResistanceVoteStatus.NotPlayer, game);
+        }
+
+        if (game.Phase != ResistancePhase.Voting)
+        {
+            return new ResistanceVoteResult(ResistanceVoteStatus.NotVoting, game);
+        }
+
+        voter.Vote = approve;
+        if (game.Players.All(x => x.Vote is not null))
+        {
+            ResistanceRoles.ResolveVotes(game);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return new ResistanceTeamResult(ResistanceTeamStatus.Selected, game);
+        return new ResistanceVoteResult(ResistanceVoteStatus.Voted, game);
+    }
+
+    public async Task<ResistanceContinueResult> ContinueAsync(
+        Guid sessionId, Guid? callerPlayerId, bool isManager, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await CreateWriterAsync(cancellationToken);
+
+        var game = await LoadAsync(dbContext, sessionId, cancellationToken);
+        if (game is null)
+        {
+            return new ResistanceContinueResult(ResistanceContinueStatus.NoGame, null);
+        }
+
+        if (!game.IsStarted)
+        {
+            return new ResistanceContinueResult(ResistanceContinueStatus.NotStarted, game);
+        }
+
+        if (game.Phase == ResistancePhase.GameOver)
+        {
+            return new ResistanceContinueResult(ResistanceContinueStatus.GameOver, game);
+        }
+
+        if (!isManager && (callerPlayerId is null || callerPlayerId != game.LeaderPlayerId))
+        {
+            return new ResistanceContinueResult(ResistanceContinueStatus.NotAllowed, game);
+        }
+
+        if (game.Phase != ResistancePhase.VoteResult || ResistanceRoles.IsApproved(game))
+        {
+            return new ResistanceContinueResult(ResistanceContinueStatus.NothingToContinue, game);
+        }
+
+        ResistanceRoles.PassLeadership(game);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return new ResistanceContinueResult(ResistanceContinueStatus.Continued, game);
     }
 }

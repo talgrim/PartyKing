@@ -19,6 +19,15 @@ public class ResistanceGame : LobbyGame<ResistancePlayer>
     /// <summary>The mission being played, from 1; the leader picks its team (see <see cref="ResistanceRoles.TeamSize"/>).</summary>
     public int MissionNumber { get; set; } = 1;
 
+    /// <summary>The step of the current round; <see cref="ResistancePhase.SelectingTeam"/> until the leader submits a team.</summary>
+    public ResistancePhase Phase { get; set; } = ResistancePhase.SelectingTeam;
+
+    /// <summary>Teams rejected in a row during the current mission; five of them make the spies win.</summary>
+    public int RejectedTeams { get; set; }
+
+    /// <summary>The winning side once <see cref="Phase"/> is <see cref="ResistancePhase.GameOver"/>.</summary>
+    public ResistanceRole? Winner { get; set; }
+
     public bool IsStarted => StartedAt is not null;
 
     /// <summary>The leader submitted a team for the current mission, which locks it (<see cref="ResistancePlayer.IsOnTeam"/>).</summary>

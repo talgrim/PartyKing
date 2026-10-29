@@ -11,6 +11,11 @@ namespace PartyKing.Contract.V1.Games;
 /// <see cref="FellowSpies"/> (the other spies' player ids) only for a spy. Observers get neither.
 /// The leader picks <see cref="RequiredTeamSize"/> players for mission <see cref="MissionNumber"/> (null before the
 /// start); <see cref="TeamPlayerIds"/> is the submitted team, empty until then, and public.
+/// <see cref="Phase"/> is the step of the round (null before the start). While the players vote only
+/// <see cref="VotedPlayerIds"/> (who has voted, not how) and the caller's own <see cref="YourVote"/> are known; the
+/// <see cref="Votes"/> of everybody and <see cref="VoteApproved"/> appear once all have voted. <see cref="RejectedTeams"/>
+/// counts the teams rejected in a row; the fifth ends the game with the <see cref="Winner"/>, and then
+/// <see cref="RevealedRoles"/> shows every role.
 /// </summary>
 public record ResistanceGameDto(
     DateTimeOffset CreatedAt,
@@ -24,7 +29,31 @@ public record ResistanceGameDto(
     IReadOnlyList<Guid>? FellowSpies,
     int MissionNumber,
     int? RequiredTeamSize,
-    IReadOnlyList<Guid> TeamPlayerIds);
+    IReadOnlyList<Guid> TeamPlayerIds,
+    ResistancePhaseDto? Phase,
+    int RejectedTeams,
+    ResistanceRoleDto? Winner,
+    IReadOnlyList<Guid> VotedPlayerIds,
+    bool? YourVote,
+    IReadOnlyList<ResistanceVoteDto>? Votes,
+    bool? VoteApproved,
+    IReadOnlyList<ResistanceRevealedRoleDto>? RevealedRoles);
+
+/// <summary>Serialized by name, which the UI compares against.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum ResistancePhaseDto
+{
+    SelectingTeam,
+    Voting,
+    VoteResult,
+    GameOver,
+}
+
+/// <summary>How one player voted on the team; public once everybody has voted.</summary>
+public record ResistanceVoteDto(Guid PlayerId, bool Approve);
+
+/// <summary>A player's role, revealed when the game is over.</summary>
+public record ResistanceRevealedRoleDto(Guid PlayerId, ResistanceRoleDto Role);
 
 /// <summary>Serialized by name ("Resistance", "Spy"), which the UI compares against.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -50,3 +79,6 @@ public record ResistancePlayersOrderRequest(IReadOnlyList<Guid>? PlayerIds);
 
 /// <summary>The ids of the players the leader sends on the mission.</summary>
 public record ResistanceTeamRequest(IReadOnlyList<Guid>? PlayerIds);
+
+/// <summary>The caller's vote on the submitted team: true approves, false rejects.</summary>
+public record ResistanceVoteRequest(bool Approve);

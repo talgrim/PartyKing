@@ -121,6 +121,36 @@ public class ResistanceController : GameControllerBase
         return result.Match(Ok, Problem);
     }
 
+    /// <summary>
+    /// A player votes on the submitted team and may change the vote until the last player has voted. 403 for anyone
+    /// who did not join, 409 when no team is up for a vote.
+    /// </summary>
+    [HttpPut("vote")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> VoteResistanceTeam(
+        Guid sessionId, [FromBody] ResistanceVoteRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.VoteAsync(
+            sessionId, request.Approve, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>
+    /// Moves on after a rejected team: the next player leads and picks a new team. The leader, the host and admins
+    /// may; 409 unless everyone voted and rejected the team.
+    /// </summary>
+    [HttpPost("continue")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ContinueResistance(Guid sessionId, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.ContinueAsync(sessionId, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
     /// <summary>Host or admin: removes a player from the Resistance game, 404 for an unknown game or player.</summary>
     [HttpDelete("players/{playerId:guid}")]
     [RequireSessionAccess]

@@ -8,4 +8,10 @@ public class ResistancePlayer : LobbyPlayer
 
     /// <summary>Whether the leader put the player on the team of the current mission.</summary>
     public bool IsOnTeam { get; set; }
+
+    /// <summary>
+    /// The player's vote on the submitted team (true approves); null until they voted. Kept after the reveal so
+    /// everybody sees who voted how, and cleared when the next team is picked.
+    /// </summary>
+    public bool? Vote { get; set; }
 }

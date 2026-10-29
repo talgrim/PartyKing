@@ -27,4 +27,19 @@ internal sealed class MeteredResistanceGamesRepository
             nameof(SelectTeamAsync),
             () => _inner.SelectTeamAsync(sessionId, callerPlayerId, playerIds, cancellationToken));
     }
+
+    public Task<ResistanceVoteResult> VoteAsync(
+        Guid sessionId, Guid? callerPlayerId, bool approve, CancellationToken cancellationToken)
+    {
+        return MeasureAsync(
+            nameof(VoteAsync), () => _inner.VoteAsync(sessionId, callerPlayerId, approve, cancellationToken));
+    }
+
+    public Task<ResistanceContinueResult> ContinueAsync(
+        Guid sessionId, Guid? callerPlayerId, bool isManager, CancellationToken cancellationToken)
+    {
+        return MeasureAsync(
+            nameof(ContinueAsync),
+            () => _inner.ContinueAsync(sessionId, callerPlayerId, isManager, cancellationToken));
+    }
 }

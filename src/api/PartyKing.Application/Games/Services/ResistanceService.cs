@@ -48,6 +48,21 @@ public interface IResistanceService
     Task<ErrorOr<ResistanceGameDto>> SelectTeamAsync(
         Guid sessionId, IReadOnlyList<Guid>? playerIds, GameCaller caller, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// A player votes on the submitted team, and may change the vote until the last player has voted. Forbidden for
+    /// anyone who did not join (the host and admins too), NotFound without a game, Conflict before the start, when
+    /// no team is up for a vote or when the game is over.
+    /// </summary>
+    Task<ErrorOr<ResistanceGameDto>> VoteAsync(
+        Guid sessionId, bool approve, GameCaller caller, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Moves on after a rejected team (next leader, new team). The leader, the host and admins may; Forbidden for
+    /// other players, Conflict unless the votes are in and rejected the team.
+    /// </summary>
+    Task<ErrorOr<ResistanceGameDto>> ContinueAsync(
+        Guid sessionId, GameCaller caller, CancellationToken cancellationToken);
+
     /// <summary>Host or admin: removes a player. NotFound for an unknown game or player.</summary>
     Task<ErrorOr<ResistanceGameDto>> KickAsync(
         Guid sessionId, Guid playerId, GameCaller caller, CancellationToken cancellationToken);
@@ -190,6 +205,8 @@ internal class ResistanceService : IResistanceService
                 return _lobby.NoGame;
             case ResistanceTeamStatus.NotStarted:
                 return Error.Conflict("Resistance.NotStarted", "The game has not started yet.");
+            case ResistanceTeamStatus.GameOver:
+                return GameOverError;
             case ResistanceTeamStatus.NotLeader:
                 return Error.Forbidden("Resistance.NotLeader", "Only the mission leader picks the team.");
             case ResistanceTeamStatus.AlreadySubmitted:
@@ -206,6 +223,76 @@ internal class ResistanceService : IResistanceService
 
         return ToDto(result.Game!, caller);
     }
+
+    public async Task<ErrorOr<ResistanceGameDto>> VoteAsync(
+        Guid sessionId, bool approve, GameCaller caller, CancellationToken cancellationToken)
+    {
+        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
+        if (access.IsError)
+        {
+            return access.Errors;
+        }
+
+        if (access.Value.Game is null)
+        {
+            return _lobby.NoGame;
+        }
+
+        var result = await _games.VoteAsync(sessionId, caller.PlayerId, approve, cancellationToken);
+        switch (result.Status)
+        {
+            case ResistanceVoteStatus.NoGame:
+                return _lobby.NoGame;
+            case ResistanceVoteStatus.NotStarted:
+                return Error.Conflict("Resistance.NotStarted", "The game has not started yet.");
+            case ResistanceVoteStatus.GameOver:
+                return GameOverError;
+            case ResistanceVoteStatus.NotPlayer:
+                return Error.Forbidden("Resistance.NotPlayer", "Only the players of the game vote.");
+            case ResistanceVoteStatus.NotVoting:
+                return Error.Conflict("Resistance.NotVoting", "No team is up for a vote.");
+        }
+
+        await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
+
+        return ToDto(result.Game!, caller);
+    }
+
+    public async Task<ErrorOr<ResistanceGameDto>> ContinueAsync(
+        Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
+    {
+        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
+        if (access.IsError)
+        {
+            return access.Errors;
+        }
+
+        if (access.Value.Game is null)
+        {
+            return _lobby.NoGame;
+        }
+
+        var result = await _games.ContinueAsync(sessionId, caller.PlayerId, access.Value.IsManager, cancellationToken);
+        switch (result.Status)
+        {
+            case ResistanceContinueStatus.NoGame:
+                return _lobby.NoGame;
+            case ResistanceContinueStatus.NotStarted:
+                return Error.Conflict("Resistance.NotStarted", "The game has not started yet.");
+            case ResistanceContinueStatus.GameOver:
+                return GameOverError;
+            case ResistanceContinueStatus.NotAllowed:
+                return Error.Forbidden("Resistance.NotAllowed", "Only the leader, the host or an admin continues.");
+            case ResistanceContinueStatus.NothingToContinue:
+                return Error.Conflict("Resistance.NothingToContinue", "There is no rejected team to move on from.");
+        }
+
+        await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
+
+        return ToDto(result.Game!, caller);
+    }
+
+    private static Error GameOverError => Error.Conflict("Resistance.GameOver", "The game is over.");
 
     public Task<ErrorOr<Guid>> JoinAsync(
         Guid sessionId, string? name, GameCaller caller, CancellationToken cancellationToken)
@@ -266,6 +353,9 @@ internal class ResistanceService : IResistanceService
                 .ToList()
             : null;
 
+        var revealed = game.Phase is ResistancePhase.VoteResult or ResistancePhase.GameOver;
+        var voted = game.Players.Where(x => x.Vote is not null).OrderBy(x => x.Order).ToList();
+
         return new ResistanceGameDto(
             game.CreatedAt,
             game.IsOpen,
@@ -278,7 +368,20 @@ internal class ResistanceService : IResistanceService
             fellowSpies,
             game.MissionNumber,
             game.IsStarted ? ResistanceRoles.TeamSize(game.Players.Count, game.MissionNumber) : null,
-            game.Players.Where(x => x.IsOnTeam).OrderBy(x => x.Order).Select(x => x.PlayerId).ToList());
+            game.Players.Where(x => x.IsOnTeam).OrderBy(x => x.Order).Select(x => x.PlayerId).ToList(),
+            game.IsStarted ? (ResistancePhaseDto)game.Phase : null,
+            game.RejectedTeams,
+            game.Winner is { } winner ? (ResistanceRoleDto)winner : null,
+            voted.Select(x => x.PlayerId).ToList(),
+            you?.Vote,
+            revealed ? voted.Select(x => new ResistanceVoteDto(x.PlayerId, x.Vote!.Value)).ToList() : null,
+            revealed ? ResistanceRoles.IsApproved(game) : null,
+            game.Phase == ResistancePhase.GameOver
+                ? game.Players
+                    .OrderBy(x => x.Order)
+                    .Select(x => new ResistanceRevealedRoleDto(x.PlayerId, (ResistanceRoleDto)x.Role!.Value))
+                    .ToList()
+                : null);
     }
 
     private sealed class ResistanceLobbyNotifier : IGameLobbyNotifier

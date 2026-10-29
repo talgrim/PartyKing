@@ -75,8 +75,17 @@ namespace PartyKing.Persistence.Migrations
                     b.Property<int>("MissionNumber")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("Phase")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("RejectedTeams")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTimeOffset?>("StartedAt")
                         .HasColumnType("TEXT");
+
+                    b.Property<int?>("Winner")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("SessionId");
 
@@ -114,6 +123,9 @@ namespace PartyKing.Persistence.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<int?>("Role")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool?>("Vote")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("SessionId", "PlayerId");
