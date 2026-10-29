@@ -22,6 +22,12 @@ public interface ICookieAuthorizationHandler
 
     /// <summary>Reads the stamp stored for the session; false when there is none or the cookie was tampered with.</summary>
     bool TryReadSessionAccess(HttpRequest request, Guid sessionId, out string stamp);
+
+    /// <summary>Remembers the Ringo player this browser joined as in the session.</summary>
+    void GrantRingoPlayer(Guid sessionId, Guid playerId, HttpContext? httpContext);
+
+    /// <summary>Reads the Ringo player id stored for the session; false when there is none or the cookie was tampered with.</summary>
+    bool TryReadRingoPlayer(HttpRequest request, Guid sessionId, out Guid playerId);
 }
 
 internal class CookieAuthorizationHandler : ICookieAuthorizationHandler
@@ -36,12 +42,14 @@ internal class CookieAuthorizationHandler : ICookieAuthorizationHandler
     private readonly IDataProtector _userProtector;
     private readonly IDataProtector _adminProtector;
     private readonly IDataProtector _sessionAccessProtector;
+    private readonly IDataProtector _ringoPlayerProtector;
 
     public CookieAuthorizationHandler(IDataProtectionProvider dataProtectionProvider)
     {
         _userProtector = dataProtectionProvider.CreateProtector("PartyKing.UserCookie");
         _adminProtector = dataProtectionProvider.CreateProtector("PartyKing.AdminCookie");
         _sessionAccessProtector = dataProtectionProvider.CreateProtector("PartyKing.SessionAccessCookie");
+        _ringoPlayerProtector = dataProtectionProvider.CreateProtector("PartyKing.RingoPlayerCookie");
     }
 
     public void Authorize(string profileId, HttpContext? httpContext)
@@ -121,6 +129,47 @@ internal class CookieAuthorizationHandler : ICookieAuthorizationHandler
         stamp = ReadSessionAccess(request).LastOrDefault(x => x.SessionId == sessionId).Stamp ?? string.Empty;
 
         return stamp.Length > 0;
+    }
+
+    public void GrantRingoPlayer(Guid sessionId, Guid playerId, HttpContext? httpContext)
+    {
+        var context = Require(httpContext);
+
+        var players = ReadRingoPlayers(context.Request)
+            .Where(x => x.SessionId != sessionId)
+            .Append((SessionId: sessionId, PlayerId: playerId))
+            .TakeLast(MaxUnlockedSessions);
+
+        context.Response.Cookies.Append(
+            Constants.RingoPlayerCookieName,
+            _ringoPlayerProtector.Protect(string.Join(';', players.Select(x => $"{x.SessionId:N}:{x.PlayerId:N}"))),
+            GetOptions(SessionAccessExpirationTime, context));
+    }
+
+    public bool TryReadRingoPlayer(HttpRequest request, Guid sessionId, out Guid playerId)
+    {
+        playerId = ReadRingoPlayers(request).LastOrDefault(x => x.SessionId == sessionId).PlayerId;
+
+        return playerId != Guid.Empty;
+    }
+
+    private IEnumerable<(Guid SessionId, Guid PlayerId)> ReadRingoPlayers(HttpRequest request)
+    {
+        if (!request.Cookies.TryGetValue(Constants.RingoPlayerCookieName, out var protectedValue)
+            || !TryUnprotect(_ringoPlayerProtector, protectedValue, out var value))
+        {
+            yield break;
+        }
+
+        foreach (var entry in value.Split(';', StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (entry.Split(':') is [var session, var player]
+                && Guid.TryParseExact(session, "N", out var sessionId)
+                && Guid.TryParseExact(player, "N", out var playerId))
+            {
+                yield return (sessionId, playerId);
+            }
+        }
     }
 
     private IEnumerable<(Guid SessionId, string Stamp)> ReadSessionAccess(HttpRequest request)

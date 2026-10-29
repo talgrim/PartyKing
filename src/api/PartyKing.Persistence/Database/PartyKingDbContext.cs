@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using PartyKing.Domain.Entities.Auth;
+using PartyKing.Domain.Entities.Games;
 using PartyKing.Domain.Entities.Lyrics;
 using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Entities.Sessions;
@@ -51,4 +52,7 @@ public class PartyKingDbContextBase : DbContext
     public DbSet<AdminAccount> AdminAccounts { get; set; } = null!;
     public DbSet<OAuthState> OAuthStates { get; set; } = null!;
     public DbSet<LyricsOffset> LyricsOffsets { get; set; } = null!;
+    public DbSet<RingoGame> RingoGames { get; set; } = null!;
+    public DbSet<RingoFlip> RingoFlips { get; set; } = null!;
+    public DbSet<RingoPlayer> RingoPlayers { get; set; } = null!;
 }

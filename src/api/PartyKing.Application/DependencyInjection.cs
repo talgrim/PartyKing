@@ -92,7 +92,9 @@ public static class DependencyInjection
     private static void RegisterGames(this IServiceCollection services)
     {
         services.AddScoped<IGameService, GameService>();
+        services.AddScoped<IRingoService, RingoService>();
         services.AddScoped<INeverHaveIEverSuggestionService, NeverHaveIEverSuggestionService>();
+        services.AddScoped<IRingoRuleSuggestionService, RingoRuleSuggestionService>();
     }
 
     private static void RegisterQueue(this IServiceCollection services)

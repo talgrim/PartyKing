@@ -13,3 +13,46 @@ export type GameSuggestionsDto = {
   /** True when the language model was unavailable and the statements come from the built-in list. */
   fromFallback: boolean;
 };
+
+// Mirrors PartyKing.Contract.V1.Games.RingoGameDto
+export type RingoGameDto = {
+  /** Seed of the card layout; the same seed gives the same layout on every device. */
+  seed: number;
+  /** The flipped cards in flip order. */
+  flips: RingoFlipDto[];
+  /** The last flipped card (0-51) until it is continued past; null when none waits for that. */
+  pendingCardId: number | null;
+  /** True once an admin opened the game to guests. */
+  isOpen: boolean;
+  /** The players in turn order. */
+  players: RingoPlayerDto[];
+  /** The player whose turn it is; null without players. */
+  currentPlayerId: string | null;
+  /** The caller's own player id; null when the caller is not a player. */
+  yourPlayerId: string | null;
+};
+
+// Mirrors PartyKing.Contract.V1.Games.RingoPlayerDto
+export type RingoPlayerDto = {
+  id: string;
+  /** Carries the "(host)" suffix for the session host. */
+  name: string;
+};
+
+// Mirrors PartyKing.Contract.V1.Games.RingoLobbyDto
+export type RingoLobbyDto = {
+  /** Seed of the game, which tells one game from the next. */
+  seed: number;
+  isOpen: boolean;
+  /** Whether the caller already joined. */
+  joined: boolean;
+};
+
+// Mirrors PartyKing.Contract.V1.Games.RingoFlipDto
+export type RingoFlipDto = {
+  /** Card id (0-51). */
+  cardId: number;
+  /** ISO timestamp. */
+  flippedAt: string;
+  flippedBy: string;
+};

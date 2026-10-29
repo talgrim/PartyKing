@@ -59,4 +59,14 @@ internal sealed class NullSessionMusicNotifier : ISessionMusicNotifier
     {
         return Task.CompletedTask;
     }
+
+    public Task RingoChangedAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task RingoOpenedAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
 }

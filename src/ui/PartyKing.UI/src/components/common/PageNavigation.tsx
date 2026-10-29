@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
-type NavigationItem = { label: string } & ({ to: string } | { onClick: () => void });
+type NavigationItem = { label: string } & ({ to: string; newTab?: boolean } | { onClick: () => void });
 
 type Props = {
   links: NavigationItem[];
@@ -10,13 +10,18 @@ type Props = {
 
 const itemClass = 'px-3 py-2 text-slate-200 bg-slate-900 rounded-md hover:bg-slate-700';
 
-/** Row of buttons: a link to another page, or an action (`onClick`) such as opening a dialog. */
+/** Row of buttons: a link to another page (in a new tab with `newTab`), or an action (`onClick`) such as opening a dialog. */
 export const PageNavigation = ({ links, className = '' }: Props): ReactNode => {
   return (
     <nav className={`flex gap-2 ${className}`}>
       {links.map((link) =>
         'to' in link ? (
-          <Link key={link.label} to={link.to} className={itemClass}>
+          <Link
+            key={link.label}
+            to={link.to}
+            className={itemClass}
+            {...(link.newTab ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+          >
             {link.label}
           </Link>
         ) : (
