@@ -292,20 +292,21 @@ export const MissionBoardIcon = ({
               {teamSizes[i]}
             </text>
           )}
-          <text x={cx} y={132} textAnchor="middle" fontSize="15" fill={COLORS.paper} fontFamily="sans-serif">
-            {`Misja ${i + 1}`}
+          <text x={cx} y={132} textAnchor="middle" fontSize="13" fontWeight="700" letterSpacing="1.5" fill={COLORS.paper} fontFamily="sans-serif">
+            {`MISJA ${i + 1}`}
           </text>
           {i === 3 && fourthMissionNeedsTwoFails && (
             <text x={cx} y={150} textAnchor="middle" fontSize="12" fontWeight="700" fill={COLORS.gold} fontFamily="sans-serif">
-              2 porażki
+              2 PORAŻKI
             </text>
           )}
         </g>
       );
     })}
-    {/* Rejected teams tracker: five steps, the fifth is a spy win. */}
+    {/* Rejected teams tracker: five steps, the fifth is a spy win. The label and the steps share the row's centre line. */}
+    <rect x="18" y="154" width="524" height="28" rx="14" fill={COLORS.ink} opacity="0.4" />
     {Array.from({ length: MAX_REJECTIONS }, (_, i) => {
-      const cx = 190 + i * 46;
+      const cx = 262 + i * 56;
       const filled = i < rejectedTeams;
       const isLast = i === MAX_REJECTIONS - 1;
       return (
@@ -320,8 +321,17 @@ export const MissionBoardIcon = ({
         />
       );
     })}
-    <text x="176" y="173" textAnchor="end" fontSize="12" fill={COLORS.paper} fontFamily="sans-serif">
-      Odrzucone drużyny
+    <text
+      x="38"
+      y="168"
+      dominantBaseline="central"
+      fontSize="13"
+      fontWeight="700"
+      letterSpacing="1.5"
+      fill={COLORS.paper}
+      fontFamily="sans-serif"
+    >
+      ODRZUCONE DRUŻYNY
     </text>
   </Svg>
 );
