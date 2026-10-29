@@ -4,6 +4,7 @@ using PartyKing.Application.Games.Services;
 using PartyKing.Application.Player.Services;
 using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
+using PartyKing.Contract.V1.Games;
 using PartyKing.Domain.Entities.Games;
 using PartyKing.Infrastructure.Repositories;
 
@@ -224,6 +225,153 @@ public class ResistanceServiceTests
         Assert.Equal([_id], _notifier.ResistanceChanges);
     }
 
+    [Fact]
+    public async Task Starting_IsForManagersOfAnOpenGameWithFivePlayers()
+    {
+        var ct = CancellationToken.None;
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _service.StartAsync(_id, new GameCaller("guest", false), ct)).FirstError.Type);
+        Assert.Equal(ErrorOr.ErrorType.NotFound, (await _service.StartAsync(_id, Host, ct)).FirstError.Type);
+
+        await _service.CreateAsync(_id, Host, ct);
+        Assert.Equal("Resistance.NotOpen", (await _service.StartAsync(_id, Host, ct)).FirstError.Code);
+
+        await _service.OpenAsync(_id, Admin, ct);
+        await JoinPlayersAsync(4);
+        Assert.Equal("Resistance.NotEnoughPlayers", (await _service.StartAsync(_id, Host, ct)).FirstError.Code);
+
+        await JoinAsync("Player 5");
+        var started = await _service.StartAsync(_id, Admin, ct);
+
+        Assert.NotNull(started.Value.StartedAt);
+        Assert.Contains(started.Value.Players, x => x.Id == started.Value.LeaderPlayerId);
+        Assert.Equal("Resistance.AlreadyStarted", (await _service.StartAsync(_id, Host, ct)).FirstError.Code);
+    }
+
+    [Fact]
+    public async Task Starting_IsPushedOnce()
+    {
+        await OpenGameAsync();
+        await JoinPlayersAsync(5);
+        var before = _notifier.ResistanceChanges.Count;
+
+        await _service.StartAsync(_id, Host, CancellationToken.None);
+
+        Assert.Equal(before + 1, _notifier.ResistanceChanges.Count);
+    }
+
+    [Theory]
+    [InlineData(5, 2)]
+    [InlineData(6, 2)]
+    [InlineData(7, 3)]
+    [InlineData(8, 3)]
+    [InlineData(9, 3)]
+    [InlineData(10, 4)]
+    public async Task Starting_DealsAThirdOfThePlayersAsSpiesRoundedUp(int players, int spies)
+    {
+        await OpenGameAsync();
+        var callers = await JoinPlayersAsync(players);
+        await _service.StartAsync(_id, Host, CancellationToken.None);
+
+        var game = await _games.GetAsync(_id, CancellationToken.None);
+
+        Assert.Equal(spies, game!.Players.Count(x => x.Role == ResistanceRole.Spy));
+        Assert.Equal(players - spies, game.Players.Count(x => x.Role == ResistanceRole.Resistance));
+        Assert.Equal(callers.Count, game.Players.Count);
+    }
+
+    [Fact]
+    public async Task AfterStarting_PlayersCannotJoinBeKickedOrReordered()
+    {
+        await OpenGameAsync();
+        var callers = await JoinPlayersAsync(5);
+        await _service.StartAsync(_id, Host, CancellationToken.None);
+        var ids = callers.Select(x => x.PlayerId!.Value).ToList();
+
+        var join = await _service.JoinAsync(_id, "Late", new GameCaller("late", false), CancellationToken.None);
+        var kick = await _service.KickAsync(_id, ids[0], Admin, CancellationToken.None);
+        var reorder = await _service.ReorderAsync(_id, ids, Admin, CancellationToken.None);
+
+        Assert.Equal("Resistance.Started", join.FirstError.Code);
+        Assert.Equal("Resistance.Started", kick.FirstError.Code);
+        Assert.Equal("Resistance.Started", reorder.FirstError.Code);
+    }
+
+    [Fact]
+    public async Task AfterStarting_EachPlayerSeesOnlyTheirOwnRoleAndSpiesSeeEachOther()
+    {
+        await OpenGameAsync();
+        var callers = await JoinPlayersAsync(7);
+        await _service.StartAsync(_id, Host, CancellationToken.None);
+        var game = await _games.GetAsync(_id, CancellationToken.None);
+
+        foreach (var caller in callers)
+        {
+            var dto = (await _service.GetAsync(_id, caller, CancellationToken.None)).Value;
+            var role = game!.Players.Single(x => x.PlayerId == caller.PlayerId).Role;
+
+            Assert.Equal((ResistanceRoleDto?)role, dto.YourRole);
+            var otherSpies = game.Players
+                .Where(x => x.Role == ResistanceRole.Spy && x.PlayerId != caller.PlayerId)
+                .Select(x => x.PlayerId);
+            if (role == ResistanceRole.Spy)
+            {
+                Assert.Equal(otherSpies.Order(), dto.FellowSpies!.Order());
+            }
+            else
+            {
+                Assert.Null(dto.FellowSpies);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task AfterStarting_ObserversSeeNoRolesButSeeTheLeader()
+    {
+        await OpenGameAsync();
+        await JoinPlayersAsync(5);
+        await _service.StartAsync(_id, Host, CancellationToken.None);
+
+        foreach (var observer in new[] { Admin, Host, new GameCaller("guest", false) })
+        {
+            var dto = (await _service.GetAsync(_id, observer, CancellationToken.None)).Value;
+
+            Assert.Null(dto.YourRole);
+            Assert.Null(dto.FellowSpies);
+            Assert.NotNull(dto.LeaderPlayerId);
+        }
+    }
+
+    [Fact]
+    public async Task TheLobby_ShowsWhetherTheGameStarted()
+    {
+        await OpenGameAsync();
+        await JoinPlayersAsync(5);
+        Assert.False((await _service.GetLobbyAsync(_id, Host, CancellationToken.None)).Value.IsStarted);
+
+        await _service.StartAsync(_id, Host, CancellationToken.None);
+
+        Assert.True((await _service.GetLobbyAsync(_id, Host, CancellationToken.None)).Value.IsStarted);
+    }
+
+    [Theory]
+    [InlineData(ResistanceRoleDto.Spy, "\"Spy\"")]
+    [InlineData(ResistanceRoleDto.Resistance, "\"Resistance\"")]
+    public void TheRole_IsSerializedByNameSoTheUiCanCompareIt(ResistanceRoleDto role, string expected)
+    {
+        Assert.Equal(expected, global::System.Text.Json.JsonSerializer.Serialize(role));
+    }
+
+    private async Task<List<GameCaller>> JoinPlayersAsync(int count)
+    {
+        var callers = new List<GameCaller>();
+        for (var i = 1; i <= count; i++)
+        {
+            callers.Add(await JoinAsync($"Player {i}"));
+        }
+
+        return callers;
+    }
+
     private async Task OpenGameAsync()
     {
         await _service.CreateAsync(_id, Host, CancellationToken.None);
@@ -271,6 +419,11 @@ public class ResistanceServiceTests
                 return Result(LobbyStatus.NotOpen, game);
             }
 
+            if (game.IsStarted)
+            {
+                return Result(LobbyStatus.Started, game);
+            }
+
             if (game.Players.Any(x => x.NormalizedName == player.NormalizedName))
             {
                 return Result(LobbyStatus.NameTaken, game);
@@ -294,6 +447,11 @@ public class ResistanceServiceTests
             if (!_games.TryGetValue(sessionId, out var game))
             {
                 return Result(LobbyStatus.NoGame, null);
+            }
+
+            if (game.IsStarted)
+            {
+                return Result(LobbyStatus.Started, game);
             }
 
             var kicked = game.Players.FirstOrDefault(x => x.PlayerId == playerId);
@@ -320,6 +478,11 @@ public class ResistanceServiceTests
                 return Result(LobbyStatus.NoGame, null);
             }
 
+            if (game.IsStarted)
+            {
+                return Result(LobbyStatus.Started, game);
+            }
+
             if (playerIds.Count != game.Players.Count || game.Players.Any(x => !playerIds.Contains(x.PlayerId)))
             {
                 return Result(LobbyStatus.OrderMismatch, game);
@@ -335,6 +498,36 @@ public class ResistanceServiceTests
 
         public Task<bool> DeleteAsync(Guid sessionId, CancellationToken cancellationToken) =>
             Task.FromResult(_games.Remove(sessionId));
+
+        public Task<ResistanceStartResult> StartAsync(
+            Guid sessionId, DateTimeOffset startedAt, CancellationToken cancellationToken)
+        {
+            var status = ResistanceStartStatus.Started;
+            _games.TryGetValue(sessionId, out var game);
+            if (game is null)
+            {
+                status = ResistanceStartStatus.NoGame;
+            }
+            else if (game.IsStarted)
+            {
+                status = ResistanceStartStatus.AlreadyStarted;
+            }
+            else if (!game.IsOpen)
+            {
+                status = ResistanceStartStatus.NotOpen;
+            }
+            else if (game.Players.Count < ResistanceGame.MinPlayers)
+            {
+                status = ResistanceStartStatus.NotEnoughPlayers;
+            }
+            else
+            {
+                ResistanceRoles.Deal(game, new Random(1));
+                game.StartedAt = startedAt;
+            }
+
+            return Task.FromResult(new ResistanceStartResult(status, game));
+        }
 
         private static Task<LobbyResult<ResistanceGame>> Result(LobbyStatus status, ResistanceGame? game) =>
             Task.FromResult(new LobbyResult<ResistanceGame>(status, game));
