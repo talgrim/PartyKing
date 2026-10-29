@@ -103,6 +103,12 @@ export const gamesApi = {
       withCredentials: true,
     }) as unknown as Promise<ResistanceGameDto>,
 
+  /** Host or admin: replaces the game's rules with the server's current configuration; 409 once the game is open or started. */
+  refreshResistanceRules: (sessionId: string) =>
+    axios.post(`/sessions/${sessionId}/games/resistance/rules/refresh`, null, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
   /** The mission leader submits the team (exactly `requiredTeamSize` distinct players), which locks it; 403 for anyone else, 409 once submitted, 400 for a wrong team. */
   selectResistanceTeam: (sessionId: string, playerIds: string[]) =>
     axios.put(`/sessions/${sessionId}/games/resistance/team`, { playerIds }, {

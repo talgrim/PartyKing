@@ -90,6 +90,23 @@ export type ResistanceGameDto = {
   voteApproved: boolean | null;
   /** Every player's role; only once the game is over, otherwise null. */
   revealedRoles: ResistanceRevealedRoleDto[] | null;
+  /** The numbers this game was created with (see `refreshResistanceRules`). */
+  rules: ResistanceRulesDto;
+};
+
+// Mirrors PartyKing.Contract.V1.Games.ResistanceRulesDto
+export type ResistanceRulesDto = {
+  playerCounts: ResistanceCountRulesDto[];
+};
+
+// Mirrors PartyKing.Contract.V1.Games.ResistanceCountRulesDto
+export type ResistanceCountRulesDto = {
+  playerCount: number;
+  spies: number;
+  /** The team size of missions 1 to 5. */
+  teamSizes: number[];
+  /** The Fail cards that make missions 1 to 5 fail. */
+  requiredFails: number[];
 };
 
 export type ResistanceRole = 'Resistance' | 'Spy';

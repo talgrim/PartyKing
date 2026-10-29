@@ -89,7 +89,7 @@ export const Resistance = (): ReactNode => {
 
   const players = game?.players ?? [];
   const started = game?.startedAt != null;
-  const board = missionBoardFor(players.length);
+  const board = missionBoardFor(players.length, game?.rules);
 
   const back = canManage
     ? { to: sessionGamesPath(sessionId), label: 'Back to the games' }
@@ -102,6 +102,15 @@ export const Resistance = (): ReactNode => {
       void mutateGlobal(resistanceLobbyKey(sessionId));
     } catch {
       setMessage('Could not open the game.');
+    }
+  };
+
+  const refreshRules = async () => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.refreshResistanceRules(sessionId), { revalidate: false });
+    } catch {
+      setMessage('Could not refresh the rules.');
     }
   };
 
@@ -178,6 +187,7 @@ export const Resistance = (): ReactNode => {
       onEnd={() => setConfirmingEnd(true)}
       onStart={() => void startGame()}
       onOpen={() => void openGame()}
+      onRefreshRules={() => void refreshRules()}
       onContinue={() => void continueGame()}
     />
   );
