@@ -46,7 +46,7 @@ export const MaximizedView = ({ sessionId, nowPlaying, showLyrics, lyrics, onRes
         <div className="min-h-0 flex-1">
           {showLyrics ? <LyricsView lyrics={lyrics} nowPlaying={nowPlaying} onResync={onResyncLyrics} /> : <SlideshowView sessionId={sessionId} />}
         </div>
-        <NowPlayingOverlay nowPlaying={nowPlaying} />
+        <NowPlayingOverlay nowPlaying={nowPlaying} overLyrics={showLyrics} />
         <button
           type="button"
           onClick={onExit}
