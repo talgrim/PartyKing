@@ -49,8 +49,8 @@ describe('ResistanceIcons', () => {
         fourthMissionNeedsTwoFails
       />,
     );
-    expect(screen.getByText('2 porażki')).toBeInTheDocument();
+    expect(screen.getByText('2 PORAŻKI')).toBeInTheDocument();
     expect(screen.getAllByText('3')).toHaveLength(1);
-    expect(screen.getByText('Misja 5')).toBeInTheDocument();
+    expect(screen.getByText('MISJA 5')).toBeInTheDocument();
   });
 });
