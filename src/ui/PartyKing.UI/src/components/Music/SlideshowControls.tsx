@@ -10,6 +10,8 @@ type Props = {
   open: boolean;
   onToggle: () => void;
   onMaximize: () => void;
+  /** Guests: the drawer can only show the lyrics, so there is nothing to switch to. */
+  lyricsOnly?: boolean;
   /** The drawer shows the lyrics instead of the slideshow. */
   lyricsActive: boolean;
   /** The song playing has lyrics; the button stays usable without, but says so. */
@@ -29,21 +31,26 @@ export const SlideshowControls = ({
   open,
   onToggle,
   onMaximize,
+  lyricsOnly = false,
   lyricsActive,
   lyricsAvailable,
   onToggleLyrics,
   className = '',
-}: Props): ReactNode => (
+}: Props): ReactNode => {
+  const drawerName = lyricsOnly ? 'lyrics' : 'slideshow';
+
+  return (
   <div className={`flex flex-col gap-1 ${className}`}>
     <button
       type="button"
       onClick={onToggle}
-      aria-label={open ? 'Hide slideshow' : 'Show slideshow'}
-      title={open ? 'Hide slideshow' : 'Show slideshow'}
+      aria-label={`${open ? 'Hide' : 'Show'} ${drawerName}`}
+      title={`${open ? 'Hide' : 'Show'} ${drawerName}`}
       className={`${buttonClass} rounded-md`}
     >
       {open ? <ChevronLeftIcon /> : <ChevronRightIcon />}
     </button>
+    {!lyricsOnly && (
     <button
       type="button"
       onClick={onToggleLyrics}
@@ -60,6 +67,7 @@ export const SlideshowControls = ({
     >
       {lyricsActive ? <SlideshowIcon /> : lyricsAvailable ? <LyricsIcon /> : <SubtitlesOffIcon />}
     </button>
+    )}
     <button
       type="button"
       onClick={onMaximize}
@@ -70,4 +78,5 @@ export const SlideshowControls = ({
       <FullscreenIcon />
     </button>
   </div>
-);
+  );
+};

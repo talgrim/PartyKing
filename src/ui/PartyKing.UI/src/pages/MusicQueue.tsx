@@ -31,8 +31,8 @@ const JOIN_PARAM = 'join';
 /**
  * Page of a session, behind the session password. Anyone who entered it (admins included) sees what is playing and
  * can search for or paste songs to add to the queue, no login needed. The host also gets the player, and an admin
- * the controls to pause and skip. The host and admins also get the slideshow in a drawer on the left, which can
- * be hidden or maximized.
+ * the controls to pause and skip. Everyone gets a drawer on the left with the lyrics of the song playing, which
+ * can be hidden or maximized; the host and admins can also switch it to the slideshow.
  */
 export const MusicQueue = (): ReactNode => {
   const { sessionId = '' } = useParams();
@@ -76,25 +76,30 @@ export const MusicQueue = (): ReactNode => {
       });
   }, [joinToken, sessionId]);
 
+  // Guests get the lyrics only: the slideshow is for the host and admins, so no guest ever requests the photos
   const canViewSlideshow = isHost || isAdmin;
 
   const locked = (error as { status?: number } | undefined)?.status === HTTP_STATUS_CODE.UNAUTHORIZED;
 
   // Looked up even while the slideshow is shown, so the lyrics button can tell whether this song has any
-  const lyrics = useLyrics(sessionId, nowPlaying?.song?.id, canViewSlideshow && Boolean(session) && !locked);
+  const lyrics = useLyrics(sessionId, nowPlaying?.song?.id, Boolean(session) && !locked);
 
   // With the automatic mode on, each song shows its lyrics once they are found and the slideshow while they are
   // searched for or missing. The toggle still works; the next result overrides it.
   const [autoLyrics] = useAutoLyrics();
   useEffect(() => {
-    if (!autoLyrics || (lyrics.status !== 'found' && lyrics.status !== 'none')) return;
+    if (!canViewSlideshow || !autoLyrics || (lyrics.status !== 'found' && lyrics.status !== 'none')) return;
     setShowLyrics(lyrics.status === 'found');
     // Only a new result matters, not a change of the setter's identity
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoLyrics, lyrics.status, nowPlaying?.song?.id]);
 
+  const lyricsOnly = !canViewSlideshow;
+  const lyricsShown = lyricsOnly || showLyrics;
+
   const lyricsControls = {
-    lyricsActive: showLyrics,
+    lyricsOnly,
+    lyricsActive: lyricsShown,
     lyricsAvailable: lyrics.status !== 'none',
     onToggleLyrics: () => setShowLyrics(!showLyrics),
   };
@@ -105,13 +110,13 @@ export const MusicQueue = (): ReactNode => {
   return (
     <SessionHubContext.Provider value={hub}>
     <div className="w-full min-h-full bg-slate-800 text-slate-400 md:flex">
-      {canViewSlideshow && session && !locked && slideshowOpen && !maximized && (
+      {session && !locked && slideshowOpen && !maximized && (
         <aside
-          aria-label={showLyrics ? 'Lyrics' : 'Slideshow'}
+          aria-label={lyricsShown ? 'Lyrics' : 'Slideshow'}
           className="relative m-2 rounded-md border-2 border-slate-400 md:w-[calc(50%-1rem)] md:shrink-0"
         >
           <div className="aspect-video w-full overflow-hidden rounded-sm bg-black">
-            {showLyrics ? (
+            {lyricsShown ? (
               <LyricsView lyrics={lyrics} nowPlaying={nowPlaying} onResync={() => void refreshNowPlaying()} />
             ) : (
               <SlideshowView sessionId={session.id} />
@@ -126,7 +131,7 @@ export const MusicQueue = (): ReactNode => {
           />
         </aside>
       )}
-      {canViewSlideshow && session && !locked && !slideshowOpen && !maximized && (
+      {session && !locked && !slideshowOpen && !maximized && (
         <SlideshowControls
           open={false}
           onToggle={() => setSlideshowOpen(true)}
@@ -193,11 +198,11 @@ export const MusicQueue = (): ReactNode => {
           </>
         )}
       </div>
-      {canViewSlideshow && session && !locked && maximized && (
+      {session && !locked && maximized && (
         <MaximizedView
           sessionId={session.id}
           nowPlaying={nowPlaying}
-          showLyrics={showLyrics}
+          showLyrics={lyricsShown}
           lyrics={lyrics}
           onResyncLyrics={() => void refreshNowPlaying()}
           onExit={() => setMaximized(false)}
