@@ -14,8 +14,23 @@ import { withDevPersona } from '@/service/devPersona';
 
 type Props = {
   sessionId: string;
-  /** Host or admin: they go straight to the board, everyone else to the page where they join. */
+  /**
+   * Host or admin: they go straight to the board; for Resistance they get a second tab to play in (the first is for
+   * the TV). Everyone else goes to the page where they join.
+   */
   canManage: boolean;
+};
+
+/**
+ * The Resistance tabs: the TV board and, unless the game started without the caller, the page to play on. A started
+ * game locks out everyone who did not join, so a host or admin who did not has only the TV tab.
+ */
+const resistancePaths = (sessionId: string, canManage: boolean, lobby: { isStarted: boolean; joined: boolean }) => {
+  if (!canManage) return [sessionResistanceJoinPath(sessionId)];
+
+  const tv = `${sessionResistancePath(sessionId)}?tv=1`;
+
+  return lobby.isStarted && !lobby.joined ? [tv] : [tv, sessionResistanceJoinPath(sessionId)];
 };
 
 /** A gamepad icon with a menu of the games open in the session; hidden while none is. A game opens in a new tab. */
@@ -26,18 +41,18 @@ export const OpenGamesMenu = ({ sessionId, canManage }: Props): ReactNode => {
 
   const games = [
     ...(ringo?.isOpen
-      ? [{ name: 'Ringo', path: canManage ? sessionRingoPath(sessionId) : sessionRingoJoinPath(sessionId) }]
+      ? [{ name: 'Ringo', paths: [canManage ? sessionRingoPath(sessionId) : sessionRingoJoinPath(sessionId)] }]
       : []),
     ...(resistance?.isOpen
-      ? [{ name: 'Resistance', path: canManage ? sessionResistancePath(sessionId) : sessionResistanceJoinPath(sessionId) }]
+      ? [{ name: 'Resistance', paths: resistancePaths(sessionId, canManage, resistance) }]
       : []),
   ];
 
   if (games.length === 0) return null;
 
-  const play = (path: string) => {
+  const play = (paths: string[]) => {
     setAnchor(null);
-    window.open(withDevPersona(path), '_blank', 'noopener,noreferrer');
+    paths.forEach((path) => window.open(withDevPersona(path), '_blank', 'noopener,noreferrer'));
   };
 
   return (
@@ -58,7 +73,7 @@ export const OpenGamesMenu = ({ sessionId, canManage }: Props): ReactNode => {
         slotProps={{ paper: { className: 'bg-slate-800! text-slate-200!' } }}
       >
         {games.map((game) => (
-          <MenuItem key={game.name} onClick={() => play(game.path)}>
+          <MenuItem key={game.name} onClick={() => play(game.paths)}>
             {game.name}
           </MenuItem>
         ))}
