@@ -19,4 +19,12 @@ internal sealed class MeteredResistanceGamesRepository
     {
         return MeasureAsync(nameof(StartAsync), () => _inner.StartAsync(sessionId, startedAt, cancellationToken));
     }
+
+    public Task<ResistanceTeamResult> SelectTeamAsync(
+        Guid sessionId, Guid? callerPlayerId, IReadOnlyList<Guid> playerIds, CancellationToken cancellationToken)
+    {
+        return MeasureAsync(
+            nameof(SelectTeamAsync),
+            () => _inner.SelectTeamAsync(sessionId, callerPlayerId, playerIds, cancellationToken));
+    }
 }

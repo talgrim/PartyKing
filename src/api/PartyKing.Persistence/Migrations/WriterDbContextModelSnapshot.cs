@@ -72,6 +72,9 @@ namespace PartyKing.Persistence.Migrations
                     b.Property<Guid?>("LeaderPlayerId")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("MissionNumber")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTimeOffset?>("StartedAt")
                         .HasColumnType("TEXT");
 
@@ -87,6 +90,9 @@ namespace PartyKing.Persistence.Migrations
 
                     b.Property<Guid>("PlayerId")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsOnTeam")
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTimeOffset>("JoinedAt")
                         .HasColumnType("TEXT");

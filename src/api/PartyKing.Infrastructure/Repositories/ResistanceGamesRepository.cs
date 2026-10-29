@@ -11,7 +11,31 @@ public interface IResistanceGamesRepository : ILobbyGamesRepository<ResistanceGa
     /// locks the players. Atomic with the players joining, so a join either makes it into the roles or is rejected.
     /// </summary>
     Task<ResistanceStartResult> StartAsync(Guid sessionId, DateTimeOffset startedAt, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The leader submits the team of the current mission, which locks it. Checked and saved in one writer context,
+    /// so it can't race another submission.
+    /// </summary>
+    Task<ResistanceTeamResult> SelectTeamAsync(
+        Guid sessionId, Guid? callerPlayerId, IReadOnlyList<Guid> playerIds, CancellationToken cancellationToken);
 }
+
+public enum ResistanceTeamStatus
+{
+    NoGame,
+    NotStarted,
+
+    /// <summary>The caller is not the player leading the mission.</summary>
+    NotLeader,
+    AlreadySubmitted,
+
+    /// <summary>Not exactly <see cref="ResistanceRoles.TeamSize"/> distinct players.</summary>
+    WrongSize,
+    UnknownPlayer,
+    Selected,
+}
+
+public record ResistanceTeamResult(ResistanceTeamStatus Status, ResistanceGame? Game);
 
 public enum ResistanceStartStatus
 {
@@ -81,5 +105,52 @@ internal class ResistanceGamesRepository
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return new ResistanceStartResult(ResistanceStartStatus.Started, game);
+    }
+
+    public async Task<ResistanceTeamResult> SelectTeamAsync(
+        Guid sessionId, Guid? callerPlayerId, IReadOnlyList<Guid> playerIds, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await CreateWriterAsync(cancellationToken);
+
+        var game = await LoadAsync(dbContext, sessionId, cancellationToken);
+        if (game is null)
+        {
+            return new ResistanceTeamResult(ResistanceTeamStatus.NoGame, null);
+        }
+
+        if (!game.IsStarted)
+        {
+            return new ResistanceTeamResult(ResistanceTeamStatus.NotStarted, game);
+        }
+
+        if (callerPlayerId is null || callerPlayerId != game.LeaderPlayerId)
+        {
+            return new ResistanceTeamResult(ResistanceTeamStatus.NotLeader, game);
+        }
+
+        if (game.IsTeamSubmitted)
+        {
+            return new ResistanceTeamResult(ResistanceTeamStatus.AlreadySubmitted, game);
+        }
+
+        if (playerIds.Count != ResistanceRoles.TeamSize(game.Players.Count, game.MissionNumber)
+            || playerIds.Distinct().Count() != playerIds.Count)
+        {
+            return new ResistanceTeamResult(ResistanceTeamStatus.WrongSize, game);
+        }
+
+        if (playerIds.Any(id => game.Players.All(x => x.PlayerId != id)))
+        {
+            return new ResistanceTeamResult(ResistanceTeamStatus.UnknownPlayer, game);
+        }
+
+        foreach (var player in game.Players)
+        {
+            player.IsOnTeam = playerIds.Contains(player.PlayerId);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return new ResistanceTeamResult(ResistanceTeamStatus.Selected, game);
     }
 }

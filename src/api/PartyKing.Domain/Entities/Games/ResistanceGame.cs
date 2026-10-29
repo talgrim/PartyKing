@@ -16,5 +16,11 @@ public class ResistanceGame : LobbyGame<ResistancePlayer>
     /// <summary>The player leading the current mission; null until the game is started.</summary>
     public Guid? LeaderPlayerId { get; set; }
 
+    /// <summary>The mission being played, from 1; the leader picks its team (see <see cref="ResistanceRoles.TeamSize"/>).</summary>
+    public int MissionNumber { get; set; } = 1;
+
     public bool IsStarted => StartedAt is not null;
+
+    /// <summary>The leader submitted a team for the current mission, which locks it (<see cref="ResistancePlayer.IsOnTeam"/>).</summary>
+    public bool IsTeamSubmitted => Players.Any(x => x.IsOnTeam);
 }

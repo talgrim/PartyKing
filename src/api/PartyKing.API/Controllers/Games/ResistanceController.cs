@@ -105,6 +105,22 @@ public class ResistanceController : GameControllerBase
         return result.Match(_ => NoContent(), Problem);
     }
 
+    /// <summary>
+    /// The mission leader submits the team (exactly the required number of distinct players), which locks it. 403 for
+    /// anyone but the leader, 409 before the start or once a team was submitted, 400 for a wrong team.
+    /// </summary>
+    [HttpPut("team")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> SelectResistanceTeam(
+        Guid sessionId, [FromBody] ResistanceTeamRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.SelectTeamAsync(
+            sessionId, request.PlayerIds, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
     /// <summary>Host or admin: removes a player from the Resistance game, 404 for an unknown game or player.</summary>
     [HttpDelete("players/{playerId:guid}")]
     [RequireSessionAccess]

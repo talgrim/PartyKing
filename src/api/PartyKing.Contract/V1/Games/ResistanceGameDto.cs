@@ -9,6 +9,8 @@ namespace PartyKing.Contract.V1.Games;
 /// Once <see cref="StartedAt"/> is set the players are locked and <see cref="LeaderPlayerId"/> leads the mission.
 /// The roles are secret: <see cref="YourRole"/> is set only for a player of a started game, and
 /// <see cref="FellowSpies"/> (the other spies' player ids) only for a spy. Observers get neither.
+/// The leader picks <see cref="RequiredTeamSize"/> players for mission <see cref="MissionNumber"/> (null before the
+/// start); <see cref="TeamPlayerIds"/> is the submitted team, empty until then, and public.
 /// </summary>
 public record ResistanceGameDto(
     DateTimeOffset CreatedAt,
@@ -19,7 +21,10 @@ public record ResistanceGameDto(
     DateTimeOffset? StartedAt,
     Guid? LeaderPlayerId,
     ResistanceRoleDto? YourRole,
-    IReadOnlyList<Guid>? FellowSpies);
+    IReadOnlyList<Guid>? FellowSpies,
+    int MissionNumber,
+    int? RequiredTeamSize,
+    IReadOnlyList<Guid> TeamPlayerIds);
 
 /// <summary>Serialized by name ("Resistance", "Spy"), which the UI compares against.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -42,3 +47,6 @@ public record ResistanceJoinRequest(string? Name);
 
 /// <summary>The ids of all the players in the new seating order.</summary>
 public record ResistancePlayersOrderRequest(IReadOnlyList<Guid>? PlayerIds);
+
+/// <summary>The ids of the players the leader sends on the mission.</summary>
+public record ResistanceTeamRequest(IReadOnlyList<Guid>? PlayerIds);

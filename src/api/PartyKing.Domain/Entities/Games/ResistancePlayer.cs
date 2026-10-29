@@ -5,4 +5,7 @@ public class ResistancePlayer : LobbyPlayer
 {
     /// <summary>Null until the game is started.</summary>
     public ResistanceRole? Role { get; set; }
+
+    /// <summary>Whether the leader put the player on the team of the current mission.</summary>
+    public bool IsOnTeam { get; set; }
 }

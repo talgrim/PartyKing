@@ -40,6 +40,14 @@ public interface IResistanceService
     /// </summary>
     Task<ErrorOr<ResistanceGameDto>> StartAsync(Guid sessionId, GameCaller caller, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// The mission leader submits the team of the current mission: exactly <c>RequiredTeamSize</c> distinct players,
+    /// which locks it. Forbidden for anyone but the leader (the host and admins get no override), NotFound without a
+    /// game, Conflict before the start or once a team was submitted, Validation for a wrong size or unknown player.
+    /// </summary>
+    Task<ErrorOr<ResistanceGameDto>> SelectTeamAsync(
+        Guid sessionId, IReadOnlyList<Guid>? playerIds, GameCaller caller, CancellationToken cancellationToken);
+
     /// <summary>Host or admin: removes a player. NotFound for an unknown game or player.</summary>
     Task<ErrorOr<ResistanceGameDto>> KickAsync(
         Guid sessionId, Guid playerId, GameCaller caller, CancellationToken cancellationToken);
@@ -161,6 +169,44 @@ internal class ResistanceService : IResistanceService
         return ToDto(result.Game!, caller);
     }
 
+    public async Task<ErrorOr<ResistanceGameDto>> SelectTeamAsync(
+        Guid sessionId, IReadOnlyList<Guid>? playerIds, GameCaller caller, CancellationToken cancellationToken)
+    {
+        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
+        if (access.IsError)
+        {
+            return access.Errors;
+        }
+
+        if (access.Value.Game is null)
+        {
+            return _lobby.NoGame;
+        }
+
+        var result = await _games.SelectTeamAsync(sessionId, caller.PlayerId, playerIds ?? [], cancellationToken);
+        switch (result.Status)
+        {
+            case ResistanceTeamStatus.NoGame:
+                return _lobby.NoGame;
+            case ResistanceTeamStatus.NotStarted:
+                return Error.Conflict("Resistance.NotStarted", "The game has not started yet.");
+            case ResistanceTeamStatus.NotLeader:
+                return Error.Forbidden("Resistance.NotLeader", "Only the mission leader picks the team.");
+            case ResistanceTeamStatus.AlreadySubmitted:
+                return Error.Conflict("Resistance.TeamSubmitted", "The team was already submitted.");
+            case ResistanceTeamStatus.WrongSize:
+                return Error.Validation(
+                    "Resistance.WrongTeamSize",
+                    $"The team needs exactly {ResistanceRoles.TeamSize(result.Game!.Players.Count, result.Game.MissionNumber)} different players.");
+            case ResistanceTeamStatus.UnknownPlayer:
+                return Error.Validation("Resistance.UnknownPlayer", "The team has a player who is not in the game.");
+        }
+
+        await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
+
+        return ToDto(result.Game!, caller);
+    }
+
     public Task<ErrorOr<Guid>> JoinAsync(
         Guid sessionId, string? name, GameCaller caller, CancellationToken cancellationToken)
     {
@@ -229,7 +275,10 @@ internal class ResistanceService : IResistanceService
             game.StartedAt,
             game.LeaderPlayerId,
             yourRole is { } role ? (ResistanceRoleDto)role : null,
-            fellowSpies);
+            fellowSpies,
+            game.MissionNumber,
+            game.IsStarted ? ResistanceRoles.TeamSize(game.Players.Count, game.MissionNumber) : null,
+            game.Players.Where(x => x.IsOnTeam).OrderBy(x => x.Order).Select(x => x.PlayerId).ToList());
     }
 
     private sealed class ResistanceLobbyNotifier : IGameLobbyNotifier
