@@ -15,6 +15,7 @@ public class RingoServiceTests
 
     private readonly FakeSessionsRepository _sessions = new();
     private readonly FakeRingoGamesRepository _games = new();
+    private readonly FakeSessionMusicNotifier _notifier = new();
     private readonly RingoService _service;
     private readonly Guid _id;
 
@@ -32,7 +33,7 @@ public class RingoServiceTests
             new NullSessionMusicNotifier(),
             new NullPlayerConnectionWatchdog(),
             NullLogger<SessionService>.Instance);
-        _service = new RingoService(sessionService, _games, clock);
+        _service = new RingoService(sessionService, _games, clock, _notifier);
         _id = _sessions.AddSession(HostId, new PasswordHasher().Hash("secret")).Id;
     }
 
@@ -63,7 +64,8 @@ public class RingoServiceTests
         var started = await _service.StartAsync(_id, profileId, isAdmin, CancellationToken.None);
         var resumed = await _service.GetAsync(_id, profileId, isAdmin, CancellationToken.None);
 
-        Assert.Empty(started.Value.FlippedCards);
+        Assert.Empty(started.Value.Flips);
+        Assert.Null(started.Value.PendingCardId);
         Assert.Equal(started.Value.Seed, resumed.Value.Seed);
     }
 
@@ -83,10 +85,94 @@ public class RingoServiceTests
         await _service.StartAsync(_id, HostId, false, CancellationToken.None);
 
         await _service.FlipAsync(_id, 30, HostId, false, CancellationToken.None);
+        await _service.ContinueAsync(_id, HostId, false, CancellationToken.None);
         await _service.FlipAsync(_id, 4, HostId, false, CancellationToken.None);
+        await _service.ContinueAsync(_id, HostId, false, CancellationToken.None);
         var result = await _service.FlipAsync(_id, 30, HostId, false, CancellationToken.None);
 
-        Assert.Equal([30, 4], result.Value.FlippedCards);
+        Assert.Equal([30, 4], result.Value.Flips.Select(x => x.CardId));
+        Assert.Null(result.Value.PendingCardId);
+    }
+
+    [Theory]
+    [InlineData(HostId, false, "guest")]
+    [InlineData(null, true, "admin")]
+    public async Task Flipping_RecordsWhoFlippedAndWhen(string? profileId, bool isAdmin, string expectedName)
+    {
+        await _service.StartAsync(_id, profileId, isAdmin, CancellationToken.None);
+
+        var result = await _service.FlipAsync(_id, 12, profileId, isAdmin, CancellationToken.None);
+
+        var flip = Assert.Single(result.Value.Flips);
+        Assert.Equal(12, flip.CardId);
+        Assert.Equal(expectedName, flip.FlippedBy);
+        Assert.Equal(new FakeClock().UtcNow, flip.FlippedAt);
+    }
+
+    [Fact]
+    public async Task AFlippedCard_StaysPendingUntilContinued()
+    {
+        await _service.StartAsync(_id, HostId, false, CancellationToken.None);
+
+        var flipped = await _service.FlipAsync(_id, 12, HostId, false, CancellationToken.None);
+        var blocked = await _service.FlipAsync(_id, 3, HostId, false, CancellationToken.None);
+        var repeated = await _service.FlipAsync(_id, 12, HostId, false, CancellationToken.None);
+        var continued = await _service.ContinueAsync(_id, HostId, false, CancellationToken.None);
+
+        Assert.Equal(12, flipped.Value.PendingCardId);
+        Assert.Equal(ErrorOr.ErrorType.Conflict, blocked.FirstError.Type);
+        Assert.Equal(12, repeated.Value.PendingCardId);
+        Assert.Null(continued.Value.PendingCardId);
+        Assert.Single(continued.Value.Flips);
+    }
+
+    [Fact]
+    public async Task TheFourthKing_EndsTheGame()
+    {
+        var ct = CancellationToken.None;
+        await _service.StartAsync(_id, HostId, false, ct);
+
+        // Kings are the cards 11, 24, 37 and 50
+        foreach (var king in new[] { 11, 24, 37 })
+        {
+            await _service.FlipAsync(_id, king, HostId, false, ct);
+            await _service.ContinueAsync(_id, HostId, false, ct);
+        }
+
+        var fourth = await _service.FlipAsync(_id, 50, HostId, false, ct);
+        await _service.ContinueAsync(_id, HostId, false, ct);
+        var after = await _service.FlipAsync(_id, 3, HostId, false, ct);
+
+        Assert.False(fourth.IsError);
+        Assert.Equal(ErrorOr.ErrorType.Conflict, after.FirstError.Type);
+        Assert.Equal("Ringo.GameOver", after.FirstError.Code);
+    }
+
+    [Fact]
+    public async Task Continuing_IsIdempotentAndNeedsAGameAndAManager()
+    {
+        var ct = CancellationToken.None;
+
+        Assert.Equal(ErrorOr.ErrorType.NotFound, (await _service.ContinueAsync(_id, HostId, false, ct)).FirstError.Type);
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _service.ContinueAsync(_id, "guest", false, ct)).FirstError.Type);
+
+        await _service.StartAsync(_id, HostId, false, ct);
+        Assert.False((await _service.ContinueAsync(_id, HostId, false, ct)).IsError);
+    }
+
+    [Fact]
+    public async Task EveryChange_IsPushedToTheSession()
+    {
+        var ct = CancellationToken.None;
+
+        await _service.StartAsync(_id, HostId, false, ct);
+        await _service.FlipAsync(_id, 5, HostId, false, ct);
+        await _service.FlipAsync(_id, 5, HostId, false, ct); // repeat: nothing changed
+        await _service.FlipAsync(_id, 6, HostId, false, ct); // blocked: nothing changed
+        await _service.ContinueAsync(_id, HostId, false, ct);
+        await _service.EndAsync(_id, HostId, false, ct);
+
+        Assert.Equal(Enumerable.Repeat(_id, 4), _notifier.RingoChanges);
     }
 
     [Theory]
@@ -119,7 +205,7 @@ public class RingoServiceTests
         var restarted = await _service.StartAsync(_id, HostId, false, CancellationToken.None);
 
         Assert.False(ended.IsError);
-        Assert.Empty(restarted.Value.FlippedCards);
+        Assert.Empty(restarted.Value.Flips);
     }
 
     [Fact]
@@ -140,23 +226,51 @@ public class RingoServiceTests
         public Task<bool> TryCreateAsync(RingoGame game, CancellationToken cancellationToken) =>
             Task.FromResult(_games.TryAdd(game.SessionId, game));
 
-        public Task<RingoGame?> FlipAsync(Guid sessionId, int cardId, CancellationToken cancellationToken)
+        public Task<RingoFlipResult> FlipAsync(
+            Guid sessionId, int cardId, string flippedBy, DateTimeOffset flippedAt, CancellationToken cancellationToken)
         {
             if (!_games.TryGetValue(sessionId, out var game))
             {
-                return Task.FromResult<RingoGame?>(null);
+                return Task.FromResult(new RingoFlipResult(RingoFlipStatus.NoGame, null));
             }
 
-            var flipped = game.FlippedCards.Length == 0
-                ? []
-                : game.FlippedCards.Split(',').Select(int.Parse).ToList();
-            if (!flipped.Contains(cardId))
+            if (game.Flips.Any(x => x.CardId == cardId))
             {
-                flipped.Add(cardId);
-                game.FlippedCards = string.Join(',', flipped);
+                return Task.FromResult(new RingoFlipResult(RingoFlipStatus.AlreadyFlipped, game));
             }
 
-            return Task.FromResult<RingoGame?>(game);
+            if (game.IsOver)
+            {
+                return Task.FromResult(new RingoFlipResult(RingoFlipStatus.GameOver, game));
+            }
+
+            if (game.PendingCardId is not null)
+            {
+                return Task.FromResult(new RingoFlipResult(RingoFlipStatus.CardPending, game));
+            }
+
+            game.Flips.Add(new RingoFlip
+            {
+                SessionId = sessionId,
+                Order = game.Flips.Count,
+                CardId = cardId,
+                FlippedAt = flippedAt,
+                FlippedBy = flippedBy,
+            });
+            game.PendingCardId = cardId;
+
+            return Task.FromResult(new RingoFlipResult(RingoFlipStatus.Flipped, game));
+        }
+
+        public Task<RingoGame?> ContinueAsync(Guid sessionId, CancellationToken cancellationToken)
+        {
+            var game = _games.GetValueOrDefault(sessionId);
+            if (game is not null)
+            {
+                game.PendingCardId = null;
+            }
+
+            return Task.FromResult(game);
         }
 
         public Task<bool> DeleteAsync(Guid sessionId, CancellationToken cancellationToken) =>
