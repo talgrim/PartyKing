@@ -68,6 +68,12 @@ export type ResistanceGameDto = {
   yourRole: ResistanceRole | null;
   /** The other spies' player ids; only a spy gets them, otherwise null. */
   fellowSpies: string[] | null;
+  /** The mission being played, from 1. */
+  missionNumber: number;
+  /** How many players the leader sends on the mission; null before the start. */
+  requiredTeamSize: number | null;
+  /** The team the leader submitted for the mission; empty until then. Public. */
+  teamPlayerIds: string[];
 };
 
 export type ResistanceRole = 'Resistance' | 'Spy';

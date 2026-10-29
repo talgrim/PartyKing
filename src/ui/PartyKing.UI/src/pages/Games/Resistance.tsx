@@ -113,6 +113,15 @@ export const Resistance = (): ReactNode => {
     }
   };
 
+  const submitTeam = async (playerIds: string[]) => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.selectResistanceTeam(sessionId, playerIds), { revalidate: false });
+    } catch {
+      setMessage('Could not submit the team.');
+    }
+  };
+
   const endGame = async () => {
     try {
       await gamesApi.endResistance(sessionId);
@@ -226,7 +235,7 @@ export const Resistance = (): ReactNode => {
           <div className={wide ? 'flex items-start gap-6' : undefined}>
             {showPlayerView && game && (
               <div className={wide ? 'w-1/3 shrink-0' : undefined}>
-                <ResistancePlayerView game={game} />
+                <ResistancePlayerView game={game} onSubmitTeam={submitTeam} />
               </div>
             )}
             {showBoard && (

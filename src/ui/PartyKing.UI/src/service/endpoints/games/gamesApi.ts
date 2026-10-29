@@ -103,6 +103,12 @@ export const gamesApi = {
       withCredentials: true,
     }) as unknown as Promise<ResistanceGameDto>,
 
+  /** The mission leader submits the team (exactly `requiredTeamSize` distinct players), which locks it; 403 for anyone else, 409 once submitted, 400 for a wrong team. */
+  selectResistanceTeam: (sessionId: string, playerIds: string[]) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/team`, { playerIds }, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
   /** Joins the open game as a player; 409 when the name is taken, the lobby is full or the game started, 400 for a bad name. An admin may omit the name ("admin"). */
   joinResistance: (sessionId: string, name: string) =>
     axios.post(`/sessions/${sessionId}/games/resistance/join`, { name }, {

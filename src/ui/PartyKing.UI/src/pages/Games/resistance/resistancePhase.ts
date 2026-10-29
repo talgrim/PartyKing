@@ -23,10 +23,19 @@ export const resistancePhaseDescription = (
     const leader = game.players.find((player) => player.id === game.leaderPlayerId);
     const youLead = leader != null && leader.id === game.yourPlayerId;
     const who = youLead ? 'Ty jesteś liderem' : `Liderem jest ${leader?.name ?? 'jeden z graczy'}`;
-    const task = youLead
-      ? `wybierz ${firstTeamSize} osób na pierwszą misję`
-      : `wybiera ${firstTeamSize} osób na pierwszą misję`;
+    const size = game.requiredTeamSize ?? firstTeamSize;
+    const mission = game.missionNumber === 1 ? 'pierwszą' : `${game.missionNumber}.`;
     const card = game.yourPlayerId != null ? ' Dotknij swojej karty, żeby poznać swoją rolę.' : '';
+
+    if (game.teamPlayerIds.length > 0) {
+      const names = game.players.filter((player) => game.teamPlayerIds.includes(player.id)).map((player) => player.name);
+
+      return `${who} (korona) zgłosił/a drużynę na ${mission} misję: ${names.join(', ')}. Teraz drużyna idzie pod głosowanie.${card}`;
+    }
+
+    const task = youLead
+      ? `wybierz ${size} osób na ${mission} misję i zgłoś je do głosowania`
+      : `wybiera ${size} osób na ${mission} misję`;
 
     return `Gra się rozpoczęła, nowi gracze nie mogą już dołączyć. ${who} (korona): ${task}. Omówcie to na żywo.${card}`;
   }
