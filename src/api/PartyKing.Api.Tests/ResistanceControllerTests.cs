@@ -100,7 +100,7 @@ public class ResistanceControllerTests
 
     private static ResistanceGameDto Game() => new(
         DateTimeOffset.UtcNow, true, [], null, 10, null, null, null, null, 1, null, [], null, 0, null, [], null,
-        null, null, null);
+        null, null, null, new ResistanceRulesDto([]));
 
     private sealed class FakeResistanceService : IResistanceService
     {
@@ -119,6 +119,12 @@ public class ResistanceControllerTests
             Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
         {
             LastCall = ("continue", sessionId, null, caller.PlayerId);
+            return Task.FromResult(Result);
+        }
+
+        public Task<ErrorOr<ResistanceGameDto>> RefreshRulesAsync(Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
+        {
+            LastCall = ("refresh-rules", sessionId, null, caller.PlayerId);
             return Task.FromResult(Result);
         }
 

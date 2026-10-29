@@ -73,7 +73,7 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         Assert.Equal(ResistanceStartStatus.Started, started.Status);
 
         _players = started.Game!.Players.OrderBy(x => x.Order).Select(x => x.PlayerId).ToList();
-        var team = _players.Take(ResistanceRoles.TeamSize(playerCount, 1)).ToList();
+        var team = _players.Take(ResistanceRules.Default().TeamSize(playerCount, 1)).ToList();
         var selected = await _repository.SelectTeamAsync(_sessionId, started.Game.LeaderPlayerId, team, ct);
         Assert.Equal(ResistanceTeamStatus.Selected, selected.Status);
 

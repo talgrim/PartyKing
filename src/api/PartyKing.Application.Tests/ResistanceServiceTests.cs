@@ -20,6 +20,7 @@ public class ResistanceServiceTests
     private readonly FakeSessionsRepository _sessions = new();
     private readonly FakeResistanceGamesRepository _games = new();
     private readonly FakeSessionMusicNotifier _notifier = new();
+    private readonly FakeRulesProvider _rules = new();
     private readonly ResistanceService _service;
     private readonly Guid _id;
 
@@ -37,7 +38,7 @@ public class ResistanceServiceTests
             new NullSessionMusicNotifier(),
             new NullPlayerConnectionWatchdog(),
             NullLogger<SessionService>.Instance);
-        _service = new ResistanceService(sessionService, _sessions, _games, clock, _notifier);
+        _service = new ResistanceService(sessionService, _sessions, _games, clock, _notifier, _rules);
         _id = _sessions.AddSession(HostId, new PasswordHasher().Hash("secret")).Id;
     }
 
@@ -52,6 +53,45 @@ public class ResistanceServiceTests
         Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _service.KickAsync(_id, Guid.NewGuid(), guest, ct)).FirstError.Type);
         Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _service.ReorderAsync(_id, [], guest, ct)).FirstError.Type);
         Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _service.EndAsync(_id, guest, ct)).FirstError.Type);
+    }
+
+    [Fact]
+    public async Task Creating_SnapshotsTheConfiguredRules()
+    {
+        _rules.Rules.PlayerCounts[5] = new ResistanceCountRules(1, [2, 2, 2, 2, 2], [1, 1, 1, 1, 2]);
+
+        var created = await _service.CreateAsync(_id, Host, CancellationToken.None);
+        _rules.Rules = ResistanceRules.Default();
+
+        var five = created.Value.Rules.PlayerCounts.Single(x => x.PlayerCount == 5);
+        Assert.Equal(1, five.Spies);
+        Assert.Equal([1, 1, 1, 1, 2], five.RequiredFails);
+        Assert.Equal(1, (await _service.GetAsync(_id, Host, CancellationToken.None)).Value.Rules.PlayerCounts.Single(x => x.PlayerCount == 5).Spies);
+    }
+
+    [Fact]
+    public async Task RefreshingRules_TakesTheCurrentConfigurationUntilTheGameIsOpen()
+    {
+        await _service.CreateAsync(_id, Host, CancellationToken.None);
+        _rules.Rules.PlayerCounts[5] = new ResistanceCountRules(1, [2, 2, 2, 2, 2], [1, 1, 1, 1, 1]);
+
+        var refreshed = await _service.RefreshRulesAsync(_id, Host, CancellationToken.None);
+
+        Assert.Equal(1, refreshed.Value.Rules.PlayerCounts.Single(x => x.PlayerCount == 5).Spies);
+
+        await _service.OpenAsync(_id, Admin, CancellationToken.None);
+        var afterOpen = await _service.RefreshRulesAsync(_id, Host, CancellationToken.None);
+
+        Assert.Equal(ErrorOr.ErrorType.Conflict, afterOpen.FirstError.Type);
+    }
+
+    [Fact]
+    public async Task RefreshingRules_NeedsAGameAndAManager()
+    {
+        var guest = new GameCaller("guest", false);
+
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _service.RefreshRulesAsync(_id, guest, CancellationToken.None)).FirstError.Type);
+        Assert.Equal(ErrorOr.ErrorType.NotFound, (await _service.RefreshRulesAsync(_id, Host, CancellationToken.None)).FirstError.Type);
     }
 
     [Fact]
@@ -268,7 +308,7 @@ public class ResistanceServiceTests
     [InlineData(10, 5, 5)]
     public void TeamSize_FollowsTheMissionTable(int players, int mission, int size)
     {
-        Assert.Equal(size, ResistanceRoles.TeamSize(players, mission));
+        Assert.Equal(size, ResistanceRules.Default().TeamSize(players, mission));
     }
 
     [Fact]
@@ -745,6 +785,16 @@ public class ResistanceServiceTests
         return new GameCaller("guest", false, joined.Value);
     }
 
+    private sealed class FakeRulesProvider : IResistanceRulesProvider
+    {
+        public ResistanceRules Rules { get; set; } = ResistanceRules.Default();
+
+        public ResistanceRules Current() => new()
+        {
+            PlayerCounts = new Dictionary<int, ResistanceCountRules>(Rules.PlayerCounts),
+        };
+    }
+
     private sealed class FakeResistanceGamesRepository : IResistanceGamesRepository
     {
         private readonly Dictionary<Guid, ResistanceGame> _games = [];
@@ -754,6 +804,24 @@ public class ResistanceServiceTests
 
         public Task<bool> TryCreateAsync(ResistanceGame game, CancellationToken cancellationToken) =>
             Task.FromResult(_games.TryAdd(game.SessionId, game));
+
+        public Task<ResistanceRulesResult> RefreshRulesAsync(
+            Guid sessionId, ResistanceRules rules, CancellationToken cancellationToken)
+        {
+            var game = _games.GetValueOrDefault(sessionId);
+            if (game is null)
+            {
+                return Task.FromResult(new ResistanceRulesResult(ResistanceRulesStatus.NoGame, null));
+            }
+
+            if (game.IsOpen || game.IsStarted)
+            {
+                return Task.FromResult(new ResistanceRulesResult(ResistanceRulesStatus.NotEditable, game));
+            }
+
+            game.Rules = rules;
+            return Task.FromResult(new ResistanceRulesResult(ResistanceRulesStatus.Refreshed, game));
+        }
 
         public Task<ResistanceGame?> OpenAsync(Guid sessionId, CancellationToken cancellationToken)
         {
@@ -914,7 +982,7 @@ public class ResistanceServiceTests
             {
                 status = ResistanceTeamStatus.AlreadySubmitted;
             }
-            else if (playerIds.Count != ResistanceRoles.TeamSize(game.Players.Count, game.MissionNumber)
+            else if (playerIds.Count != game.Rules.TeamSize(game.Players.Count, game.MissionNumber)
                 || playerIds.Distinct().Count() != playerIds.Count)
             {
                 status = ResistanceTeamStatus.WrongSize;
