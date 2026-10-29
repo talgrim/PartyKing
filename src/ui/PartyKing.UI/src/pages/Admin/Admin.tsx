@@ -2,7 +2,7 @@ import { FormEvent, ReactNode, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import useSWR from 'swr';
 import { PageNavigation } from '@/components/common/PageNavigation';
-import { ROUTE_PATHS, sessionPath } from '@/router/constants';
+import { ROUTE_PATHS, sessionGamesPath, sessionPath } from '@/router/constants';
 import { HTTP_STATUS_CODE } from '@/service/constants';
 import { adminApi } from '@/service/endpoints/admin/adminApi';
 import { ADMIN_HINT_KEY } from '@/service/endpoints/admin/useIsAdmin';
@@ -205,6 +205,9 @@ const Sessions = ({ onLoggedOut }: { onLoggedOut: () => void }): ReactNode => {
               <button className={secondaryButton} disabled={busy} onClick={() => copyLink(session)}>
                 Copy link
               </button>
+              <Link to={sessionGamesPath(session.id)} className={secondaryButton}>
+                Games
+              </Link>
               {session.hasHost && (
                 <button className={secondaryButton} disabled={busy} onClick={() => release(session)}>
                   Remove host

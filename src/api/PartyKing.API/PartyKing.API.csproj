@@ -12,7 +12,7 @@
     <ItemGroup>
         <PackageReference Include="ErrorOr" Version="2.0.1" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.8" />
-        <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.8" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.10" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.3" />
     </ItemGroup>
 
@@ -23,6 +23,7 @@
       <ProjectReference Include="..\PartyKing.ServiceDefaults\PartyKing.ServiceDefaults.csproj" />
       <ProjectReference Include="..\PartyKing.Infrastructure.Youtube\PartyKing.Infrastructure.Youtube.csproj" />
       <ProjectReference Include="..\PartyKing.Infrastructure.Lyrics\PartyKing.Infrastructure.Lyrics.csproj" />
+      <ProjectReference Include="..\PartyKing.Infrastructure.Llm\PartyKing.Infrastructure.Llm.csproj" />
     </ItemGroup>
 
 </Project>

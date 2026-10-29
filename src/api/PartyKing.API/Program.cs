@@ -62,6 +62,15 @@ builder.Services.AddRateLimiter(options =>
                 PermitLimit = 10,
                 Window = TimeSpan.FromMinutes(1)
             }));
+    // Every request spends the free quota of the language model
+    options.AddPolicy(GamesController.SuggestionsRateLimitPolicy, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1)
+            }));
     // Several guests can share one Wi-Fi (one IP), so the limit is generous
     options.AddPolicy(SlideshowController.UploadRateLimitPolicy, context =>
         RateLimitPartition.GetFixedWindowLimiter(
