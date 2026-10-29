@@ -19,6 +19,7 @@ internal class GameService : IGameService
     // Placeholder list until games are stored and started per session
     private static readonly IReadOnlyList<GameDto> Games =
     [
+        new("resistance", "Resistance", "Gra dedukcji społecznej dla 5-10 osób: Ruch Oporu kontra Szpiedzy."),
         new("ringo", "Ringo", "A party game played with the whole room."),
         new("never-have-i-ever", "Never have I ever", "Guests confess what they have never done."),
     ];
