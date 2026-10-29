@@ -9,7 +9,7 @@ const lines = [
   { timeMs: 9000, text: '' },
 ];
 
-const found = { status: 'found' as const, songId: 1, lines };
+const found = { status: 'found' as const, songId: 1, lines, offsetMs: 0 };
 
 const nowPlaying = (overrides: Partial<NowPlayingDto> = {}): NowPlayingDto => ({
   song: {
@@ -81,14 +81,13 @@ describe('LyricsView', () => {
     expect(screen.getByText('♪')).toHaveAttribute('aria-current', 'true');
   });
 
-  it('shifts the lines with the timing buttons and remembers the choice', () => {
+  it('shifts the lines with the timing buttons', () => {
     render(<LyricsView lyrics={found} nowPlaying={nowPlaying({ positionMs: 4600, paused: true })} />);
     expect(screen.getByText('first line')).toHaveAttribute('aria-current', 'true');
 
     fireEvent.click(screen.getByRole('button', { name: 'Show lyrics earlier' }));
 
     expect(screen.getByText('second line')).toHaveAttribute('aria-current', 'true');
-    expect(localStorage.getItem('partyking.lyricsOffsetMs')).toBe('500');
     expect(screen.getByRole('button', { name: /Lyrics timing \+0\.5 s/ })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Lyrics timing/ }));
@@ -123,19 +122,75 @@ describe('LyricsView', () => {
     expect(onResync).toHaveBeenCalledTimes(1);
   });
 
-  it('resyncs on the button and zeroes the timing offset when the next song starts', () => {
+  it('resyncs on the button', () => {
     const onResync = vi.fn();
-    const song = (id: number) => nowPlaying({ song: { ...nowPlaying().song!, id } });
-    const { rerender } = render(<LyricsView lyrics={found} nowPlaying={song(1)} onResync={onResync} />);
+    render(<LyricsView lyrics={found} nowPlaying={nowPlaying()} onResync={onResync} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Resync lyrics' }));
+
     expect(onResync).toHaveBeenCalledTimes(1);
+  });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Show lyrics earlier' }));
-    expect(localStorage.getItem('partyking.lyricsOffsetMs')).not.toBe('0');
+  describe('timing offset shared through the server', () => {
+    const timing = () => screen.getByRole('button', { name: /^Lyrics timing/ });
 
-    rerender(<LyricsView lyrics={found} nowPlaying={song(2)} onResync={onResync} />);
-    expect(localStorage.getItem('partyking.lyricsOffsetMs')).toBe('0');
+    it('starts at the offset saved for the song', () => {
+      render(<LyricsView lyrics={{ ...found, offsetMs: -1500 }} nowPlaying={nowPlaying()} />);
+
+      expect(timing()).toHaveTextContent('−1.5 s');
+    });
+
+    it('starts the next song at its own saved offset, dropping what was nudged', () => {
+      const { rerender } = render(<LyricsView lyrics={found} nowPlaying={nowPlaying()} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Show lyrics earlier' }));
+      expect(timing()).toHaveTextContent('+0.5 s');
+
+      rerender(<LyricsView lyrics={{ ...found, songId: 2 }} nowPlaying={nowPlaying()} />);
+
+      expect(timing()).toHaveTextContent('0.0 s');
+    });
+
+    it('replaces a nudged value when a new offset is saved', () => {
+      const { rerender } = render(<LyricsView lyrics={found} nowPlaying={nowPlaying()} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Show lyrics earlier' }));
+
+      rerender(<LyricsView lyrics={{ ...found, offsetMs: 2000 }} nowPlaying={nowPlaying()} />);
+
+      expect(timing()).toHaveTextContent('+2.0 s');
+    });
+
+    it('offers no save button to a viewer who cannot save', () => {
+      render(<LyricsView lyrics={found} nowPlaying={nowPlaying()} />);
+
+      expect(screen.queryByRole('button', { name: 'Save lyrics timing' })).not.toBeInTheDocument();
+    });
+
+    it('saves the nudged value with the tick, which is disabled until the value differs', async () => {
+      const onSaveOffset = vi.fn().mockResolvedValue(undefined);
+      render(<LyricsView lyrics={found} nowPlaying={nowPlaying()} onSaveOffset={onSaveOffset} />);
+      const save = screen.getByRole('button', { name: 'Save lyrics timing' });
+      expect(save).toBeDisabled();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Show lyrics earlier' }));
+      expect(save).toBeEnabled();
+      await act(async () => {
+        fireEvent.click(save);
+      });
+
+      expect(onSaveOffset).toHaveBeenCalledWith(500);
+    });
+
+    it('keeps the tick available when saving fails', async () => {
+      const onSaveOffset = vi.fn().mockRejectedValue(new Error('403'));
+      render(<LyricsView lyrics={found} nowPlaying={nowPlaying()} onSaveOffset={onSaveOffset} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Show lyrics earlier' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Save lyrics timing' }));
+      });
+
+      expect(screen.getByRole('button', { name: 'Save lyrics timing' })).toBeEnabled();
+    });
   });
 
   it('opens on the line being sung and jumps there at once, as after moving between drawer and maximized view', () => {

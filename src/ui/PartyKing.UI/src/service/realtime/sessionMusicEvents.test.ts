@@ -1,5 +1,6 @@
 import { SongSource } from '@/service/endpoints/queue/types';
 import {
+  applyLyricsOffsetChanged,
   applyPlayerStateChanged,
   applyQueueAdvancedToNowPlaying,
   applyQueueAdvancedToQueue,
@@ -72,5 +73,13 @@ describe('sessionMusicEvents', () => {
       applyPlayerStateChanged(current, { songId: 1, paused: false, playerConnected: true, positionMs: 42000 })
         .positionMs,
     ).toBe(0);
+  });
+
+  it('puts a saved offset into the loaded lyrics and leaves missing ones alone', () => {
+    const lyrics = { songId: 1, lines: [{ timeMs: 1000, text: 'la' }], offsetMs: 0 };
+
+    expect(applyLyricsOffsetChanged(lyrics, 1500)).toEqual({ ...lyrics, offsetMs: 1500 });
+    expect(applyLyricsOffsetChanged(undefined, 1500)).toBeUndefined();
+    expect(applyLyricsOffsetChanged(null, 1500)).toBeNull();
   });
 });

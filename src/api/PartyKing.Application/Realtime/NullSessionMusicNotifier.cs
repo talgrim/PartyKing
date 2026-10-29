@@ -1,3 +1,4 @@
+using PartyKing.Contract.V1.Lyrics;
 using PartyKing.Contract.V1.Player;
 using PartyKing.Contract.V1.Queue;
 
@@ -41,6 +42,14 @@ internal sealed class NullSessionMusicNotifier : ISessionMusicNotifier
     public Task FallbackErrorChangedAsync(
         Guid sessionId,
         FallbackErrorDto error,
+        CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task LyricsOffsetChangedAsync(
+        Guid sessionId,
+        LyricsOffsetChangedDto offset,
         CancellationToken cancellationToken)
     {
         return Task.CompletedTask;

@@ -1,4 +1,5 @@
 import { SongDto } from '@/service/endpoints/queue/types';
+import { LyricsDto } from '@/service/endpoints/lyrics/types';
 import { NowPlayingDto, PlayerCommand } from '@/service/endpoints/player/types';
 
 export const SESSION_MUSIC_EVENTS = {
@@ -8,6 +9,7 @@ export const SESSION_MUSIC_EVENTS = {
   PlayerStateChanged: 'PlayerStateChanged',
   PlayerCommand: 'PlayerCommand',
   FallbackErrorChanged: 'FallbackErrorChanged',
+  LyricsOffsetChanged: 'LyricsOffsetChanged',
   SlideChanged: 'SlideChanged',
 } as const;
 
@@ -44,7 +46,14 @@ export type HostPlayerPushHandlers = {
 
 export const queueSongsKey = (sessionId: string) => ['queue-songs', sessionId] as const;
 export const nowPlayingKey = (sessionId: string) => ['now-playing', sessionId] as const;
+export const lyricsKey = (sessionId: string, songId: number) => ['lyrics', sessionId, songId] as const;
 export const slideshowKey = (sessionId: string) => ({ endpoint: `/sessions/${sessionId}/photos/current` });
+
+/** Puts a saved offset into the lyrics of the song it was saved for; lyrics that aren't loaded stay as they are. */
+export const applyLyricsOffsetChanged = (
+  current: LyricsDto | null | undefined,
+  offsetMs: number,
+): LyricsDto | null | undefined => (current ? { ...current, offsetMs } : current);
 
 export const applySongAdded = (queue: SongDto[] | undefined, song: SongDto): SongDto[] => {
   if (!queue) return [song];

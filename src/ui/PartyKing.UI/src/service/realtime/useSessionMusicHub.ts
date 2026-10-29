@@ -2,9 +2,11 @@ import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } fro
 import { MutableRefObject, useEffect, useState } from 'react';
 import { mutate } from 'swr';
 import envVariables from '@/envVariables';
+import { LyricsDto, LyricsOffsetChangedEvent } from '@/service/endpoints/lyrics/types';
 import { SongDto } from '@/service/endpoints/queue/types';
 import { NowPlayingDto } from '@/service/endpoints/player/types';
 import {
+  applyLyricsOffsetChanged,
   applyPlayerStateChanged,
   applyQueueAdvancedToNowPlaying,
   applyQueueAdvancedToQueue,
@@ -12,6 +14,7 @@ import {
   applySongRemoved,
   FallbackErrorChangedEvent,
   HostPlayerPushHandlers,
+  lyricsKey,
   nowPlayingKey,
   PlayerCommandEvent,
   PlayerStateChangedEvent,
@@ -31,6 +34,8 @@ const revalidateSession = (sessionId: string) => {
   void mutate(queueSongsKey(sessionId));
   void mutate(nowPlayingKey(sessionId));
   void mutate(slideshowKey(sessionId));
+  // A saved offset may have been missed meanwhile; only the lyrics of a mounted view are fetched again
+  void mutate((key) => Array.isArray(key) && key[0] === 'lyrics' && key[1] === sessionId);
 };
 
 /** The live connection of a session page; `connected` is false while it is starting, reconnecting or down. */
@@ -107,6 +112,14 @@ export const useSessionMusicHub = (
 
       connection.on(SESSION_MUSIC_EVENTS.FallbackErrorChanged, (event: FallbackErrorChangedEvent) => {
         hostPlayer?.current.onFallbackError?.(event.error);
+      });
+
+      connection.on(SESSION_MUSIC_EVENTS.LyricsOffsetChanged, (event: LyricsOffsetChangedEvent) => {
+        void mutate(
+          lyricsKey(sessionId, event.songId),
+          (current: LyricsDto | null | undefined) => applyLyricsOffsetChanged(current, event.offsetMs),
+          { revalidate: false },
+        );
       });
 
       connection.on(SESSION_MUSIC_EVENTS.SlideChanged, () => {
