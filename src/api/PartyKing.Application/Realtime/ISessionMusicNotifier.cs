@@ -37,4 +37,7 @@ public interface ISessionMusicNotifier
 
     /// <summary>The session's Ringo game changed (started, flipped, continued or ended); clients fetch it again.</summary>
     Task RingoChangedAsync(Guid sessionId, CancellationToken cancellationToken);
+
+    /// <summary>An admin opened the session's Ringo game to guests; guests are asked whether to join.</summary>
+    Task RingoOpenedAsync(Guid sessionId, CancellationToken cancellationToken);
 }

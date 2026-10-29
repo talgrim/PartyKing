@@ -67,15 +67,24 @@ public class GamesController : CoreController
         return result.Match(Ok, Problem);
     }
 
-    /// <summary>Host or admin: the session's Ringo game, 404 when there is none.</summary>
+    /// <summary>The session's Ringo game, 404 when there is none. Host, admin or a player; 403 for anyone else.</summary>
     [HttpGet("sessions/{sessionId:guid}/games/ringo")]
     [RequireSessionAccess]
     [ProducesResponseType<RingoGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetRingo(Guid sessionId, CancellationToken cancellationToken)
     {
-        var (profileId, isAdmin) = await ReadCallerAsync();
+        var result = await _ringoService.GetAsync(sessionId, await ReadCallerAsync(sessionId), cancellationToken);
 
-        var result = await _ringoService.GetAsync(sessionId, profileId, isAdmin, cancellationToken);
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>Anyone who unlocked the session: whether the Ringo game is open to join and whether the caller did.</summary>
+    [HttpGet("sessions/{sessionId:guid}/games/ringo/lobby")]
+    [RequireSessionAccess]
+    [ProducesResponseType<RingoLobbyDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetRingoLobby(Guid sessionId, CancellationToken cancellationToken)
+    {
+        var result = await _ringoService.GetLobbyAsync(sessionId, await ReadCallerAsync(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
     }
@@ -86,35 +95,87 @@ public class GamesController : CoreController
     [ProducesResponseType<RingoGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> StartRingo(Guid sessionId, CancellationToken cancellationToken)
     {
-        var (profileId, isAdmin) = await ReadCallerAsync();
-
-        var result = await _ringoService.StartAsync(sessionId, profileId, isAdmin, cancellationToken);
+        var result = await _ringoService.StartAsync(sessionId, await ReadCallerAsync(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
     }
 
-    /// <summary>Host or admin: flips a card (0-51), idempotent; 409 while another card is pending.</summary>
+    /// <summary>Admin only: opens the Ringo game to guests (idempotent), 403 for the host.</summary>
+    [HttpPost("sessions/{sessionId:guid}/games/ringo/open")]
+    [RequireSessionAccess]
+    [ProducesResponseType<RingoGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> OpenRingo(Guid sessionId, CancellationToken cancellationToken)
+    {
+        var result = await _ringoService.OpenAsync(sessionId, await ReadCallerAsync(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>
+    /// Joins the open Ringo game as a player and remembers the player in a cookie. 400 for a bad name, 409 while the
+    /// game is closed or the name is taken. The session host's name comes from their Spotify profile.
+    /// </summary>
+    [HttpPost("sessions/{sessionId:guid}/games/ringo/join")]
+    [RequireSessionAccess]
+    [EnableRateLimiting(SessionsController.JoinRateLimitPolicy)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> JoinRingo(
+        Guid sessionId, [FromBody] RingoJoinRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _ringoService.JoinAsync(
+            sessionId, request.Name, await ReadCallerAsync(sessionId), cancellationToken);
+        if (!result.IsError)
+        {
+            _cookieAuthorizationHandler.GrantRingoPlayer(sessionId, result.Value, HttpContext);
+        }
+
+        return result.Match(_ => NoContent(), Problem);
+    }
+
+    /// <summary>Host or admin: removes a player from the Ringo game, 404 for an unknown game or player.</summary>
+    [HttpDelete("sessions/{sessionId:guid}/games/ringo/players/{playerId:guid}")]
+    [RequireSessionAccess]
+    [ProducesResponseType<RingoGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> KickRingoPlayer(Guid sessionId, Guid playerId, CancellationToken cancellationToken)
+    {
+        var result = await _ringoService.KickAsync(
+            sessionId, playerId, await ReadCallerAsync(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>Host or admin: sets the turn order; 409 when the ids are not exactly the players.</summary>
+    [HttpPut("sessions/{sessionId:guid}/games/ringo/players/order")]
+    [RequireSessionAccess]
+    [ProducesResponseType<RingoGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ReorderRingoPlayers(
+        Guid sessionId, [FromBody] RingoPlayersOrderRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _ringoService.ReorderAsync(
+            sessionId, request.PlayerIds, await ReadCallerAsync(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>Flips a card (0-51), idempotent. Host and admin any time, a player on their turn; 409 otherwise.</summary>
     [HttpPost("sessions/{sessionId:guid}/games/ringo/cards/{cardId:int}/flip")]
     [RequireSessionAccess]
     [ProducesResponseType<RingoGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> FlipRingoCard(Guid sessionId, int cardId, CancellationToken cancellationToken)
     {
-        var (profileId, isAdmin) = await ReadCallerAsync();
-
-        var result = await _ringoService.FlipAsync(sessionId, cardId, profileId, isAdmin, cancellationToken);
+        var result = await _ringoService.FlipAsync(
+            sessionId, cardId, await ReadCallerAsync(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
     }
 
-    /// <summary>Host or admin: continues past the pending card, 404 when there is no game.</summary>
+    /// <summary>Continues past the pending card and passes the turn. Host, admin or the player whose turn it is.</summary>
     [HttpPost("sessions/{sessionId:guid}/games/ringo/continue")]
     [RequireSessionAccess]
     [ProducesResponseType<RingoGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> ContinueRingo(Guid sessionId, CancellationToken cancellationToken)
     {
-        var (profileId, isAdmin) = await ReadCallerAsync();
-
-        var result = await _ringoService.ContinueAsync(sessionId, profileId, isAdmin, cancellationToken);
+        var result = await _ringoService.ContinueAsync(sessionId, await ReadCallerAsync(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
     }
@@ -132,10 +193,10 @@ public class GamesController : CoreController
         [FromBody] RingoRuleSuggestionsRequest request,
         CancellationToken cancellationToken)
     {
-        var (profileId, isAdmin) = await ReadCallerAsync();
+        var caller = await ReadCallerAsync(sessionId);
 
         var result = await _ruleSuggestionService.SuggestAsync(
-            sessionId, request.PreviousRules, profileId, isAdmin, cancellationToken);
+            sessionId, request.PreviousRules, caller.ProfileId, caller.IsAdmin, cancellationToken);
 
         return result.Match(Ok, Problem);
     }
@@ -146,18 +207,19 @@ public class GamesController : CoreController
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> EndRingo(Guid sessionId, CancellationToken cancellationToken)
     {
-        var (profileId, isAdmin) = await ReadCallerAsync();
-
-        var result = await _ringoService.EndAsync(sessionId, profileId, isAdmin, cancellationToken);
+        var result = await _ringoService.EndAsync(sessionId, await ReadCallerAsync(sessionId), cancellationToken);
 
         return result.Match(_ => NoContent(), Problem);
     }
 
-    private async Task<(string? ProfileId, bool IsAdmin)> ReadCallerAsync()
+    private async Task<RingoCaller> ReadCallerAsync(Guid sessionId)
     {
         var profileId = _cookieAuthorizationHandler.TryReadProfileId(Request, out var id) ? id : null;
         var isAdmin = (await HttpContext.AuthenticateAsync(Constants.AdminScheme)).Succeeded;
+        var playerId = _cookieAuthorizationHandler.TryReadRingoPlayer(Request, sessionId, out var player)
+            ? player
+            : (Guid?)null;
 
-        return (profileId, isAdmin);
+        return new RingoCaller(profileId, isAdmin, playerId);
     }
 }

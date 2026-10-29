@@ -79,6 +79,11 @@ internal sealed class SignalRSessionMusicNotifier : ISessionMusicNotifier
         return Clients(sessionId).SendAsync(SessionMusicHubEvents.RingoChanged, cancellationToken);
     }
 
+    public Task RingoOpenedAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        return Clients(sessionId).SendAsync(SessionMusicHubEvents.RingoOpened, cancellationToken);
+    }
+
     private IClientProxy Clients(Guid sessionId)
     {
         return _hub.Clients.Group(SessionHub.GroupName(sessionId));
