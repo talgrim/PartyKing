@@ -58,6 +58,26 @@ namespace PartyKing.Persistence.Migrations
                     b.ToTable("OAuthStates");
                 });
 
+            modelBuilder.Entity("PartyKing.Domain.Entities.Games.RingoGame", b =>
+                {
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FlippedCards")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Seed")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("SessionId");
+
+                    b.ToTable("RingoGames");
+                });
+
             modelBuilder.Entity("PartyKing.Domain.Entities.Lyrics.LyricsOffset", b =>
                 {
                     b.Property<string>("SongUrl")
@@ -239,6 +259,15 @@ namespace PartyKing.Persistence.Migrations
                     b.HasOne("PartyKing.Domain.Entities.Sessions.Session", null)
                         .WithMany()
                         .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PartyKing.Domain.Entities.Games.RingoGame", b =>
+                {
+                    b.HasOne("PartyKing.Domain.Entities.Sessions.Session", null)
+                        .WithOne()
+                        .HasForeignKey("PartyKing.Domain.Entities.Games.RingoGame", "SessionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
