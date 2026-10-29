@@ -61,8 +61,8 @@ public class RingoSessionDeletionTests : IAsyncLifetime
 
         var host = await _ringo.JoinAsync(session.Id, NewPlayer(session.Id, "Ola", profileId: "spotify-host"), CancellationToken.None);
         var guest = await _ringo.JoinAsync(session.Id, NewPlayer(session.Id, "Bartek"), CancellationToken.None);
-        Assert.Equal(RingoPlayersStatus.Done, host.Status);
-        Assert.Equal(RingoPlayersStatus.Done, guest.Status);
+        Assert.Equal(LobbyStatus.Done, host.Status);
+        Assert.Equal(LobbyStatus.Done, guest.Status);
 
         var flip = await _ringo.FlipAsync(session.Id, 5, "admin", turnOf: null, DateTimeOffset.UtcNow, CancellationToken.None);
         Assert.Equal(RingoFlipStatus.Flipped, flip.Status);
@@ -77,7 +77,7 @@ public class RingoSessionDeletionTests : IAsyncLifetime
         SessionId = sessionId,
         PlayerId = Guid.NewGuid(),
         Name = name,
-        NormalizedName = (profileId is null ? name : name + RingoPlayer.HostSuffix).ToUpperInvariant(),
+        NormalizedName = (profileId is null ? name : name + LobbyPlayer.HostSuffix).ToUpperInvariant(),
         JoinedAt = DateTimeOffset.UtcNow,
         ProfileId = profileId,
     };
