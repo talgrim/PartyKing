@@ -1,5 +1,5 @@
 import { ReactNode, useState } from 'react';
-import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { mutate as mutateGlobal } from 'swr';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -8,10 +8,15 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { PageNavigation } from '@/components/common/PageNavigation';
-import { MissionBoardIcon } from '@/pages/Games/resistance/ResistanceIcons';
+import { ResistanceManagerControls } from '@/pages/Games/resistance/ResistanceManagerControls';
+import { ResistanceCompactBoard } from '@/pages/Games/resistance/ResistanceCompactBoard';
+import { ResistancePhaseBanner } from '@/pages/Games/resistance/ResistancePhaseBanner';
+import { ResistancePlayerView } from '@/pages/Games/resistance/ResistancePlayerView';
+import { ResistanceTvBoard } from '@/pages/Games/resistance/ResistanceTvBoard';
+import { ResistanceViewSwitch } from '@/pages/Games/resistance/ResistanceViewSwitch';
 import { resistancePhaseDescription } from '@/pages/Games/resistance/resistancePhase';
 import { RESISTANCE_RULES } from '@/pages/Games/resistance/resistanceRules';
-import { MIN_PLAYERS, missionBoardFor } from '@/pages/Games/resistance/resistanceTeams';
+import { missionBoardFor } from '@/pages/Games/resistance/resistanceTeams';
 import { sessionGamesPath, sessionPath, sessionResistanceJoinPath } from '@/router/constants';
 import { HTTP_STATUS_CODE } from '@/service/constants';
 import { gamesApi } from '@/service/endpoints/games/gamesApi';
@@ -19,13 +24,8 @@ import { useResistanceGame } from '@/service/endpoints/games/useResistanceGame';
 import { useViewerRole } from '@/service/endpoints/sessions/useViewerRole';
 import { resistanceLobbyKey } from '@/service/realtime/sessionMusicEvents';
 import { useSessionMusicHub } from '@/service/realtime/useSessionMusicHub';
-import { ResistancePlayers } from './ResistancePlayers';
-import { ResistanceRoleCard } from './ResistanceRoleCard';
+import { usePersistedFlag } from '@/utils/usePersistedFlag';
 import { ResistanceSettings } from './ResistanceSettings';
-
-const NO_RESULTS = [null, null, null, null, null] as const;
-
-const navClass = 'px-3 py-2 text-slate-200 bg-slate-900 rounded-md';
 
 /**
  * The Resistance page: the mission board for the players who joined so far, the players around the edge and the
@@ -34,15 +34,24 @@ const navClass = 'px-3 py-2 text-slate-200 bg-slate-900 rounded-md';
  * open. The host or an admin starts the game with at least five players: that locks the players, shows the first
  * leader's crown and gives every player a face-down card with their secret role (a spy also sees the other spies).
  * Anyone else only watches. Nothing more is played yet.
+ *
+ * Two layouts share the page. The TV layout (`?tv=1` for the host and admins, and for a host or admin who is not
+ * playing) has the manager controls, the board in the middle and the players around the edge, and never shows the
+ * viewer's role or "Ty", since it is meant for a big screen. Everyone else gets a phone layout: a player switches
+ * between their own view (the default, with the role card) and the board with the player list; the choice is kept in
+ * `localStorage`. Observers only get the board.
  */
 export const Resistance = (): ReactNode => {
   const { sessionId = '' } = useParams();
   const navigate = useNavigate();
   const { data: game, error, mutate } = useResistanceGame(sessionId);
   const { isHost, isAdmin } = useViewerRole(sessionId);
+  const [searchParams] = useSearchParams();
+  const [boardView, setBoardView] = usePersistedFlag('partyking.resistanceBoardView', false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [managingPlayers, setManagingPlayers] = useState(false);
   const [confirmingEnd, setConfirmingEnd] = useState(false);
+  const [controlsOpen, setControlsOpen] = useState(false);
   const [message, setMessage] = useState<string>();
 
   // The server pushes every change of the lobby (ResistanceChanged), so other devices stay current without polling
@@ -55,6 +64,14 @@ export const Resistance = (): ReactNode => {
   if (status === HTTP_STATUS_CODE.NOT_FOUND) {
     return <Navigate to={canManage ? sessionGamesPath(sessionId) : sessionPath(sessionId)} replace />;
   }
+
+  const tv = canManage && searchParams.get('tv') === '1';
+  const isPlayer = game?.yourPlayerId != null;
+  const tvLayout = tv || (canManage && !isPlayer);
+  const showSwitch = isPlayer && !tv;
+  const showPlayerView = showSwitch && !boardView;
+  // The TV tab shares the player's cookies, so it must not show the role or the "Ty" badge of whoever is logged in
+  const shownGame = game && tv ? { ...game, yourPlayerId: null, yourRole: null, fellowSpies: null } : game;
 
   const players = game?.players ?? [];
   const started = game?.startedAt != null;
@@ -96,94 +113,102 @@ export const Resistance = (): ReactNode => {
     }
   };
 
+  const banner = shownGame && (
+    <ResistancePhaseBanner text={resistancePhaseDescription(shownGame, { canManage, isAdmin }, board.teamSizes[0])} />
+  );
+
+  const rulesButton = (
+    <button
+      type="button"
+      onClick={() => setRulesOpen(true)}
+      aria-label="Rules"
+      title="Rules"
+      className="ml-auto p-1 text-slate-400 hover:text-slate-200 cursor-pointer"
+    >
+      <InfoOutlinedIcon />
+    </button>
+  );
+
+  const managerControls = game && canManage && (
+    <ResistanceManagerControls
+      game={game}
+      isAdmin={isAdmin}
+      onManagePlayers={() => setManagingPlayers(true)}
+      onEnd={() => setConfirmingEnd(true)}
+      onStart={() => void startGame()}
+      onOpen={() => void openGame()}
+    />
+  );
+
+  const playerCount = game && (
+    <span className="text-slate-400">
+      {players.length}/{game.maxPlayers} graczy
+    </span>
+  );
+
   return (
-    <div className="relative w-full h-screen bg-slate-800 text-slate-400">
-      <nav className="absolute inset-x-0 top-0 h-[10%] px-[10%] flex items-center">
-        <div className="flex items-center gap-2 w-full">
-          <PageNavigation
-            links={[
-              back,
-              ...(game && canManage && game.isOpen && !started && game.yourPlayerId == null
-                ? [{ to: sessionResistanceJoinPath(sessionId), label: 'Join as a player' }]
-                : []),
-              ...(game && canManage && !started ? [{ onClick: () => setManagingPlayers(true), label: 'Players' }] : []),
-              ...(game && canManage ? [{ onClick: () => setConfirmingEnd(true), label: 'End game' }] : []),
-            ]}
-          />
-          {game && canManage && game.isOpen && !started && (
-            <button
-              type="button"
-              onClick={() => void startGame()}
-              disabled={players.length < MIN_PLAYERS}
-              title={players.length < MIN_PLAYERS ? `Potrzeba co najmniej ${MIN_PLAYERS} graczy` : undefined}
-              className={`${navClass} cursor-pointer disabled:opacity-50 disabled:cursor-default`}
-            >
-              Start game
-            </button>
-          )}
-          {game && isAdmin && !started && (
-            <button
-              type="button"
-              onClick={() => void openGame()}
-              disabled={game.isOpen}
-              className={`${navClass} cursor-pointer disabled:opacity-50 disabled:cursor-default`}
-            >
-              Open the game
-            </button>
-          )}
-          {game && (
-            <span className="text-slate-400">
-              {players.length}/{game.maxPlayers} graczy
-            </span>
-          )}
-          {message && <span className="text-amber-500">{message}</span>}
-          <button
-            type="button"
-            onClick={() => setRulesOpen(true)}
-            aria-label="Rules"
-            title="Rules"
-            className="ml-auto p-1 text-slate-400 hover:text-slate-200 cursor-pointer"
-          >
-            <InfoOutlinedIcon />
-          </button>
-        </div>
-      </nav>
-
-      {/* The board keeps to the middle 80%; the players sit in the margins around it */}
-      <div className="absolute inset-[10%] flex flex-col items-center justify-center gap-4 overflow-hidden">
-        {game?.yourRole != null && (
-          <ResistanceRoleCard role={game.yourRole} players={players} fellowSpyIds={game.fellowSpies ?? []} />
-        )}
-
-        {game && (
-          <div
-            role="status"
-            className="flex items-center justify-center gap-3 w-full px-5 py-3 rounded-xl border border-amber-400/40
-              bg-gradient-to-r from-slate-900/90 via-slate-800/90 to-slate-900/90
-              shadow-lg shadow-amber-500/10 ring-1 ring-inset ring-white/5"
-          >
-            <span aria-hidden="true" className="w-1.5 self-stretch rounded-full bg-gradient-to-b from-amber-300 to-amber-600" />
-            <p className="flex-1 text-xl sm:text-2xl lg:text-3xl font-semibold leading-snug text-center text-amber-50 tracking-wide drop-shadow">
-              {resistancePhaseDescription(game, { canManage, isAdmin }, board.teamSizes[0])}
-            </p>
-            <span aria-hidden="true" className="w-1.5 self-stretch rounded-full bg-gradient-to-b from-amber-300 to-amber-600" />
+    <div
+      className={
+        tvLayout
+          ? 'relative w-full h-screen bg-slate-800 text-slate-400'
+          : 'flex flex-col gap-3 w-full min-h-screen p-3 bg-slate-800 text-slate-400'
+      }
+    >
+      {tvLayout ? (
+        <nav className="absolute inset-x-0 top-0 h-[10%] px-[10%] flex items-center">
+          <div className="flex items-center gap-2 w-full">
+            <PageNavigation
+              links={[
+                back,
+                ...(game && canManage && game.isOpen && !started && game.yourPlayerId == null
+                  ? [{ to: sessionResistanceJoinPath(sessionId), label: 'Join as a player' }]
+                  : []),
+              ]}
+            />
+            {managerControls}
+            {playerCount}
+            {message && <span className="text-amber-500">{message}</span>}
+            {rulesButton}
           </div>
-        )}
+        </nav>
+      ) : (
+        <nav className="flex flex-wrap items-center gap-2">
+          <PageNavigation links={[back]} />
+          {showSwitch && <ResistanceViewSwitch showBoard={boardView} onChange={setBoardView} />}
+          {playerCount}
+          {message && <span className="text-amber-500">{message}</span>}
+          {canManage && (
+            <button
+              type="button"
+              onClick={() => setControlsOpen((open) => !open)}
+              aria-expanded={controlsOpen}
+              aria-controls="resistance-manager-controls"
+              className="px-3 py-2 text-slate-200 bg-slate-900 rounded-md hover:bg-slate-700 cursor-pointer"
+            >
+              Controls
+            </button>
+          )}
+          {rulesButton}
+        </nav>
+      )}
 
-        <MissionBoardIcon
-          className="w-full max-h-full"
-          title="Mission board"
-          teamSizes={board.teamSizes}
-          results={NO_RESULTS}
-          currentMission={null}
-          rejectedTeams={0}
-          fourthMissionNeedsTwoFails={board.fourthMissionNeedsTwoFails}
-          dimmed={board.provisional}
-        />
-      </div>
+      {!tvLayout && canManage && controlsOpen && (
+        <div id="resistance-manager-controls" role="group" aria-label="Game controls" className="flex flex-wrap gap-2">
+          {managerControls}
+        </div>
+      )}
 
-      {game && players.length > 0 && (
-        <ResistancePlayers players={players} yourPlayerId={game.yourPlayerId} leaderId={game.leaderPlayerId} />
+      {tvLayout ? (
+        <ResistanceTvBoard game={game} board={board} banner={banner} yourPlayerId={shownGame?.yourPlayerId ?? null} />
+      ) : (
+        <>
+          {banner}
+          {showPlayerView && game ? (
+            <ResistancePlayerView game={game} />
+          ) : (
+            <ResistanceCompactBoard game={game} board={board} />
+          )}
+        </>
       )}
 
       {canManage && !started && (

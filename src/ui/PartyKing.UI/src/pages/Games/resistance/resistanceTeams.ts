@@ -25,3 +25,5 @@ export const missionBoardFor = (playerCount: number) => {
     fourthMissionNeedsTwoFails: count >= 7,
   };
 };
+
+export type MissionBoardLayout = ReturnType<typeof missionBoardFor>;
