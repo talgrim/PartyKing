@@ -64,7 +64,7 @@ describe('MusicQueue', () => {
     });
   });
 
-  it('shows a guest what is playing and the queue, without any controls', async () => {
+  it('shows a guest what is playing, the queue and the lyrics, without any player controls', async () => {
     mocks.getViewerRole.mockResolvedValue({ isHost: false, isAdmin: false });
 
     await renderPage();
@@ -73,7 +73,8 @@ describe('MusicQueue', () => {
     expect(screen.queryByText('host player')).not.toBeInTheDocument();
     expect(screen.queryByText('admin controls')).not.toBeInTheDocument();
     expect(screen.queryByText('slideshow')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Maximize' })).not.toBeInTheDocument();
+    // Guests get the lyrics drawer and its maximized view, never the photos
+    expect(await screen.findByRole('button', { name: 'Maximize' })).toBeVisible();
   });
 
   it('links an admin to the admin panel, and nobody else', async () => {
