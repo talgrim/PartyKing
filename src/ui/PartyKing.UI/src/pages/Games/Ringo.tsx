@@ -7,7 +7,14 @@ import { HTTP_STATUS_CODE } from '@/service/constants';
 import { gamesApi } from '@/service/endpoints/games/gamesApi';
 import { RingoGameDto } from '@/service/endpoints/games/types';
 import { useRingoGame } from '@/service/endpoints/games/useRingoGame';
+import { useSessionMusicHub } from '@/service/realtime/useSessionMusicHub';
+import { usePersistedFlag } from '@/utils/usePersistedFlag';
 import { RingoBoard } from './RingoBoard';
+import { RingoCardOverlay } from './RingoCardOverlay';
+import { RingoGameOver } from './RingoGameOver';
+import { endingFlip } from './ringoCards';
+import { RingoHistory } from './RingoHistory';
+import { RingoPiles } from './RingoPiles';
 
 const navClass = 'px-3 py-2 text-slate-200 bg-slate-900 rounded-md hover:bg-slate-700';
 
@@ -21,6 +28,12 @@ export const Ringo = (): ReactNode => {
   const { data: game, error, mutate } = useRingoGame(sessionId);
   const [confirmingEnd, setConfirmingEnd] = useState(false);
   const [message, setMessage] = useState<string>();
+  const [historyOpen, setHistoryOpen] = usePersistedFlag('partyking.ringoHistoryOpen', false);
+
+  // The server pushes every change of the game (RingoChanged), so other devices stay current without polling
+  useSessionMusicHub(sessionId, game !== undefined);
+
+  const ending = game && endingFlip(game.flips);
 
   const status = (error as { status?: number } | undefined)?.status;
 
@@ -34,7 +47,12 @@ export const Ringo = (): ReactNode => {
   const flip = async (cardId: number) => {
     if (!game) return;
     setMessage(undefined);
-    const optimistic: RingoGameDto = { ...game, flippedCards: [...game.flippedCards, cardId] };
+    // The server fills in who flipped the card and when
+    const optimistic: RingoGameDto = {
+      ...game,
+      flips: [...game.flips, { cardId, flippedAt: new Date().toISOString(), flippedBy: '…' }],
+      pendingCardId: cardId,
+    };
     try {
       await mutate(gamesApi.flipRingoCard(sessionId, cardId), {
         optimisticData: optimistic,
@@ -43,6 +61,20 @@ export const Ringo = (): ReactNode => {
       });
     } catch {
       setMessage('Could not flip the card.');
+    }
+  };
+
+  const continueGame = async () => {
+    if (!game) return;
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.continueRingo(sessionId), {
+        optimisticData: { ...game, pendingCardId: null },
+        rollbackOnError: true,
+        revalidate: false,
+      });
+    } catch {
+      setMessage('Could not continue the game.');
     }
   };
 
@@ -69,6 +101,7 @@ export const Ringo = (): ReactNode => {
           </button>
         )}
         {message && <span className="text-amber-500">{message}</span>}
+        {game && <RingoPiles flips={game.flips} pendingCardId={game.pendingCardId} />}
       </nav>
 
       {status === HTTP_STATUS_CODE.UNAUTHORIZED && (
@@ -80,9 +113,23 @@ export const Ringo = (): ReactNode => {
       )}
 
       {game && (
-        <div className="absolute inset-[10%]">
-          <RingoBoard seed={game.seed} flippedCards={game.flippedCards} onFlip={(id) => void flip(id)} />
+        <div className="absolute inset-[10%] isolate">
+          <RingoBoard
+            seed={game.seed}
+            pendingCardId={game.pendingCardId}
+            gameOver={ending !== undefined}
+            flippedCards={game.flips.map((flip) => flip.cardId)}
+            onFlip={(id) => void flip(id)}
+          />
         </div>
+      )}
+
+      {game && <RingoHistory flips={game.flips} open={historyOpen} onToggle={() => setHistoryOpen(!historyOpen)} />}
+
+      {game && ending && <RingoGameOver flip={ending} flips={game.flips} onEnd={() => void endGame()} />}
+
+      {game?.pendingCardId != null && !ending && (
+        <RingoCardOverlay cardId={game.pendingCardId} flips={game.flips} onContinue={() => void continueGame()} />
       )}
 
       <Dialog

@@ -11,6 +11,7 @@ export const SESSION_MUSIC_EVENTS = {
   FallbackErrorChanged: 'FallbackErrorChanged',
   LyricsOffsetChanged: 'LyricsOffsetChanged',
   SlideChanged: 'SlideChanged',
+  RingoChanged: 'RingoChanged',
 } as const;
 
 /** Hub methods the client calls: tells the server this connection displays the slideshow (its timer runs only then). */
@@ -47,6 +48,7 @@ export type HostPlayerPushHandlers = {
 export const queueSongsKey = (sessionId: string) => ['queue-songs', sessionId] as const;
 export const nowPlayingKey = (sessionId: string) => ['now-playing', sessionId] as const;
 export const lyricsKey = (sessionId: string, songId: number) => ['lyrics', sessionId, songId] as const;
+export const ringoKey = (sessionId: string) => ['ringo', sessionId] as const;
 export const slideshowKey = (sessionId: string) => ({ endpoint: `/sessions/${sessionId}/photos/current` });
 
 /** Puts a saved offset into the lyrics of the song it was saved for; lyrics that aren't loaded stay as they are. */

@@ -20,6 +20,7 @@ import {
   PlayerStateChangedEvent,
   QueueAdvancedEvent,
   queueSongsKey,
+  ringoKey,
   SESSION_MUSIC_EVENTS,
   slideshowKey,
   SongRemovedEvent,
@@ -34,6 +35,7 @@ const revalidateSession = (sessionId: string) => {
   void mutate(queueSongsKey(sessionId));
   void mutate(nowPlayingKey(sessionId));
   void mutate(slideshowKey(sessionId));
+  void mutate(ringoKey(sessionId));
   // A saved offset may have been missed meanwhile; only the lyrics of a mounted view are fetched again
   void mutate((key) => Array.isArray(key) && key[0] === 'lyrics' && key[1] === sessionId);
 };
@@ -124,6 +126,10 @@ export const useSessionMusicHub = (
 
       connection.on(SESSION_MUSIC_EVENTS.SlideChanged, () => {
         void mutate(slideshowKey(sessionId));
+      });
+
+      connection.on(SESSION_MUSIC_EVENTS.RingoChanged, () => {
+        void mutate(ringoKey(sessionId));
       });
 
       const built = connection;

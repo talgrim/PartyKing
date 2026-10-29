@@ -21,9 +21,15 @@ export const gamesApi = {
   startRingo: (sessionId: string) =>
     axios.post(`/sessions/${sessionId}/games/ringo`, null, { withCredentials: true }) as unknown as Promise<RingoGameDto>,
 
-  /** Host or admin: flips a card (0-51); flipping a flipped card changes nothing. */
+  /** Host or admin: flips a card (0-51); flipping a flipped card changes nothing, 409 while another card is pending. */
   flipRingoCard: (sessionId: string, cardId: number) =>
     axios.post(`/sessions/${sessionId}/games/ringo/cards/${cardId}/flip`, null, {
+      withCredentials: true,
+    }) as unknown as Promise<RingoGameDto>,
+
+  /** Host or admin: continues past the pending card, which then leaves the table. */
+  continueRingo: (sessionId: string) =>
+    axios.post(`/sessions/${sessionId}/games/ringo/continue`, null, {
       withCredentials: true,
     }) as unknown as Promise<RingoGameDto>,
 

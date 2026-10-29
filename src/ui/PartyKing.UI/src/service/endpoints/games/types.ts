@@ -18,6 +18,17 @@ export type GameSuggestionsDto = {
 export type RingoGameDto = {
   /** Seed of the card layout; the same seed gives the same layout on every device. */
   seed: number;
-  /** Ids of the flipped cards (0-51) in flip order. */
-  flippedCards: number[];
+  /** The flipped cards in flip order. */
+  flips: RingoFlipDto[];
+  /** The last flipped card (0-51) until the host or an admin continues past it; null when none waits for that. */
+  pendingCardId: number | null;
+};
+
+// Mirrors PartyKing.Contract.V1.Games.RingoFlipDto
+export type RingoFlipDto = {
+  /** Card id (0-51). */
+  cardId: number;
+  /** ISO timestamp. */
+  flippedAt: string;
+  flippedBy: string;
 };
