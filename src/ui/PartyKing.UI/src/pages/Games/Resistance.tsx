@@ -9,6 +9,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { PageNavigation } from '@/components/common/PageNavigation';
 import { MissionBoardIcon } from '@/pages/Games/resistance/ResistanceIcons';
+import { resistancePhaseDescription } from '@/pages/Games/resistance/resistancePhase';
 import { RESISTANCE_RULES } from '@/pages/Games/resistance/resistanceRules';
 import { MIN_PLAYERS, missionBoardFor } from '@/pages/Games/resistance/resistanceTeams';
 import { sessionGamesPath, sessionPath, sessionResistanceJoinPath } from '@/router/constants';
@@ -154,9 +155,9 @@ export const Resistance = (): ReactNode => {
           <ResistanceRoleCard role={game.yourRole} players={players} fellowSpyIds={game.fellowSpies ?? []} />
         )}
 
-        {board.provisional && game && !started && (
-          <p className="text-sm text-slate-400">
-            Potrzeba co najmniej 5 graczy. Pokazane rozmiary drużyn dotyczą gry w 5 osób.
+        {game && (
+          <p className="text-sm text-slate-300 text-center max-w-prose">
+            {resistancePhaseDescription(game, { canManage, isAdmin }, board.teamSizes[0])}
           </p>
         )}
 
