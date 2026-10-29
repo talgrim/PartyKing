@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.StaticFiles;
 using PartyKing.API;
 using PartyKing.API.Controllers;
 using PartyKing.API.Controllers.Games;
+using PartyKing.API.Development;
 using PartyKing.API.Hubs;
 using PartyKing.Application;
 using PartyKing.Application.Slideshow.Services;
@@ -118,6 +119,7 @@ app.UseRouting();
 if (app.Environment.IsDevelopment())
 {
     app.UseCors(corsPolicy);
+    app.UseMiddleware<DevPersonaMiddleware>();
 }
 
 app

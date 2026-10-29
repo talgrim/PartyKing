@@ -1,5 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { Button, Snackbar } from '@mui/material';
+import { withDevPersona } from '@/service/devPersona';
 
 const wasDismissed = (key: string): boolean => {
   try {
@@ -40,7 +41,7 @@ export const GameInvite = ({ sessionId, lobby, gameId, dismissedKey, joinPath, m
   };
 
   const accept = () => {
-    window.open(joinPath, '_blank', 'noopener,noreferrer');
+    window.open(withDevPersona(joinPath), '_blank', 'noopener,noreferrer');
     dismiss();
   };
 

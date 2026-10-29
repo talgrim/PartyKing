@@ -4,6 +4,7 @@ import {
   onResponseFulfilled,
   onResponseRejected,
 } from '@/service/interceptors/response';
+import { devPersona } from '@/service/devPersona';
 
 const configureAxios = (
   axios: AxiosInstance,
@@ -17,6 +18,9 @@ const configureAxios = (
   axios.defaults.validateStatus = (status) => {
     return status < 400;
   };
+  if (devPersona) {
+    axios.defaults.headers.common['X-Dev-Persona'] = devPersona;
+  }
   axios.interceptors.response.use(onResponseFulfilled, onResponseRejected);
 };
 

@@ -10,6 +10,7 @@ import {
 } from '@/router/constants';
 import { useResistanceLobby } from '@/service/endpoints/games/useResistanceLobby';
 import { useRingoLobby } from '@/service/endpoints/games/useRingoLobby';
+import { withDevPersona } from '@/service/devPersona';
 
 type Props = {
   sessionId: string;
@@ -36,7 +37,7 @@ export const OpenGamesMenu = ({ sessionId, canManage }: Props): ReactNode => {
 
   const play = (path: string) => {
     setAnchor(null);
-    window.open(path, '_blank', 'noopener,noreferrer');
+    window.open(withDevPersona(path), '_blank', 'noopener,noreferrer');
   };
 
   return (
