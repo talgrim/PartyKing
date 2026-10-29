@@ -9,7 +9,14 @@ vi.mock('@/service/endpoints/games/gamesApi', () => ({
   gamesApi: { getRingoLobby: mocks.getRingoLobby, getResistanceLobby: mocks.getResistanceLobby },
 }));
 
-const lobby = (isOpen: boolean) => ({ seed: 1, createdAt: '2026-10-29T10:00:00Z', isOpen, joined: false });
+const lobby = (isOpen: boolean, extra: object = {}) => ({
+  seed: 1,
+  createdAt: '2026-10-29T10:00:00Z',
+  isOpen,
+  isStarted: false,
+  joined: false,
+  ...extra,
+});
 
 const renderMenu = (canManage: boolean, refreshInterval = 0) =>
   render(
@@ -57,6 +64,34 @@ describe('OpenGamesMenu', () => {
     await userEvent.click(screen.getByRole('menuitem', { name: 'Ringo' }));
 
     expect(open).toHaveBeenCalledWith('/s/session-1/games/ringo', '_blank', 'noopener,noreferrer');
+    open.mockRestore();
+  });
+
+  it('opens the TV board and the player page for the host and admins in Resistance', async () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+    mocks.getRingoLobby.mockResolvedValue(lobby(false));
+    mocks.getResistanceLobby.mockResolvedValue(lobby(true));
+    renderMenu(true);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Open games' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Resistance' }));
+
+    expect(open).toHaveBeenNthCalledWith(1, '/s/session-1/games/resistance?tv=1', '_blank', 'noopener,noreferrer');
+    expect(open).toHaveBeenNthCalledWith(2, '/s/session-1/games/resistance/join', '_blank', 'noopener,noreferrer');
+    open.mockRestore();
+  });
+
+  it('opens only the TV board once Resistance started without the host', async () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+    mocks.getRingoLobby.mockResolvedValue(lobby(false));
+    mocks.getResistanceLobby.mockResolvedValue(lobby(true, { isStarted: true }));
+    renderMenu(true);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Open games' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Resistance' }));
+
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(open).toHaveBeenCalledWith('/s/session-1/games/resistance?tv=1', '_blank', 'noopener,noreferrer');
     open.mockRestore();
   });
 
