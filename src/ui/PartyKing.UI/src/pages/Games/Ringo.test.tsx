@@ -4,13 +4,25 @@ import { SWRConfig } from 'swr';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { Ringo } from './Ringo';
 
-const mocks = vi.hoisted(() => ({ getRingo: vi.fn(), flip: vi.fn(), continue: vi.fn(), end: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  getRingo: vi.fn(),
+  flip: vi.fn(),
+  continue: vi.fn(),
+  end: vi.fn(),
+  suggestRules: vi.fn(),
+}));
 
 // No live connection in tests; the page only passes its session id and enabled flag
 vi.mock('@/service/realtime/useSessionMusicHub', () => ({ useSessionMusicHub: vi.fn() }));
 
 vi.mock('@/service/endpoints/games/gamesApi', () => ({
-  gamesApi: { getRingo: mocks.getRingo, flipRingoCard: mocks.flip, continueRingo: mocks.continue, endRingo: mocks.end },
+  gamesApi: {
+    getRingo: mocks.getRingo,
+    flipRingoCard: mocks.flip,
+    continueRingo: mocks.continue,
+    endRingo: mocks.end,
+    getRingoRuleSuggestions: mocks.suggestRules,
+  },
 }));
 
 const flip = (cardId: number, flippedBy = 'admin') => ({
@@ -77,6 +89,19 @@ describe('Ringo', () => {
 
     expect(await screen.findByRole('dialog', { name: 'As Pik' })).toBeInTheDocument();
     screen.getAllByRole('button', { name: 'Face down card' }).forEach((card) => expect(card).toBeDisabled());
+  });
+
+  it('offers rule suggestions on an ace only', async () => {
+    mocks.getRingo.mockResolvedValue({ seed: 1, flips: [flip(12)], pendingCardId: 12 });
+    const { unmount } = renderPage();
+    expect(await screen.findByRole('button', { name: 'Zaproponuj zasady' })).toBeInTheDocument();
+    unmount();
+
+    mocks.getRingo.mockResolvedValue({ seed: 1, flips: [flip(5)], pendingCardId: 5 });
+    renderPage();
+
+    expect(await screen.findByRole('dialog', { name: 'Siódemka Pik' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Zaproponuj zasady' })).not.toBeInTheDocument();
   });
 
   it('shows the end of the game with the name of whoever flipped the fourth king', async () => {
