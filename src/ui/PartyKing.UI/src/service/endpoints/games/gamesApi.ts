@@ -1,5 +1,5 @@
 import { axios } from '@/service/request';
-import { GameDto, GameSuggestionsDto, RingoGameDto } from './types';
+import { GameDto, GameSuggestionsDto, RingoGameDto, RingoLobbyDto } from './types';
 
 // The axios response interceptor unwraps `response.data`, so this resolves to the payload itself.
 export const gamesApi = {
@@ -13,21 +13,49 @@ export const gamesApi = {
       withCredentials: true,
     }) as unknown as Promise<GameSuggestionsDto>,
 
-  /** Host or admin: the session's Ringo game; rejects with status 404 when there is none. */
+  /** The session's Ringo game as host, admin or player; rejects with status 404 when there is none, 403 for anyone else. */
   getRingo: (sessionId: string) =>
     axios.get(`/sessions/${sessionId}/games/ringo`, { withCredentials: true }) as unknown as Promise<RingoGameDto>,
+
+  /** Anyone in the session: whether the Ringo game is open to join and whether the caller did; 404 without a game. */
+  getRingoLobby: (sessionId: string) =>
+    axios.get(`/sessions/${sessionId}/games/ringo/lobby`, { withCredentials: true }) as unknown as Promise<RingoLobbyDto>,
+
+  /** Admin only: opens the Ringo game to guests. */
+  openRingo: (sessionId: string) =>
+    axios.post(`/sessions/${sessionId}/games/ringo/open`, null, {
+      withCredentials: true,
+    }) as unknown as Promise<RingoGameDto>,
+
+  /** Joins the open game as a player; rejects with 409 when the name is taken, 400 for a bad name. The host's name is taken from Spotify. */
+  joinRingo: (sessionId: string, name: string) =>
+    axios.post(`/sessions/${sessionId}/games/ringo/join`, { name }, { withCredentials: true }) as unknown as Promise<void>,
+
+  /** Host or admin: removes a player. */
+  kickRingoPlayer: (sessionId: string, playerId: string) =>
+    axios.delete(`/sessions/${sessionId}/games/ringo/players/${playerId}`, {
+      withCredentials: true,
+    }) as unknown as Promise<RingoGameDto>,
+
+  /** Host or admin: sets the turn order; rejects with 409 when the players changed meanwhile. */
+  reorderRingoPlayers: (sessionId: string, playerIds: string[]) =>
+    axios.put(
+      `/sessions/${sessionId}/games/ringo/players/order`,
+      { playerIds },
+      { withCredentials: true },
+    ) as unknown as Promise<RingoGameDto>,
 
   /** Host or admin: starts a Ringo game; rejects with status 409 when the session already has one. */
   startRingo: (sessionId: string) =>
     axios.post(`/sessions/${sessionId}/games/ringo`, null, { withCredentials: true }) as unknown as Promise<RingoGameDto>,
 
-  /** Host or admin: flips a card (0-51); flipping a flipped card changes nothing, 409 while another card is pending. */
+  /** Flips a card (0-51), as host or admin any time and as a player on their turn; 409 while another card is pending. */
   flipRingoCard: (sessionId: string, cardId: number) =>
     axios.post(`/sessions/${sessionId}/games/ringo/cards/${cardId}/flip`, null, {
       withCredentials: true,
     }) as unknown as Promise<RingoGameDto>,
 
-  /** Host or admin: continues past the pending card, which then leaves the table. */
+  /** Continues past the pending card, which then leaves the table, and passes the turn. Host, admin or the player on turn. */
   continueRingo: (sessionId: string) =>
     axios.post(`/sessions/${sessionId}/games/ringo/continue`, null, {
       withCredentials: true,

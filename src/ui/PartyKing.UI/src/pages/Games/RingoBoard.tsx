@@ -8,6 +8,8 @@ type Props = {
   pendingCardId: number | null;
   /** The fourth king was flipped: nothing can be flipped any more. */
   gameOver?: boolean;
+  /** Locks the cards for a viewer who may not flip now (not their turn). */
+  disabled?: boolean;
   /** Ids of every flipped card; the ones but the pending one already left the table. */
   flippedCards: number[];
   onFlip: (cardId: number) => void;
@@ -17,7 +19,7 @@ type Props = {
 const boardStyle = { '--card-w': 'min(11vw, 13vh)' } as CSSProperties;
 
 /** The table: the cards still in play scattered at random positions, laid out from the game's seed. */
-export const RingoBoard = ({ seed, pendingCardId, gameOver = false, flippedCards, onFlip }: Props): ReactNode => {
+export const RingoBoard = ({ seed, pendingCardId, gameOver = false, disabled = false, flippedCards, onFlip }: Props): ReactNode => {
   const layout = useMemo(() => createLayout(seed), [seed]);
   const flipped = useMemo(() => new Set(flippedCards), [flippedCards]);
 
@@ -34,7 +36,7 @@ export const RingoBoard = ({ seed, pendingCardId, gameOver = false, flippedCards
             key={placement.id}
             placement={placement}
             flipped={flipped.has(placement.id)}
-            disabled={pendingCardId !== null || gameOver}
+            disabled={pendingCardId !== null || gameOver || disabled}
             onFlip={onFlip}
           />
         ))}
