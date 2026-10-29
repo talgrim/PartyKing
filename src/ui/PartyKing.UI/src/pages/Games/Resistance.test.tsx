@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SWRConfig } from 'swr';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -8,13 +8,19 @@ const mocks = vi.hoisted(() => ({
   role: { isHost: false, isAdmin: true },
   getResistance: vi.fn(),
   openResistance: vi.fn(),
+  startResistance: vi.fn(),
   endResistance: vi.fn(),
 }));
 
 vi.mock('@/service/endpoints/sessions/useViewerRole', () => ({ useViewerRole: () => mocks.role }));
 vi.mock('@/service/realtime/useSessionMusicHub', () => ({ useSessionMusicHub: vi.fn() }));
 vi.mock('@/service/endpoints/games/gamesApi', () => ({
-  gamesApi: { getResistance: mocks.getResistance, openResistance: mocks.openResistance, endResistance: mocks.endResistance },
+  gamesApi: {
+    getResistance: mocks.getResistance,
+    openResistance: mocks.openResistance,
+    startResistance: mocks.startResistance,
+    endResistance: mocks.endResistance,
+  },
 }));
 
 const lobby = (names: string[], isOpen = false) => ({
@@ -23,6 +29,17 @@ const lobby = (names: string[], isOpen = false) => ({
   players: names.map((name, i) => ({ id: `p${i}`, name })),
   yourPlayerId: null,
   maxPlayers: 10,
+  startedAt: null,
+  leaderPlayerId: null,
+  yourRole: null,
+  fellowSpies: null,
+});
+
+const started = (names: string[], extra: object = {}) => ({
+  ...lobby(names, true),
+  startedAt: '2026-10-29T11:00:00Z',
+  leaderPlayerId: 'p1',
+  ...extra,
 });
 
 const renderPage = () =>
@@ -43,6 +60,7 @@ describe('Resistance', () => {
     mocks.role = { isHost: false, isAdmin: true };
     mocks.getResistance.mockReset();
     mocks.openResistance.mockReset();
+    mocks.startResistance.mockReset();
     mocks.endResistance.mockReset();
     mocks.getResistance.mockResolvedValue(lobby([]));
   });
@@ -150,5 +168,98 @@ describe('Resistance', () => {
 
     await screen.findByRole('list', { name: 'Players' });
     expect(screen.queryByRole('button', { name: 'End game' })).not.toBeInTheDocument();
+  });
+
+  describe('starting', () => {
+    const five = ['A', 'B', 'C', 'D', 'E'];
+
+    it('disables Start below five players and starts at five', async () => {
+      mocks.getResistance.mockResolvedValue(lobby(['A', 'B', 'C', 'D'], true));
+      const view = renderPage();
+      expect(await screen.findByRole('button', { name: 'Start game' })).toBeDisabled();
+      view.unmount();
+
+      mocks.getResistance.mockResolvedValue(lobby(five, true));
+      mocks.startResistance.mockResolvedValue(started(five));
+      renderPage();
+      await userEvent.click(await screen.findByRole('button', { name: 'Start game' }));
+
+      expect(mocks.startResistance).toHaveBeenCalledWith('session-1');
+      await waitFor(() => expect(screen.queryByRole('button', { name: 'Start game' })).not.toBeInTheDocument());
+    });
+
+    it('offers no Start to guests or before the game is open', async () => {
+      mocks.role = { isHost: false, isAdmin: false };
+      mocks.getResistance.mockResolvedValue(lobby(five, true));
+      const view = renderPage();
+      await screen.findByRole('list', { name: 'Players' });
+      expect(screen.queryByRole('button', { name: 'Start game' })).not.toBeInTheDocument();
+      view.unmount();
+
+      mocks.role = { isHost: true, isAdmin: false };
+      mocks.getResistance.mockResolvedValue(lobby(five, false));
+      renderPage();
+      await screen.findByRole('list', { name: 'Players' });
+      expect(screen.queryByRole('button', { name: 'Start game' })).not.toBeInTheDocument();
+    });
+
+    it('locks the player management and shows the leader once started', async () => {
+      mocks.getResistance.mockResolvedValue(started(five));
+      renderPage();
+
+      await screen.findByRole('img', { name: 'Leader' });
+      expect(screen.queryByRole('button', { name: 'Players' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Start game' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Open the game' })).not.toBeInTheDocument();
+    });
+
+    it('shows a player their card face-down and reveals it on a tap', async () => {
+      mocks.role = { isHost: false, isAdmin: false };
+      mocks.getResistance.mockResolvedValue(started(five, { yourPlayerId: 'p0', yourRole: 'Resistance' }));
+      renderPage();
+
+      const card = await screen.findByRole('button', { name: 'Pokaż swoją rolę' });
+      expect(screen.queryByRole('img', { name: 'Ruch Oporu' })).not.toBeInTheDocument();
+
+      await userEvent.click(card);
+      expect(await screen.findByRole('img', { name: 'Ruch Oporu' })).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Ukryj swoją rolę' }));
+      expect(screen.queryByRole('img', { name: 'Ruch Oporu' })).not.toBeInTheDocument();
+    });
+
+    it('shows a spy the other spies only while the card is face up', async () => {
+      mocks.role = { isHost: false, isAdmin: false };
+      mocks.getResistance.mockResolvedValue(
+        started(five, { yourPlayerId: 'p0', yourRole: 'Spy', fellowSpies: ['p3'] }),
+      );
+      renderPage();
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Pokaż swoją rolę' }));
+
+      expect(await screen.findByRole('img', { name: 'Szpieg' })).toBeInTheDocument();
+      expect(within(screen.getByRole('list', { name: 'Fellow spies' })).getByText('D')).toBeInTheDocument();
+    });
+
+    it('marks which seat is yours, and shows no stray "0" for the Resistance role', async () => {
+      mocks.role = { isHost: false, isAdmin: false };
+      mocks.getResistance.mockResolvedValue(started(five, { yourPlayerId: 'p2', yourRole: 'Resistance' }));
+      const { container } = renderPage();
+
+      const seats = await screen.findByRole('list', { name: 'Players' });
+      const mine = within(seats).getAllByRole('listitem').find((item) => item.textContent?.includes('Ty'));
+      expect(mine).toHaveTextContent('C');
+      expect(container.textContent).not.toMatch(/^0/);
+      expect(screen.queryByText('0')).not.toBeInTheDocument();
+    });
+
+    it('gives observers no card', async () => {
+      mocks.role = { isHost: false, isAdmin: false };
+      mocks.getResistance.mockResolvedValue(started(five));
+      renderPage();
+
+      await screen.findByRole('img', { name: 'Leader' });
+      expect(screen.queryByRole('button', { name: 'Pokaż swoją rolę' })).not.toBeInTheDocument();
+    });
   });
 });

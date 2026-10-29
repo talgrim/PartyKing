@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({ getLobby: vi.fn() }));
 
 vi.mock('@/service/endpoints/games/gamesApi', () => ({ gamesApi: { getResistanceLobby: mocks.getLobby } }));
 
-const open = { createdAt: '2026-10-29T10:00:00Z', isOpen: true, joined: false };
+const open = { createdAt: '2026-10-29T10:00:00Z', isOpen: true, isStarted: false, joined: false };
 
 const renderInvite = () =>
   render(
@@ -46,6 +46,7 @@ describe('ResistanceInvite', () => {
   it.each([
     ['the game is not open', { ...open, isOpen: false }],
     ['the guest already joined', { ...open, joined: true }],
+    ['the game started', { ...open, isStarted: true }],
   ])('shows nothing when %s', async (_, lobby) => {
     mocks.getLobby.mockResolvedValue(lobby);
     renderInvite();

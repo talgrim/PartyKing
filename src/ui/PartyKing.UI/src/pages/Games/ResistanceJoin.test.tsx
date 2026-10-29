@@ -15,7 +15,7 @@ vi.mock('@/service/endpoints/games/gamesApi', () => ({
   gamesApi: { getResistanceLobby: mocks.getLobby, joinResistance: mocks.join },
 }));
 
-const open = { createdAt: '2026-10-29T10:00:00Z', isOpen: true, joined: false };
+const open = { createdAt: '2026-10-29T10:00:00Z', isOpen: true, isStarted: false, joined: false };
 
 const renderPage = () =>
   render(
@@ -63,6 +63,14 @@ describe('ResistanceJoin', () => {
     renderPage();
 
     expect(await screen.findByText(/nie jest jeszcze otwarta/)).toBeInTheDocument();
+  });
+
+  it('says the game already started instead of showing the form', async () => {
+    mocks.getLobby.mockResolvedValue({ ...open, isStarted: true });
+    renderPage();
+
+    expect(await screen.findByText(/już się rozpoczęła/)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Twoje imię/)).not.toBeInTheDocument();
   });
 
   it('goes back to the session when there is no game', async () => {
