@@ -40,6 +40,13 @@ describe('Games', () => {
     expect(screen.getByRole('link', { name: 'Back to the session' })).toHaveAttribute('href', '/s/session-1');
   });
 
+  it('links to the Resistance board', async () => {
+    mocks.getGames.mockResolvedValue([{ id: 'resistance', name: 'Resistance', description: 'Gra dedukcji społecznej.' }]);
+    renderPage();
+
+    expect(await screen.findByRole('link', { name: 'Open' })).toHaveAttribute('href', '/s/session-1/games/resistance');
+  });
+
   it('offers suggestions only for Never have I ever', async () => {
     mocks.getGames.mockResolvedValue([
       { id: 'ringo', name: 'Ringo', description: 'A party game.' },
