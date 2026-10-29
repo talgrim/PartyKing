@@ -13,7 +13,7 @@ const wasDismissed = (key: string): boolean => {
 type Props = {
   sessionId: string;
   /** What the guest is invited to, as the lobby reports it; undefined while loading or without a game. */
-  lobby: { isOpen: boolean; joined: boolean } | undefined;
+  lobby: { isOpen: boolean; isStarted?: boolean; joined: boolean } | undefined;
   /** Tells one game of the session from the next, so a dismissed invitation does not hide the next game's. */
   gameId: string | number;
   /** `sessionStorage` key of the dismissal for a session and game. */
@@ -26,7 +26,7 @@ type Props = {
 export const GameInvite = ({ sessionId, lobby, gameId, dismissedKey, joinPath, message }: Props): ReactNode => {
   const [dismissedNow, setDismissedNow] = useState<string>();
 
-  if (!lobby || !lobby.isOpen || lobby.joined) return null;
+  if (!lobby || !lobby.isOpen || lobby.isStarted || lobby.joined) return null;
 
   const key = dismissedKey(sessionId, gameId);
   if (dismissedNow === key || wasDismissed(key)) return null;

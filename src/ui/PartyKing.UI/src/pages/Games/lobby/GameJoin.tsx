@@ -11,7 +11,7 @@ const MAX_NAME_LENGTH = 30;
 const joinErrorMessage = (error: unknown): string => {
   switch ((error as { status?: number } | undefined)?.status) {
     case HTTP_STATUS_CODE.CONFLICT:
-      return 'Ktoś już używa tego imienia (albo gra jest zamknięta lub pełna).';
+      return 'Ktoś już używa tego imienia (albo gra jest zamknięta, pełna lub już się rozpoczęła).';
     case HTTP_STATUS_CODE.BAD_REQUEST:
       return 'To imię jest niepoprawne.';
     default:
@@ -76,7 +76,7 @@ const JoinForm = ({ title, isHost, isAdmin, kicked, join, onJoined }: FormProps)
 type Props = {
   sessionId: string;
   title: string;
-  lobby: { isOpen: boolean; joined: boolean } | undefined;
+  lobby: { isOpen: boolean; isStarted?: boolean; joined: boolean } | undefined;
   error: unknown;
   isLoading: boolean;
   join: (name: string) => Promise<void>;
@@ -108,6 +108,17 @@ export const GameJoin = ({ sessionId, title, lobby, error, isLoading, join, onJo
     return board;
   }
   if (isLoading || !lobby) return null;
+
+  if (lobby.isStarted && !wasJoined) {
+    return (
+      <p className="p-4 text-slate-200">
+        Ta gra już się rozpoczęła.{' '}
+        <Link to={sessionPath(sessionId)} className="underline">
+          Wróć do sesji
+        </Link>
+      </p>
+    );
+  }
 
   if (!lobby.isOpen && !wasJoined) {
     return (

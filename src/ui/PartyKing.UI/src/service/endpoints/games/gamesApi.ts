@@ -97,7 +97,13 @@ export const gamesApi = {
       withCredentials: true,
     }) as unknown as Promise<ResistanceGameDto>,
 
-  /** Joins the open game as a player; 409 when the name is taken or the lobby is full, 400 for a bad name. An admin may omit the name ("admin"). */
+  /** Host or admin: starts the open game with at least 5 players (roles, first leader); 409 when it is closed, started or short of players. */
+  startResistance: (sessionId: string) =>
+    axios.post(`/sessions/${sessionId}/games/resistance/start`, null, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
+  /** Joins the open game as a player; 409 when the name is taken, the lobby is full or the game started, 400 for a bad name. An admin may omit the name ("admin"). */
   joinResistance: (sessionId: string, name: string) =>
     axios.post(`/sessions/${sessionId}/games/resistance/join`, { name }, {
       withCredentials: true,

@@ -60,7 +60,17 @@ export type ResistanceGameDto = {
   yourPlayerId: string | null;
   /** The lobby cap. */
   maxPlayers: number;
+  /** ISO timestamp of the start; null while the game is a lobby. Once set, the players are locked. */
+  startedAt: string | null;
+  /** The player leading the mission; null until the game is started. */
+  leaderPlayerId: string | null;
+  /** The caller's own secret role; null for observers and before the start. */
+  yourRole: ResistanceRole | null;
+  /** The other spies' player ids; only a spy gets them, otherwise null. */
+  fellowSpies: string[] | null;
 };
+
+export type ResistanceRole = 'Resistance' | 'Spy';
 
 // Mirrors PartyKing.Contract.V1.Games.ResistancePlayerDto
 export type ResistancePlayerDto = {
@@ -74,6 +84,8 @@ export type ResistanceLobbyDto = {
   /** ISO timestamp of the game's creation, which tells one game from the next. */
   createdAt: string;
   isOpen: boolean;
+  /** True once the game started; nobody can join then. */
+  isStarted: boolean;
   /** Whether the caller already joined. */
   joined: boolean;
 };

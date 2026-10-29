@@ -128,6 +128,18 @@ export const OperativeCardIcon = ({ className, title }: IconProps): ReactNode =>
   </Svg>
 );
 
+/** Small marker for a fellow spy in the list a spy sees (a fedora and sunglasses on a red disc). */
+export const SpyMarkerIcon = ({ className, title }: IconProps): ReactNode => (
+  <Svg viewBox="0 0 100 100" className={className} title={title}>
+    <circle cx="50" cy="50" r="46" fill={COLORS.spyDark} stroke={COLORS.spy} strokeWidth="5" />
+    <path d="M18 46 Q50 38 82 46 L77 54 Q50 47 23 54 Z" fill={COLORS.paper} />
+    <path d="M32 46 Q32 20 50 20 Q68 20 68 46 Z" fill={COLORS.paper} />
+    <rect x="30" y="56" width="18" height="11" rx="3" fill={COLORS.paper} />
+    <rect x="52" y="56" width="18" height="11" rx="3" fill={COLORS.paper} />
+    <rect x="46" y="59" width="8" height="3" fill={COLORS.paper} />
+  </Svg>
+);
+
 /** Token held by the current mission leader (a crown). */
 export const LeaderTokenIcon = ({ className, title }: IconProps): ReactNode => (
   <Svg viewBox="0 0 100 100" className={className} title={title}>

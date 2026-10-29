@@ -10,7 +10,7 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { PageNavigation } from '@/components/common/PageNavigation';
 import { MissionBoardIcon } from '@/pages/Games/resistance/ResistanceIcons';
 import { RESISTANCE_RULES } from '@/pages/Games/resistance/resistanceRules';
-import { missionBoardFor } from '@/pages/Games/resistance/resistanceTeams';
+import { MIN_PLAYERS, missionBoardFor } from '@/pages/Games/resistance/resistanceTeams';
 import { sessionGamesPath, sessionPath, sessionResistanceJoinPath } from '@/router/constants';
 import { HTTP_STATUS_CODE } from '@/service/constants';
 import { gamesApi } from '@/service/endpoints/games/gamesApi';
@@ -19,6 +19,7 @@ import { useViewerRole } from '@/service/endpoints/sessions/useViewerRole';
 import { resistanceLobbyKey } from '@/service/realtime/sessionMusicEvents';
 import { useSessionMusicHub } from '@/service/realtime/useSessionMusicHub';
 import { ResistancePlayers } from './ResistancePlayers';
+import { ResistanceRoleCard } from './ResistanceRoleCard';
 import { ResistanceSettings } from './ResistanceSettings';
 
 const NO_RESULTS = [null, null, null, null, null] as const;
@@ -29,7 +30,9 @@ const navClass = 'px-3 py-2 text-slate-200 bg-slate-900 rounded-md';
  * The Resistance page: the mission board for the players who joined so far, the players around the edge and the
  * rules summary behind the "i" button. The host and admins manage the players, an admin opens the game to guests
  * (the 5-player team sizes are shown dimmed until five joined). Guests who unlocked the session watch once the game is
- * open. Nothing is played yet: starting the game (roles, spies) is not built.
+ * open. The host or an admin starts the game with at least five players: that locks the players, shows the first
+ * leader's crown and gives every player a face-down card with their secret role (a spy also sees the other spies).
+ * Anyone else only watches. Nothing more is played yet.
  */
 export const Resistance = (): ReactNode => {
   const { sessionId = '' } = useParams();
@@ -53,6 +56,7 @@ export const Resistance = (): ReactNode => {
   }
 
   const players = game?.players ?? [];
+  const started = game?.startedAt != null;
   const board = missionBoardFor(players.length);
 
   const back = canManage
@@ -66,6 +70,16 @@ export const Resistance = (): ReactNode => {
       void mutateGlobal(resistanceLobbyKey(sessionId));
     } catch {
       setMessage('Could not open the game.');
+    }
+  };
+
+  const startGame = async () => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.startResistance(sessionId), { revalidate: false });
+      void mutateGlobal(resistanceLobbyKey(sessionId));
+    } catch {
+      setMessage('Could not start the game.');
     }
   };
 
@@ -88,14 +102,25 @@ export const Resistance = (): ReactNode => {
           <PageNavigation
             links={[
               back,
-              ...(game && canManage && game.isOpen && game.yourPlayerId == null
+              ...(game && canManage && game.isOpen && !started && game.yourPlayerId == null
                 ? [{ to: sessionResistanceJoinPath(sessionId), label: 'Join as a player' }]
                 : []),
-              ...(game && canManage ? [{ onClick: () => setManagingPlayers(true), label: 'Players' }] : []),
+              ...(game && canManage && !started ? [{ onClick: () => setManagingPlayers(true), label: 'Players' }] : []),
               ...(game && canManage ? [{ onClick: () => setConfirmingEnd(true), label: 'End game' }] : []),
             ]}
           />
-          {game && isAdmin && (
+          {game && canManage && game.isOpen && !started && (
+            <button
+              type="button"
+              onClick={() => void startGame()}
+              disabled={players.length < MIN_PLAYERS}
+              title={players.length < MIN_PLAYERS ? `Potrzeba co najmniej ${MIN_PLAYERS} graczy` : undefined}
+              className={`${navClass} cursor-pointer disabled:opacity-50 disabled:cursor-default`}
+            >
+              Start game
+            </button>
+          )}
+          {game && isAdmin && !started && (
             <button
               type="button"
               onClick={() => void openGame()}
@@ -125,7 +150,11 @@ export const Resistance = (): ReactNode => {
 
       {/* The board keeps to the middle 80%; the players sit in the margins around it */}
       <div className="absolute inset-[10%] flex flex-col items-center justify-center gap-4 overflow-hidden">
-        {board.provisional && game && (
+        {game?.yourRole != null && (
+          <ResistanceRoleCard role={game.yourRole} players={players} fellowSpyIds={game.fellowSpies ?? []} />
+        )}
+
+        {board.provisional && game && !started && (
           <p className="text-sm text-slate-400">
             Potrzeba co najmniej 5 graczy. Pokazane rozmiary drużyn dotyczą gry w 5 osób.
           </p>
@@ -143,9 +172,11 @@ export const Resistance = (): ReactNode => {
         />
       </div>
 
-      {game && players.length > 0 && <ResistancePlayers players={players} yourPlayerId={game.yourPlayerId} />}
+      {game && players.length > 0 && (
+        <ResistancePlayers players={players} yourPlayerId={game.yourPlayerId} leaderId={game.leaderPlayerId} />
+      )}
 
-      {canManage && (
+      {canManage && !started && (
         <ResistanceSettings sessionId={sessionId} open={managingPlayers} onClose={() => setManagingPlayers(false)} />
       )}
 
