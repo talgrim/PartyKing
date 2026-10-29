@@ -11,4 +11,5 @@ internal static class SessionMusicHubEvents
     public const string LyricsOffsetChanged = "LyricsOffsetChanged";
     public const string SlideChanged = "SlideChanged";
     public const string RingoChanged = "RingoChanged";
+    public const string RingoOpened = "RingoOpened";
 }

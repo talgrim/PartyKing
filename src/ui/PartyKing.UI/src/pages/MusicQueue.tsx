@@ -14,8 +14,10 @@ import { useAutoLyrics } from '@/components/Music/useAutoLyrics';
 import { useUploadDialog } from '@/components/Music/useUploadDialog';
 import { SessionPasswordForm } from '@/components/Music/SessionPasswordForm';
 import { PageNavigation } from '@/components/common/PageNavigation';
+import { RingoInvite } from '@/pages/Games/RingoInvite';
 import { SlideshowView } from '@/pages/Slideshow/SlideshowView';
-import { ROUTE_PATHS } from '@/router/constants';
+import { ROUTE_PATHS, sessionRingoPath } from '@/router/constants';
+import { useRingoLobby } from '@/service/endpoints/games/useRingoLobby';
 import { HTTP_STATUS_CODE } from '@/service/constants';
 import { lyricsApi } from '@/service/endpoints/lyrics/lyricsApi';
 import { LyricsDto } from '@/service/endpoints/lyrics/types';
@@ -126,6 +128,9 @@ export const MusicQueue = (): ReactNode => {
 
   const hostPlayerPush = useRef<HostPlayerPushHandlers>({});
   const hub = useSessionMusicHub(sessionId, Boolean(session && !locked), hostPlayerPush);
+  const unlocked = Boolean(session && !locked);
+  const canManage = isHost || isAdmin;
+  const { data: ringoLobby } = useRingoLobby(sessionId, unlocked);
 
   return (
     <SessionHubContext.Provider value={hub}>
@@ -172,6 +177,9 @@ export const MusicQueue = (): ReactNode => {
             { to: ROUTE_PATHS.HOME, label: 'All sessions' },
             // Photos can be added only once the session is unlocked
             ...(session && !locked ? [{ onClick: uploadDialog.show, label: 'Upload photos' }] : []),
+            ...(unlocked && canManage && ringoLobby?.isOpen
+              ? [{ to: sessionRingoPath(sessionId), label: 'Ringo board', newTab: true }]
+              : []),
             ...(isAdmin ? [{ to: ROUTE_PATHS.ADMIN, label: 'Admin panel' }] : []),
           ]}
         />
@@ -179,6 +187,7 @@ export const MusicQueue = (): ReactNode => {
         {locked && joinFailed && (
           <p className="px-2 pt-4 text-amber-500">This QR code has expired. Enter the password instead.</p>
         )}
+        {unlocked && !canManage && <RingoInvite sessionId={sessionId} enabled />}
         {locked && <SessionPasswordForm sessionId={sessionId} onJoined={onJoined} />}
 
         {error && !locked && (

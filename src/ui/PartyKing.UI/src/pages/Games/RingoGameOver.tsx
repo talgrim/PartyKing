@@ -7,7 +7,8 @@ type Props = {
   /** The flip of the fourth king. */
   flip: RingoFlipDto;
   flips: RingoFlipDto[];
-  onEnd: () => void;
+  /** Ends the game; only given to the host and admins, so players see no button. */
+  onEnd?: () => void;
 };
 
 /** Shown instead of the card overlay once the fourth king is flipped: the game is over and says who ended it. */
@@ -33,13 +34,15 @@ export const RingoGameOver = ({ flip, flips, onEnd }: Props): ReactNode => {
         <strong>{flip.flippedBy}</strong> odwrócił/a czwartego króla: {cardName(flip.cardId)}
       </p>
       <p className="max-w-xl text-lg text-slate-200">{cardEffect(flip.cardId, flips)}</p>
-      <button
-        type="button"
-        onClick={onEnd}
-        className="px-6 py-2 text-lg text-slate-100 bg-indigo-700 rounded-md cursor-pointer hover:bg-indigo-600"
-      >
-        Zakończ grę
-      </button>
+      {onEnd && (
+        <button
+          type="button"
+          onClick={onEnd}
+          className="px-6 py-2 text-lg text-slate-100 bg-indigo-700 rounded-md cursor-pointer hover:bg-indigo-600"
+        >
+          Zakończ grę
+        </button>
+      )}
     </div>
   );
 };

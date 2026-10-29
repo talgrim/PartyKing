@@ -93,6 +93,12 @@ namespace PartyKing.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("CurrentPlayerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsOpen")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int?>("PendingCardId")
                         .HasColumnType("INTEGER");
 
@@ -102,6 +108,41 @@ namespace PartyKing.Persistence.Migrations
                     b.HasKey("SessionId");
 
                     b.ToTable("RingoGames");
+                });
+
+            modelBuilder.Entity("PartyKing.Domain.Entities.Games.RingoPlayer", b =>
+                {
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("PlayerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("JoinedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ProfileId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("SessionId", "PlayerId");
+
+                    b.HasIndex("SessionId", "NormalizedName")
+                        .IsUnique();
+
+                    b.ToTable("RingoPlayers");
                 });
 
             modelBuilder.Entity("PartyKing.Domain.Entities.Lyrics.LyricsOffset", b =>
@@ -307,6 +348,15 @@ namespace PartyKing.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("PartyKing.Domain.Entities.Games.RingoPlayer", b =>
+                {
+                    b.HasOne("PartyKing.Domain.Entities.Games.RingoGame", null)
+                        .WithMany("Players")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("PartyKing.Domain.Entities.Queue.QueueItem", b =>
                 {
                     b.HasOne("PartyKing.Domain.Entities.Sessions.Session", null)
@@ -347,6 +397,8 @@ namespace PartyKing.Persistence.Migrations
             modelBuilder.Entity("PartyKing.Domain.Entities.Games.RingoGame", b =>
                 {
                     b.Navigation("Flips");
+
+                    b.Navigation("Players");
                 });
 #pragma warning restore 612, 618
         }

@@ -5,15 +5,19 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { Ringo } from './Ringo';
 
 const mocks = vi.hoisted(() => ({
+  role: { isHost: false, isAdmin: true },
   getRingo: vi.fn(),
   flip: vi.fn(),
   continue: vi.fn(),
   end: vi.fn(),
   suggestRules: vi.fn(),
+  open: vi.fn(),
 }));
 
 // No live connection in tests; the page only passes its session id and enabled flag
 vi.mock('@/service/realtime/useSessionMusicHub', () => ({ useSessionMusicHub: vi.fn() }));
+
+vi.mock('@/service/endpoints/sessions/useViewerRole', () => ({ useViewerRole: () => mocks.role }));
 
 vi.mock('@/service/endpoints/games/gamesApi', () => ({
   gamesApi: {
@@ -21,9 +25,12 @@ vi.mock('@/service/endpoints/games/gamesApi', () => ({
     flipRingoCard: mocks.flip,
     continueRingo: mocks.continue,
     endRingo: mocks.end,
+    openRingo: mocks.open,
     getRingoRuleSuggestions: mocks.suggestRules,
   },
 }));
+
+const table = { isOpen: false, players: [], currentPlayerId: null, yourPlayerId: null };
 
 const flip = (cardId: number, flippedBy = 'admin') => ({
   cardId,
@@ -38,6 +45,7 @@ const renderPage = () =>
         <Routes>
           <Route path="/s/:sessionId/games/ringo" element={<Ringo />} />
           <Route path="/s/:sessionId/games" element={<p>Games page</p>} />
+          <Route path="/s/:sessionId/games/ringo/join" element={<p>Join page</p>} />
           <Route path="/s/:sessionId" element={<p>Session page</p>} />
         </Routes>
       </MemoryRouter>
@@ -50,11 +58,13 @@ describe('Ringo', () => {
     mocks.flip.mockReset();
     mocks.continue.mockReset();
     localStorage.clear();
+    mocks.role = { isHost: false, isAdmin: true };
     mocks.end.mockReset();
+    mocks.open.mockReset();
   });
 
   it('shows the cards still in play, and a flipped one that was continued past has left the table', async () => {
-    mocks.getRingo.mockResolvedValue({ seed: 1, flips: [flip(0)], pendingCardId: null });
+    mocks.getRingo.mockResolvedValue({ seed: 1, flips: [flip(0)], pendingCardId: null, ...table });
 
     renderPage();
 
@@ -63,9 +73,9 @@ describe('Ringo', () => {
   });
 
   it('flips a card on click and shows it in the middle with its effect until continued', async () => {
-    mocks.getRingo.mockResolvedValue({ seed: 1, flips: [], pendingCardId: null });
-    mocks.flip.mockResolvedValue({ seed: 1, flips: [flip(5)], pendingCardId: 5 });
-    mocks.continue.mockResolvedValue({ seed: 1, flips: [flip(5)], pendingCardId: null });
+    mocks.getRingo.mockResolvedValue({ seed: 1, flips: [], pendingCardId: null, ...table });
+    mocks.flip.mockResolvedValue({ seed: 1, flips: [flip(5)], pendingCardId: 5, ...table });
+    mocks.continue.mockResolvedValue({ seed: 1, flips: [flip(5)], pendingCardId: null, ...table });
     renderPage();
 
     await userEvent.click((await screen.findAllByRole('button', { name: 'Face down card' }))[0]);
@@ -83,7 +93,7 @@ describe('Ringo', () => {
   });
 
   it('shows the pending card after a reload and blocks flipping other cards', async () => {
-    mocks.getRingo.mockResolvedValue({ seed: 1, flips: [flip(12)], pendingCardId: 12 });
+    mocks.getRingo.mockResolvedValue({ seed: 1, flips: [flip(12)], pendingCardId: 12, ...table });
 
     renderPage();
 
@@ -92,12 +102,12 @@ describe('Ringo', () => {
   });
 
   it('offers rule suggestions on an ace only', async () => {
-    mocks.getRingo.mockResolvedValue({ seed: 1, flips: [flip(12)], pendingCardId: 12 });
+    mocks.getRingo.mockResolvedValue({ seed: 1, flips: [flip(12)], pendingCardId: 12, ...table });
     const { unmount } = renderPage();
     expect(await screen.findByRole('button', { name: 'Zaproponuj zasady' })).toBeInTheDocument();
     unmount();
 
-    mocks.getRingo.mockResolvedValue({ seed: 1, flips: [flip(5)], pendingCardId: 5 });
+    mocks.getRingo.mockResolvedValue({ seed: 1, flips: [flip(5)], pendingCardId: 5, ...table });
     renderPage();
 
     expect(await screen.findByRole('dialog', { name: 'Siódemka Pik' })).toBeInTheDocument();
@@ -109,6 +119,7 @@ describe('Ringo', () => {
       seed: 1,
       flips: [flip(11), flip(24), flip(37), flip(50, 'guest')],
       pendingCardId: 50,
+      ...table,
     });
     mocks.end.mockResolvedValue(undefined);
     renderPage();
@@ -125,7 +136,7 @@ describe('Ringo', () => {
   });
 
   it('puts continued kings and aces on their piles', async () => {
-    mocks.getRingo.mockResolvedValue({ seed: 1, flips: [flip(11), flip(12), flip(25)], pendingCardId: null });
+    mocks.getRingo.mockResolvedValue({ seed: 1, flips: [flip(11), flip(12), flip(25)], pendingCardId: null, ...table });
 
     renderPage();
 
@@ -138,6 +149,7 @@ describe('Ringo', () => {
       seed: 1,
       flips: [flip(0, 'guest'), flip(12, 'admin')],
       pendingCardId: null,
+      ...table,
     });
     renderPage();
 
@@ -152,7 +164,7 @@ describe('Ringo', () => {
   });
 
   it('ends the game only after a confirmation', async () => {
-    mocks.getRingo.mockResolvedValue({ seed: 1, flips: [], pendingCardId: null });
+    mocks.getRingo.mockResolvedValue({ seed: 1, flips: [], pendingCardId: null, ...table });
     mocks.end.mockResolvedValue(undefined);
     renderPage();
 
@@ -167,7 +179,7 @@ describe('Ringo', () => {
   });
 
   it('keeps the game when the confirmation is cancelled', async () => {
-    mocks.getRingo.mockResolvedValue({ seed: 1, flips: [], pendingCardId: null });
+    mocks.getRingo.mockResolvedValue({ seed: 1, flips: [], pendingCardId: null, ...table });
     renderPage();
 
     await userEvent.click(await screen.findByRole('button', { name: 'End game' }));
@@ -184,11 +196,57 @@ describe('Ringo', () => {
     expect(await screen.findByText('Games page')).toBeInTheDocument();
   });
 
-  it('sends guests back to the session page', async () => {
+  it('sends someone who is not a player to the join page', async () => {
+    mocks.role = { isHost: false, isAdmin: false };
     mocks.getRingo.mockRejectedValue({ status: 403 });
 
     renderPage();
 
-    expect(await screen.findByText('Session page')).toBeInTheDocument();
+    expect(await screen.findByText('Join page')).toBeInTheDocument();
+  });
+
+  it('lets a player flip only on their turn and hides the manager controls', async () => {
+    mocks.role = { isHost: false, isAdmin: false };
+    const players = [
+      { id: 'p1', name: 'Ola' },
+      { id: 'p2', name: 'Bartek' },
+    ];
+    mocks.getRingo.mockResolvedValue({
+      seed: 1,
+      flips: [],
+      pendingCardId: null,
+      isOpen: true,
+      players,
+      currentPlayerId: 'p1',
+      yourPlayerId: 'p2',
+    });
+
+    renderPage();
+
+    const cards = await screen.findAllByRole('button', { name: 'Face down card' });
+    expect(cards[0]).toBeDisabled();
+    expect(screen.getByRole('list', { name: 'Players' })).toHaveTextContent('Ola');
+    expect(screen.queryByRole('button', { name: 'End game' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Players' })).not.toBeInTheDocument();
+  });
+
+  it('lets an admin open the game from the board, once', async () => {
+    mocks.getRingo.mockResolvedValue({ seed: 1, flips: [], pendingCardId: null, ...table });
+    mocks.open.mockResolvedValue({ seed: 1, flips: [], pendingCardId: null, ...table, isOpen: true });
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Open the game' }));
+
+    await waitFor(() => expect(mocks.open).toHaveBeenCalledWith('session-1'));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Open the game' })).toBeDisabled());
+  });
+
+  it('hides "Open the game" from the host', async () => {
+    mocks.role = { isHost: true, isAdmin: false };
+    mocks.getRingo.mockResolvedValue({ seed: 1, flips: [], pendingCardId: null, ...table });
+    renderPage();
+
+    await screen.findAllByRole('button', { name: 'Face down card' });
+    expect(screen.queryByRole('button', { name: 'Open the game' })).not.toBeInTheDocument();
   });
 });

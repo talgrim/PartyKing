@@ -11,7 +11,15 @@ public class RingoGame
 
     public DateTimeOffset CreatedAt { get; set; }
 
+    /// <summary>Set by an admin once guests may join; it cannot be undone.</summary>
+    public bool IsOpen { get; set; }
+
+    /// <summary>The player whose turn it is; null while nobody has joined.</summary>
+    public Guid? CurrentPlayerId { get; set; }
+
     public List<RingoFlip> Flips { get; set; } = [];
+
+    public List<RingoPlayer> Players { get; set; } = [];
 
     /// <summary>The fourth king ends the game: nothing can be flipped any more.</summary>
     public bool IsOver => Flips.Count(x => x.CardId % 13 == KingRankIndex) >= KingsToEnd;

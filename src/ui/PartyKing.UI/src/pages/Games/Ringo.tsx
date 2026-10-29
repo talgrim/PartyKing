@@ -1,12 +1,15 @@
 import { ReactNode, useState } from 'react';
+import { mutate as mutateGlobal } from 'swr';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
 import { SessionPasswordForm } from '@/components/Music/SessionPasswordForm';
-import { sessionGamesPath, sessionPath } from '@/router/constants';
+import { sessionGamesPath, sessionPath, sessionRingoJoinPath } from '@/router/constants';
 import { HTTP_STATUS_CODE } from '@/service/constants';
 import { gamesApi } from '@/service/endpoints/games/gamesApi';
 import { RingoGameDto } from '@/service/endpoints/games/types';
 import { useRingoGame } from '@/service/endpoints/games/useRingoGame';
+import { useViewerRole } from '@/service/endpoints/sessions/useViewerRole';
+import { ringoLobbyKey } from '@/service/realtime/sessionMusicEvents';
 import { useSessionMusicHub } from '@/service/realtime/useSessionMusicHub';
 import { usePersistedFlag } from '@/utils/usePersistedFlag';
 import { RingoBoard } from './RingoBoard';
@@ -15,17 +18,22 @@ import { RingoGameOver } from './RingoGameOver';
 import { endingFlip } from './ringoCards';
 import { RingoHistory } from './RingoHistory';
 import { RingoPiles } from './RingoPiles';
+import { RingoPlayers } from './RingoPlayers';
+import { RingoSettings } from './RingoSettings';
 
 const navClass = 'px-3 py-2 text-slate-200 bg-slate-900 rounded-md hover:bg-slate-700';
 
 /**
- * The Ringo board of a session, for the host and admins (the server refuses guests, who are sent back to the session
- * page). Without a game it goes back to the games list, where a game is started.
+ * The Ringo board of a session. The host and admins can flip any time, end the game and manage the players; a player
+ * who joined by name flips and continues only on their turn. Anyone else is sent to the join page. Without a game the
+ * host and admins go back to the games list, where a game is started, and players to the session page.
  */
 export const Ringo = (): ReactNode => {
   const { sessionId = '' } = useParams();
   const navigate = useNavigate();
   const { data: game, error, mutate } = useRingoGame(sessionId);
+  const { isHost, isAdmin } = useViewerRole(sessionId);
+  const [managingPlayers, setManagingPlayers] = useState(false);
   const [confirmingEnd, setConfirmingEnd] = useState(false);
   const [message, setMessage] = useState<string>();
   // Kept here, not in the overlay, which closes after every card; the server stores no rules
@@ -38,12 +46,17 @@ export const Ringo = (): ReactNode => {
   const ending = game && endingFlip(game.flips);
 
   const status = (error as { status?: number } | undefined)?.status;
+  const canManage = isHost || isAdmin;
+  const yourTurn = game?.yourPlayerId != null && game.yourPlayerId === game.currentPlayerId;
+  const canAct = canManage || yourTurn;
+  const onTurn = game?.players.find((player) => player.id === game.currentPlayerId);
 
+  // Not a player (or kicked): the join page says whether the game is open and asks for a name
   if (status === HTTP_STATUS_CODE.FORBIDDEN) {
-    return <Navigate to={sessionPath(sessionId)} replace />;
+    return <Navigate to={sessionRingoJoinPath(sessionId)} replace />;
   }
   if (status === HTTP_STATUS_CODE.NOT_FOUND) {
-    return <Navigate to={sessionGamesPath(sessionId)} replace />;
+    return <Navigate to={canManage ? sessionGamesPath(sessionId) : sessionPath(sessionId)} replace />;
   }
 
   const flip = async (cardId: number) => {
@@ -80,6 +93,16 @@ export const Ringo = (): ReactNode => {
     }
   };
 
+  const openGame = async () => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.openRingo(sessionId), { revalidate: false });
+      void mutateGlobal(ringoLobbyKey(sessionId));
+    } catch {
+      setMessage('Could not open the game.');
+    }
+  };
+
   const endGame = async () => {
     try {
       await gamesApi.endRingo(sessionId);
@@ -94,13 +117,44 @@ export const Ringo = (): ReactNode => {
   return (
     <div className="relative w-full h-screen bg-slate-800 text-slate-400">
       <nav className="absolute inset-x-0 top-0 h-[10%] px-[10%] flex items-center gap-2">
-        <Link to={sessionGamesPath(sessionId)} className={navClass}>
-          Back to the games
-        </Link>
-        {game && (
+        {canManage ? (
+          <Link to={sessionGamesPath(sessionId)} className={navClass}>
+            Back to the games
+          </Link>
+        ) : (
+          <Link to={sessionPath(sessionId)} className={navClass}>
+            Back to the session
+          </Link>
+        )}
+        {game && canManage && (
           <button type="button" onClick={() => setConfirmingEnd(true)} className={`${navClass} cursor-pointer`}>
             End game
           </button>
+        )}
+        {game && canManage && (
+          <button type="button" onClick={() => setManagingPlayers(true)} className={`${navClass} cursor-pointer`}>
+            Players
+          </button>
+        )}
+        {game && isAdmin && (
+          <button
+            type="button"
+            onClick={() => void openGame()}
+            disabled={game.isOpen}
+            className={`${navClass} cursor-pointer disabled:opacity-50 disabled:cursor-default`}
+          >
+            Open the game
+          </button>
+        )}
+        {game && canManage && game.isOpen && game.yourPlayerId == null && (
+          <Link to={sessionRingoJoinPath(sessionId)} className={navClass}>
+            Join as a player
+          </Link>
+        )}
+        {onTurn && (
+          <span className="text-amber-400">
+            Tura: <strong>{onTurn.name}</strong>
+          </span>
         )}
         {message && <span className="text-amber-500">{message}</span>}
         {game && <RingoPiles flips={game.flips} pendingCardId={game.pendingCardId} />}
@@ -120,15 +174,20 @@ export const Ringo = (): ReactNode => {
             seed={game.seed}
             pendingCardId={game.pendingCardId}
             gameOver={ending !== undefined}
+            disabled={!canAct}
             flippedCards={game.flips.map((flip) => flip.cardId)}
             onFlip={(id) => void flip(id)}
           />
         </div>
       )}
 
+      {game && game.players.length > 0 && (
+        <RingoPlayers players={game.players} currentPlayerId={game.currentPlayerId} yourPlayerId={game.yourPlayerId} />
+      )}
+
       {game && <RingoHistory flips={game.flips} open={historyOpen} onToggle={() => setHistoryOpen(!historyOpen)} />}
 
-      {game && ending && <RingoGameOver flip={ending} flips={game.flips} onEnd={() => void endGame()} />}
+      {game && ending && <RingoGameOver flip={ending} flips={game.flips} onEnd={canManage ? () => void endGame() : undefined} />}
 
       {game?.pendingCardId != null && !ending && (
         <RingoCardOverlay
@@ -138,8 +197,12 @@ export const Ringo = (): ReactNode => {
           suggestedRules={suggestedRules}
           onSuggested={(rules) => setSuggestedRules((current) => [...current, ...rules])}
           onContinue={() => void continueGame()}
+          canContinue={canAct}
+          canSuggest={canManage}
         />
       )}
+
+      {canManage && <RingoSettings sessionId={sessionId} open={managingPlayers} onClose={() => setManagingPlayers(false)} />}
 
       <Dialog
         open={confirmingEnd}

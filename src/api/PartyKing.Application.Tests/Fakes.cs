@@ -246,6 +246,7 @@ internal class FakeSessionMusicNotifier : ISessionMusicNotifier
     public List<(Guid SessionId, LyricsOffsetChangedDto Offset)> LyricsOffsetChanges { get; } = [];
     public List<Guid> SlideshowChanges { get; } = [];
     public List<Guid> RingoChanges { get; } = [];
+    public List<Guid> RingoOpens { get; } = [];
 
     public Task SongAddedAsync(Guid sessionId, QueueItemDto song, CancellationToken cancellationToken)
     {
@@ -311,6 +312,12 @@ internal class FakeSessionMusicNotifier : ISessionMusicNotifier
     public Task RingoChangedAsync(Guid sessionId, CancellationToken cancellationToken)
     {
         RingoChanges.Add(sessionId);
+        return Task.CompletedTask;
+    }
+
+    public Task RingoOpenedAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        RingoOpens.Add(sessionId);
         return Task.CompletedTask;
     }
 }
