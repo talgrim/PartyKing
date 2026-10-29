@@ -26,6 +26,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PartyKing.Api.Tests", "Part
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PartyKing.Infrastructure.Lyrics", "PartyKing.Infrastructure.Lyrics\PartyKing.Infrastructure.Lyrics.csproj", "{ED5E23FC-1EAB-4EC4-8796-A3F0084ABFC7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PartyKing.Infrastructure.Llm", "PartyKing.Infrastructure.Llm\PartyKing.Infrastructure.Llm.csproj", "{2BC72BDD-BF10-441C-9B27-859531839809}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -192,6 +194,18 @@ Global
 		{ED5E23FC-1EAB-4EC4-8796-A3F0084ABFC7}.Release|x64.Build.0 = Release|Any CPU
 		{ED5E23FC-1EAB-4EC4-8796-A3F0084ABFC7}.Release|x86.ActiveCfg = Release|Any CPU
 		{ED5E23FC-1EAB-4EC4-8796-A3F0084ABFC7}.Release|x86.Build.0 = Release|Any CPU
+		{2BC72BDD-BF10-441C-9B27-859531839809}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2BC72BDD-BF10-441C-9B27-859531839809}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2BC72BDD-BF10-441C-9B27-859531839809}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{2BC72BDD-BF10-441C-9B27-859531839809}.Debug|x64.Build.0 = Debug|Any CPU
+		{2BC72BDD-BF10-441C-9B27-859531839809}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{2BC72BDD-BF10-441C-9B27-859531839809}.Debug|x86.Build.0 = Debug|Any CPU
+		{2BC72BDD-BF10-441C-9B27-859531839809}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2BC72BDD-BF10-441C-9B27-859531839809}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2BC72BDD-BF10-441C-9B27-859531839809}.Release|x64.ActiveCfg = Release|Any CPU
+		{2BC72BDD-BF10-441C-9B27-859531839809}.Release|x64.Build.0 = Release|Any CPU
+		{2BC72BDD-BF10-441C-9B27-859531839809}.Release|x86.ActiveCfg = Release|Any CPU
+		{2BC72BDD-BF10-441C-9B27-859531839809}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
