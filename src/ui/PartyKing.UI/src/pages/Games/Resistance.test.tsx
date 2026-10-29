@@ -10,6 +10,8 @@ const mocks = vi.hoisted(() => ({
   openResistance: vi.fn(),
   startResistance: vi.fn(),
   selectResistanceTeam: vi.fn(),
+  voteResistanceTeam: vi.fn(),
+  continueResistance: vi.fn(),
   endResistance: vi.fn(),
 }));
 
@@ -21,6 +23,8 @@ vi.mock('@/service/endpoints/games/gamesApi', () => ({
     openResistance: mocks.openResistance,
     startResistance: mocks.startResistance,
     selectResistanceTeam: mocks.selectResistanceTeam,
+    voteResistanceTeam: mocks.voteResistanceTeam,
+    continueResistance: mocks.continueResistance,
     endResistance: mocks.endResistance,
   },
 }));
@@ -38,6 +42,14 @@ const lobby = (names: string[], isOpen = false) => ({
   missionNumber: 1,
   requiredTeamSize: null,
   teamPlayerIds: [] as string[],
+  phase: null as string | null,
+  rejectedTeams: 0,
+  winner: null as string | null,
+  votedPlayerIds: [] as string[],
+  yourVote: null as boolean | null,
+  votes: null as { playerId: string; approve: boolean }[] | null,
+  voteApproved: null as boolean | null,
+  revealedRoles: null as { playerId: string; role: string }[] | null,
 });
 
 const started = (names: string[], extra: object = {}) => ({
@@ -45,6 +57,7 @@ const started = (names: string[], extra: object = {}) => ({
   startedAt: '2026-10-29T11:00:00Z',
   leaderPlayerId: 'p1',
   requiredTeamSize: 2,
+  phase: 'SelectingTeam',
   ...extra,
 });
 
@@ -419,7 +432,7 @@ describe('Resistance', () => {
 
     it('keeps the picks local and sends them only on submit', async () => {
       mocks.getResistance.mockResolvedValue(leading());
-      mocks.selectResistanceTeam.mockResolvedValue(leading({ teamPlayerIds: ['p0', 'p1'] }));
+      mocks.selectResistanceTeam.mockResolvedValue(leading({ teamPlayerIds: ['p0', 'p1'], phase: 'Voting' }));
       renderPage();
 
       await userEvent.click(await screen.findByRole('checkbox', { name: 'A' }));
@@ -439,7 +452,7 @@ describe('Resistance', () => {
       expect(screen.queryByRole('checkbox', { name: 'A' })).not.toBeInTheDocument();
       view.unmount();
 
-      mocks.getResistance.mockResolvedValue(leading({ teamPlayerIds: ['p0', 'p1'] }));
+      mocks.getResistance.mockResolvedValue(leading({ teamPlayerIds: ['p0', 'p1'], phase: 'Voting' }));
       renderPage();
       await screen.findByRole('button', { name: 'Pokaż swoją rolę' });
       expect(screen.queryByRole('checkbox', { name: 'A' })).not.toBeInTheDocument();
@@ -456,7 +469,7 @@ describe('Resistance', () => {
 
     it('shows the submitted team as cards under the board in the TV view', async () => {
       mocks.role = { isHost: true, isAdmin: false };
-      mocks.getResistance.mockResolvedValue(started(five, { teamPlayerIds: ['p0', 'p3'] }));
+      mocks.getResistance.mockResolvedValue(started(five, { teamPlayerIds: ['p0', 'p3'], phase: 'Voting' }));
       renderPage('/s/session-1/games/resistance?tv=1');
 
       const team = await screen.findByRole('region', { name: 'Team' });
@@ -474,11 +487,196 @@ describe('Resistance', () => {
     });
 
     it('shows the submitted team to everyone on the board', async () => {
-      mocks.getResistance.mockResolvedValue(started(five, { teamPlayerIds: ['p0', 'p3'] }));
+      mocks.getResistance.mockResolvedValue(started(five, { teamPlayerIds: ['p0', 'p3'], phase: 'Voting' }));
       renderPage();
 
       const list = await screen.findByRole('list', { name: 'Players' });
       expect(within(list).getAllByText('W drużynie')).toHaveLength(2);
+    });
+  });
+
+  describe('voting', () => {
+    const five = ['A', 'B', 'C', 'D', 'E'];
+    const voting = (extra: object = {}) =>
+      started(five, {
+        yourPlayerId: 'p2',
+        yourRole: 'Resistance',
+        teamPlayerIds: ['p0', 'p1'],
+        phase: 'Voting',
+        ...extra,
+      });
+    const rejected = (extra: object = {}) =>
+      voting({
+        phase: 'VoteResult',
+        voteApproved: false,
+        rejectedTeams: 1,
+        votedPlayerIds: ['p0', 'p1', 'p2', 'p3', 'p4'],
+        votes: [
+          { playerId: 'p0', approve: true },
+          { playerId: 'p1', approve: false },
+          { playerId: 'p2', approve: false },
+          { playerId: 'p3', approve: false },
+          { playerId: 'p4', approve: true },
+        ],
+        ...extra,
+      });
+
+    beforeEach(() => {
+      mocks.role = { isHost: false, isAdmin: false };
+    });
+
+    it('gives a player the vote buttons, with their current choice pressed', async () => {
+      mocks.getResistance.mockResolvedValue(voting({ yourVote: false, votedPlayerIds: ['p2'] }));
+      renderPage();
+
+      expect(await screen.findByRole('button', { name: 'Odrzuć' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('button', { name: 'Zatwierdź' })).toHaveAttribute('aria-pressed', 'false');
+    });
+
+    it('sends the vote and shows the answer', async () => {
+      mocks.getResistance.mockResolvedValue(voting());
+      mocks.voteResistanceTeam.mockResolvedValue(voting({ yourVote: true, votedPlayerIds: ['p2'] }));
+      renderPage();
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Zatwierdź' }));
+
+      expect(mocks.voteResistanceTeam).toHaveBeenCalledWith('session-1', true);
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Zatwierdź' })).toHaveAttribute('aria-pressed', 'true'));
+    });
+
+    it('lets the vote be changed after it was cast', async () => {
+      mocks.getResistance.mockResolvedValue(voting({ yourVote: true, votedPlayerIds: ['p2'] }));
+      mocks.voteResistanceTeam.mockResolvedValue(voting({ yourVote: false, votedPlayerIds: ['p2'] }));
+      renderPage();
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Odrzuć' }));
+
+      expect(mocks.voteResistanceTeam).toHaveBeenCalledWith('session-1', false);
+    });
+
+    it('gives observers and the TV tab no vote buttons', async () => {
+      mocks.role = { isHost: true, isAdmin: false };
+      mocks.getResistance.mockResolvedValue(voting({ yourPlayerId: null, yourRole: null }));
+      const view = renderPage();
+      await screen.findByRole('img', { name: 'Mission board' });
+      expect(screen.queryByRole('button', { name: 'Zatwierdź' })).not.toBeInTheDocument();
+      view.unmount();
+
+      mocks.getResistance.mockResolvedValue(voting({ yourVote: true }));
+      renderPage('/s/session-1/games/resistance?tv=1');
+      await screen.findByRole('img', { name: 'Mission board' });
+      expect(screen.queryByRole('button', { name: 'Zatwierdź' })).not.toBeInTheDocument();
+    });
+
+    it('marks who has voted without showing how', async () => {
+      mocks.getResistance.mockResolvedValue(voting({ yourPlayerId: null, yourRole: null, votedPlayerIds: ['p0', 'p3'] }));
+      renderPage();
+
+      const list = await screen.findByRole('list', { name: 'Players' });
+      expect(within(list).getAllByText('Zagłosował/a')).toHaveLength(2);
+      expect(within(list).queryByText('Za')).not.toBeInTheDocument();
+      expect(within(list).queryByText('Przeciw')).not.toBeInTheDocument();
+    });
+
+    it('shows how everybody voted once the votes are public', async () => {
+      mocks.getResistance.mockResolvedValue(rejected({ yourPlayerId: null, yourRole: null }));
+      renderPage();
+
+      const list = await screen.findByRole('list', { name: 'Players' });
+      expect(within(list).getAllByText('Za')).toHaveLength(2);
+      expect(within(list).getAllByText('Przeciw')).toHaveLength(3);
+      expect(screen.getByText(/została odrzucona \(za: 2, przeciw: 3\)/)).toBeInTheDocument();
+    });
+
+    it('shows each voter\'s card with their name next to the team on the TV view', async () => {
+      mocks.role = { isHost: true, isAdmin: false };
+      mocks.getResistance.mockResolvedValue(rejected({ yourPlayerId: null, yourRole: null }));
+      renderPage('/s/session-1/games/resistance?tv=1');
+
+      const votes = await screen.findByRole('region', { name: 'Votes' });
+      expect(within(votes).getAllByRole('img', { name: 'Za' })).toHaveLength(2);
+      expect(within(votes).getAllByRole('img', { name: 'Przeciw' })).toHaveLength(3);
+      expect(within(votes).getByText('A')).toBeInTheDocument();
+      expect(screen.getByRole('region', { name: 'Team' })).toBeInTheDocument();
+    });
+
+    it('shows no vote cards on the TV view until the votes are public', async () => {
+      mocks.role = { isHost: true, isAdmin: false };
+      mocks.getResistance.mockResolvedValue(voting({ yourPlayerId: null, yourRole: null, votedPlayerIds: ['p0'] }));
+      renderPage('/s/session-1/games/resistance?tv=1');
+
+      await screen.findByRole('region', { name: 'Team' });
+      expect(screen.queryByRole('region', { name: 'Votes' })).not.toBeInTheDocument();
+    });
+
+    it('lets the leader continue after a rejected team', async () => {
+      mocks.getResistance.mockResolvedValue(rejected({ yourPlayerId: 'p1' }));
+      mocks.continueResistance.mockResolvedValue(started(five, { yourPlayerId: 'p1', leaderPlayerId: 'p2', rejectedTeams: 1 }));
+      renderPage();
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Dalej' }));
+
+      expect(mocks.continueResistance).toHaveBeenCalledWith('session-1');
+    });
+
+    it('offers "Dalej" to a manager, but not to a player who does not lead', async () => {
+      mocks.getResistance.mockResolvedValue(rejected());
+      const view = renderPage();
+      await screen.findByRole('button', { name: 'Pokaż swoją rolę' });
+      expect(screen.queryByRole('button', { name: 'Dalej' })).not.toBeInTheDocument();
+      view.unmount();
+
+      mocks.role = { isHost: true, isAdmin: false };
+      mocks.getResistance.mockResolvedValue(rejected({ yourPlayerId: null, yourRole: null }));
+      renderPage('/s/session-1/games/resistance?tv=1');
+      expect(await screen.findByRole('button', { name: 'Dalej' })).toBeInTheDocument();
+    });
+
+    it('has no "Dalej" for an approved team', async () => {
+      mocks.role = { isHost: true, isAdmin: false };
+      mocks.getResistance.mockResolvedValue(
+        rejected({ yourPlayerId: null, yourRole: null, voteApproved: true, rejectedTeams: 0 }),
+      );
+      renderPage('/s/session-1/games/resistance?tv=1');
+
+      await screen.findByRole('img', { name: 'Mission board' });
+      expect(screen.queryByRole('button', { name: 'Dalej' })).not.toBeInTheDocument();
+    });
+
+    it('shows the picker again for the next leader after a rejection', async () => {
+      mocks.getResistance.mockResolvedValue(
+        started(five, { yourPlayerId: 'p2', yourRole: 'Resistance', leaderPlayerId: 'p2', rejectedTeams: 1 }),
+      );
+      renderPage();
+
+      expect(await screen.findByRole('button', { name: 'Zgłoś drużynę do głosowania' })).toBeInTheDocument();
+      expect(screen.getByText(/Odrzucone drużyny z rzędu: 1\/5/)).toBeInTheDocument();
+    });
+
+    it('announces the spies winning and reveals every role when the game is over', async () => {
+      mocks.getResistance.mockResolvedValue(
+        rejected({
+          yourPlayerId: null,
+          yourRole: null,
+          phase: 'GameOver',
+          winner: 'Spy',
+          rejectedTeams: 5,
+          revealedRoles: [
+            { playerId: 'p0', role: 'Spy' },
+            { playerId: 'p1', role: 'Resistance' },
+            { playerId: 'p2', role: 'Resistance' },
+            { playerId: 'p3', role: 'Spy' },
+            { playerId: 'p4', role: 'Resistance' },
+          ],
+        }),
+      );
+      renderPage();
+
+      const list = await screen.findByRole('list', { name: 'Players' });
+      expect(within(list).getAllByText('Szpieg')).toHaveLength(2);
+      expect(within(list).getAllByText('Ruch Oporu')).toHaveLength(3);
+      expect(screen.getByText(/Szpiedzy wygrali/)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Dalej' })).not.toBeInTheDocument();
     });
   });
 });
