@@ -8,7 +8,6 @@ import { MusicQueue } from '@/pages/MusicQueue';
 import { Admin } from '@/pages/Admin/Admin';
 import { Games } from '@/pages/Games/Games';
 import { Ringo } from '@/pages/Games/Ringo';
-import { ResistanceIconsPreview } from '@/pages/Games/resistance/ResistanceIconsPreview';
 
 export const routes: RouteObject[] = [
   {
@@ -22,7 +21,6 @@ export const routes: RouteObject[] = [
       {path: ROUTE_PATHS.SESSION_GAMES, element: <Games/>},
       {path: ROUTE_PATHS.SESSION_GAMES_RINGO, element: <Ringo/>},
       {path: ROUTE_PATHS.SESSION, element: <MusicQueue/>},
-      ...(import.meta.env.DEV ? [{path: 'dev/resistance-icons', element: <ResistanceIconsPreview/>}] : []),
     ],
   },
 ];
