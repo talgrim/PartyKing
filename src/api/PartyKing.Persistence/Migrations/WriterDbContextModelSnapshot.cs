@@ -58,6 +58,19 @@ namespace PartyKing.Persistence.Migrations
                     b.ToTable("OAuthStates");
                 });
 
+            modelBuilder.Entity("PartyKing.Domain.Entities.Lyrics.LyricsOffset", b =>
+                {
+                    b.Property<string>("SongUrl")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("OffsetMs")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("SongUrl");
+
+                    b.ToTable("LyricsOffsets");
+                });
+
             modelBuilder.Entity("PartyKing.Domain.Entities.Queue.QueueItem", b =>
                 {
                     b.Property<int>("Id")

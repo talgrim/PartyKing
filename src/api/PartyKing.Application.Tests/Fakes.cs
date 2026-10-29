@@ -5,6 +5,7 @@ using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Slideshow.Services;
+using PartyKing.Contract.V1.Lyrics;
 using PartyKing.Contract.V1.Player;
 using PartyKing.Contract.V1.Queue;
 using PartyKing.Contract.V1.Slideshow;
@@ -242,6 +243,7 @@ internal class FakeSessionMusicNotifier : ISessionMusicNotifier
     public List<(Guid SessionId, PlayerStateChangedDto State)> PlayerStateChanged { get; } = [];
     public List<(Guid SessionId, PlayerCommandDto Command)> PlayerCommands { get; } = [];
     public List<(Guid SessionId, FallbackErrorDto Error)> FallbackErrors { get; } = [];
+    public List<(Guid SessionId, LyricsOffsetChangedDto Offset)> LyricsOffsetChanges { get; } = [];
     public List<Guid> SlideshowChanges { get; } = [];
 
     public Task SongAddedAsync(Guid sessionId, QueueItemDto song, CancellationToken cancellationToken)
@@ -287,6 +289,15 @@ internal class FakeSessionMusicNotifier : ISessionMusicNotifier
         CancellationToken cancellationToken)
     {
         FallbackErrors.Add((sessionId, error));
+        return Task.CompletedTask;
+    }
+
+    public Task LyricsOffsetChangedAsync(
+        Guid sessionId,
+        LyricsOffsetChangedDto offset,
+        CancellationToken cancellationToken)
+    {
+        LyricsOffsetChanges.Add((sessionId, offset));
         return Task.CompletedTask;
     }
 

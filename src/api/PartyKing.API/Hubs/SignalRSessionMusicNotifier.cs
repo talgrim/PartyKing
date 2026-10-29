@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 using PartyKing.Application.Realtime;
+using PartyKing.Contract.V1.Lyrics;
 using PartyKing.Contract.V1.Player;
 using PartyKing.Contract.V1.Queue;
 
@@ -58,6 +59,14 @@ internal sealed class SignalRSessionMusicNotifier : ISessionMusicNotifier
         CancellationToken cancellationToken)
     {
         return Clients(sessionId).SendAsync(SessionMusicHubEvents.FallbackErrorChanged, error, cancellationToken);
+    }
+
+    public Task LyricsOffsetChangedAsync(
+        Guid sessionId,
+        LyricsOffsetChangedDto offset,
+        CancellationToken cancellationToken)
+    {
+        return Clients(sessionId).SendAsync(SessionMusicHubEvents.LyricsOffsetChanged, offset, cancellationToken);
     }
 
     public Task SlideshowChangedAsync(Guid sessionId, CancellationToken cancellationToken)

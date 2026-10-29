@@ -60,3 +60,14 @@ describe('SlideshowControls lyrics button', () => {
     expect(button).not.toHaveClass('text-slate-500');
   });
 });
+
+describe('SlideshowControls for guests', () => {
+  it('has no slideshow to switch to and names the drawer after the lyrics', () => {
+    renderControls({ lyricsOnly: true, lyricsActive: true });
+
+    expect(screen.queryByRole('button', { name: 'Show slideshow' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Show lyrics' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hide lyrics' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Maximize' })).toBeInTheDocument();
+  });
+});

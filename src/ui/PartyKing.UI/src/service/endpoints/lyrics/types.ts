@@ -11,4 +11,13 @@ export type LyricsDto = {
   songId: number;
   /** Ordered by time. */
   lines: LyricsLineDto[];
+  /** The timing offset the host or an admin saved for the song; 0 when none was. */
+  offsetMs: number;
+};
+
+// Mirrors PartyKing.Contract.V1.Lyrics.LyricsOffsetChangedDto
+export type LyricsOffsetChangedEvent = {
+  /** The queue item that was playing when the offset was saved. */
+  songId: number;
+  offsetMs: number;
 };
