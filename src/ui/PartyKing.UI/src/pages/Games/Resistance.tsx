@@ -3,6 +3,7 @@ import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-
 import { mutate as mutateGlobal } from 'swr';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -17,8 +18,14 @@ import { ResistanceViewSwitch } from '@/pages/Games/resistance/ResistanceViewSwi
 import { resistancePhaseDescription } from '@/pages/Games/resistance/resistancePhase';
 import { RESISTANCE_RULES } from '@/pages/Games/resistance/resistanceRules';
 import { missionBoardFor } from '@/pages/Games/resistance/resistanceTeams';
-import { sessionGamesPath, sessionPath, sessionResistanceJoinPath } from '@/router/constants';
+import {
+  sessionGamesPath,
+  sessionPath,
+  sessionResistanceJoinPath,
+  sessionResistancePath,
+} from '@/router/constants';
 import { HTTP_STATUS_CODE } from '@/service/constants';
+import { withDevPersona } from '@/service/devPersona';
 import { gamesApi } from '@/service/endpoints/games/gamesApi';
 import { useResistanceGame } from '@/service/endpoints/games/useResistanceGame';
 import { useViewerRole } from '@/service/endpoints/sessions/useViewerRole';
@@ -26,6 +33,9 @@ import { resistanceLobbyKey } from '@/service/realtime/sessionMusicEvents';
 import { useSessionMusicHub } from '@/service/realtime/useSessionMusicHub';
 import { usePersistedFlag } from '@/utils/usePersistedFlag';
 import { ResistanceSettings } from './ResistanceSettings';
+
+/** From this width a player has room for their own view and the board side by side, so there is no switch. */
+const WIDE_QUERY = '(min-width: 1024px)';
 
 /**
  * The Resistance page: the mission board for the players who joined so far, the players around the edge and the
@@ -39,7 +49,7 @@ import { ResistanceSettings } from './ResistanceSettings';
  * playing) has the manager controls, the board in the middle and the players around the edge, and never shows the
  * viewer's role or "Ty", since it is meant for a big screen. Everyone else gets a phone layout: a player switches
  * between their own view (the default, with the role card) and the board with the player list; the choice is kept in
- * `localStorage`. Observers only get the board.
+ * `localStorage`; from 1024 px wide a player sees both at once, without the switch. Observers only get the board.
  */
 export const Resistance = (): ReactNode => {
   const { sessionId = '' } = useParams();
@@ -47,6 +57,7 @@ export const Resistance = (): ReactNode => {
   const { data: game, error, mutate } = useResistanceGame(sessionId);
   const { isHost, isAdmin } = useViewerRole(sessionId);
   const [searchParams] = useSearchParams();
+  const wide = useMediaQuery(WIDE_QUERY);
   const [boardView, setBoardView] = usePersistedFlag('partyking.resistanceBoardView', false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [managingPlayers, setManagingPlayers] = useState(false);
@@ -68,8 +79,9 @@ export const Resistance = (): ReactNode => {
   const tv = canManage && searchParams.get('tv') === '1';
   const isPlayer = game?.yourPlayerId != null;
   const tvLayout = tv || (canManage && !isPlayer);
-  const showSwitch = isPlayer && !tv;
-  const showPlayerView = showSwitch && !boardView;
+  const showSwitch = isPlayer && !tv && !wide;
+  const showPlayerView = isPlayer && !tv && (wide || !boardView);
+  const showBoard = !showPlayerView || wide;
   // The TV tab shares the player's cookies, so it must not show the role or the "Ty" badge of whoever is logged in
   const shownGame = game && tv ? { ...game, yourPlayerId: null, yourRole: null, fellowSpies: null } : game;
 
@@ -194,6 +206,14 @@ export const Resistance = (): ReactNode => {
 
       {!tvLayout && canManage && controlsOpen && (
         <div id="resistance-manager-controls" role="group" aria-label="Game controls" className="flex flex-wrap gap-2">
+          <a
+            href={withDevPersona(`${sessionResistancePath(sessionId)}?tv=1`)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-2 text-slate-200 bg-slate-900 rounded-md hover:bg-slate-700"
+          >
+            Open TV view
+          </a>
           {managerControls}
         </div>
       )}
@@ -203,11 +223,18 @@ export const Resistance = (): ReactNode => {
       ) : (
         <>
           {banner}
-          {showPlayerView && game ? (
-            <ResistancePlayerView game={game} />
-          ) : (
-            <ResistanceCompactBoard game={game} board={board} />
-          )}
+          <div className={wide ? 'flex items-start gap-6' : undefined}>
+            {showPlayerView && game && (
+              <div className={wide ? 'w-1/3 shrink-0' : undefined}>
+                <ResistancePlayerView game={game} />
+              </div>
+            )}
+            {showBoard && (
+              <div className={wide ? 'flex-1 min-w-0' : undefined}>
+                <ResistanceCompactBoard game={game} board={board} />
+              </div>
+            )}
+          </div>
         </>
       )}
 
