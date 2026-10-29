@@ -22,6 +22,14 @@ const game = (count: number, extra: Partial<ResistanceGameDto> = {}): Resistance
   votes: null,
   voteApproved: null,
   revealedRoles: null,
+  rules: {
+    playerCounts: [5, 6, 7, 8, 9, 10].map((playerCount) => ({
+      playerCount,
+      spies: Math.ceil(playerCount / 3),
+      teamSizes: ({ 5: [2, 3, 2, 3, 3], 6: [2, 3, 4, 3, 4], 7: [2, 3, 3, 4, 4] } as Record<number, number[]>)[playerCount] ?? [3, 4, 4, 5, 5],
+      requiredFails: [1, 1, 1, playerCount >= 7 ? 2 : 1, 1],
+    })),
+  },
   ...extra,
 });
 

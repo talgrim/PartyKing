@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   getResistance: vi.fn(),
   openResistance: vi.fn(),
   startResistance: vi.fn(),
+  refreshResistanceRules: vi.fn(),
   selectResistanceTeam: vi.fn(),
   voteResistanceTeam: vi.fn(),
   continueResistance: vi.fn(),
@@ -22,6 +23,7 @@ vi.mock('@/service/endpoints/games/gamesApi', () => ({
     getResistance: mocks.getResistance,
     openResistance: mocks.openResistance,
     startResistance: mocks.startResistance,
+    refreshResistanceRules: mocks.refreshResistanceRules,
     selectResistanceTeam: mocks.selectResistanceTeam,
     voteResistanceTeam: mocks.voteResistanceTeam,
     continueResistance: mocks.continueResistance,
@@ -50,6 +52,14 @@ const lobby = (names: string[], isOpen = false) => ({
   votes: null as { playerId: string; approve: boolean }[] | null,
   voteApproved: null as boolean | null,
   revealedRoles: null as { playerId: string; role: string }[] | null,
+  rules: {
+    playerCounts: [5, 6, 7, 8, 9, 10].map((playerCount) => ({
+      playerCount,
+      spies: Math.ceil(playerCount / 3),
+      teamSizes: ({ 5: [2, 3, 2, 3, 3], 6: [2, 3, 4, 3, 4], 7: [2, 3, 3, 4, 4] } as Record<number, number[]>)[playerCount] ?? [3, 4, 4, 5, 5],
+      requiredFails: [1, 1, 1, playerCount >= 7 ? 2 : 1, 1],
+    })),
+  },
 });
 
 const started = (names: string[], extra: object = {}) => ({
@@ -80,6 +90,7 @@ describe('Resistance', () => {
     mocks.getResistance.mockReset();
     mocks.openResistance.mockReset();
     mocks.startResistance.mockReset();
+    mocks.refreshResistanceRules.mockReset();
     mocks.selectResistanceTeam.mockReset();
     mocks.endResistance.mockReset();
     mocks.getResistance.mockResolvedValue(lobby([]));
@@ -127,6 +138,30 @@ describe('Resistance', () => {
 
     expect(mocks.openResistance).toHaveBeenCalledWith('session-1');
     expect(await screen.findByRole('button', { name: 'Open the game' })).toBeDisabled();
+  });
+
+  it('refreshes the rules while the lobby is closed, for the host too', async () => {
+    mocks.role = { isHost: true, isAdmin: false };
+    mocks.refreshResistanceRules.mockResolvedValue(lobby([]));
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Refresh rules' }));
+
+    expect(mocks.refreshResistanceRules).toHaveBeenCalledWith('session-1');
+  });
+
+  it('disables Refresh rules once the game is open and hides it after the start', async () => {
+    mocks.getResistance.mockResolvedValue(lobby(['Ala'], true));
+    const { unmount } = renderPage();
+
+    expect(await screen.findByRole('button', { name: 'Refresh rules' })).toBeDisabled();
+    unmount();
+
+    mocks.getResistance.mockResolvedValue(started(['Ala', 'Ola', 'Ela', 'Ula', 'Ewa']));
+    renderPage();
+
+    await screen.findByRole('img', { name: 'Leader' });
+    expect(screen.queryByRole('button', { name: 'Refresh rules' })).not.toBeInTheDocument();
   });
 
   it('gives the host no Open button and links back to the games', async () => {
