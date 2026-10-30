@@ -10,8 +10,10 @@ type Props = {
 };
 
 /**
- * Leader window (Strong Leader) and confidence window (No Confidence, after an approved vote): a Strong Leader is in someone's hand, so everyone confirms they play no card (nobody can tell who
- * holds one) and the holder may take the lead instead. The window ends when all confirmed or the lead was taken.
+ * The window before the leader acts (leader window) and the one after an approved vote (confidence window). It opens
+ * whenever anyone holds a playable card, whatever it is, so everybody sees the same thing: a question whether to play a
+ * card. Only a holder of the matching card (Strong Leader, No Confidence) gets the extra button, and nothing here names
+ * a card to those who do not hold it. The window ends when all confirmed or a card was played.
  */
 export const ResistanceLeaderWindow = ({ game, onTakeLead, onNoConfidence, onPass }: Props): ReactNode => {
   const [submitting, setSubmitting] = useState(false);
@@ -21,6 +23,7 @@ export const ResistanceLeaderWindow = ({ game, onTakeLead, onNoConfidence, onPas
   const youLead = game.yourPlayerId === game.leaderPlayerId;
   const passed = game.yourPlayerId != null && game.leaderWindowPassedPlayerIds.includes(game.yourPlayerId);
   const { name, effect, Icon } = PLOT_CARDS[type];
+  const canPlay = card != null && (confidence || !youLead);
 
   const run = async (action: () => Promise<void>) => {
     setSubmitting(true);
@@ -32,12 +35,17 @@ export const ResistanceLeaderWindow = ({ game, onTakeLead, onNoConfidence, onPas
   };
 
   return (
-    <section aria-label={name} className="w-full flex items-center gap-3 rounded-xl bg-slate-900 p-4 ring-1 ring-slate-700 shadow-lg">
-      <Icon className="w-16 shrink-0" title={name} />
+    <section
+      aria-label="Zagrywanie kart"
+      className="w-full flex items-center gap-3 rounded-xl bg-slate-900 p-4 ring-1 ring-slate-700 shadow-lg"
+    >
+      {canPlay && <Icon className="w-16 shrink-0" title={name} />}
       <div className="min-w-0 flex-1">
-        <p className="font-medium text-slate-100">{name}</p>
-        <p className="mb-2 text-sm text-slate-400">{effect}</p>
-        {card != null && (confidence || !youLead) && (
+        <p className="font-medium text-slate-100">Czy zagrywasz kartę Intrygi?</p>
+        <p className="mb-2 text-sm text-slate-400">
+          {canPlay ? effect : 'Potwierdź, że nie zagrywasz karty. Nie widać, kto ma jakie karty.'}
+        </p>
+        {canPlay && (
           <button
             type="button"
             disabled={submitting}

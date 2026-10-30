@@ -65,9 +65,9 @@ export const resistancePhaseDescription = (
         ? ''
         : game.leaderWindowPassedPlayerIds.includes(game.yourPlayerId)
           ? ' Twoje potwierdzenie jest zapisane.'
-          : ' Potwierdź, że nie zagrywasz karty, albo przejmij przywództwo.';
+          : ' Potwierdź, że nie zagrywasz karty (albo zagraj ją).';
 
-      return `${who} (korona), ale zanim cokolwiek zrobi, ktoś może zagrać kartę „Charyzmatyczny Przywódca”. Potwierdzili: ${passed}/${count}.${mine}`;
+      return `${who} (korona), ale zanim cokolwiek zrobi, gracze decydują, czy zagrywają karty Intrygi. Potwierdzili: ${passed}/${count}.${mine}`;
     }
 
     if (game.phase === 'ConfidenceWindow') {
@@ -76,9 +76,9 @@ export const resistancePhaseDescription = (
         ? ''
         : game.leaderWindowPassedPlayerIds.includes(game.yourPlayerId)
           ? ' Twoje potwierdzenie jest zapisane.'
-          : ' Potwierdź, że nie zagrywasz karty, albo odrzuć drużynę.';
+          : ' Potwierdź, że nie zagrywasz karty (albo zagraj ją).';
 
-      return `Drużyna (${names.join(', ')}) została zatwierdzona (${tally}), ale zanim wyruszy, ktoś może zagrać kartę „Nie ufajcie mu”. Potwierdzili: ${passed}/${count}.${mine}`;
+      return `Drużyna (${names.join(', ')}) została zatwierdzona (${tally}), ale zanim wyruszy, gracze decydują, czy zagrywają karty Intrygi. Potwierdzili: ${passed}/${count}.${mine}`;
     }
 
     if (game.phase === 'ResolvingCards') {
