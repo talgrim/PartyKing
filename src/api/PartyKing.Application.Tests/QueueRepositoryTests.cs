@@ -11,13 +11,12 @@ using PartyKing.Persistence.Database;
 namespace PartyKing.Application.Tests;
 
 /// <summary>
-/// Runs against a real SQLite file: the contexts hardcode "Data Source=PartyKing.db", so each test class gets a
-/// fresh working directory to put it in.
+/// Runs against a real SQLite file in a fresh temp directory per test.
 /// </summary>
 public class QueueRepositoryTests : IAsyncLifetime
 {
-    private readonly string _originalDirectory = Environment.CurrentDirectory;
     private readonly string _directory = Path.Combine(Path.GetTempPath(), $"partyking-tests-{Guid.NewGuid():N}");
+    private string ConnectionString => $"Data Source={Path.Combine(_directory, "PartyKing.db")}";
     private ServiceProvider _provider = null!;
     private readonly RepositoryMetrics _metrics = new();
     private QueueRepository _repository = null!;
@@ -26,11 +25,10 @@ public class QueueRepositoryTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         Directory.CreateDirectory(_directory);
-        Environment.CurrentDirectory = _directory;
 
         _provider = new ServiceCollection()
-            .AddDbContextFactory<WriterDbContext>()
-            .AddDbContextFactory<ReaderDbContext>()
+            .AddDbContextFactory<WriterDbContext>(options => options.UseSqlite(ConnectionString))
+            .AddDbContextFactory<ReaderDbContext>(options => options.UseSqlite(ConnectionString))
             .BuildServiceProvider();
 
         var writer = _provider.GetRequiredService<IDbContextFactory<WriterDbContext>>();
@@ -55,7 +53,6 @@ public class QueueRepositoryTests : IAsyncLifetime
         await _provider.DisposeAsync();
         _metrics.Dispose();
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
-        Environment.CurrentDirectory = _originalDirectory;
         Directory.Delete(_directory, recursive: true);
     }
 

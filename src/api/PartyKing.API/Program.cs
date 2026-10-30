@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.StaticFiles;
 using PartyKing.API;
 using PartyKing.API.Controllers;
+using PartyKing.API.Controllers.Games;
+using PartyKing.API.Development;
 using PartyKing.API.Hubs;
 using PartyKing.Application;
 using PartyKing.Application.Slideshow.Services;
@@ -63,7 +65,7 @@ builder.Services.AddRateLimiter(options =>
                 Window = TimeSpan.FromMinutes(1)
             }));
     // Every request spends the free quota of the language model
-    options.AddPolicy(GamesController.SuggestionsRateLimitPolicy, context =>
+    options.AddPolicy(GameControllerBase.SuggestionsRateLimitPolicy, context =>
         RateLimitPartition.GetFixedWindowLimiter(
             context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             _ => new FixedWindowRateLimiterOptions
@@ -117,6 +119,7 @@ app.UseRouting();
 if (app.Environment.IsDevelopment())
 {
     app.UseCors(corsPolicy);
+    app.UseMiddleware<DevPersonaMiddleware>();
 }
 
 app

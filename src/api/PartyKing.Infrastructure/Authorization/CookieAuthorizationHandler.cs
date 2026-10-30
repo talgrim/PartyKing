@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
+using PartyKing.Domain.Entities.Games;
 using PartyKing.Infrastructure.Authentication;
 
 namespace PartyKing.Infrastructure.Authorization;
@@ -23,11 +24,11 @@ public interface ICookieAuthorizationHandler
     /// <summary>Reads the stamp stored for the session; false when there is none or the cookie was tampered with.</summary>
     bool TryReadSessionAccess(HttpRequest request, Guid sessionId, out string stamp);
 
-    /// <summary>Remembers the Ringo player this browser joined as in the session.</summary>
-    void GrantRingoPlayer(Guid sessionId, Guid playerId, HttpContext? httpContext);
+    /// <summary>Remembers the player this browser joined the session's game as.</summary>
+    void GrantGamePlayer(GameKind game, Guid sessionId, Guid playerId, HttpContext? httpContext);
 
-    /// <summary>Reads the Ringo player id stored for the session; false when there is none or the cookie was tampered with.</summary>
-    bool TryReadRingoPlayer(HttpRequest request, Guid sessionId, out Guid playerId);
+    /// <summary>Reads the player id stored for the session's game; false when there is none or the cookie was tampered with.</summary>
+    bool TryReadGamePlayer(GameKind game, HttpRequest request, Guid sessionId, out Guid playerId);
 }
 
 internal class CookieAuthorizationHandler : ICookieAuthorizationHandler
@@ -42,14 +43,21 @@ internal class CookieAuthorizationHandler : ICookieAuthorizationHandler
     private readonly IDataProtector _userProtector;
     private readonly IDataProtector _adminProtector;
     private readonly IDataProtector _sessionAccessProtector;
-    private readonly IDataProtector _ringoPlayerProtector;
+    private readonly Dictionary<GameKind, (string CookieName, IDataProtector Protector)> _gamePlayerCookies;
 
     public CookieAuthorizationHandler(IDataProtectionProvider dataProtectionProvider)
     {
         _userProtector = dataProtectionProvider.CreateProtector("PartyKing.UserCookie");
         _adminProtector = dataProtectionProvider.CreateProtector("PartyKing.AdminCookie");
         _sessionAccessProtector = dataProtectionProvider.CreateProtector("PartyKing.SessionAccessCookie");
-        _ringoPlayerProtector = dataProtectionProvider.CreateProtector("PartyKing.RingoPlayerCookie");
+        _gamePlayerCookies = new()
+        {
+            [GameKind.Ringo] = (
+                Constants.RingoPlayerCookieName, dataProtectionProvider.CreateProtector("PartyKing.RingoPlayerCookie")),
+            [GameKind.Resistance] = (
+                Constants.ResistancePlayerCookieName,
+                dataProtectionProvider.CreateProtector("PartyKing.ResistancePlayerCookie")),
+        };
     }
 
     public void Authorize(string profileId, HttpContext? httpContext)
@@ -131,32 +139,34 @@ internal class CookieAuthorizationHandler : ICookieAuthorizationHandler
         return stamp.Length > 0;
     }
 
-    public void GrantRingoPlayer(Guid sessionId, Guid playerId, HttpContext? httpContext)
+    public void GrantGamePlayer(GameKind game, Guid sessionId, Guid playerId, HttpContext? httpContext)
     {
         var context = Require(httpContext);
+        var (cookieName, protector) = _gamePlayerCookies[game];
 
-        var players = ReadRingoPlayers(context.Request)
+        var players = ReadGamePlayers(game, context.Request)
             .Where(x => x.SessionId != sessionId)
             .Append((SessionId: sessionId, PlayerId: playerId))
             .TakeLast(MaxUnlockedSessions);
 
         context.Response.Cookies.Append(
-            Constants.RingoPlayerCookieName,
-            _ringoPlayerProtector.Protect(string.Join(';', players.Select(x => $"{x.SessionId:N}:{x.PlayerId:N}"))),
+            cookieName,
+            protector.Protect(string.Join(';', players.Select(x => $"{x.SessionId:N}:{x.PlayerId:N}"))),
             GetOptions(SessionAccessExpirationTime, context));
     }
 
-    public bool TryReadRingoPlayer(HttpRequest request, Guid sessionId, out Guid playerId)
+    public bool TryReadGamePlayer(GameKind game, HttpRequest request, Guid sessionId, out Guid playerId)
     {
-        playerId = ReadRingoPlayers(request).LastOrDefault(x => x.SessionId == sessionId).PlayerId;
+        playerId = ReadGamePlayers(game, request).LastOrDefault(x => x.SessionId == sessionId).PlayerId;
 
         return playerId != Guid.Empty;
     }
 
-    private IEnumerable<(Guid SessionId, Guid PlayerId)> ReadRingoPlayers(HttpRequest request)
+    private IEnumerable<(Guid SessionId, Guid PlayerId)> ReadGamePlayers(GameKind game, HttpRequest request)
     {
-        if (!request.Cookies.TryGetValue(Constants.RingoPlayerCookieName, out var protectedValue)
-            || !TryUnprotect(_ringoPlayerProtector, protectedValue, out var value))
+        var (cookieName, protector) = _gamePlayerCookies[game];
+        if (!request.Cookies.TryGetValue(cookieName, out var protectedValue)
+            || !TryUnprotect(protector, protectedValue, out var value))
         {
             yield break;
         }

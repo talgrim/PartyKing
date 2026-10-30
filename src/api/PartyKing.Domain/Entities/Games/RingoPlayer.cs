@@ -1,27 +1,4 @@
 namespace PartyKing.Domain.Entities.Games;
 
-/// <summary>A person who joined a Ringo game by name. The turn order is <see cref="Order"/>.</summary>
-public class RingoPlayer
-{
-    public Guid SessionId { get; set; }
-    public Guid PlayerId { get; set; }
-
-    /// <summary>The name shown to everyone, without the "(host)" suffix.</summary>
-    public string Name { get; set; } = string.Empty;
-
-    /// <summary>Trimmed, upper-cased name that is unique within the game.</summary>
-    public string NormalizedName { get; set; } = string.Empty;
-
-    /// <summary>Position in the turn order, from 0.</summary>
-    public int Order { get; set; }
-
-    public DateTimeOffset JoinedAt { get; set; }
-
-    /// <summary>The Spotify profile id of a player who joined as the session host; null for anyone else.</summary>
-    public string? ProfileId { get; set; }
-
-    public const string HostSuffix = " (host)";
-
-    /// <summary>The name with the "(host)" suffix for the session host; what flips and the board show.</summary>
-    public string DisplayName => ProfileId is null ? Name : Name + HostSuffix;
-}
+/// <summary>A person who joined a Ringo game by name. The turn order is <see cref="LobbyPlayer.Order"/>.</summary>
+public class RingoPlayer : LobbyPlayer;

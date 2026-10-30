@@ -13,8 +13,8 @@ namespace PartyKing.Application.Tests;
 /// </summary>
 public class RingoSessionDeletionTests : IAsyncLifetime
 {
-    private readonly string _originalDirectory = Environment.CurrentDirectory;
     private readonly string _directory = Path.Combine(Path.GetTempPath(), $"partyking-tests-{Guid.NewGuid():N}");
+    private string ConnectionString => $"Data Source={Path.Combine(_directory, "PartyKing.db")}";
     private ServiceProvider _provider = null!;
     private IDbContextFactory<WriterDbContext> _writer = null!;
     private RingoGamesRepository _ringo = null!;
@@ -23,11 +23,10 @@ public class RingoSessionDeletionTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         Directory.CreateDirectory(_directory);
-        Environment.CurrentDirectory = _directory;
 
         _provider = new ServiceCollection()
-            .AddDbContextFactory<WriterDbContext>()
-            .AddDbContextFactory<ReaderDbContext>()
+            .AddDbContextFactory<WriterDbContext>(options => options.UseSqlite(ConnectionString))
+            .AddDbContextFactory<ReaderDbContext>(options => options.UseSqlite(ConnectionString))
             .BuildServiceProvider();
 
         _writer = _provider.GetRequiredService<IDbContextFactory<WriterDbContext>>();
@@ -46,7 +45,6 @@ public class RingoSessionDeletionTests : IAsyncLifetime
     {
         await _provider.DisposeAsync();
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
-        Environment.CurrentDirectory = _originalDirectory;
         Directory.Delete(_directory, recursive: true);
     }
 
@@ -61,8 +59,8 @@ public class RingoSessionDeletionTests : IAsyncLifetime
 
         var host = await _ringo.JoinAsync(session.Id, NewPlayer(session.Id, "Ola", profileId: "spotify-host"), CancellationToken.None);
         var guest = await _ringo.JoinAsync(session.Id, NewPlayer(session.Id, "Bartek"), CancellationToken.None);
-        Assert.Equal(RingoPlayersStatus.Done, host.Status);
-        Assert.Equal(RingoPlayersStatus.Done, guest.Status);
+        Assert.Equal(LobbyStatus.Done, host.Status);
+        Assert.Equal(LobbyStatus.Done, guest.Status);
 
         var flip = await _ringo.FlipAsync(session.Id, 5, "admin", turnOf: null, DateTimeOffset.UtcNow, CancellationToken.None);
         Assert.Equal(RingoFlipStatus.Flipped, flip.Status);
@@ -77,7 +75,7 @@ public class RingoSessionDeletionTests : IAsyncLifetime
         SessionId = sessionId,
         PlayerId = Guid.NewGuid(),
         Name = name,
-        NormalizedName = (profileId is null ? name : name + RingoPlayer.HostSuffix).ToUpperInvariant(),
+        NormalizedName = (profileId is null ? name : name + LobbyPlayer.HostSuffix).ToUpperInvariant(),
         JoinedAt = DateTimeOffset.UtcNow,
         ProfileId = profileId,
     };

@@ -9,66 +9,60 @@ using PartyKing.Infrastructure.Repositories;
 
 namespace PartyKing.Application.Games.Services;
 
-/// <summary>Who calls: the host's Spotify profile id, whether an admin, and the player id of the caller's device.</summary>
-public record RingoCaller(string? ProfileId, bool IsAdmin, Guid? PlayerId = null);
-
 public interface IRingoService
 {
     /// <summary>The session's game. NotFound when there is none; Forbidden unless host, admin or a player of it.</summary>
-    Task<ErrorOr<RingoGameDto>> GetAsync(Guid sessionId, RingoCaller caller, CancellationToken cancellationToken);
+    Task<ErrorOr<RingoGameDto>> GetAsync(Guid sessionId, GameCaller caller, CancellationToken cancellationToken);
 
     /// <summary>What a guest may know: whether the game is open and whether the caller joined. NotFound without a game.</summary>
-    Task<ErrorOr<RingoLobbyDto>> GetLobbyAsync(Guid sessionId, RingoCaller caller, CancellationToken cancellationToken);
+    Task<ErrorOr<RingoLobbyDto>> GetLobbyAsync(Guid sessionId, GameCaller caller, CancellationToken cancellationToken);
 
     /// <summary>Starts a game with a random layout. Conflict when the session already has one.</summary>
-    Task<ErrorOr<RingoGameDto>> StartAsync(Guid sessionId, RingoCaller caller, CancellationToken cancellationToken);
+    Task<ErrorOr<RingoGameDto>> StartAsync(Guid sessionId, GameCaller caller, CancellationToken cancellationToken);
 
     /// <summary>Admin only: opens the game to guests (idempotent). NotFound without a game, Forbidden for the host.</summary>
-    Task<ErrorOr<RingoGameDto>> OpenAsync(Guid sessionId, RingoCaller caller, CancellationToken cancellationToken);
+    Task<ErrorOr<RingoGameDto>> OpenAsync(Guid sessionId, GameCaller caller, CancellationToken cancellationToken);
 
     /// <summary>
     /// Joins an open game and returns the new player's id (the caller's own one when they already joined). The session
-    /// host joins under the first name of their Spotify profile and ignores <paramref name="name"/>. Validation error
-    /// for an empty or over-long name, Conflict while the game is closed or the name is taken, NotFound without a game.
+    /// host joins under the first name of their Spotify profile and ignores <paramref name="name"/>; an admin without
+    /// a name joins as "admin". Validation error for an empty or over-long name, Conflict while the game is closed or
+    /// the name is taken, NotFound without a game.
     /// </summary>
-    Task<ErrorOr<Guid>> JoinAsync(Guid sessionId, string? name, RingoCaller caller, CancellationToken cancellationToken);
+    Task<ErrorOr<Guid>> JoinAsync(Guid sessionId, string? name, GameCaller caller, CancellationToken cancellationToken);
 
     /// <summary>Host or admin: removes a player. NotFound for an unknown game or player.</summary>
-    Task<ErrorOr<RingoGameDto>> KickAsync(Guid sessionId, Guid playerId, RingoCaller caller, CancellationToken cancellationToken);
+    Task<ErrorOr<RingoGameDto>> KickAsync(Guid sessionId, Guid playerId, GameCaller caller, CancellationToken cancellationToken);
 
     /// <summary>Host or admin: sets the turn order. Conflict when the ids are not exactly the game's players.</summary>
     Task<ErrorOr<RingoGameDto>> ReorderAsync(
-        Guid sessionId, IReadOnlyList<Guid>? playerIds, RingoCaller caller, CancellationToken cancellationToken);
+        Guid sessionId, IReadOnlyList<Guid>? playerIds, GameCaller caller, CancellationToken cancellationToken);
 
     /// <summary>
     /// Flips a card and makes it the pending one (idempotent for a flipped card). Host and admins may flip at any
     /// time, a player only on their turn (Conflict otherwise). Validation error for an id outside 0-51, NotFound
     /// without a game, Conflict while another card is pending or after the fourth king.
     /// </summary>
-    Task<ErrorOr<RingoGameDto>> FlipAsync(Guid sessionId, int cardId, RingoCaller caller, CancellationToken cancellationToken);
+    Task<ErrorOr<RingoGameDto>> FlipAsync(Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken);
 
     /// <summary>
     /// Clears the pending card (idempotent) and passes the turn on. Host, admins and the player whose turn it is.
     /// NotFound without a game.
     /// </summary>
-    Task<ErrorOr<RingoGameDto>> ContinueAsync(Guid sessionId, RingoCaller caller, CancellationToken cancellationToken);
+    Task<ErrorOr<RingoGameDto>> ContinueAsync(Guid sessionId, GameCaller caller, CancellationToken cancellationToken);
 
     /// <summary>Ends the game. NotFound when there is none.</summary>
-    Task<ErrorOr<Deleted>> EndAsync(Guid sessionId, RingoCaller caller, CancellationToken cancellationToken);
+    Task<ErrorOr<Deleted>> EndAsync(Guid sessionId, GameCaller caller, CancellationToken cancellationToken);
 }
 
 internal class RingoService : IRingoService
 {
     public const int CardCount = 52;
-    public const int MaxNameLength = 30;
 
-    private const string FallbackHostName = "Host";
-
-    private readonly ISessionService _sessionService;
-    private readonly ISessionsRepository _sessions;
     private readonly IRingoGamesRepository _games;
     private readonly IDateTimeProvider _clock;
     private readonly ISessionMusicNotifier _notifier;
+    private readonly GameLobby<RingoGame, RingoPlayer> _lobby;
 
     public RingoService(
         ISessionService sessionService,
@@ -77,37 +71,39 @@ internal class RingoService : IRingoService
         IDateTimeProvider clock,
         ISessionMusicNotifier notifier)
     {
-        _sessionService = sessionService;
-        _sessions = sessions;
         _games = games;
         _clock = clock;
         _notifier = notifier;
+        _lobby = new GameLobby<RingoGame, RingoPlayer>(
+            sessionService, sessions, games, clock, new RingoLobbyNotifier(notifier), new GameLobbyOptions("Ringo"));
     }
 
     public async Task<ErrorOr<RingoGameDto>> GetAsync(
-        Guid sessionId, RingoCaller caller, CancellationToken cancellationToken)
+        Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
     {
-        var access = await AccessAsync(sessionId, caller, cancellationToken);
+        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
         if (access.IsError)
         {
             return access.Errors;
         }
 
-        return access.Value.Game is null ? NoGame : ToDto(access.Value.Game, caller);
+        return access.Value.Game is null ? _lobby.NoGame : ToDto(access.Value.Game, caller);
     }
 
     public async Task<ErrorOr<RingoLobbyDto>> GetLobbyAsync(
-        Guid sessionId, RingoCaller caller, CancellationToken cancellationToken)
+        Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
     {
         var game = await _games.GetAsync(sessionId, cancellationToken);
 
-        return game is null ? NoGame : new RingoLobbyDto(game.Seed, game.IsOpen, IsPlayer(game, caller));
+        return game is null
+            ? _lobby.NoGame
+            : new RingoLobbyDto(game.Seed, game.IsOpen, GameLobby<RingoGame, RingoPlayer>.IsPlayer(game, caller));
     }
 
     public async Task<ErrorOr<RingoGameDto>> StartAsync(
-        Guid sessionId, RingoCaller caller, CancellationToken cancellationToken)
+        Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
     {
-        if (await AuthorizeAsync(sessionId, caller, cancellationToken) is { IsError: true } denied)
+        if (await _lobby.AuthorizeAsync(sessionId, caller, cancellationToken) is { IsError: true } denied)
         {
             return denied.Errors;
         }
@@ -130,145 +126,39 @@ internal class RingoService : IRingoService
     }
 
     public async Task<ErrorOr<RingoGameDto>> OpenAsync(
-        Guid sessionId, RingoCaller caller, CancellationToken cancellationToken)
+        Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
     {
-        if (!caller.IsAdmin)
-        {
-            return Error.Forbidden("Ringo.AdminOnly", "Only an admin can open the game to guests.");
-        }
+        var result = await _lobby.OpenAsync(sessionId, caller, cancellationToken);
 
-        var existing = await _games.GetAsync(sessionId, cancellationToken);
-        if (existing is null)
-        {
-            return NoGame;
-        }
-
-        if (existing.IsOpen)
-        {
-            return ToDto(existing, caller);
-        }
-
-        var game = await _games.OpenAsync(sessionId, cancellationToken);
-        if (game is null)
-        {
-            return NoGame;
-        }
-
-        await _notifier.RingoOpenedAsync(sessionId, cancellationToken);
-        await _notifier.RingoChangedAsync(sessionId, cancellationToken);
-
-        return ToDto(game, caller);
+        return result.IsError ? result.Errors : ToDto(result.Value, caller);
     }
 
-    public async Task<ErrorOr<Guid>> JoinAsync(
-        Guid sessionId, string? name, RingoCaller caller, CancellationToken cancellationToken)
+    public Task<ErrorOr<Guid>> JoinAsync(
+        Guid sessionId, string? name, GameCaller caller, CancellationToken cancellationToken)
     {
-        var session = await _sessions.GetAsync(sessionId, cancellationToken);
-        if (session is null)
-        {
-            return Error.NotFound("Ringo.SessionNotFound", "The session was not found.");
-        }
-
-        var game = await _games.GetAsync(sessionId, cancellationToken);
-        if (game is null)
-        {
-            return NoGame;
-        }
-
-        if (caller.PlayerId is { } existing && game.Players.Any(x => x.PlayerId == existing))
-        {
-            return existing;
-        }
-
-        var isHost = caller.ProfileId is not null && session.HostProfileId == caller.ProfileId;
-        var playerName = isHost ? HostName(session.HostProfile?.DisplayName) : name?.Trim() ?? string.Empty;
-        if (!isHost && ValidateName(playerName) is { } invalid)
-        {
-            return invalid;
-        }
-
-        var player = new RingoPlayer
-        {
-            PlayerId = Guid.NewGuid(),
-            Name = playerName,
-            ProfileId = isHost ? caller.ProfileId : null,
-            JoinedAt = _clock.UtcNow,
-        };
-        player.NormalizedName = player.DisplayName.ToUpperInvariant();
-
-        var result = await _games.JoinAsync(sessionId, player, cancellationToken);
-        switch (result.Status)
-        {
-            case RingoPlayersStatus.NoGame:
-                return NoGame;
-            case RingoPlayersStatus.NotOpen:
-                return Error.Conflict("Ringo.NotOpen", "The game is not open to guests.");
-            case RingoPlayersStatus.NameTaken:
-                return Error.Conflict("Ringo.NameTaken", "Another player already uses this name.");
-        }
-
-        await _notifier.RingoChangedAsync(sessionId, cancellationToken);
-
-        return player.PlayerId;
+        return _lobby.JoinAsync(sessionId, name, caller, cancellationToken);
     }
 
     public async Task<ErrorOr<RingoGameDto>> KickAsync(
-        Guid sessionId, Guid playerId, RingoCaller caller, CancellationToken cancellationToken)
+        Guid sessionId, Guid playerId, GameCaller caller, CancellationToken cancellationToken)
     {
-        if (await AuthorizeAsync(sessionId, caller, cancellationToken) is { IsError: true } denied)
-        {
-            return denied.Errors;
-        }
+        var result = await _lobby.KickAsync(sessionId, playerId, caller, cancellationToken);
 
-        var result = await _games.KickAsync(sessionId, playerId, cancellationToken);
-        if (result.Status == RingoPlayersStatus.NoGame)
-        {
-            return NoGame;
-        }
-
-        if (result.Status == RingoPlayersStatus.NoPlayer)
-        {
-            return Error.NotFound("Ringo.PlayerNotFound", "The game has no such player.");
-        }
-
-        await _notifier.RingoChangedAsync(sessionId, cancellationToken);
-
-        return ToDto(result.Game!, caller);
+        return result.IsError ? result.Errors : ToDto(result.Value, caller);
     }
 
     public async Task<ErrorOr<RingoGameDto>> ReorderAsync(
-        Guid sessionId, IReadOnlyList<Guid>? playerIds, RingoCaller caller, CancellationToken cancellationToken)
+        Guid sessionId, IReadOnlyList<Guid>? playerIds, GameCaller caller, CancellationToken cancellationToken)
     {
-        if (await AuthorizeAsync(sessionId, caller, cancellationToken) is { IsError: true } denied)
-        {
-            return denied.Errors;
-        }
+        var result = await _lobby.ReorderAsync(sessionId, playerIds, caller, cancellationToken);
 
-        if (playerIds is null)
-        {
-            return Error.Validation("Ringo.InvalidOrder", "The player ids are required.");
-        }
-
-        var result = await _games.ReorderAsync(sessionId, playerIds, cancellationToken);
-        if (result.Status == RingoPlayersStatus.NoGame)
-        {
-            return NoGame;
-        }
-
-        if (result.Status == RingoPlayersStatus.OrderMismatch)
-        {
-            return Error.Conflict("Ringo.OrderMismatch", "The players changed, try again.");
-        }
-
-        await _notifier.RingoChangedAsync(sessionId, cancellationToken);
-
-        return ToDto(result.Game!, caller);
+        return result.IsError ? result.Errors : ToDto(result.Value, caller);
     }
 
     public async Task<ErrorOr<RingoGameDto>> FlipAsync(
-        Guid sessionId, int cardId, RingoCaller caller, CancellationToken cancellationToken)
+        Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken)
     {
-        var access = await AccessAsync(sessionId, caller, cancellationToken);
+        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
         if (access.IsError)
         {
             return access.Errors;
@@ -287,7 +177,7 @@ internal class RingoService : IRingoService
         switch (result.Status)
         {
             case RingoFlipStatus.NoGame:
-                return NoGame;
+                return _lobby.NoGame;
             case RingoFlipStatus.NotYourTurn:
                 return Error.Conflict("Ringo.NotYourTurn", "It is another player's turn.");
             case RingoFlipStatus.GameOver:
@@ -303,9 +193,9 @@ internal class RingoService : IRingoService
     }
 
     public async Task<ErrorOr<RingoGameDto>> ContinueAsync(
-        Guid sessionId, RingoCaller caller, CancellationToken cancellationToken)
+        Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
     {
-        var access = await AccessAsync(sessionId, caller, cancellationToken);
+        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
         if (access.IsError)
         {
             return access.Errors;
@@ -315,7 +205,7 @@ internal class RingoService : IRingoService
         var result = await _games.ContinueAsync(sessionId, turnOf, cancellationToken);
         if (result.Status == RingoContinueStatus.NoGame)
         {
-            return NoGame;
+            return _lobby.NoGame;
         }
 
         if (result.Status == RingoContinueStatus.NotYourTurn)
@@ -329,16 +219,16 @@ internal class RingoService : IRingoService
     }
 
     public async Task<ErrorOr<Deleted>> EndAsync(
-        Guid sessionId, RingoCaller caller, CancellationToken cancellationToken)
+        Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
     {
-        if (await AuthorizeAsync(sessionId, caller, cancellationToken) is { IsError: true } denied)
+        if (await _lobby.AuthorizeAsync(sessionId, caller, cancellationToken) is { IsError: true } denied)
         {
             return denied.Errors;
         }
 
         if (!await _games.DeleteAsync(sessionId, cancellationToken))
         {
-            return NoGame;
+            return _lobby.NoGame;
         }
 
         await _notifier.RingoChangedAsync(sessionId, cancellationToken);
@@ -346,77 +236,7 @@ internal class RingoService : IRingoService
         return Result.Deleted;
     }
 
-    /// <summary>The first word of the Spotify display name (all of it when it has no spaces).</summary>
-    public static string HostName(string? displayName)
-    {
-        var first = displayName?.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-        if (first is null)
-        {
-            return FallbackHostName;
-        }
-
-        return first.Length > MaxNameLength ? first[..MaxNameLength] : first;
-    }
-
-    private static Error NoGame => Error.NotFound("Ringo.NotFound", "The session has no Ringo game.");
-
-    private static Error? ValidateName(string name)
-    {
-        if (name.Length == 0)
-        {
-            return Error.Validation("Ringo.InvalidName", "The name must not be empty.");
-        }
-
-        if (name.Length > MaxNameLength)
-        {
-            return Error.Validation("Ringo.InvalidName", $"The name must be at most {MaxNameLength} characters.");
-        }
-
-        // The suffix is how everyone recognizes the host, so a guest can't spell it
-        if (name.EndsWith(RingoPlayer.HostSuffix.Trim(), StringComparison.OrdinalIgnoreCase))
-        {
-            return Error.Validation("Ringo.InvalidName", "The name must not end with (host).");
-        }
-
-        return null;
-    }
-
-    private static bool IsPlayer(RingoGame game, RingoCaller caller)
-    {
-        return caller.PlayerId is { } id && game.Players.Any(x => x.PlayerId == id);
-    }
-
-    private Task<ErrorOr<Success>> AuthorizeAsync(
-        Guid sessionId, RingoCaller caller, CancellationToken cancellationToken)
-    {
-        return _sessionService.AuthorizeManagerAsync(sessionId, caller.ProfileId, caller.IsAdmin, cancellationToken);
-    }
-
-    private readonly record struct Access(bool IsManager, RingoGame? Game);
-
-    /// <summary>
-    /// The host and admins always get in. Anyone else needs to be a player of the game, and is Forbidden whether or
-    /// not a game exists, so a guest can't tell.
-    /// </summary>
-    private async Task<ErrorOr<Access>> AccessAsync(
-        Guid sessionId, RingoCaller caller, CancellationToken cancellationToken)
-    {
-        var authorization = await AuthorizeAsync(sessionId, caller, cancellationToken);
-        if (authorization.IsError && authorization.FirstError.Type != ErrorType.Forbidden)
-        {
-            return authorization.Errors;
-        }
-
-        var game = await _games.GetAsync(sessionId, cancellationToken);
-        if (authorization.IsError && (game is null || !IsPlayer(game, caller)))
-        {
-            return authorization.Errors;
-        }
-
-        return new Access(!authorization.IsError, game);
-    }
-
-    private static RingoGameDto ToDto(RingoGame game, RingoCaller caller)
+    private static RingoGameDto ToDto(RingoGame game, GameCaller caller)
     {
         var flips = game.Flips
             .OrderBy(x => x.Order)
@@ -434,6 +254,22 @@ internal class RingoService : IRingoService
             game.IsOpen,
             players,
             RingoTurns.Current(game)?.PlayerId,
-            IsPlayer(game, caller) ? caller.PlayerId : null);
+            GameLobby<RingoGame, RingoPlayer>.IsPlayer(game, caller) ? caller.PlayerId : null);
+    }
+
+    private sealed class RingoLobbyNotifier : IGameLobbyNotifier
+    {
+        private readonly ISessionMusicNotifier _notifier;
+
+        public RingoLobbyNotifier(ISessionMusicNotifier notifier)
+        {
+            _notifier = notifier;
+        }
+
+        public Task OpenedAsync(Guid sessionId, CancellationToken cancellationToken) =>
+            _notifier.RingoOpenedAsync(sessionId, cancellationToken);
+
+        public Task ChangedAsync(Guid sessionId, CancellationToken cancellationToken) =>
+            _notifier.RingoChangedAsync(sessionId, cancellationToken);
     }
 }
