@@ -415,6 +415,62 @@ public class ResistanceServiceTests
     }
 
     [Fact]
+    public async Task PlotCards_AreDrawnForTheLeaderAndDealtToOthers_HandsStayPrivateAndCountsPublic()
+    {
+        var ct = CancellationToken.None;
+        await _service.CreateAsync(_id, Host, ct);
+        await _service.SetPlotCardsAsync(_id, true, Host, ct);
+        await _service.OpenAsync(_id, Admin, ct);
+        var callers = await JoinPlayersAsync(5);
+        var started = await _service.StartAsync(_id, Host, ct);
+        var leader = callers.First(x => x.PlayerId == started.Value.LeaderPlayerId);
+        var others = callers.Where(x => x.PlayerId != leader.PlayerId).ToList();
+
+        Assert.Equal(ResistancePhaseDto.DealingCards, started.Value.Phase);
+        Assert.Equal(1, started.Value.Rules.PlotCardsPerRound);
+        var drawn = (await _service.GetAsync(_id, leader, ct)).Value.YourPlotCards;
+        Assert.Single(drawn);
+        foreach (var other in others)
+        {
+            Assert.Empty((await _service.GetAsync(_id, other, ct)).Value.YourPlotCards);
+        }
+
+        Assert.Equal("Resistance.CardsNotDealt", (await _service.SelectTeamAsync(_id, [leader.PlayerId!.Value], leader, ct)).FirstError.Code);
+        Assert.Equal("Resistance.NotLeader", (await _service.DealPlotCardsAsync(_id, [], others[0], ct)).FirstError.Code);
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _service.DealPlotCardsAsync(_id, [], Host, ct)).FirstError.Type);
+
+        var receiver = others[0];
+        var deal = drawn.Where(x => x.ToDeal).Select(x => new ResistancePlotCardAssignmentDto(x.Id, receiver.PlayerId!.Value)).ToList();
+        var before = _notifier.ResistanceChanges.Count;
+        var dealt = await _service.DealPlotCardsAsync(_id, deal, leader, ct);
+
+        Assert.Equal(ResistancePhaseDto.SelectingTeam, dealt.Value.Phase);
+        Assert.Equal(before + 1, _notifier.ResistanceChanges.Count);
+        Assert.Equal(1, dealt.Value.PlotCardCounts.Sum(x => x.Count));
+        Assert.Equal(deal.Count, (await _service.GetAsync(_id, receiver, ct)).Value.YourPlotCards.Count);
+        foreach (var other in others.Skip(1))
+        {
+            Assert.Empty((await _service.GetAsync(_id, other, ct)).Value.YourPlotCards);
+        }
+
+        Assert.Equal("Resistance.NotDealing", (await _service.DealPlotCardsAsync(_id, [], leader, ct)).FirstError.Code);
+    }
+
+    [Fact]
+    public async Task WithoutThePlotCards_TheGameShowsNoCardsAndPicksAtOnce()
+    {
+        var ct = CancellationToken.None;
+        var callers = await OpenGameAndJoinAsync(5);
+        var started = await _service.StartAsync(_id, Host, ct);
+        var leader = callers.First(x => x.PlayerId == started.Value.LeaderPlayerId);
+
+        Assert.Equal(ResistancePhaseDto.SelectingTeam, started.Value.Phase);
+        Assert.Empty(started.Value.PlotCardCounts);
+        Assert.Empty((await _service.GetAsync(_id, leader, ct)).Value.YourPlotCards);
+        Assert.Equal("Resistance.NotDealing", (await _service.DealPlotCardsAsync(_id, [], leader, ct)).FirstError.Code);
+    }
+
+    [Fact]
     public async Task SelectingATeam_LetsTheLeaderPickThemselvesAndLocksTheTeam()
     {
         var ct = CancellationToken.None;
@@ -1389,6 +1445,10 @@ public class ResistanceServiceTests
             {
                 status = ResistanceTeamStatus.NotLeader;
             }
+            else if (game.Phase == ResistancePhase.DealingCards)
+            {
+                status = ResistanceTeamStatus.CardsNotDealt;
+            }
             else if (game.Phase != ResistancePhase.SelectingTeam)
             {
                 status = ResistanceTeamStatus.AlreadySubmitted;
@@ -1415,6 +1475,65 @@ public class ResistanceServiceTests
             }
 
             return Task.FromResult(new ResistanceTeamResult(status, game));
+        }
+
+        public Task<ResistanceDealResult> DealPlotCardsAsync(
+            Guid sessionId, Guid? callerPlayerId, IReadOnlyList<PlotCardAssignment> assignments,
+            CancellationToken cancellationToken)
+        {
+            _games.TryGetValue(sessionId, out var game);
+            var status = ResistanceDealStatus.Dealt;
+            var toDeal = game is null ? [] : ResistanceRoles.CardsToDeal(game).ToDictionary(x => x.CardId);
+            if (game is null)
+            {
+                status = ResistanceDealStatus.NoGame;
+            }
+            else if (!game.IsStarted)
+            {
+                status = ResistanceDealStatus.NotStarted;
+            }
+            else if (game.Phase == ResistancePhase.GameOver)
+            {
+                status = ResistanceDealStatus.GameOver;
+            }
+            else if (callerPlayerId is null || callerPlayerId != game.LeaderPlayerId)
+            {
+                status = ResistanceDealStatus.NotLeader;
+            }
+            else if (game.Phase != ResistancePhase.DealingCards)
+            {
+                status = ResistanceDealStatus.NotDealing;
+            }
+            else if (assignments.Any(x => !toDeal.ContainsKey(x.CardId))
+                     || assignments.Select(x => x.CardId).Distinct().Count() != assignments.Count)
+            {
+                status = ResistanceDealStatus.UnknownCard;
+            }
+            else if (assignments.Any(x => x.PlayerId == game.LeaderPlayerId || game.Players.All(p => p.PlayerId != x.PlayerId)))
+            {
+                status = ResistanceDealStatus.InvalidReceiver;
+            }
+            else if (assignments.Count != toDeal.Count)
+            {
+                status = ResistanceDealStatus.Incomplete;
+            }
+            else
+            {
+                foreach (var assignment in assignments)
+                {
+                    toDeal[assignment.CardId].Location = ResistancePlotCardLocation.Hand;
+                    toDeal[assignment.CardId].HolderPlayerId = assignment.PlayerId;
+                }
+
+                foreach (var kept in game!.PlotCards.Where(x => x.Location == ResistancePlotCardLocation.Drawn))
+                {
+                    kept.Location = ResistancePlotCardLocation.Hand;
+                }
+
+                game.Phase = ResistancePhase.SelectingTeam;
+            }
+
+            return Task.FromResult(new ResistanceDealResult(status, game));
         }
 
         public Task<ResistanceVoteResult> VoteAsync(
