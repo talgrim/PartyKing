@@ -125,6 +125,17 @@ describe('ResistancePlotLog', () => {
     expect(items[1]).not.toMatch(/Szpieg|Ruch Oporu/);
   });
 
+  it('logs a card without a target by its holder alone', () => {
+    render(
+      <ResistancePlotLog
+        players={players}
+        cards={[{ id: 3, type: 'NoConfidence', holderPlayerId: 'p1', targetPlayerId: null, missionNumber: 1, isConfirmed: false }]}
+      />,
+    );
+
+    expect(screen.getByRole('listitem').textContent).toContain('Bartek zagrał/a „Nie ufajcie mu”');
+  });
+
   it('renders nothing before any card is played', () => {
     const { container } = render(<ResistancePlotLog players={players} cards={[]} />);
 
@@ -147,5 +158,17 @@ describe('resistancePhaseDescription while the immediate cards are played', () =
 
     expect(text).toContain('karty natychmiastowe');
     expect(text).toContain('Czekamy na potwierdzenie: Darek, Ala.');
+  });
+
+  it('does not wait for a played card that shows no identity card', () => {
+    const text = resistancePhaseDescription(
+      game({
+        playedPlotCards: [{ id: 3, type: 'NoConfidence', holderPlayerId: 'p1', targetPlayerId: null, missionNumber: 1, isConfirmed: false }],
+      }),
+      { canManage: false, isAdmin: false },
+      2,
+    );
+
+    expect(text).not.toContain('Czekamy na potwierdzenie');
   });
 });

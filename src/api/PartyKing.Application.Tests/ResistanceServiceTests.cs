@@ -541,6 +541,33 @@ public class ResistanceServiceTests
     }
 
     [Fact]
+    public async Task APlayedCardWithoutATarget_IsLoggedAndShowsNobodyAnIdentityCard()
+    {
+        var ct = CancellationToken.None;
+        var callers = await OpenGameAndJoinAsync(5);
+        await _service.StartAsync(_id, Host, ct);
+        var game = (await _games.GetAsync(_id, ct))!;
+        var holder = game.Players.OrderBy(x => x.Order).First();
+        game.PlotCards.Add(new ResistancePlotCard
+        {
+            SessionId = _id,
+            CardId = 0,
+            Type = ResistancePlotCardType.NoConfidence,
+            Location = ResistancePlotCardLocation.Played,
+            HolderPlayerId = holder.PlayerId,
+            PlayedAt = DateTimeOffset.UtcNow,
+            PlayedInMission = 1,
+        });
+
+        var view = (await _service.GetAsync(_id, callers.First(x => x.PlayerId == holder.PlayerId), ct)).Value;
+
+        var logged = Assert.Single(view.PlayedPlotCards);
+        Assert.Null(logged.TargetPlayerId);
+        Assert.Empty(view.YourReveals);
+        Assert.Empty(ResistanceRoles.UnconfirmedCards(game));
+    }
+
+    [Fact]
     public async Task WithoutThePlotCards_TheGameShowsNoCardsAndPicksAtOnce()
     {
         var ct = CancellationToken.None;
