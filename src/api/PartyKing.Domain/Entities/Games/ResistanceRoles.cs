@@ -353,7 +353,11 @@ public static class ResistanceRoles
             player.Vote = null;
             player.MissionCard = null;
             player.PassedLeaderWindow = false;
+            player.Role = null;
         }
+
+        game.LeaderPlayerId = null;
+        game.PlotCards.Clear();
     }
 
     /// <summary>Gives every player a random role, picks a random first leader and starts the first mission.</summary>

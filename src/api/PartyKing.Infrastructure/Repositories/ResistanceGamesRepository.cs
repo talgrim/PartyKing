@@ -26,7 +26,7 @@ public interface IResistanceGamesRepository : ILobbyGamesRepository<ResistanceGa
     Task<ResistanceStartResult> StartAsync(Guid sessionId, DateTimeOffset startedAt, CancellationToken cancellationToken);
 
     /// <summary>Starts a finished game over with the same players: new roles and leader, mission 1, no results.</summary>
-    Task<ResistanceRestartResult> RestartAsync(Guid sessionId, DateTimeOffset startedAt, CancellationToken cancellationToken);
+    Task<ResistanceRestartResult> RestartAsync(Guid sessionId, CancellationToken cancellationToken);
 
     /// <summary>
     /// The leader submits the team of the current mission, which locks it. Checked and saved in one writer context,
@@ -360,7 +360,7 @@ internal class ResistanceGamesRepository
             return new ResistanceRulesResult(ResistanceRulesStatus.NoGame, null);
         }
 
-        if (game.IsOpen || game.IsStarted)
+        if (game.IsStarted)
         {
             return new ResistanceRulesResult(ResistanceRulesStatus.NotEditable, game);
         }
@@ -411,7 +411,7 @@ internal class ResistanceGamesRepository
     }
 
     public async Task<ResistanceRestartResult> RestartAsync(
-        Guid sessionId, DateTimeOffset startedAt, CancellationToken cancellationToken)
+        Guid sessionId, CancellationToken cancellationToken)
     {
         await using var dbContext = await CreateWriterAsync(cancellationToken);
 
@@ -432,8 +432,7 @@ internal class ResistanceGamesRepository
         }
 
         ResistanceRoles.Reset(game);
-        ResistanceRoles.Deal(game, Random.Shared);
-        game.StartedAt = startedAt;
+        game.StartedAt = null;
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return new ResistanceRestartResult(ResistanceRestartStatus.Restarted, game);

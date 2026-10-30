@@ -257,7 +257,7 @@ internal class ResistanceService : IResistanceService
                 return _lobby.NoGame;
             case ResistanceRulesStatus.NotEditable:
                 return Error.Conflict(
-                    "Resistance.RulesLocked", "The plot cards can only be switched before the game is opened.");
+                    "Resistance.RulesLocked", "The plot cards can only be switched before the game starts.");
         }
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
@@ -309,7 +309,7 @@ internal class ResistanceService : IResistanceService
             return denied.Errors;
         }
 
-        var result = await _games.RestartAsync(sessionId, _clock.UtcNow, cancellationToken);
+        var result = await _games.RestartAsync(sessionId, cancellationToken);
         switch (result.Status)
         {
             case ResistanceRestartStatus.NoGame:
