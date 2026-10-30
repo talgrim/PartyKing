@@ -13,6 +13,12 @@ public class ResistanceRules
 
     public Dictionary<int, ResistanceCountRules> PlayerCounts { get; set; } = new();
 
+    /// <summary>Whether the plot cards add-on is played. Off by default; only editable before the game is opened.</summary>
+    public bool PlotCardsEnabled { get; set; }
+
+    /// <summary>How many copies of each plot card the deck holds (15 cards in all).</summary>
+    public Dictionary<ResistancePlotCardType, int> PlotDeck { get; set; } = DefaultPlotDeck();
+
     /// <summary>A third of the players as spies, rounded up; the official team sizes; two fails on mission 4 from 7 players.</summary>
     public static ResistanceRules Default() => new()
     {
@@ -26,6 +32,23 @@ public class ResistanceRules
             [10] = new(4, [3, 4, 4, 5, 5], [1, 1, 1, 2, 1]),
         },
     };
+
+    public static Dictionary<ResistancePlotCardType, int> DefaultPlotDeck() => new()
+    {
+        [ResistancePlotCardType.OverheardConversation] = 2,
+        [ResistancePlotCardType.OpinionMaker] = 2,
+        [ResistancePlotCardType.EstablishConfidence] = 1,
+        [ResistancePlotCardType.OpenUp] = 1,
+        [ResistancePlotCardType.NoConfidence] = 3,
+        [ResistancePlotCardType.KeepingCloseEye] = 2,
+        [ResistancePlotCardType.StrongLeader] = 2,
+        [ResistancePlotCardType.InTheSpotlight] = 1,
+        [ResistancePlotCardType.TakeResponsibility] = 1,
+    };
+
+    /// <summary>How many plot cards the leader draws before each mission: 1 for 5-6 players, 2 for 7-8, 3 for 9-10.</summary>
+    public int PlotCardsPerRound(int playerCount) =>
+        (Math.Clamp(playerCount, ResistanceGame.MinPlayers, ResistanceGame.MaxPlayers) - 3) / 2;
 
     public int SpyCount(int playerCount) => For(playerCount).Spies;
 
