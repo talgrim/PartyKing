@@ -6,7 +6,7 @@ type Props = {
   playerId: string;
 };
 
-const badge = 'shrink-0 text-xs uppercase rounded px-1';
+const badge = 'shrink-0 text-[clamp(0.75rem,0.8em,1.75rem)] uppercase rounded px-1';
 
 /**
  * What the table may know about a player: whether they have voted (not how) while the vote is on, how they voted once

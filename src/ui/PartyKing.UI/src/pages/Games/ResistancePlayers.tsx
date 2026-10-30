@@ -32,7 +32,7 @@ export const ResistancePlayers = ({ players, yourPlayerId, leaderId = null, mark
             key={player.id}
             title={player.name}
             style={{ left: `${seats[index].left}%`, top: `${seats[index].top}%` }}
-            className={`absolute -translate-x-1/2 -translate-y-1/2 max-w-[9vw] flex items-center gap-1 px-2 py-1 rounded-md text-sm ${
+            className={`absolute -translate-x-1/2 -translate-y-1/2 max-w-[11vw] flex items-center gap-[0.4vw] px-[max(0.5rem,0.6vw)] py-[max(0.25rem,0.3vw)] rounded-md text-[clamp(0.875rem,1.5vw,2.25rem)] ${
               you
                 ? 'bg-amber-400 text-slate-900 font-semibold ring-2 ring-amber-200 shadow-lg shadow-amber-400/40'
                 : 'bg-slate-900 text-slate-200'
@@ -44,12 +44,12 @@ export const ResistancePlayers = ({ players, yourPlayerId, leaderId = null, mark
               {you && <span className="sr-only"> (you)</span>}
             </span>
             {you && (
-              <span aria-hidden="true" className="shrink-0 text-xs uppercase rounded bg-slate-900 text-amber-300 px-1">
+              <span aria-hidden="true" className="shrink-0 text-[0.8em] uppercase rounded bg-slate-900 text-amber-300 px-1">
                 Ty
               </span>
             )}
             {marks?.(player.id)}
-            {card && <span className={`absolute ${side} w-[5vw] min-w-12`}>{card}</span>}
+            {card && <span className={`absolute ${side} w-[6vw] min-w-12`}>{card}</span>}
           </li>
         );
       })}
