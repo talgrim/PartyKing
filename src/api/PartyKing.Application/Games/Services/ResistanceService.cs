@@ -175,15 +175,22 @@ internal class ResistanceService : IResistanceService
     public async Task<ErrorOr<ResistanceGameDto>> GetAsync(
         Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
     {
-        var authorization = await _lobby.AuthorizeAsync(sessionId, caller, cancellationToken);
-        if (authorization.IsError && authorization.FirstError.Type != ErrorType.Forbidden)
+        // A caller with neither a host profile nor an admin cookie can't be a manager, so skip the session read
+        var isManager = false;
+        if (caller.ProfileId is not null || caller.IsAdmin)
         {
-            return authorization.Errors;
+            var authorization = await _lobby.AuthorizeAsync(sessionId, caller, cancellationToken);
+            if (authorization.IsError && authorization.FirstError.Type != ErrorType.Forbidden)
+            {
+                return authorization.Errors;
+            }
+
+            isManager = !authorization.IsError;
         }
 
         var game = await _games.GetAsync(sessionId, cancellationToken);
 
-        return game is null || (authorization.IsError && !game.IsOpen) ? _lobby.NoGame : ToDto(game, caller);
+        return game is null || (!isManager && !game.IsOpen) ? _lobby.NoGame : ToDto(game, caller);
     }
 
     public async Task<ErrorOr<ResistanceLobbyDto>> GetLobbyAsync(
