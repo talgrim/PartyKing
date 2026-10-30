@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   voteResistanceTeam: vi.fn(),
   playResistanceMissionCard: vi.fn(),
   continueResistance: vi.fn(),
+  restartResistance: vi.fn(),
   endResistance: vi.fn(),
 }));
 
@@ -29,6 +30,7 @@ vi.mock('@/service/endpoints/games/gamesApi', () => ({
     voteResistanceTeam: mocks.voteResistanceTeam,
     playResistanceMissionCard: mocks.playResistanceMissionCard,
     continueResistance: mocks.continueResistance,
+    restartResistance: mocks.restartResistance,
     endResistance: mocks.endResistance,
   },
 }));
@@ -94,6 +96,7 @@ describe('Resistance', () => {
   beforeEach(() => {
     mocks.role = { isHost: false, isAdmin: true };
     mocks.getResistance.mockReset();
+    mocks.restartResistance.mockReset();
     mocks.openResistance.mockReset();
     mocks.startResistance.mockReset();
     mocks.refreshResistanceRules.mockReset();
@@ -782,6 +785,29 @@ describe('Resistance', () => {
       expect(within(list).getAllByText('Ruch Oporu')).toHaveLength(3);
       expect(screen.getByText(/Szpiedzy wygrali/)).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Dalej' })).not.toBeInTheDocument();
+    });
+
+    it('lets a manager restart the game once it is over', async () => {
+      mocks.role = { isHost: true, isAdmin: false };
+      mocks.getResistance.mockResolvedValue(
+        rejected({ yourPlayerId: null, yourRole: null, phase: 'GameOver', winner: 'Spy', rejectedTeams: 5, revealedRoles: [] }),
+      );
+      mocks.restartResistance.mockResolvedValue(started(five, { yourPlayerId: null, yourRole: null }));
+      renderPage('/s/session-1/games/resistance?tv=1');
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Restart game' }));
+
+      expect(mocks.restartResistance).toHaveBeenCalledWith('session-1');
+      await waitFor(() => expect(screen.queryByRole('button', { name: 'Restart game' })).not.toBeInTheDocument());
+    });
+
+    it('offers no restart while the game is on', async () => {
+      mocks.role = { isHost: true, isAdmin: false };
+      mocks.getResistance.mockResolvedValue(started(five, { yourPlayerId: null, yourRole: null }));
+      renderPage('/s/session-1/games/resistance?tv=1');
+
+      await screen.findByRole('button', { name: 'End game' });
+      expect(screen.queryByRole('button', { name: 'Restart game' })).not.toBeInTheDocument();
     });
   });
 });
