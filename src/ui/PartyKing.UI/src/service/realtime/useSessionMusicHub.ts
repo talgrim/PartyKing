@@ -37,6 +37,9 @@ const hubUrl = (sessionId: string) => {
 /** A burst of pushes (everyone voting at once) is answered with one refetch per client instead of one per push. */
 const RESISTANCE_REVALIDATE_DEBOUNCE_MS = 250;
 
+/** Each client waits a random extra moment, so a push doesn't make every client fetch in the same instant. */
+const RESISTANCE_REVALIDATE_JITTER_MS = 500;
+
 const revalidateSession = (sessionId: string) => {
   void mutate(queueSongsKey(sessionId));
   void mutate(nowPlayingKey(sessionId));
@@ -152,7 +155,7 @@ export const useSessionMusicHub = (
         resistanceTimer = setTimeout(() => {
           void mutate(resistanceKey(sessionId));
           void mutate(resistanceLobbyKey(sessionId));
-        }, RESISTANCE_REVALIDATE_DEBOUNCE_MS);
+        }, RESISTANCE_REVALIDATE_DEBOUNCE_MS + Math.random() * RESISTANCE_REVALIDATE_JITTER_MS);
       });
 
       connection.on(SESSION_MUSIC_EVENTS.ResistanceOpened, () => {
