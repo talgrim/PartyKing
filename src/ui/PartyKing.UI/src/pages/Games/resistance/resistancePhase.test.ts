@@ -28,6 +28,8 @@ const game = (count: number, extra: Partial<ResistanceGameDto> = {}): Resistance
   missionResults: [],
   yourPlotCards: [],
   plotCardCounts: [],
+  opinionMakerPlayerIds: [],
+  opinionMakerVotes: [],
   rules: {
     playerCounts: [5, 6, 7, 8, 9, 10].map((playerCount) => ({
       playerCount,
@@ -226,5 +228,18 @@ describe('resistancePhaseDescription', () => {
     expect(resistancePhaseDescription({ ...dealing, yourPlayerId: 'p2' }, guest, 2)).toMatch(
       /Liderem jest Gracz 1.*rozdaje dobrane karty Intryg/,
     );
+  });
+
+  it('names the Opinion Maker who has to vote first', () => {
+    const voting = game(5, {
+      startedAt: '2026-10-29T10:05:00Z',
+      phase: 'Voting',
+      leaderPlayerId: 'p1',
+      teamPlayerIds: ['p1', 'p2'],
+      opinionMakerPlayerIds: ['p3'],
+    });
+
+    expect(resistancePhaseDescription(voting, guest, 2)).toMatch(/Najpierw głosuje kreator opinii: Gracz 3/);
+    expect(resistancePhaseDescription({ ...voting, votedPlayerIds: ['p3'] }, guest, 2)).not.toMatch(/kreator opinii/);
   });
 });

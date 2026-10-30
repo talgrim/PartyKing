@@ -11,10 +11,11 @@ const players = [
   { id: 'p2', name: 'Celina' },
 ];
 
-const card = (id: number, type: ResistancePlotCardDto['type'], toDeal = false): ResistancePlotCardDto => ({
+const card = (id: number, type: ResistancePlotCardDto['type'], toDeal = false, inPlay = false): ResistancePlotCardDto => ({
   id,
   type,
   toDeal,
+  inPlay,
 });
 
 describe('ResistancePlotHand', () => {
@@ -23,6 +24,12 @@ describe('ResistancePlotHand', () => {
 
     expect(screen.getByText('Nie ufajcie mu')).toBeInTheDocument();
     expect(screen.queryByText('Tylko tobie zaufam')).not.toBeInTheDocument();
+  });
+
+  it('marks an Opinion Maker in play as visible to everyone', () => {
+    render(<ResistancePlotHand cards={[card(5, 'OpinionMaker', false, true)]} />);
+
+    expect(screen.getByText('W grze, widoczna dla wszystkich.')).toBeInTheDocument();
   });
 
   it('renders nothing without held cards', () => {

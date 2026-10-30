@@ -64,6 +64,8 @@ const lobby = (names: string[], isOpen = false) => ({
   missionResults: [] as { missionNumber: number; succeeded: boolean; failCount: number }[],
   yourPlotCards: [] as unknown[],
   plotCardCounts: [] as unknown[],
+  opinionMakerPlayerIds: [] as string[],
+  opinionMakerVotes: [] as unknown[],
   rules: {
     playerCounts: [5, 6, 7, 8, 9, 10].map((playerCount) => ({
       playerCount,
