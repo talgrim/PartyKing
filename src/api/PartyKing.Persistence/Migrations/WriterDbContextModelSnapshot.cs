@@ -98,6 +98,25 @@ namespace PartyKing.Persistence.Migrations
                     b.ToTable("ResistanceGames");
                 });
 
+            modelBuilder.Entity("PartyKing.Domain.Entities.Games.ResistanceMissionResult", b =>
+                {
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MissionNumber")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("FailCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Succeeded")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("SessionId", "MissionNumber");
+
+                    b.ToTable("ResistanceMissionResults");
+                });
+
             modelBuilder.Entity("PartyKing.Domain.Entities.Games.ResistancePlayer", b =>
                 {
                     b.Property<Guid>("SessionId")
@@ -111,6 +130,9 @@ namespace PartyKing.Persistence.Migrations
 
                     b.Property<DateTimeOffset>("JoinedAt")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool?>("MissionCard")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -423,6 +445,15 @@ namespace PartyKing.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("PartyKing.Domain.Entities.Games.ResistanceMissionResult", b =>
+                {
+                    b.HasOne("PartyKing.Domain.Entities.Games.ResistanceGame", null)
+                        .WithMany("MissionResults")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("PartyKing.Domain.Entities.Games.ResistancePlayer", b =>
                 {
                     b.HasOne("PartyKing.Domain.Entities.Games.ResistanceGame", null)
@@ -498,6 +529,8 @@ namespace PartyKing.Persistence.Migrations
 
             modelBuilder.Entity("PartyKing.Domain.Entities.Games.ResistanceGame", b =>
                 {
+                    b.Navigation("MissionResults");
+
                     b.Navigation("Players");
                 });
 

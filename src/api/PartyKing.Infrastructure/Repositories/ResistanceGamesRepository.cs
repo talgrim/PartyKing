@@ -35,8 +35,16 @@ public interface IResistanceGamesRepository : ILobbyGamesRepository<ResistanceGa
         Guid sessionId, Guid? callerPlayerId, bool approve, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Moves on after a rejected team: the next player leads, the team and the votes are cleared. The leader or a
-    /// manager may do it.
+    /// A member of the approved team secretly plays a Success or Fail card; it can't be changed. The card that
+    /// completes the team is resolved in the same save: the mission fails when the Fail cards reach the rules'
+    /// requirement, and the third success or failure ends the game.
+    /// </summary>
+    Task<ResistanceMissionCardResult> PlayMissionCardAsync(
+        Guid sessionId, Guid? callerPlayerId, bool success, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Moves on after a rejected team or a finished mission: the next player leads, the team, the votes and the cards
+    /// are cleared (a finished mission also starts the next one). The leader or a manager may do it.
     /// </summary>
     Task<ResistanceContinueResult> ContinueAsync(
         Guid sessionId, Guid? callerPlayerId, bool isManager, CancellationToken cancellationToken);
@@ -87,6 +95,29 @@ public enum ResistanceVoteStatus
 
 public record ResistanceVoteResult(ResistanceVoteStatus Status, ResistanceGame? Game);
 
+public enum ResistanceMissionStatus
+{
+    NoGame,
+    NotStarted,
+    GameOver,
+
+    /// <summary>The caller did not join the game (a host or admin who only watches).</summary>
+    NotPlayer,
+
+    /// <summary>No approved team is playing a mission.</summary>
+    NotPlaying,
+
+    /// <summary>The caller is not on the team.</summary>
+    NotOnTeam,
+    AlreadyPlayed,
+
+    /// <summary>A member of the resistance may only play Success.</summary>
+    MustSucceed,
+    Played,
+}
+
+public record ResistanceMissionCardResult(ResistanceMissionStatus Status, ResistanceGame? Game);
+
 public enum ResistanceContinueStatus
 {
     NoGame,
@@ -96,7 +127,7 @@ public enum ResistanceContinueStatus
     /// <summary>Neither the leader nor a manager.</summary>
     NotAllowed,
 
-    /// <summary>The votes are not in yet, or the team was approved (the mission itself is not built yet).</summary>
+    /// <summary>The votes are not in yet, or the approved team's mission is still being played.</summary>
     NothingToContinue,
     Continued,
 }
@@ -132,7 +163,7 @@ internal class ResistanceGamesRepository
 
     protected override IQueryable<ResistanceGame> Games(PartyKingDbContextBase dbContext)
     {
-        return dbContext.ResistanceGames.Include(x => x.Players);
+        return dbContext.ResistanceGames.Include(x => x.Players).Include(x => x.MissionResults);
     }
 
     protected override DbSet<ResistanceGame> Table(PartyKingDbContextBase dbContext) => dbContext.ResistanceGames;
@@ -241,6 +272,7 @@ internal class ResistanceGamesRepository
         {
             player.IsOnTeam = playerIds.Contains(player.PlayerId);
             player.Vote = null;
+            player.MissionCard = null;
         }
 
         game.Phase = ResistancePhase.Voting;
@@ -292,6 +324,64 @@ internal class ResistanceGamesRepository
         return new ResistanceVoteResult(ResistanceVoteStatus.Voted, game);
     }
 
+    public async Task<ResistanceMissionCardResult> PlayMissionCardAsync(
+        Guid sessionId, Guid? callerPlayerId, bool success, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await CreateWriterAsync(cancellationToken);
+
+        var game = await LoadAsync(dbContext, sessionId, cancellationToken);
+        if (game is null)
+        {
+            return new ResistanceMissionCardResult(ResistanceMissionStatus.NoGame, null);
+        }
+
+        if (!game.IsStarted)
+        {
+            return new ResistanceMissionCardResult(ResistanceMissionStatus.NotStarted, game);
+        }
+
+        if (game.Phase == ResistancePhase.GameOver)
+        {
+            return new ResistanceMissionCardResult(ResistanceMissionStatus.GameOver, game);
+        }
+
+        var player = game.Players.FirstOrDefault(x => x.PlayerId == callerPlayerId);
+        if (player is null)
+        {
+            return new ResistanceMissionCardResult(ResistanceMissionStatus.NotPlayer, game);
+        }
+
+        if (game.Phase != ResistancePhase.PlayingMission)
+        {
+            return new ResistanceMissionCardResult(ResistanceMissionStatus.NotPlaying, game);
+        }
+
+        if (!player.IsOnTeam)
+        {
+            return new ResistanceMissionCardResult(ResistanceMissionStatus.NotOnTeam, game);
+        }
+
+        if (player.MissionCard is not null)
+        {
+            return new ResistanceMissionCardResult(ResistanceMissionStatus.AlreadyPlayed, game);
+        }
+
+        if (!success && player.Role == ResistanceRole.Resistance)
+        {
+            return new ResistanceMissionCardResult(ResistanceMissionStatus.MustSucceed, game);
+        }
+
+        player.MissionCard = success;
+        if (ResistanceRoles.AllCardsPlayed(game))
+        {
+            ResistanceRoles.ResolveMission(game);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return new ResistanceMissionCardResult(ResistanceMissionStatus.Played, game);
+    }
+
     public async Task<ResistanceContinueResult> ContinueAsync(
         Guid sessionId, Guid? callerPlayerId, bool isManager, CancellationToken cancellationToken)
     {
@@ -318,7 +408,7 @@ internal class ResistanceGamesRepository
             return new ResistanceContinueResult(ResistanceContinueStatus.NotAllowed, game);
         }
 
-        if (game.Phase != ResistancePhase.VoteResult || ResistanceRoles.IsApproved(game))
+        if (game.Phase != ResistancePhase.MissionResult)
         {
             return new ResistanceContinueResult(ResistanceContinueStatus.NothingToContinue, game);
         }

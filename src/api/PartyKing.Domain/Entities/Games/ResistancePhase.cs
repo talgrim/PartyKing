@@ -9,9 +9,15 @@ public enum ResistancePhase
     /// <summary>The team is submitted and the players vote; a vote can be changed until the last player has voted.</summary>
     Voting,
 
-    /// <summary>Everybody voted and the votes are public. A rejected team moves on when someone continues.</summary>
+    /// <summary>No longer used: a rejected team passes the lead on at once. Kept so the stored numbers stay stable.</summary>
     VoteResult,
 
     /// <summary>The game is decided (<see cref="ResistanceGame.Winner"/>).</summary>
     GameOver,
+
+    /// <summary>The team was approved and its members secretly play a Success or Fail card.</summary>
+    PlayingMission,
+
+    /// <summary>All cards are in and the outcome of the mission is public. It moves on when someone continues.</summary>
+    MissionResult,
 }

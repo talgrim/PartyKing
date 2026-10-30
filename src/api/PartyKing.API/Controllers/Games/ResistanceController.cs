@@ -152,8 +152,25 @@ public class ResistanceController : GameControllerBase
     }
 
     /// <summary>
-    /// Moves on after a rejected team: the next player leads and picks a new team. The leader, the host and admins
-    /// may; 409 unless everyone voted and rejected the team.
+    /// A member of the approved team secretly plays Success or Fail, once. 403 for anyone who did not join, is not on
+    /// the team, or is a member of the resistance playing Fail; 409 when no approved team is playing or the card was
+    /// already played.
+    /// </summary>
+    [HttpPut("mission")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> PlayResistanceMissionCard(
+        Guid sessionId, [FromBody] ResistanceMissionCardRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.PlayMissionCardAsync(
+            sessionId, request.Success, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>
+    /// Moves on after a finished mission: the next player leads and picks a team for the next mission. The leader, the
+    /// host and admins may; 409 unless the mission is over. A rejected team needs no step, the lead passes on at once.
     /// </summary>
     [HttpPost("continue")]
     [RequireSessionAccess]

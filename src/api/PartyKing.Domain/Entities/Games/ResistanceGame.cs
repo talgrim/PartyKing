@@ -34,6 +34,15 @@ public class ResistanceGame : LobbyGame<ResistancePlayer>
     /// </summary>
     public ResistanceRules Rules { get; set; } = ResistanceRules.Default();
 
+    /// <summary>The outcomes of the missions finished so far, public.</summary>
+    public List<ResistanceMissionResult> MissionResults { get; set; } = [];
+
+    /// <summary>Successful missions so far; three of them win the game for the resistance.</summary>
+    public int ResistanceScore => MissionResults.Count(x => x.Succeeded);
+
+    /// <summary>Failed missions so far; three of them win the game for the spies.</summary>
+    public int SpyScore => MissionResults.Count(x => !x.Succeeded);
+
     public bool IsStarted => StartedAt is not null;
 
     /// <summary>The leader submitted a team for the current mission, which locks it (<see cref="ResistancePlayer.IsOnTeam"/>).</summary>

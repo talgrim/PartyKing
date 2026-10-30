@@ -14,4 +14,10 @@ public class ResistancePlayer : LobbyPlayer
     /// everybody sees who voted how, and cleared when the next team is picked.
     /// </summary>
     public bool? Vote { get; set; }
+
+    /// <summary>
+    /// The card the player secretly played on the approved team (true is Success, false is Fail); null until they
+    /// played. Never sent to anyone else, and cleared when the next team is picked.
+    /// </summary>
+    public bool? MissionCard { get; set; }
 }

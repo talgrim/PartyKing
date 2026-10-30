@@ -75,4 +75,5 @@ public class PartyKingDbContextBase : DbContext
     public DbSet<RingoPlayer> RingoPlayers { get; set; } = null!;
     public DbSet<ResistanceGame> ResistanceGames { get; set; } = null!;
     public DbSet<ResistancePlayer> ResistancePlayers { get; set; } = null!;
+    public DbSet<ResistanceMissionResult> ResistanceMissionResults { get; set; } = null!;
 }

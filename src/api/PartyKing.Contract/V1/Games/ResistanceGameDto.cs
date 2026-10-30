@@ -16,6 +16,10 @@ namespace PartyKing.Contract.V1.Games;
 /// <see cref="Votes"/> of everybody and <see cref="VoteApproved"/> appear once all have voted. <see cref="RejectedTeams"/>
 /// counts the teams rejected in a row; the fifth ends the game with the <see cref="Winner"/>, and then
 /// <see cref="RevealedRoles"/> shows every role.
+/// An approved team plays the mission: its members each play a secret card, <see cref="PlayedMissionPlayerIds"/> says
+/// who has (not which card) and <see cref="YourMissionCard"/> is the caller's own. Once all have played only the
+/// number of Fail cards of each finished mission is public (<see cref="MissionResults"/>), never who played them;
+/// <see cref="RequiredFails"/> is how many of them fail the current mission. Three successes or three failures win.
 /// </summary>
 public record ResistanceGameDto(
     DateTimeOffset CreatedAt,
@@ -38,7 +42,14 @@ public record ResistanceGameDto(
     IReadOnlyList<ResistanceVoteDto>? Votes,
     bool? VoteApproved,
     IReadOnlyList<ResistanceRevealedRoleDto>? RevealedRoles,
-    ResistanceRulesDto Rules);
+    ResistanceRulesDto Rules,
+    int? RequiredFails,
+    IReadOnlyList<Guid> PlayedMissionPlayerIds,
+    bool? YourMissionCard,
+    IReadOnlyList<ResistanceMissionResultDto> MissionResults);
+
+/// <summary>The public outcome of a finished mission: how many Fail cards were played, not by whom.</summary>
+public record ResistanceMissionResultDto(int MissionNumber, bool Succeeded, int FailCount);
 
 /// <summary>
 /// The numbers the game was created with (copied from the server configuration, refreshed on request until the game
@@ -57,6 +68,8 @@ public enum ResistancePhaseDto
     Voting,
     VoteResult,
     GameOver,
+    PlayingMission,
+    MissionResult,
 }
 
 /// <summary>How one player voted on the team; public once everybody has voted.</summary>
@@ -92,3 +105,6 @@ public record ResistanceTeamRequest(IReadOnlyList<Guid>? PlayerIds);
 
 /// <summary>The caller's vote on the submitted team: true approves, false rejects.</summary>
 public record ResistanceVoteRequest(bool Approve);
+
+/// <summary>The card a team member plays on the mission: true is Success, false is Fail.</summary>
+public record ResistanceMissionCardRequest(bool Success);

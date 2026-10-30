@@ -57,8 +57,16 @@ public interface IResistanceService
         Guid sessionId, bool approve, GameCaller caller, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Moves on after a rejected team (next leader, new team). The leader, the host and admins may; Forbidden for
-    /// other players, Conflict unless the votes are in and rejected the team.
+    /// A member of the approved team secretly plays Success (true) or Fail (false), once. Forbidden for anyone who did
+    /// not join, who is not on the team, or is a member of the resistance playing Fail; Conflict before the start, when
+    /// no approved team is playing, when the caller already played, and when the game is over.
+    /// </summary>
+    Task<ErrorOr<ResistanceGameDto>> PlayMissionCardAsync(
+        Guid sessionId, bool success, GameCaller caller, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Moves on after a rejected team or a finished mission (next leader, new team, next mission). The leader, the host
+    /// and admins may; Forbidden for other players, Conflict unless the votes rejected the team or the mission is over.
     /// </summary>
     Task<ErrorOr<ResistanceGameDto>> ContinueAsync(
         Guid sessionId, GameCaller caller, CancellationToken cancellationToken);
@@ -291,6 +299,46 @@ internal class ResistanceService : IResistanceService
         return ToDto(result.Game!, caller);
     }
 
+    public async Task<ErrorOr<ResistanceGameDto>> PlayMissionCardAsync(
+        Guid sessionId, bool success, GameCaller caller, CancellationToken cancellationToken)
+    {
+        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
+        if (access.IsError)
+        {
+            return access.Errors;
+        }
+
+        if (access.Value.Game is null)
+        {
+            return _lobby.NoGame;
+        }
+
+        var result = await _games.PlayMissionCardAsync(sessionId, caller.PlayerId, success, cancellationToken);
+        switch (result.Status)
+        {
+            case ResistanceMissionStatus.NoGame:
+                return _lobby.NoGame;
+            case ResistanceMissionStatus.NotStarted:
+                return Error.Conflict("Resistance.NotStarted", "The game has not started yet.");
+            case ResistanceMissionStatus.GameOver:
+                return GameOverError;
+            case ResistanceMissionStatus.NotPlayer:
+                return Error.Forbidden("Resistance.NotPlayer", "Only the players of the game play the mission.");
+            case ResistanceMissionStatus.NotPlaying:
+                return Error.Conflict("Resistance.NotPlayingMission", "No approved team is playing a mission.");
+            case ResistanceMissionStatus.NotOnTeam:
+                return Error.Forbidden("Resistance.NotOnTeam", "Only the members of the team play the mission.");
+            case ResistanceMissionStatus.AlreadyPlayed:
+                return Error.Conflict("Resistance.AlreadyPlayed", "You already played your card.");
+            case ResistanceMissionStatus.MustSucceed:
+                return Error.Forbidden("Resistance.MustSucceed", "A member of the resistance can only play Success.");
+        }
+
+        await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
+
+        return ToDto(result.Game!, caller);
+    }
+
     public async Task<ErrorOr<ResistanceGameDto>> ContinueAsync(
         Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
     {
@@ -317,7 +365,7 @@ internal class ResistanceService : IResistanceService
             case ResistanceContinueStatus.NotAllowed:
                 return Error.Forbidden("Resistance.NotAllowed", "Only the leader, the host or an admin continues.");
             case ResistanceContinueStatus.NothingToContinue:
-                return Error.Conflict("Resistance.NothingToContinue", "There is no rejected team to move on from.");
+                return Error.Conflict("Resistance.NothingToContinue", "There is no finished mission to move on from.");
         }
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
@@ -386,7 +434,8 @@ internal class ResistanceService : IResistanceService
                 .ToList()
             : null;
 
-        var revealed = game.Phase is ResistancePhase.VoteResult or ResistancePhase.GameOver;
+        // Hidden while the vote is on; public once all voted (also while the next leader picks after a rejection)
+        var revealed = game.Phase != ResistancePhase.Voting && game.Players.All(x => x.Vote is not null);
         var voted = game.Players.Where(x => x.Vote is not null).OrderBy(x => x.Order).ToList();
 
         return new ResistanceGameDto(
@@ -419,7 +468,14 @@ internal class ResistanceService : IResistanceService
                 game.Rules.PlayerCounts
                     .OrderBy(x => x.Key)
                     .Select(x => new ResistanceCountRulesDto(x.Key, x.Value.Spies, x.Value.TeamSizes, x.Value.RequiredFails))
-                    .ToList()));
+                    .ToList()),
+            game.IsStarted ? game.Rules.RequiredFails(game.Players.Count, game.MissionNumber) : null,
+            game.Players.Where(x => x.MissionCard is not null).OrderBy(x => x.Order).Select(x => x.PlayerId).ToList(),
+            you?.MissionCard,
+            game.MissionResults
+                .OrderBy(x => x.MissionNumber)
+                .Select(x => new ResistanceMissionResultDto(x.MissionNumber, x.Succeeded, x.FailCount))
+                .ToList());
     }
 
     private sealed class ResistanceLobbyNotifier : IGameLobbyNotifier
