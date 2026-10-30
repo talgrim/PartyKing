@@ -407,6 +407,10 @@ internal class ResistanceService : IResistanceService
                 return Error.Forbidden("Resistance.NotPlayer", "Only the players of the game vote.");
             case ResistanceVoteStatus.NotVoting:
                 return Error.Conflict("Resistance.NotVoting", "No team is up for a vote.");
+            case ResistanceVoteStatus.VoteLocked:
+                return Error.Conflict("Resistance.VoteLocked", "An Opinion Maker's vote can't be changed.");
+            case ResistanceVoteStatus.OpinionMakersFirst:
+                return Error.Conflict("Resistance.OpinionMakersFirst", "The Opinion Makers vote first.");
         }
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
@@ -553,6 +557,11 @@ internal class ResistanceService : IResistanceService
         var revealed = game.Phase != ResistancePhase.Voting && game.Players.All(x => x.Vote is not null);
         var voted = game.Players.Where(x => x.Vote is not null).OrderBy(x => x.Order).ToList();
 
+        // Opinion Makers are public; their votes are too once every one of them has voted (before the others may)
+        var opinionMakers = ResistanceRoles.OpinionMakerIds(game);
+        var opinionMakersRevealed = opinionMakers.Count > 0
+            && game.Players.Where(x => opinionMakers.Contains(x.PlayerId)).All(x => x.Vote is not null);
+
         return new ResistanceGameDto(
             game.CreatedAt,
             game.IsOpen,
@@ -601,7 +610,8 @@ internal class ResistanceService : IResistanceService
                     .Select(x => new ResistancePlotCardDto(
                         x.CardId,
                         (ResistancePlotCardTypeDto)x.Type,
-                        x.Location == ResistancePlotCardLocation.Drawn && x.Type != ResistancePlotCardType.EstablishConfidence))
+                        x.Location == ResistancePlotCardLocation.Drawn && x.Type != ResistancePlotCardType.EstablishConfidence,
+                        x.Location == ResistancePlotCardLocation.InPlay))
                     .ToList(),
             game.Rules.PlotCardsEnabled
                 ? game.Players
@@ -609,6 +619,14 @@ internal class ResistanceService : IResistanceService
                     .Select(x => new ResistancePlotCardCountDto(
                         x.PlayerId,
                         game.PlotCards.Count(c => c.HolderPlayerId == x.PlayerId && c.Location == ResistancePlotCardLocation.Hand)))
+                    .ToList()
+                : [],
+            game.Players.Where(x => opinionMakers.Contains(x.PlayerId)).OrderBy(x => x.Order).Select(x => x.PlayerId).ToList(),
+            opinionMakersRevealed
+                ? game.Players
+                    .Where(x => opinionMakers.Contains(x.PlayerId))
+                    .OrderBy(x => x.Order)
+                    .Select(x => new ResistanceVoteDto(x.PlayerId, x.Vote!.Value))
                     .ToList()
                 : []);
     }

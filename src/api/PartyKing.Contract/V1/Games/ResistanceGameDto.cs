@@ -48,10 +48,12 @@ public record ResistanceGameDto(
     bool? YourMissionCard,
     IReadOnlyList<ResistanceMissionResultDto> MissionResults,
     IReadOnlyList<ResistancePlotCardDto> YourPlotCards,
-    IReadOnlyList<ResistancePlotCardCountDto> PlotCardCounts);
+    IReadOnlyList<ResistancePlotCardCountDto> PlotCardCounts,
+    IReadOnlyList<Guid> OpinionMakerPlayerIds,
+    IReadOnlyList<ResistanceVoteDto> OpinionMakerVotes);
 
 /// <summary>A plot card the caller holds. <paramref name="ToDeal"/> is true while the leader still has to hand it out.</summary>
-public record ResistancePlotCardDto(int Id, ResistancePlotCardTypeDto Type, bool ToDeal);
+public record ResistancePlotCardDto(int Id, ResistancePlotCardTypeDto Type, bool ToDeal, bool InPlay);
 
 /// <summary>How many plot cards a player holds in hand; public, the cards themselves are not.</summary>
 public record ResistancePlotCardCountDto(Guid PlayerId, int Count);
