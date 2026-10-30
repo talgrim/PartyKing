@@ -69,14 +69,10 @@ export const ResistanceManagerControls = ({ game, isAdmin, onManagePlayers, onEn
         </button>
       )}
       {!started && (
-        <label
-          className={`${buttonClass} flex items-center gap-2 ${game.isOpen ? 'opacity-50 cursor-default' : ''}`}
-          title={game.isOpen ? 'Karty Intryg można włączyć tylko przed otwarciem gry' : undefined}
-        >
+        <label className={`${buttonClass} flex items-center gap-2`}>
           <input
             type="checkbox"
             checked={game.rules.plotCardsEnabled}
-            disabled={game.isOpen}
             onChange={(event) => onSetPlotCards(event.target.checked)}
           />
           Plot cards
