@@ -261,6 +261,111 @@ export const PlotCardIcon = ({ className, title }: IconProps): ReactNode => (
   </Svg>
 );
 
+/** Shared look of the plot cards: the brown face with a gold border, a glyph in the upper part and a Polish name (one or two lines) below. */
+const PlotCardFace = ({
+  className,
+  title,
+  label,
+  children,
+}: IconProps & { label: string[]; children: ReactNode }): ReactNode => (
+  <Svg viewBox="0 0 100 140" className={className} title={title}>
+    <CardFrame fill="#3b2f1a" stroke={COLORS.gold} />
+    <circle cx="50" cy="56" r="34" fill={COLORS.gold} fillOpacity="0.12" />
+    {children}
+    {label.map((line, index) => (
+      <text
+        key={line}
+        x="50"
+        y={label.length === 1 ? 124 : 117 + index * 10}
+        textAnchor="middle"
+        fontSize="8.5"
+        fontWeight="700"
+        fill={COLORS.gold}
+        fontFamily="sans-serif"
+      >
+        {line}
+      </text>
+    ))}
+  </Svg>
+);
+
+/** Plot card "Keeping a Close Eye on You": look at one played mission card (an eye). */
+export const PlotCloseEyeCardIcon = ({ className, title }: IconProps): ReactNode => (
+  <PlotCardFace className={className} title={title} label={['MAM CIĘ', 'NA OKU']}>
+    <path d="M16 56 Q50 18 84 56 Q50 94 16 56 Z" fill={COLORS.paper} stroke={COLORS.gold} strokeWidth="3" strokeLinejoin="round" />
+    <circle cx="50" cy="56" r="17" fill={COLORS.resistance} />
+    <circle cx="50" cy="56" r="8" fill={COLORS.ink} />
+    <circle cx="55" cy="51" r="3" fill={COLORS.paper} />
+  </PlotCardFace>
+);
+
+/** Plot card "Establish Confidence": the leader shows their identity card (a person on an ID card). */
+export const PlotEstablishConfidenceCardIcon = ({ className, title }: IconProps): ReactNode => (
+  <PlotCardFace className={className} title={title} label={['ZDOBĄDŹ', 'ZAUFANIE']}>
+    <rect x="20" y="32" width="60" height="44" rx="5" fill={COLORS.paper} stroke={COLORS.gold} strokeWidth="2.5" />
+    <Person x={40} y={58} scale={0.7} fill={COLORS.resistance} />
+    <rect x="54" y="42" width="20" height="4" rx="2" fill={COLORS.muted} />
+    <rect x="54" y="52" width="20" height="4" rx="2" fill={COLORS.muted} />
+    <circle cx="68" cy="74" r="12" fill={COLORS.success} stroke={COLORS.paper} strokeWidth="2.5" />
+    <Check cx={68} cy={74} size={6} stroke={COLORS.paper} />
+  </PlotCardFace>
+);
+
+/** Plot card "Strong Leader": become the leader (a crown with an upward arrow). */
+export const PlotStrongLeaderCardIcon = ({ className, title }: IconProps): ReactNode => (
+  <PlotCardFace className={className} title={title} label={['SILNY', 'LIDER']}>
+    <path d="M24 74 L20 44 L38 58 L50 36 L62 58 L80 44 L76 74 Z" fill={COLORS.gold} stroke={COLORS.gold} strokeLinejoin="round" strokeWidth="3" />
+    <rect x="24" y="74" width="52" height="8" rx="2" fill={COLORS.gold} />
+    <circle cx="20" cy="44" r="4" fill={COLORS.gold} />
+    <circle cx="50" cy="36" r="4" fill={COLORS.gold} />
+    <circle cx="80" cy="44" r="4" fill={COLORS.gold} />
+    <path d="M50 30 L50 14 M43 21 L50 14 L57 21" fill="none" stroke={COLORS.paper} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+  </PlotCardFace>
+);
+
+/** Plot card "Overheard Conversation": peek at a neighbour's identity card (an ear with sound waves). */
+export const PlotOverheardConversationCardIcon = ({ className, title }: IconProps): ReactNode => (
+  <PlotCardFace className={className} title={title} label={['PODSŁUCHANA', 'ROZMOWA']}>
+    <path
+      d="M56 24 C38 24 30 38 32 52 C33 62 38 66 40 74 C42 82 50 86 58 82 C68 78 68 68 62 64 C70 58 74 50 74 42 C74 30 66 24 56 24 Z"
+      fill={COLORS.paper}
+      stroke={COLORS.gold}
+      strokeWidth="3"
+      strokeLinejoin="round"
+    />
+    <path d="M50 38 C44 38 42 46 46 50 C50 54 54 56 54 62" fill="none" stroke={COLORS.muted} strokeWidth="3" strokeLinecap="round" />
+    <path d="M18 40 Q10 56 18 72 M26 46 Q21 56 26 66" fill="none" stroke={COLORS.gold} strokeWidth="3" strokeLinecap="round" />
+  </PlotCardFace>
+);
+
+/** Plot card "No Confidence": nullifies an approved vote (the approve check struck out). */
+export const PlotNoConfidenceCardIcon = ({ className, title }: IconProps): ReactNode => (
+  <PlotCardFace className={className} title={title} label={['WOTUM', 'NIEUFNOŚCI']}>
+    <circle cx="50" cy="56" r="30" fill={COLORS.success} />
+    <Check cx={50} cy={56} size={15} stroke={COLORS.paper} />
+    <circle cx="50" cy="56" r="34" fill="none" stroke={COLORS.fail} strokeWidth="6" />
+    <path d="M26 32 L74 80" stroke={COLORS.fail} strokeWidth="6" strokeLinecap="round" />
+  </PlotCardFace>
+);
+
+/** Plot card "In the Spotlight": a team member plays their mission card face up (a spotlight on a person). */
+export const PlotSpotlightCardIcon = ({ className, title }: IconProps): ReactNode => (
+  <PlotCardFace className={className} title={title} label={['W ŚWIETLE', 'REFLEKTORÓW']}>
+    <path d="M42 14 L58 14 L84 92 L16 92 Z" fill={COLORS.gold} fillOpacity="0.35" />
+    <rect x="38" y="8" width="24" height="10" rx="3" fill={COLORS.muted} stroke={COLORS.gold} strokeWidth="2" />
+    <Person x={50} y={76} scale={1.1} fill={COLORS.paper} />
+  </PlotCardFace>
+);
+
+/** Plot card "Opinion Maker": votes first and in public (a megaphone). */
+export const PlotOpinionMakerCardIcon = ({ className, title }: IconProps): ReactNode => (
+  <PlotCardFace className={className} title={title} label={['KREATOR', 'OPINII']}>
+    <path d="M22 46 L22 66 L36 66 L62 84 L62 28 L36 46 Z" fill={COLORS.gold} stroke={COLORS.paper} strokeWidth="2.5" strokeLinejoin="round" />
+    <rect x="30" y="64" width="10" height="16" rx="3" fill={COLORS.paper} stroke={COLORS.gold} strokeWidth="2" />
+    <path d="M70 40 Q78 56 70 72 M78 32 Q92 56 78 80" fill="none" stroke={COLORS.paper} strokeWidth="3.5" strokeLinecap="round" />
+  </PlotCardFace>
+);
+
 export type MissionResult = 'success' | 'fail' | null;
 
 type MissionBoardProps = {
