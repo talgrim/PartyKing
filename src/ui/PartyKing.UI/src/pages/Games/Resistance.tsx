@@ -181,6 +181,15 @@ export const Resistance = (): ReactNode => {
     }
   };
 
+  const playNoConfidence = async (cardId: number) => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.playResistanceNoConfidence(sessionId, cardId), { revalidate: false });
+    } catch {
+      setMessage('Could not play the card.');
+    }
+  };
+
   const passLeaderWindow = async () => {
     setMessage(undefined);
     try {
@@ -362,6 +371,7 @@ export const Resistance = (): ReactNode => {
                   onPlayPlotCard={playPlotCard}
                   onTakeResponsibility={takeResponsibility}
                   onTakeLead={takeLead}
+                  onNoConfidence={playNoConfidence}
                   onPassLeaderWindow={passLeaderWindow}
                   onConfirmPlotCard={confirmPlotCard}
                   onVote={castVote}

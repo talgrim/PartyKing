@@ -145,7 +145,13 @@ export const gamesApi = {
       withCredentials: true,
     }) as unknown as Promise<ResistanceGameDto>,
 
-  /** A player confirms in the leader window that they play no card; the last confirmation ends it. 403 for a non-player, 409 outside the window. */
+  /** The holder of No Confidence cancels the approved team in the confidence window; it counts as a rejected team. 403 for anyone else, 409 outside the window or once played. */
+  playResistanceNoConfidence: (sessionId: string, cardId: number) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/cards/${cardId}/no-confidence`, undefined, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
+  /** A player confirms in the leader or confidence window that they play no card; the last confirmation ends it. 403 for a non-player, 409 outside the window. */
   passResistanceLeaderWindow: (sessionId: string) =>
     axios.put(`/sessions/${sessionId}/games/resistance/leader-window/pass`, undefined, {
       withCredentials: true,

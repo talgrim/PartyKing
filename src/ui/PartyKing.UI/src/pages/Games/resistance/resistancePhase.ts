@@ -70,6 +70,17 @@ export const resistancePhaseDescription = (
       return `${who} (korona), ale zanim cokolwiek zrobi, ktoś może zagrać kartę „Charyzmatyczny Przywódca”. Potwierdzili: ${passed}/${count}.${mine}`;
     }
 
+    if (game.phase === 'ConfidenceWindow') {
+      const passed = game.leaderWindowPassedPlayerIds.length;
+      const mine = game.yourPlayerId == null
+        ? ''
+        : game.leaderWindowPassedPlayerIds.includes(game.yourPlayerId)
+          ? ' Twoje potwierdzenie jest zapisane.'
+          : ' Potwierdź, że nie zagrywasz karty, albo odrzuć drużynę.';
+
+      return `Drużyna (${names.join(', ')}) została zatwierdzona (${tally}), ale zanim wyruszy, ktoś może zagrać kartę „Nie ufajcie mu”. Potwierdzili: ${passed}/${count}.${mine}`;
+    }
+
     if (game.phase === 'ResolvingCards') {
       const waiting = game.playedPlotCards
         .filter((card) => IMMEDIATE_PLOT_CARDS.includes(card.type) && !card.isConfirmed)

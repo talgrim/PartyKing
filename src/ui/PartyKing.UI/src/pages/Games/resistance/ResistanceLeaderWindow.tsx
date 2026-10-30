@@ -5,19 +5,22 @@ import { PLOT_CARDS } from './resistancePlotCards';
 type Props = {
   game: ResistanceGameDto;
   onTakeLead: (cardId: number) => Promise<void>;
+  onNoConfidence: (cardId: number) => Promise<void>;
   onPass: () => Promise<void>;
 };
 
 /**
- * Leader window: a Strong Leader is in someone's hand, so everyone confirms they play no card (nobody can tell who
+ * Leader window (Strong Leader) and confidence window (No Confidence, after an approved vote): a Strong Leader is in someone's hand, so everyone confirms they play no card (nobody can tell who
  * holds one) and the holder may take the lead instead. The window ends when all confirmed or the lead was taken.
  */
-export const ResistanceLeaderWindow = ({ game, onTakeLead, onPass }: Props): ReactNode => {
+export const ResistanceLeaderWindow = ({ game, onTakeLead, onNoConfidence, onPass }: Props): ReactNode => {
   const [submitting, setSubmitting] = useState(false);
-  const card = game.yourPlotCards.find((x) => x.type === 'StrongLeader');
+  const confidence = game.phase === 'ConfidenceWindow';
+  const type = confidence ? 'NoConfidence' : 'StrongLeader';
+  const card = game.yourPlotCards.find((x) => x.type === type);
   const youLead = game.yourPlayerId === game.leaderPlayerId;
   const passed = game.yourPlayerId != null && game.leaderWindowPassedPlayerIds.includes(game.yourPlayerId);
-  const { name, effect, Icon } = PLOT_CARDS.StrongLeader;
+  const { name, effect, Icon } = PLOT_CARDS[type];
 
   const run = async (action: () => Promise<void>) => {
     setSubmitting(true);
@@ -34,14 +37,14 @@ export const ResistanceLeaderWindow = ({ game, onTakeLead, onPass }: Props): Rea
       <div className="min-w-0 flex-1">
         <p className="font-medium text-slate-100">{name}</p>
         <p className="mb-2 text-sm text-slate-400">{effect}</p>
-        {card != null && !youLead && (
+        {card != null && (confidence || !youLead) && (
           <button
             type="button"
             disabled={submitting}
-            onClick={() => void run(() => onTakeLead(card.id))}
+            onClick={() => void run(() => (confidence ? onNoConfidence(card.id) : onTakeLead(card.id)))}
             className="mb-2 w-full rounded-lg bg-emerald-500 px-4 py-2 font-semibold text-slate-900 transition-colors hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
           >
-            Przejmij przywództwo
+            {confidence ? 'Odrzuć zatwierdzoną drużynę' : 'Przejmij przywództwo'}
           </button>
         )}
         <button

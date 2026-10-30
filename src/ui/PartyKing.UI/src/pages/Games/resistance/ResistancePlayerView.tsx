@@ -25,7 +25,9 @@ type Props = {
   onTakeResponsibility: (cardId: number, targetPlayerId: string, takeOpinionMaker: boolean | null) => Promise<void>;
   /** Takes the lead with Strong Leader (leader window). */
   onTakeLead: (cardId: number) => Promise<void>;
-  /** Confirms in the leader window that no card is played. */
+  /** Cancels the approved team with No Confidence (confidence window). */
+  onNoConfidence: (cardId: number) => Promise<void>;
+  /** Confirms in the leader or confidence window that no card is played. */
   onPassLeaderWindow: () => Promise<void>;
   /** Confirms having seen the identity card a played plot card showed. */
   onConfirmPlotCard: (cardId: number) => Promise<void>;
@@ -36,7 +38,7 @@ type Props = {
 };
 
 /** The view of a player: their secret role and, as the round goes, the team picker, the vote or the continue button. */
-export const ResistancePlayerView = ({ game, onSubmitTeam, onDealPlotCards, onPlayPlotCard, onTakeResponsibility, onTakeLead, onPassLeaderWindow, onConfirmPlotCard, onVote, onPlayMissionCard, onContinue }: Props): ReactNode => {
+export const ResistancePlayerView = ({ game, onSubmitTeam, onDealPlotCards, onPlayPlotCard, onTakeResponsibility, onTakeLead, onNoConfidence, onPassLeaderWindow, onConfirmPlotCard, onVote, onPlayMissionCard, onContinue }: Props): ReactNode => {
   const isPlayer = game.yourPlayerId != null;
   const leads = isPlayer && game.yourPlayerId === game.leaderPlayerId;
   const deals = leads && game.phase === 'DealingCards';
@@ -60,8 +62,8 @@ export const ResistancePlayerView = ({ game, onSubmitTeam, onDealPlotCards, onPl
           onSubmit={onDealPlotCards}
         />
       )}
-      {isPlayer && game.phase === 'LeaderWindow' && (
-        <ResistanceLeaderWindow game={game} onTakeLead={onTakeLead} onPass={onPassLeaderWindow} />
+      {isPlayer && (game.phase === 'LeaderWindow' || game.phase === 'ConfidenceWindow') && (
+        <ResistanceLeaderWindow game={game} onTakeLead={onTakeLead} onNoConfidence={onNoConfidence} onPass={onPassLeaderWindow} />
       )}
       {resolves && <ResistancePlotPlayer game={game} onPlay={onPlayPlotCard} onConfirm={onConfirmPlotCard} />}
       {isPlayer && game.phase === 'PlayingMission' && (
