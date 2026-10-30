@@ -92,6 +92,21 @@ export type ResistanceGameDto = {
   revealedRoles: ResistanceRevealedRoleDto[] | null;
   /** The numbers this game was created with (see `refreshResistanceRules`). */
   rules: ResistanceRulesDto;
+  /** How many Fail cards make the current mission fail; null before the start. */
+  requiredFails: number | null;
+  /** Who has played a mission card (not which) while the mission is on; public. */
+  playedMissionPlayerIds: string[];
+  /** The caller's own mission card (true = Success); null until they play or when they are not on the team. */
+  yourMissionCard: boolean | null;
+  /** The finished missions, in order. */
+  missionResults: ResistanceMissionResultDto[];
+};
+
+// Mirrors PartyKing.Contract.V1.Games.ResistanceMissionResultDto
+export type ResistanceMissionResultDto = {
+  missionNumber: number;
+  succeeded: boolean;
+  failCount: number;
 };
 
 // Mirrors PartyKing.Contract.V1.Games.ResistanceRulesDto
@@ -111,8 +126,8 @@ export type ResistanceCountRulesDto = {
 
 export type ResistanceRole = 'Resistance' | 'Spy';
 
-/** SelectingTeam: the leader picks; Voting: the team is up for a vote; VoteResult: the votes are public. */
-export type ResistancePhase = 'SelectingTeam' | 'Voting' | 'VoteResult' | 'GameOver';
+/** SelectingTeam: the leader picks (the votes that rejected the last team stay public until then); Voting: the team is up for a vote; PlayingMission: the approved team plays cards; MissionResult: the outcome waits for "Dalej". */
+export type ResistancePhase = 'SelectingTeam' | 'Voting' | 'PlayingMission' | 'MissionResult' | 'GameOver';
 
 // Mirrors PartyKing.Contract.V1.Games.ResistanceVoteDto
 export type ResistanceVoteDto = {

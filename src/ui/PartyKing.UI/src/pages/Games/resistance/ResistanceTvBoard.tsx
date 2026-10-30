@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { ResistanceGameDto } from '@/service/endpoints/games/types';
 import { ResistancePlayers } from '../ResistancePlayers';
 import { ResistanceMissionBoard } from './ResistanceMissionBoard';
+import { ResistanceMissionCards } from './ResistanceMissionCards';
 import { ResistancePlayerMarks } from './ResistancePlayerMarks';
 import { ResistanceTeamCards } from './ResistanceTeamCards';
 import { ResistanceVoteCards } from './ResistanceVoteCards';
@@ -19,7 +20,16 @@ type Props = {
 export const ResistanceTvBoard = ({ game, board, banner, yourPlayerId }: Props): ReactNode => {
   const team = game?.players.filter((player) => game.teamPlayerIds.includes(player.id)) ?? [];
 
-  const votes = game?.votes && game.votes.length > 0 ? game.votes : null;
+  // The votes show from the moment all voted until the next leader submits a team (after a rejection) or the mission
+  // is over. The server only sends them while they are public.
+  const votesShown = game?.phase === 'SelectingTeam' || game?.phase === 'PlayingMission';
+  const votes = votesShown && game?.votes && game.votes.length > 0 ? game.votes : null;
+
+  // The cards of the mission that just finished, until "Dalej" starts the next one (also when it ended the game).
+  const finished = game?.phase === 'MissionResult' || game?.phase === 'GameOver'
+    ? game.missionResults.find((result) => result.missionNumber === game.missionNumber)
+    : undefined;
+  const cards = finished && team.length > 0 ? { count: team.length, fails: finished.failCount } : null;
 
   return (
     <>
@@ -31,14 +41,16 @@ export const ResistanceTvBoard = ({ game, board, banner, yourPlayerId }: Props):
             className="absolute inset-0 h-full w-full"
             currentMission={game?.startedAt != null ? game.missionNumber - 1 : null}
             rejectedTeams={game?.rejectedTeams}
+            missionResults={game?.missionResults}
           />
         </div>
-        {(team.length > 0 || votes) && (
+        {(team.length > 0 || votes || cards) && (
           <div className="flex w-full shrink-0 items-start justify-center gap-[4vw]">
             {team.length > 0 && (
               <ResistanceTeamCards members={team} missionNumber={game!.missionNumber} leaderId={game!.leaderPlayerId} />
             )}
             {votes && <ResistanceVoteCards players={game!.players} votes={votes} />}
+            {cards && <ResistanceMissionCards cardCount={cards.count} failCount={cards.fails} />}
           </div>
         )}
       </div>

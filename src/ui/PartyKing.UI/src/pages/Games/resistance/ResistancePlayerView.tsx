@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { ResistanceGameDto } from '@/service/endpoints/games/types';
 import { ResistanceRoleCard } from '../ResistanceRoleCard';
 import { ResistanceTeamPicker } from './ResistanceTeamPicker';
+import { ResistanceMissionPanel } from './ResistanceMissionPanel';
 import { ResistanceVotePanel } from './ResistanceVotePanel';
 
 type Props = {
@@ -10,17 +11,20 @@ type Props = {
   onSubmitTeam: (playerIds: string[]) => Promise<void>;
   /** Votes on the submitted team (true approves); only a player sees the vote buttons, and only while the vote is on. */
   onVote: (approve: boolean) => Promise<void>;
-  /** Moves on after a rejected team; the leader sees the button once the votes are public. */
+  /** Plays a mission card (true = Success); only a member of the approved team sees the cards. */
+  onPlayMissionCard: (success: boolean) => Promise<void>;
+  /** Moves on after a finished mission; the leader sees the button then. */
   onContinue: () => Promise<void>;
 };
 
 /** The view of a player: their secret role and, as the round goes, the team picker, the vote or the continue button. */
-export const ResistancePlayerView = ({ game, onSubmitTeam, onVote, onContinue }: Props): ReactNode => {
+export const ResistancePlayerView = ({ game, onSubmitTeam, onVote, onPlayMissionCard, onContinue }: Props): ReactNode => {
   const isPlayer = game.yourPlayerId != null;
   const leads = isPlayer && game.yourPlayerId === game.leaderPlayerId;
   const picksTeam = leads && game.phase === 'SelectingTeam' && game.requiredTeamSize != null;
   const votes = isPlayer && game.phase === 'Voting';
-  const continues = leads && game.phase === 'VoteResult' && game.voteApproved === false;
+  const plays = isPlayer && game.phase === 'PlayingMission' && game.teamPlayerIds.includes(game.yourPlayerId!);
+  const continues = leads && game.phase === 'MissionResult';
 
   return (
     <div className="flex flex-col items-center gap-4 py-2">
@@ -36,6 +40,7 @@ export const ResistancePlayerView = ({ game, onSubmitTeam, onVote, onContinue }:
         />
       )}
       {votes && <ResistanceVotePanel game={game} onVote={onVote} />}
+      {plays && <ResistanceMissionPanel game={game} onPlay={onPlayMissionCard} />}
       {continues && (
         <button
           type="button"

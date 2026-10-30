@@ -17,6 +17,7 @@ export const ResistanceCompactBoard = ({ game, board }: Props): ReactNode => (
       board={board}
       currentMission={game?.startedAt != null ? game.missionNumber - 1 : null}
       rejectedTeams={game?.rejectedTeams}
+      missionResults={game?.missionResults}
     />
 
     {game && game.players.length > 0 && (

@@ -222,8 +222,8 @@ export const VoteRejectCardIcon = ({ className, title, ...button }: IconProps & 
 );
 
 /** Mission card: Success (the only card a Resistance member may play). */
-export const MissionSuccessCardIcon = ({ className, title }: IconProps): ReactNode => (
-  <Svg viewBox="0 0 100 140" className={className} title={title}>
+export const MissionSuccessCardIcon = ({ className, title, ...button }: IconProps & ButtonProps): ReactNode => (
+  <Svg viewBox="0 0 100 140" className={className} title={title} {...button}>
     <CardFrame fill={COLORS.resistanceDark} stroke={COLORS.success} />
     <path d="M50 22 L82 34 L82 70 Q82 96 50 112 Q18 96 18 70 L18 34 Z" fill={COLORS.success} stroke={COLORS.paper} strokeWidth="3" strokeLinejoin="round" />
     <Check cx={50} cy={66} size={16} stroke={COLORS.paper} />
@@ -234,8 +234,8 @@ export const MissionSuccessCardIcon = ({ className, title }: IconProps): ReactNo
 );
 
 /** Mission card: Fail (sabotage, only a spy may play it). */
-export const MissionFailCardIcon = ({ className, title }: IconProps): ReactNode => (
-  <Svg viewBox="0 0 100 140" className={className} title={title}>
+export const MissionFailCardIcon = ({ className, title, ...button }: IconProps & ButtonProps): ReactNode => (
+  <Svg viewBox="0 0 100 140" className={className} title={title} {...button}>
     <CardFrame fill={COLORS.spyDark} stroke={COLORS.fail} />
     <path d="M50 22 L82 34 L82 70 Q82 96 50 112 Q18 96 18 70 L18 34 Z" fill={COLORS.fail} stroke={COLORS.paper} strokeWidth="3" strokeLinejoin="round" />
     <path d="M50 38 L42 62 L54 62 L46 94 L64 56 L52 56 L60 38 Z" fill={COLORS.gold} />

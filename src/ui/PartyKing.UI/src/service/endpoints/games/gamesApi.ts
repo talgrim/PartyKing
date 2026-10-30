@@ -121,6 +121,12 @@ export const gamesApi = {
       withCredentials: true,
     }) as unknown as Promise<ResistanceGameDto>,
 
+  /** A team member plays a mission card (Success or Fail); 403 unless on the team (a Resistance member can only succeed), 409 when played already or no mission is on. */
+  playResistanceMissionCard: (sessionId: string, success: boolean) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/mission`, { success }, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
   /** The leader, the host or an admin moves on after a rejected team (next leader picks); 409 unless the team was rejected. */
   continueResistance: (sessionId: string) =>
     axios.post(`/sessions/${sessionId}/games/resistance/continue`, null, {

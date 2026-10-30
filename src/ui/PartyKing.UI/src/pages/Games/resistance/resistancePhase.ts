@@ -35,22 +35,44 @@ export const resistancePhaseDescription = (
     const approvals = votes.filter((vote) => vote.approve).length;
     const tally = `za: ${approvals}, przeciw: ${votes.length - approvals}`;
 
+    const results = game.missionResults ?? [];
+    const succeeded = results.filter((result) => result.succeeded).length;
+    const score = `Ruch Oporu ${succeeded}, Szpiedzy ${results.length - succeeded}`;
+
     if (game.phase === 'GameOver') {
-      return `Koniec gry! ${
+      const why =
         game.winner === 'Spy'
-          ? `Szpiedzy wygrali: ${MAX_REJECTED_TEAMS} drużyn z rzędu zostało odrzuconych`
-          : 'Ruch Oporu wygrał'
-      } (${tally}). Wszystkie role zostały ujawnione.`;
+          ? game.rejectedTeams >= MAX_REJECTED_TEAMS
+            ? `${MAX_REJECTED_TEAMS} drużyn z rzędu zostało odrzuconych`
+            : 'trzy misje się nie powiodły'
+          : 'trzy misje zakończyły się sukcesem';
+
+      return `Koniec gry! ${game.winner === 'Spy' ? 'Szpiedzy wygrali' : 'Ruch Oporu wygrał'}: ${why} (${score}). Wszystkie role zostały ujawnione.`;
     }
 
-    if (game.phase === 'VoteResult') {
-      if (game.voteApproved) {
-        return `Drużyna (${names.join(', ')}) została zatwierdzona (${tally}). Misja nie jest jeszcze gotowa w aplikacji.`;
-      }
+    if (game.phase === 'PlayingMission') {
+      const progress = `Zagrano ${game.playedMissionPlayerIds.length}/${game.teamPlayerIds.length} kart.`;
+      const fails = game.requiredFails ?? 1;
+      const rule = fails > 1 ? ` Misja kończy się porażką od ${fails} kart Porażka.` : '';
+      const onTeam = game.yourPlayerId != null && game.teamPlayerIds.includes(game.yourPlayerId);
+      const mine = !onTeam
+        ? ''
+        : game.yourMissionCard == null
+          ? ' Zagraj swoją kartę misji.'
+          : ' Twoja karta jest zagrana.';
 
+      return `Drużyna (${names.join(', ')}) została zatwierdzona (${tally}) i wykonuje ${mission} misję. ${progress}${rule}${mine}`;
+    }
+
+    if (game.phase === 'MissionResult') {
+      const last = results.find((result) => result.missionNumber === game.missionNumber);
       const next = youLead || viewer.canManage ? 'Kliknij „Dalej”' : 'Lider lub host kliknie „Dalej”';
+      const outcome = last?.succeeded
+        ? 'Misja zakończyła się sukcesem'
+        : `Misja zakończyła się porażką (kart Porażka: ${last?.failCount ?? 0})`;
+      const fails = last?.succeeded && last.failCount > 0 ? ` (kart Porażka: ${last.failCount})` : '';
 
-      return `Drużyna (${names.join(', ')}) została odrzucona (${tally}).${rejected} ${next}, żeby przywództwo przeszło na następnego gracza.`;
+      return `${outcome}${fails}. Wynik: ${score}. ${next}, żeby zaczęła się kolejna misja.`;
     }
 
     if (game.phase === 'Voting') {
@@ -68,6 +90,10 @@ export const resistancePhaseDescription = (
     const task = youLead
       ? `wybierz ${size} osób na ${mission} misję i zgłoś je do głosowania`
       : `wybiera ${size} osób na ${mission} misję`;
+
+    if (votes.length > 0) {
+      return `Poprzednia drużyna została odrzucona (${tally}).${rejected} ${who} (korona): ${task}. Omówcie to na żywo.${card}`;
+    }
 
     return `Gra się rozpoczęła, nowi gracze nie mogą już dołączyć. ${who} (korona): ${task}. Omówcie to na żywo.${rejected}${card}`;
   }

@@ -21,11 +21,11 @@ export const ResistanceManagerControls = ({ game, isAdmin, onManagePlayers, onEn
   const started = game.startedAt != null;
   const enough = game.players.length >= MIN_PLAYERS;
 
-  const rejected = game.phase === 'VoteResult' && game.voteApproved === false;
+  const missionOver = game.phase === 'MissionResult';
 
   return (
     <>
-      {rejected && (
+      {missionOver && (
         <button type="button" onClick={onContinue} className={buttonClass}>
           Dalej
         </button>

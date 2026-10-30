@@ -45,7 +45,9 @@ const WIDE_QUERY = '(min-width: 1024px)';
  * leader's crown and gives every player a face-down card with their secret role (a spy also sees the other spies).
  * Anyone else only watches. The leader picks the team, every player votes on it (a vote can be changed until the
  * last player has voted; the votes become public then), and a rejected team passes the lead on after "Dalej" (the
- * leader, host or an admin). Five rejected teams in a row end the game with a spy win. The missions are not played yet.
+ * leader, host or an admin). Five rejected teams in a row end the game with a spy win. An approved team plays the mission: every
+ * member secretly plays Success or Fail (a Resistance member only Success), only the number of Fail cards becomes
+ * public, and "Dalej" starts the next mission. Three successes or failures end the game.
  *
  * Two layouts share the page. The TV layout (`?tv=1` for the host and admins, and for a host or admin who is not
  * playing) has the manager controls, the board in the middle and the players around the edge, and never shows the
@@ -85,7 +87,7 @@ export const Resistance = (): ReactNode => {
   const showPlayerView = isPlayer && !tv && (wide || !boardView);
   const showBoard = !showPlayerView || wide;
   // The TV tab shares the player's cookies, so it must not show the role or the "Ty" badge of whoever is logged in
-  const shownGame = game && tv ? { ...game, yourPlayerId: null, yourRole: null, fellowSpies: null, yourVote: null } : game;
+  const shownGame = game && tv ? { ...game, yourPlayerId: null, yourRole: null, fellowSpies: null, yourVote: null, yourMissionCard: null } : game;
 
   const players = game?.players ?? [];
   const started = game?.startedAt != null;
@@ -139,6 +141,15 @@ export const Resistance = (): ReactNode => {
       await mutate(gamesApi.voteResistanceTeam(sessionId, approve), { revalidate: false });
     } catch {
       setMessage('Could not send the vote.');
+    }
+  };
+
+  const playMissionCard = async (success: boolean) => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.playResistanceMissionCard(sessionId, success), { revalidate: false });
+    } catch {
+      setMessage('Could not play the mission card.');
     }
   };
 
@@ -270,6 +281,7 @@ export const Resistance = (): ReactNode => {
                   game={game}
                   onSubmitTeam={submitTeam}
                   onVote={castVote}
+                  onPlayMissionCard={playMissionCard}
                   onContinue={continueGame}
                 />
               </div>
