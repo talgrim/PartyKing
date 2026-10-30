@@ -44,8 +44,10 @@ public interface IResistanceGamesRepository : ILobbyGamesRepository<ResistanceGa
         CancellationToken cancellationToken);
 
     /// <summary>
-    /// The holder of an immediate card (Overheard Conversation, Establish Confidence, Open Up) plays it on a player:
-    /// a neighbour for Overheard Conversation, any other player for the rest.
+    /// The holder of a card plays it on a player. An immediate card (Overheard Conversation, Establish Confidence, Open
+    /// Up) is played while the immediate cards are resolved, on a neighbour for Overheard Conversation and any other
+    /// player for the rest. In the Spotlight is played while the mission is played, on a team member who has not
+    /// played their mission card yet, and makes that card public.
     /// </summary>
     Task<ResistancePlayCardResult> PlayPlotCardAsync(
         Guid sessionId, Guid? callerPlayerId, int cardId, Guid targetPlayerId, CancellationToken cancellationToken);
@@ -148,6 +150,9 @@ public enum ResistancePlayCardStatus
 
     /// <summary>The immediate cards are not being played.</summary>
     NotResolving,
+
+    /// <summary>In the Spotlight is played while the mission cards are played, and the mission is not.</summary>
+    NotPlayingMission,
 
     /// <summary>No such card, or it is not an immediate card.</summary>
     UnknownCard,
@@ -524,14 +529,35 @@ internal class ResistanceGamesRepository
     {
         await using var dbContext = await CreateWriterAsync(cancellationToken);
 
-        var (early, game) = await LoadResolvingAsync(dbContext, sessionId, cancellationToken);
-        if (early is { } status)
+        var game = await LoadAsync(dbContext, sessionId, cancellationToken);
+        if (game is null)
         {
-            return new ResistancePlayCardResult(status, game);
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.NoGame, null);
         }
 
-        var card = game!.PlotCards.Find(x => x.CardId == cardId);
-        if (card is null || !ResistanceRoles.IsImmediate(card.Type)
+        if (!game.IsStarted)
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.NotStarted, game);
+        }
+
+        if (game.Phase == ResistancePhase.GameOver)
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.GameOver, game);
+        }
+
+        var card = game.PlotCards.Find(x => x.CardId == cardId);
+        var spotlight = card?.Type == ResistancePlotCardType.InTheSpotlight;
+        if (spotlight && game.Phase != ResistancePhase.PlayingMission)
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.NotPlayingMission, game);
+        }
+
+        if (!spotlight && game.Phase != ResistancePhase.ResolvingCards)
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.NotResolving, game);
+        }
+
+        if (card is null || !(spotlight || ResistanceRoles.IsImmediate(card.Type))
             || card.Location is not (ResistancePlotCardLocation.Hand or ResistancePlotCardLocation.Played))
         {
             return new ResistancePlayCardResult(ResistancePlayCardStatus.UnknownCard, game);
@@ -547,9 +573,20 @@ internal class ResistanceGamesRepository
             return new ResistancePlayCardResult(ResistancePlayCardStatus.WrongState, game);
         }
 
-        var validTarget = card.Type == ResistancePlotCardType.OverheardConversation
-            ? ResistanceRoles.Neighbours(game, card.HolderPlayerId!.Value).Contains(targetPlayerId)
-            : targetPlayerId != card.HolderPlayerId && game.Players.Any(x => x.PlayerId == targetPlayerId);
+        if (spotlight && ResistanceRoles.OpenMissionPlayerId(game) is not null)
+        {
+            // One player is forced open per mission
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.WrongState, game);
+        }
+
+        var validTarget = card.Type switch
+        {
+            ResistancePlotCardType.OverheardConversation =>
+                ResistanceRoles.Neighbours(game, card.HolderPlayerId!.Value).Contains(targetPlayerId),
+            ResistancePlotCardType.InTheSpotlight =>
+                ResistanceRoles.CanBeForcedOpen(game, card.HolderPlayerId!.Value, targetPlayerId),
+            _ => targetPlayerId != card.HolderPlayerId && game.Players.Any(x => x.PlayerId == targetPlayerId),
+        };
         if (!validTarget)
         {
             return new ResistancePlayCardResult(ResistancePlayCardStatus.InvalidTarget, game);
@@ -559,7 +596,7 @@ internal class ResistanceGamesRepository
         card.TargetPlayerId = targetPlayerId;
         card.PlayedAt = DateTimeOffset.UtcNow;
         card.PlayedInMission = game.MissionNumber;
-        card.IsConfirmed = false;
+        card.IsConfirmed = spotlight;
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return new ResistancePlayCardResult(ResistancePlayCardStatus.Done, game);

@@ -439,6 +439,8 @@ internal class ResistanceService : IResistanceService
                 return GameOverError;
             case ResistancePlayCardStatus.NotResolving:
                 return Error.Conflict("Resistance.NotResolving", "No plot cards are being played now.");
+            case ResistancePlayCardStatus.NotPlayingMission:
+                return Error.Conflict("Resistance.NotPlayingMission", "The mission cards are not being played now.");
             case ResistancePlayCardStatus.UnknownCard:
                 return Error.NotFound("Resistance.UnknownCard", "There is no such card to play.");
             case ResistancePlayCardStatus.NotAllowed:
@@ -719,7 +721,9 @@ internal class ResistanceService : IResistanceService
                         x.CardId,
                         ResistanceRoles.Revealed(x)!.Value,
                         (ResistanceRoleDto)game.Players.First(p => p.PlayerId == ResistanceRoles.Revealed(x)).Role!.Value))
-                    .ToList());
+                    .ToList(),
+            ResistanceRoles.OpenMissionPlayerId(game),
+            game.Players.FirstOrDefault(x => x.PlayerId == ResistanceRoles.OpenMissionPlayerId(game))?.MissionCard);
     }
 
     private sealed class ResistanceLobbyNotifier : IGameLobbyNotifier

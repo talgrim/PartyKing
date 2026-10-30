@@ -121,6 +121,23 @@ public static class ResistanceRoles
     public static Guid? Revealed(ResistancePlotCard card) =>
         card.Type == ResistancePlotCardType.OverheardConversation ? card.TargetPlayerId : card.HolderPlayerId;
 
+    /// <summary>
+    /// The team member who must play their mission card openly this mission (In the Spotlight), or null. The card
+    /// stays in the log, so it only counts for the mission it was played in.
+    /// </summary>
+    public static Guid? OpenMissionPlayerId(ResistanceGame game) =>
+        game.PlotCards
+            .Where(x => x.Type == ResistancePlotCardType.InTheSpotlight
+                        && x.Location == ResistancePlotCardLocation.Played
+                        && x.PlayedInMission == game.MissionNumber)
+            .Select(x => x.TargetPlayerId)
+            .FirstOrDefault();
+
+    /// <summary>Whether In the Spotlight may force the target open: another player of the team who has not played yet.</summary>
+    public static bool CanBeForcedOpen(ResistanceGame game, Guid holderPlayerId, Guid targetPlayerId) =>
+        targetPlayerId != holderPlayerId
+        && game.Players.Any(x => x.PlayerId == targetPlayerId && x.IsOnTeam && x.MissionCard is null);
+
     /// <summary>After the cards are dealt: plays the immediate ones first, otherwise the leader picks the team.</summary>
     public static void AfterDeal(ResistanceGame game) =>
         game.Phase = UnplayedImmediateCards(game).Any() ? ResistancePhase.ResolvingCards : ResistancePhase.SelectingTeam;

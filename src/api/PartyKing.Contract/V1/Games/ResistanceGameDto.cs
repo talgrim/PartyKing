@@ -20,6 +20,8 @@ namespace PartyKing.Contract.V1.Games;
 /// who has (not which card) and <see cref="YourMissionCard"/> is the caller's own. Once all have played only the
 /// number of Fail cards of each finished mission is public (<see cref="MissionResults"/>), never who played them;
 /// <see cref="RequiredFails"/> is how many of them fail the current mission. Three successes or three failures win.
+/// In the Spotlight forces one team member to play openly: <see cref="OpenMissionPlayerId"/> is that player and
+/// <see cref="OpenMissionCard"/> their card (true = Success), public once they have played it.
 /// </summary>
 public record ResistanceGameDto(
     DateTimeOffset CreatedAt,
@@ -52,7 +54,9 @@ public record ResistanceGameDto(
     IReadOnlyList<Guid> OpinionMakerPlayerIds,
     IReadOnlyList<ResistanceVoteDto> OpinionMakerVotes,
     IReadOnlyList<ResistancePlayedPlotCardDto> PlayedPlotCards,
-    IReadOnlyList<ResistanceCardRevealDto> YourReveals);
+    IReadOnlyList<ResistanceCardRevealDto> YourReveals,
+    Guid? OpenMissionPlayerId,
+    bool? OpenMissionCard);
 
 /// <summary>
 /// A plot card that was played; public, newest first. The identity card it showed stays with its viewer.
