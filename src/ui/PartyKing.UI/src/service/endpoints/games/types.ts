@@ -116,6 +116,8 @@ export type ResistanceGameDto = {
   openMissionPlayerId: string | null;
   /** That player's mission card (true = Success), public once they played it. */
   openMissionCard: boolean | null;
+  /** LeaderWindow: the players who confirmed they play no card; public. */
+  leaderWindowPassedPlayerIds: string[];
 };
 
 // Mirrors PartyKing.Contract.V1.Games.ResistancePlayedPlotCardDto
@@ -191,7 +193,7 @@ export type ResistanceCountRulesDto = {
 
 export type ResistanceRole = 'Resistance' | 'Spy';
 
-/** DealingCards: the leader hands out the plot cards just drawn (add-on only); ResolvingCards: the immediate plot cards are played and their receivers confirm; SelectingTeam: the leader picks (the votes that rejected the last team stay public until then); Voting: the team is up for a vote; PlayingMission: the approved team plays cards; MissionResult: the outcome waits for "Dalej". */
+/** DealingCards: the leader hands out the plot cards just drawn (add-on only); ResolvingCards: the immediate plot cards are played and their receivers confirm; SelectingTeam: the leader picks (the votes that rejected the last team stay public until then); Voting: the team is up for a vote; PlayingMission: the approved team plays cards; LeaderWindow: a Strong Leader is out there, so everyone confirms they play no card or its holder takes the lead; MissionResult: the outcome waits for "Dalej". */
 export type ResistancePhase =
   | 'SelectingTeam'
   | 'Voting'
@@ -199,7 +201,8 @@ export type ResistancePhase =
   | 'MissionResult'
   | 'GameOver'
   | 'DealingCards'
-  | 'ResolvingCards';
+  | 'ResolvingCards'
+  | 'LeaderWindow';
 
 // Mirrors PartyKing.Contract.V1.Games.ResistanceVoteDto
 export type ResistanceVoteDto = {

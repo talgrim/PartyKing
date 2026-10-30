@@ -139,6 +139,18 @@ export const gamesApi = {
       withCredentials: true,
     }) as unknown as Promise<ResistanceGameDto>,
 
+  /** The holder of Strong Leader takes the lead in the leader window. 403 for anyone else, 409 outside the window or once played. */
+  takeResistanceLead: (sessionId: string, cardId: number) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/cards/${cardId}/take-lead`, undefined, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
+  /** A player confirms in the leader window that they play no card; the last confirmation ends it. 403 for a non-player, 409 outside the window. */
+  passResistanceLeaderWindow: (sessionId: string) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/leader-window/pass`, undefined, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
   /** The player who saw the identity card confirms it; the last confirmation moves on to the team. 403 for anyone else, 409 when not played or confirmed already. */
   confirmResistancePlotCard: (sessionId: string, cardId: number) =>
     axios.put(`/sessions/${sessionId}/games/resistance/cards/${cardId}/confirm`, undefined, {

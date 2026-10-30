@@ -7,6 +7,7 @@ import { ResistanceVotePanel } from './ResistanceVotePanel';
 import { ResistancePlotDealer } from './ResistancePlotDealer';
 import { ResistancePlotHand } from './ResistancePlotHand';
 import { ResistancePlotPlayer } from './ResistancePlotPlayer';
+import { ResistanceLeaderWindow } from './ResistanceLeaderWindow';
 import { ResistanceSpotlightPlayer } from './ResistanceSpotlightPlayer';
 import { ResistanceTakeResponsibility } from './ResistanceTakeResponsibility';
 
@@ -22,6 +23,10 @@ type Props = {
   onPlayPlotCard: (cardId: number, targetPlayerId: string) => Promise<void>;
   /** Takes a plot card from a player (Take Responsibility); the choice is null unless the target has an Opinion Maker and a hand. */
   onTakeResponsibility: (cardId: number, targetPlayerId: string, takeOpinionMaker: boolean | null) => Promise<void>;
+  /** Takes the lead with Strong Leader (leader window). */
+  onTakeLead: (cardId: number) => Promise<void>;
+  /** Confirms in the leader window that no card is played. */
+  onPassLeaderWindow: () => Promise<void>;
   /** Confirms having seen the identity card a played plot card showed. */
   onConfirmPlotCard: (cardId: number) => Promise<void>;
   /** Plays a mission card (true = Success); only a member of the approved team sees the cards. */
@@ -31,7 +36,7 @@ type Props = {
 };
 
 /** The view of a player: their secret role and, as the round goes, the team picker, the vote or the continue button. */
-export const ResistancePlayerView = ({ game, onSubmitTeam, onDealPlotCards, onPlayPlotCard, onTakeResponsibility, onConfirmPlotCard, onVote, onPlayMissionCard, onContinue }: Props): ReactNode => {
+export const ResistancePlayerView = ({ game, onSubmitTeam, onDealPlotCards, onPlayPlotCard, onTakeResponsibility, onTakeLead, onPassLeaderWindow, onConfirmPlotCard, onVote, onPlayMissionCard, onContinue }: Props): ReactNode => {
   const isPlayer = game.yourPlayerId != null;
   const leads = isPlayer && game.yourPlayerId === game.leaderPlayerId;
   const deals = leads && game.phase === 'DealingCards';
@@ -54,6 +59,9 @@ export const ResistancePlayerView = ({ game, onSubmitTeam, onDealPlotCards, onPl
           cards={game.yourPlotCards.filter((card) => card.toDeal)}
           onSubmit={onDealPlotCards}
         />
+      )}
+      {isPlayer && game.phase === 'LeaderWindow' && (
+        <ResistanceLeaderWindow game={game} onTakeLead={onTakeLead} onPass={onPassLeaderWindow} />
       )}
       {resolves && <ResistancePlotPlayer game={game} onPlay={onPlayPlotCard} onConfirm={onConfirmPlotCard} />}
       {isPlayer && game.phase === 'PlayingMission' && (

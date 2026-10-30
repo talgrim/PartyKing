@@ -172,6 +172,24 @@ export const Resistance = (): ReactNode => {
     }
   };
 
+  const takeLead = async (cardId: number) => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.takeResistanceLead(sessionId, cardId), { revalidate: false });
+    } catch {
+      setMessage('Could not take the lead.');
+    }
+  };
+
+  const passLeaderWindow = async () => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.passResistanceLeaderWindow(sessionId), { revalidate: false });
+    } catch {
+      setMessage('Could not confirm.');
+    }
+  };
+
   const confirmPlotCard = async (cardId: number) => {
     setMessage(undefined);
     try {
@@ -343,6 +361,8 @@ export const Resistance = (): ReactNode => {
                   onDealPlotCards={dealPlotCards}
                   onPlayPlotCard={playPlotCard}
                   onTakeResponsibility={takeResponsibility}
+                  onTakeLead={takeLead}
+                  onPassLeaderWindow={passLeaderWindow}
                   onConfirmPlotCard={confirmPlotCard}
                   onVote={castVote}
                   onPlayMissionCard={playMissionCard}
