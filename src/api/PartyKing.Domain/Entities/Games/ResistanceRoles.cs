@@ -99,6 +99,16 @@ public static class ResistanceRoles
         game.PlotCards.Where(x => x.Location == ResistancePlotCardLocation.Drawn
                                   && x.Type != ResistancePlotCardType.EstablishConfidence);
 
+    /// <summary>The players with an Opinion Maker in play: they reveal their vote before the others vote.</summary>
+    public static IReadOnlyList<Guid> OpinionMakerIds(ResistanceGame game) =>
+        game.PlotCards
+            .Where(x => x.Location == ResistancePlotCardLocation.InPlay
+                        && x.Type == ResistancePlotCardType.OpinionMaker
+                        && x.HolderPlayerId is not null)
+            .Select(x => x.HolderPlayerId!.Value)
+            .Distinct()
+            .ToList();
+
     /// <summary>
     /// Builds and shuffles the deck from the rules' composition, or clears it when the add-on is off. The deck holds at
     /// most 15 cards and a game draws at most 5 missions x 3 cards, so it never runs out.

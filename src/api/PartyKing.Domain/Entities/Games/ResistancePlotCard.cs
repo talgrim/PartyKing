@@ -11,6 +11,12 @@ public enum ResistancePlotCardLocation
 
     /// <summary>In the hand of <see cref="ResistancePlotCard.HolderPlayerId"/>, hidden from everyone else.</summary>
     Hand,
+
+    /// <summary>
+    /// Face up in front of <see cref="ResistancePlotCard.HolderPlayerId"/> for everyone to see (an Opinion Maker, which
+    /// is played the moment it is dealt and stays for the rest of the game).
+    /// </summary>
+    InPlay,
 }
 
 /// <summary>One card of the plot cards add-on, built from <see cref="ResistanceRules.PlotDeck"/> when the game starts.</summary>
