@@ -2,25 +2,48 @@ import { ReactNode } from 'react';
 import { MissionFailCardIcon, MissionSuccessCardIcon } from './ResistanceIcons';
 
 type Props = {
-  /** How many cards were played: the size of the team. */
+  /** How many cards were played: the size of the team (the open card included). */
   cardCount: number;
+  /** Fail cards among them (the open card included). */
   failCount: number;
+  /** The card played openly through "Pod obserwacją": shown first and signed with the player's name. */
+  open?: { name: string; success: boolean } | null;
 };
 
-/** The played mission cards of a finished mission, Fail cards first; nothing tells who played which, for the TV view. */
-export const ResistanceMissionCards = ({ cardCount, failCount }: Props): ReactNode => (
-  <section aria-label="Mission cards" className="flex flex-col items-center gap-2 shrink-0">
-    <h2 className="text-[clamp(1.1rem,2.6vh,2rem)] font-semibold uppercase tracking-wide text-slate-300">Karty misji</h2>
-    <ul className="flex flex-wrap justify-center gap-3">
-      {Array.from({ length: cardCount }, (_, i) => (
-        <li key={i} className="flex w-[8vw] min-w-20 max-w-36 flex-col items-center">
-          {i < failCount ? (
-            <MissionFailCardIcon title="Porażka" className="h-[clamp(5rem,16vh,11rem)] w-auto" />
-          ) : (
-            <MissionSuccessCardIcon title="Sukces" className="h-[clamp(5rem,16vh,11rem)] w-auto" />
-          )}
-        </li>
-      ))}
-    </ul>
-  </section>
-);
+const CARD_SIZE = 'h-[clamp(5rem,16vh,11rem)] w-auto';
+
+/**
+ * The played mission cards of a finished mission, Fail cards first, for the TV view. Nothing tells who played which,
+ * except the card an In the Spotlight forced open, which comes first with the player's name under it.
+ */
+export const ResistanceMissionCards = ({ cardCount, failCount, open = null }: Props): ReactNode => {
+  const hidden = open ? Math.max(cardCount - 1, 0) : cardCount;
+  const hiddenFails = open && !open.success ? Math.max(failCount - 1, 0) : failCount;
+
+  return (
+    <section aria-label="Mission cards" className="flex flex-col items-center gap-2 shrink-0">
+      <h2 className="text-[clamp(1.1rem,2.6vh,2rem)] font-semibold uppercase tracking-wide text-slate-300">Karty misji</h2>
+      <ul className="flex flex-wrap justify-center gap-3">
+        {open && (
+          <li className="flex w-[8vw] min-w-20 max-w-36 flex-col items-center gap-1">
+            {open.success ? (
+              <MissionSuccessCardIcon title="Sukces" className={CARD_SIZE} />
+            ) : (
+              <MissionFailCardIcon title="Porażka" className={CARD_SIZE} />
+            )}
+            <span className="max-w-full truncate text-[clamp(0.9rem,2.2vh,1.5rem)] font-medium text-slate-100">{open.name}</span>
+          </li>
+        )}
+        {Array.from({ length: hidden }, (_, i) => (
+          <li key={i} className="flex w-[8vw] min-w-20 max-w-36 flex-col items-center">
+            {i < hiddenFails ? (
+              <MissionFailCardIcon title="Porażka" className={CARD_SIZE} />
+            ) : (
+              <MissionSuccessCardIcon title="Sukces" className={CARD_SIZE} />
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+};

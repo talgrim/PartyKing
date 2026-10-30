@@ -33,7 +33,11 @@ export const ResistanceTvBoard = ({ game, board, banner, yourPlayerId }: Props):
   const finished = game?.phase === 'MissionResult' || game?.phase === 'GameOver'
     ? game.missionResults.find((result) => result.missionNumber === game.missionNumber)
     : undefined;
+  const openPlayer = game?.players.find((player) => player.id === game.openMissionPlayerId);
+  const open = openPlayer && game?.openMissionCard != null ? { name: openPlayer.name, success: game.openMissionCard } : null;
   const cards = finished && team.length > 0 ? { count: team.length, fails: finished.failCount } : null;
+  // While the mission is played the openly played card is already public, the rest stay hidden until the mission ends
+  const showCards = cards ?? (game?.phase === 'PlayingMission' && open ? { count: 1, fails: open.success ? 0 : 1 } : null);
 
   return (
     <>
@@ -48,13 +52,13 @@ export const ResistanceTvBoard = ({ game, board, banner, yourPlayerId }: Props):
             missionResults={game?.missionResults}
           />
         </div>
-        {(team.length > 0 || votes || cards) && (
+        {(team.length > 0 || votes || showCards) && (
           <div className="flex w-full shrink-0 items-start justify-center gap-[4vw]">
             {team.length > 0 && (
               <ResistanceTeamCards members={team} missionNumber={game!.missionNumber} leaderId={game!.leaderPlayerId} />
             )}
             {votes && <ResistanceVoteCards players={game!.players} votes={votes} />}
-            {cards && <ResistanceMissionCards cardCount={cards.count} failCount={cards.fails} />}
+            {showCards && <ResistanceMissionCards cardCount={showCards.count} failCount={showCards.fails} open={open} />}
           </div>
         )}
       </div>
