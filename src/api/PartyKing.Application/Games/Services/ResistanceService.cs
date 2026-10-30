@@ -95,6 +95,14 @@ public interface IResistanceService
     /// The mission leader hands the drawn plot cards to the other players. Forbidden for anyone else (no manager
     /// override), Conflict when there is nothing to hand out, Validation for a wrong or incomplete deal.
     /// </summary>
+    /// <summary>The holder plays an immediate plot card on a player.</summary>
+    Task<ErrorOr<ResistanceGameDto>> PlayPlotCardAsync(
+        Guid sessionId, int cardId, Guid targetPlayerId, GameCaller caller, CancellationToken cancellationToken);
+
+    /// <summary>The player who saw the identity card confirms it; the last confirmation moves on to the team.</summary>
+    Task<ErrorOr<ResistanceGameDto>> ConfirmPlotCardAsync(
+        Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken);
+
     Task<ErrorOr<ResistanceGameDto>> DealPlotCardsAsync(
         Guid sessionId, IReadOnlyList<ResistancePlotCardAssignmentDto>? assignments, GameCaller caller,
         CancellationToken cancellationToken);
@@ -380,6 +388,72 @@ internal class ResistanceService : IResistanceService
         return ToDto(result.Game!, caller);
     }
 
+    public async Task<ErrorOr<ResistanceGameDto>> PlayPlotCardAsync(
+        Guid sessionId, int cardId, Guid targetPlayerId, GameCaller caller, CancellationToken cancellationToken)
+    {
+        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
+        if (access.IsError)
+        {
+            return access.Errors;
+        }
+
+        if (access.Value.Game is null)
+        {
+            return _lobby.NoGame;
+        }
+
+        var result = await _games.PlayPlotCardAsync(sessionId, caller.PlayerId, cardId, targetPlayerId, cancellationToken);
+
+        return await FinishPlotCardAsync(sessionId, result, caller, cancellationToken);
+    }
+
+    public async Task<ErrorOr<ResistanceGameDto>> ConfirmPlotCardAsync(
+        Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken)
+    {
+        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
+        if (access.IsError)
+        {
+            return access.Errors;
+        }
+
+        if (access.Value.Game is null)
+        {
+            return _lobby.NoGame;
+        }
+
+        var result = await _games.ConfirmPlotCardAsync(sessionId, caller.PlayerId, cardId, cancellationToken);
+
+        return await FinishPlotCardAsync(sessionId, result, caller, cancellationToken);
+    }
+
+    private async Task<ErrorOr<ResistanceGameDto>> FinishPlotCardAsync(
+        Guid sessionId, ResistancePlayCardResult result, GameCaller caller, CancellationToken cancellationToken)
+    {
+        switch (result.Status)
+        {
+            case ResistancePlayCardStatus.NoGame:
+                return _lobby.NoGame;
+            case ResistancePlayCardStatus.NotStarted:
+                return Error.Conflict("Resistance.NotStarted", "The game has not started yet.");
+            case ResistancePlayCardStatus.GameOver:
+                return GameOverError;
+            case ResistancePlayCardStatus.NotResolving:
+                return Error.Conflict("Resistance.NotResolving", "No plot cards are being played now.");
+            case ResistancePlayCardStatus.UnknownCard:
+                return Error.NotFound("Resistance.UnknownCard", "There is no such card to play.");
+            case ResistancePlayCardStatus.NotAllowed:
+                return Error.Forbidden("Resistance.NotYourCard", "This is not your card to play or to confirm.");
+            case ResistancePlayCardStatus.WrongState:
+                return Error.Conflict("Resistance.CardState", "The card was played already, or has not been played yet.");
+            case ResistancePlayCardStatus.InvalidTarget:
+                return Error.Validation("Resistance.InvalidTarget", "The card cannot be played on that player.");
+        }
+
+        await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
+
+        return ToDto(result.Game!, caller);
+    }
+
     public async Task<ErrorOr<ResistanceGameDto>> VoteAsync(
         Guid sessionId, bool approve, GameCaller caller, CancellationToken cancellationToken)
     {
@@ -605,7 +679,7 @@ internal class ResistanceService : IResistanceService
             you is null
                 ? []
                 : game.PlotCards
-                    .Where(x => x.HolderPlayerId == you.PlayerId)
+                    .Where(x => x.HolderPlayerId == you.PlayerId && x.Location != ResistancePlotCardLocation.Played)
                     .OrderBy(x => x.CardId)
                     .Select(x => new ResistancePlotCardDto(
                         x.CardId,
@@ -628,7 +702,24 @@ internal class ResistanceService : IResistanceService
                     .OrderBy(x => x.Order)
                     .Select(x => new ResistanceVoteDto(x.PlayerId, x.Vote!.Value))
                     .ToList()
-                : []);
+                : [],
+            game.PlotCards
+                .Where(x => x.Location == ResistancePlotCardLocation.Played)
+                .OrderByDescending(x => x.PlayedAt)
+                .Select(x => new ResistancePlayedPlotCardDto(
+                    x.CardId, (ResistancePlotCardTypeDto)x.Type, x.HolderPlayerId!.Value, x.TargetPlayerId!.Value,
+                    x.PlayedInMission, x.IsConfirmed))
+                .ToList(),
+            // Only the player an identity card is shown to sees it, and only until they confirm
+            you is null
+                ? []
+                : ResistanceRoles.UnconfirmedCards(game)
+                    .Where(x => ResistanceRoles.Viewer(x) == you.PlayerId)
+                    .Select(x => new ResistanceCardRevealDto(
+                        x.CardId,
+                        ResistanceRoles.Revealed(x)!.Value,
+                        (ResistanceRoleDto)game.Players.First(p => p.PlayerId == ResistanceRoles.Revealed(x)).Role!.Value))
+                    .ToList());
     }
 
     private sealed class ResistanceLobbyNotifier : IGameLobbyNotifier

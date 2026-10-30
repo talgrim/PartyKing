@@ -50,7 +50,19 @@ public record ResistanceGameDto(
     IReadOnlyList<ResistancePlotCardDto> YourPlotCards,
     IReadOnlyList<ResistancePlotCardCountDto> PlotCardCounts,
     IReadOnlyList<Guid> OpinionMakerPlayerIds,
-    IReadOnlyList<ResistanceVoteDto> OpinionMakerVotes);
+    IReadOnlyList<ResistanceVoteDto> OpinionMakerVotes,
+    IReadOnlyList<ResistancePlayedPlotCardDto> PlayedPlotCards,
+    IReadOnlyList<ResistanceCardRevealDto> YourReveals);
+
+/// <summary>
+/// An immediate plot card that was played; public, newest first. The identity card it showed stays with its viewer.
+/// <paramref name="TargetPlayerId"/> is the neighbour (Overheard Conversation) or the player it was played on.
+/// </summary>
+public record ResistancePlayedPlotCardDto(
+    int Id, ResistancePlotCardTypeDto Type, Guid HolderPlayerId, Guid TargetPlayerId, int MissionNumber, bool IsConfirmed);
+
+/// <summary>The identity card a played card shows the caller, until they confirm having seen it.</summary>
+public record ResistanceCardRevealDto(int CardId, Guid PlayerId, ResistanceRoleDto Role);
 
 /// <summary>A plot card the caller holds. <paramref name="ToDeal"/> is true while the leader still has to hand it out.</summary>
 public record ResistancePlotCardDto(int Id, ResistancePlotCardTypeDto Type, bool ToDeal, bool InPlay);
@@ -105,6 +117,7 @@ public enum ResistancePhaseDto
     PlayingMission,
     MissionResult,
     DealingCards,
+    ResolvingCards,
 }
 
 /// <summary>How one player voted on the team; public once everybody has voted.</summary>
@@ -140,6 +153,9 @@ public record ResistanceTeamRequest(IReadOnlyList<Guid>? PlayerIds);
 
 /// <summary>Switches the plot cards add-on on or off (only before the game is opened).</summary>
 public record ResistancePlotCardsRequest(bool Enabled);
+
+/// <summary>The player an immediate plot card is played on.</summary>
+public record ResistancePlayPlotCardRequest(Guid TargetPlayerId);
 
 /// <summary>The caller's vote on the submitted team: true approves, false rejects.</summary>
 public record ResistanceVoteRequest(bool Approve);

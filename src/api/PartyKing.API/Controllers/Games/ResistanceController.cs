@@ -115,6 +115,38 @@ public class ResistanceController : GameControllerBase
         return result.Match(Ok, Problem);
     }
 
+    /// <summary>
+    /// The holder of an immediate plot card plays it on a player. 403 for anyone else, 404 for an unknown card,
+    /// 409 when the cards are not being played or it was played already, 400 for a target the card can't be played on.
+    /// </summary>
+    [HttpPut("cards/{cardId:int}/play")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> PlayResistancePlotCard(
+        Guid sessionId, int cardId, [FromBody] ResistancePlayPlotCardRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.PlayPlotCardAsync(
+            sessionId, cardId, request.TargetPlayerId, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>
+    /// The player an identity card was shown to confirms having seen it; the last confirmation moves on to picking the
+    /// team. 403 for anyone else, 409 when the card has not been played or is confirmed already.
+    /// </summary>
+    [HttpPut("cards/{cardId:int}/confirm")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ConfirmResistancePlotCard(
+        Guid sessionId, int cardId, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.ConfirmPlotCardAsync(
+            sessionId, cardId, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
     /// <summary>Admin only: opens the Resistance game to guests (idempotent), 403 for the host.</summary>
     [HttpPost("open")]
     [RequireSessionAccess]
