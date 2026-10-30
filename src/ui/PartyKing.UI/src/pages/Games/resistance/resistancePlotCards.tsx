@@ -67,3 +67,6 @@ export const PLOT_CARDS: Record<ResistancePlotCardType, PlotCardInfo> = {
     Icon: PlotTakeResponsibilityCardIcon,
   },
 };
+
+/** Played the moment they are dealt; their receiver confirms what they saw. */
+export const IMMEDIATE_PLOT_CARDS: ResistancePlotCardType[] = ['OverheardConversation', 'EstablishConfidence', 'OpenUp'];

@@ -11,6 +11,7 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { PageNavigation } from '@/components/common/PageNavigation';
 import { ResistanceManagerControls } from '@/pages/Games/resistance/ResistanceManagerControls';
 import { ResistanceCompactBoard } from '@/pages/Games/resistance/ResistanceCompactBoard';
+import { ResistancePlotLog } from './resistance/ResistancePlotLog';
 import { ResistancePhaseBanner } from '@/pages/Games/resistance/ResistancePhaseBanner';
 import { ResistancePlayerView } from '@/pages/Games/resistance/ResistancePlayerView';
 import { ResistanceTvBoard } from '@/pages/Games/resistance/ResistanceTvBoard';
@@ -87,7 +88,7 @@ export const Resistance = (): ReactNode => {
   const showPlayerView = isPlayer && !tv && (wide || !boardView);
   const showBoard = !showPlayerView || wide;
   // The TV tab shares the player's cookies, so it must not show the role or the "Ty" badge of whoever is logged in
-  const shownGame = game && tv ? { ...game, yourPlayerId: null, yourRole: null, fellowSpies: null, yourVote: null, yourMissionCard: null, yourPlotCards: [] } : game;
+  const shownGame = game && tv ? { ...game, yourPlayerId: null, yourRole: null, fellowSpies: null, yourVote: null, yourMissionCard: null, yourPlotCards: [], yourReveals: [] } : game;
 
   const players = game?.players ?? [];
   const started = game?.startedAt != null;
@@ -153,6 +154,24 @@ export const Resistance = (): ReactNode => {
     }
   };
 
+  const playPlotCard = async (cardId: number, targetPlayerId: string) => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.playResistancePlotCard(sessionId, cardId, targetPlayerId), { revalidate: false });
+    } catch {
+      setMessage('Could not play the card.');
+    }
+  };
+
+  const confirmPlotCard = async (cardId: number) => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.confirmResistancePlotCard(sessionId, cardId), { revalidate: false });
+    } catch {
+      setMessage('Could not confirm the card.');
+    }
+  };
+
   const castVote = async (approve: boolean) => {
     setMessage(undefined);
     try {
@@ -202,7 +221,10 @@ export const Resistance = (): ReactNode => {
   };
 
   const banner = shownGame && (
-    <ResistancePhaseBanner text={resistancePhaseDescription(shownGame, { canManage, isAdmin }, board.teamSizes[0])} />
+    <>
+      <ResistancePhaseBanner text={resistancePhaseDescription(shownGame, { canManage, isAdmin }, board.teamSizes[0])} />
+      <ResistancePlotLog cards={shownGame.playedPlotCards} players={shownGame.players} />
+    </>
   );
 
   const rulesButton = (
@@ -310,6 +332,8 @@ export const Resistance = (): ReactNode => {
                   game={game}
                   onSubmitTeam={submitTeam}
                   onDealPlotCards={dealPlotCards}
+                  onPlayPlotCard={playPlotCard}
+                  onConfirmPlotCard={confirmPlotCard}
                   onVote={castVote}
                   onPlayMissionCard={playMissionCard}
                   onContinue={continueGame}

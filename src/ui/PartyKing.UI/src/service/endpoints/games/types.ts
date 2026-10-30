@@ -108,6 +108,28 @@ export type ResistanceGameDto = {
   opinionMakerPlayerIds: string[];
   /** The Opinion Makers' votes, once every one of them has voted (the vote is final); empty before. */
   opinionMakerVotes: ResistanceVoteDto[];
+  /** The immediate plot cards played so far, newest first; public. */
+  playedPlotCards: ResistancePlayedPlotCardDto[];
+  /** The identity cards played cards show the caller, until they confirm having seen them; private. */
+  yourReveals: ResistanceCardRevealDto[];
+};
+
+// Mirrors PartyKing.Contract.V1.Games.ResistancePlayedPlotCardDto
+export type ResistancePlayedPlotCardDto = {
+  id: number;
+  type: ResistancePlotCardType;
+  holderPlayerId: string;
+  /** The neighbour (Overheard Conversation) or the player the card was played on. */
+  targetPlayerId: string;
+  missionNumber: number;
+  isConfirmed: boolean;
+};
+
+// Mirrors PartyKing.Contract.V1.Games.ResistanceCardRevealDto
+export type ResistanceCardRevealDto = {
+  cardId: number;
+  playerId: string;
+  role: ResistanceRole;
 };
 
 // Mirrors PartyKing.Contract.V1.Games.ResistancePlotCardDto
@@ -165,14 +187,15 @@ export type ResistanceCountRulesDto = {
 
 export type ResistanceRole = 'Resistance' | 'Spy';
 
-/** DealingCards: the leader hands out the plot cards just drawn (add-on only); SelectingTeam: the leader picks (the votes that rejected the last team stay public until then); Voting: the team is up for a vote; PlayingMission: the approved team plays cards; MissionResult: the outcome waits for "Dalej". */
+/** DealingCards: the leader hands out the plot cards just drawn (add-on only); ResolvingCards: the immediate plot cards are played and their receivers confirm; SelectingTeam: the leader picks (the votes that rejected the last team stay public until then); Voting: the team is up for a vote; PlayingMission: the approved team plays cards; MissionResult: the outcome waits for "Dalej". */
 export type ResistancePhase =
   | 'SelectingTeam'
   | 'Voting'
   | 'PlayingMission'
   | 'MissionResult'
   | 'GameOver'
-  | 'DealingCards';
+  | 'DealingCards'
+  | 'ResolvingCards';
 
 // Mirrors PartyKing.Contract.V1.Games.ResistanceVoteDto
 export type ResistanceVoteDto = {

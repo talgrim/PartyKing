@@ -58,6 +58,16 @@ export const resistancePhaseDescription = (
       return `${who} (korona): ${task}. Potem wybierze drużynę na ${mission} misję.`;
     }
 
+    if (game.phase === 'ResolvingCards') {
+      const waiting = game.playedPlotCards
+        .filter((card) => !card.isConfirmed)
+        .map((card) => game.players.find((player) => player.id === (card.type === 'OverheardConversation' ? card.holderPlayerId : card.targetPlayerId))?.name)
+        .filter((name) => name != null);
+      const confirm = waiting.length > 0 ? ` Czekamy na potwierdzenie: ${waiting.join(', ')}.` : '';
+
+      return `${who} (korona) rozdał/a karty Intryg. Gracze zagrywają karty natychmiastowe i potwierdzają, że zobaczyli kartę Tożsamości; potem drużynę wybierze lider.${confirm}`;
+    }
+
     if (game.phase === 'PlayingMission') {
       const progress = `Zagrano ${game.playedMissionPlayerIds.length}/${game.teamPlayerIds.length} kart.`;
       const fails = game.requiredFails ?? 1;

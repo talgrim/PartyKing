@@ -127,6 +127,18 @@ export const gamesApi = {
       withCredentials: true,
     }) as unknown as Promise<ResistanceGameDto>,
 
+  /** The holder plays an immediate plot card on a player (a neighbour for Overheard Conversation); 403 for anyone else, 409 outside the playing phase or once played, 400 for a wrong target. */
+  playResistancePlotCard: (sessionId: string, cardId: number, targetPlayerId: string) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/cards/${cardId}/play`, { targetPlayerId }, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
+  /** The player who saw the identity card confirms it; the last confirmation moves on to the team. 403 for anyone else, 409 when not played or confirmed already. */
+  confirmResistancePlotCard: (sessionId: string, cardId: number) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/cards/${cardId}/confirm`, undefined, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
   /** The mission leader submits the team (exactly `requiredTeamSize` distinct players), which locks it; 403 for anyone else, 409 once submitted, 400 for a wrong team. */
   selectResistanceTeam: (sessionId: string, playerIds: string[]) =>
     axios.put(`/sessions/${sessionId}/games/resistance/team`, { playerIds }, {
