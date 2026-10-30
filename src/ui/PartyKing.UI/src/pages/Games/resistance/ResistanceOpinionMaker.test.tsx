@@ -3,6 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { ResistanceGameDto } from '@/service/endpoints/games/types';
 import { ResistancePlayerMarks } from './ResistancePlayerMarks';
+import { ResistanceTvBoard } from './ResistanceTvBoard';
+import { missionBoardFor } from './resistanceTeams';
 import { ResistanceVotePanel } from './ResistanceVotePanel';
 
 const players = ['Ala', 'Bartek', 'Celina'].map((name, i) => ({ id: `p${i}`, name }));
@@ -20,6 +22,8 @@ const game = (extra: Partial<ResistanceGameDto>): ResistanceGameDto =>
     plotCardCounts: [],
     opinionMakerPlayerIds: ['p0'],
     opinionMakerVotes: [],
+    playedPlotCards: [],
+    yourReveals: [],
     ...extra,
   }) as unknown as ResistanceGameDto;
 
@@ -69,5 +73,34 @@ describe('ResistancePlayerMarks with an Opinion Maker', () => {
 
     expect(screen.queryByText('Kreator opinii')).not.toBeInTheDocument();
     expect(screen.queryByText('Za')).not.toBeInTheDocument();
+  });
+});
+
+describe('ResistanceTvBoard with an Opinion Maker', () => {
+  it('shows the Opinion Maker card beside the holder only', () => {
+    const tvGame = game({ phase: 'SelectingTeam', teamPlayerIds: [], missionResults: [], missionNumber: 1, rules: undefined });
+    render(<ResistanceTvBoard game={tvGame} board={missionBoardFor(3, undefined)} banner={null} yourPlayerId={null} />);
+
+    const cards = screen.getAllByTitle('Kreator opinii');
+    expect(cards.length).toBeGreaterThan(0);
+    expect(screen.getByText('Ala').closest('li')).toContainElement(cards[0]);
+    expect(screen.getByText('Bartek').closest('li')?.querySelector('title')).toBeNull();
+  });
+});
+
+describe('ResistanceTvBoard votes section', () => {
+  it('shows the Opinion Maker vote while the others are still voting', () => {
+    const tvGame = game({
+      phase: 'Voting',
+      teamPlayerIds: [],
+      missionResults: [],
+      missionNumber: 1,
+      opinionMakerVotes: [{ playerId: 'p0', approve: true }],
+    });
+    render(<ResistanceTvBoard game={tvGame} board={missionBoardFor(3, undefined)} banner={null} yourPlayerId={null} />);
+
+    const section = screen.getByRole('region', { name: 'Votes' });
+    expect(section).toHaveTextContent('Ala');
+    expect(section).not.toHaveTextContent('Bartek');
   });
 });
