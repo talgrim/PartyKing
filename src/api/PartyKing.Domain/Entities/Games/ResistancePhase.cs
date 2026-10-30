@@ -26,4 +26,10 @@ public enum ResistancePhase
     /// team. Only entered at the start of a mission, not after a rejected team.
     /// </summary>
     DealingCards,
+
+    /// <summary>
+    /// Plot cards add-on: the immediate cards (Overheard Conversation, Establish Confidence, Open Up) are played, in
+    /// any order, and their receivers confirm what they saw. Moves on to picking the team when all are confirmed.
+    /// </summary>
+    ResolvingCards,
 }

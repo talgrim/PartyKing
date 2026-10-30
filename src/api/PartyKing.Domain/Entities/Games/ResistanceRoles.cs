@@ -99,6 +99,42 @@ public static class ResistanceRoles
         game.PlotCards.Where(x => x.Location == ResistancePlotCardLocation.Drawn
                                   && x.Type != ResistancePlotCardType.EstablishConfidence);
 
+    /// <summary>Whether the card is played the moment it is dealt and needs its receiver to confirm what they saw.</summary>
+    public static bool IsImmediate(ResistancePlotCardType type) =>
+        type is ResistancePlotCardType.OverheardConversation
+            or ResistancePlotCardType.EstablishConfidence
+            or ResistancePlotCardType.OpenUp;
+
+    /// <summary>The immediate cards in a hand that have not been played yet.</summary>
+    public static IEnumerable<ResistancePlotCard> UnplayedImmediateCards(ResistanceGame game) =>
+        game.PlotCards.Where(x => x.Location == ResistancePlotCardLocation.Hand && IsImmediate(x.Type));
+
+    /// <summary>The played cards whose receiver has not confirmed yet.</summary>
+    public static IEnumerable<ResistancePlotCard> UnconfirmedCards(ResistanceGame game) =>
+        game.PlotCards.Where(x => x.Location == ResistancePlotCardLocation.Played && !x.IsConfirmed);
+
+    /// <summary>The player who sees the identity card an immediate card shows: the holder of Overheard Conversation, else the target.</summary>
+    public static Guid? Viewer(ResistancePlotCard card) =>
+        card.Type == ResistancePlotCardType.OverheardConversation ? card.HolderPlayerId : card.TargetPlayerId;
+
+    /// <summary>The player whose identity card an immediate card shows: the target of Overheard Conversation, else the holder.</summary>
+    public static Guid? Revealed(ResistancePlotCard card) =>
+        card.Type == ResistancePlotCardType.OverheardConversation ? card.TargetPlayerId : card.HolderPlayerId;
+
+    /// <summary>After the cards are dealt: plays the immediate ones first, otherwise the leader picks the team.</summary>
+    public static void AfterDeal(ResistanceGame game) =>
+        game.Phase = UnplayedImmediateCards(game).Any() ? ResistancePhase.ResolvingCards : ResistancePhase.SelectingTeam;
+
+    /// <summary>The players seated directly beside the player, the one before first, wrapping around the table.</summary>
+    public static IReadOnlyList<Guid> Neighbours(ResistanceGame game, Guid playerId)
+    {
+        var seats = game.Players.OrderBy(x => x.Order).Select(x => x.PlayerId).ToList();
+        var index = seats.IndexOf(playerId);
+        return index < 0
+            ? []
+            : [seats[(index + seats.Count - 1) % seats.Count], seats[(index + 1) % seats.Count]];
+    }
+
     /// <summary>The players with an Opinion Maker in play: they reveal their vote before the others vote.</summary>
     public static IReadOnlyList<Guid> OpinionMakerIds(ResistanceGame game) =>
         game.PlotCards
@@ -142,6 +178,10 @@ public static class ResistanceRoles
             card.Location = ResistancePlotCardLocation.Deck;
             card.HolderPlayerId = null;
             card.DeckOrder = order[i];
+            card.TargetPlayerId = null;
+            card.PlayedAt = null;
+            card.PlayedInMission = 0;
+            card.IsConfirmed = false;
         }
     }
 

@@ -17,6 +17,9 @@ public enum ResistancePlotCardLocation
     /// is played the moment it is dealt and stays for the rest of the game).
     /// </summary>
     InPlay,
+
+    /// <summary>Used up: an immediate card, kept so the public log can show it (<see cref="ResistancePlotCard.TargetPlayerId"/>).</summary>
+    Played,
 }
 
 /// <summary>One card of the plot cards add-on, built from <see cref="ResistanceRules.PlotDeck"/> when the game starts.</summary>
@@ -36,4 +39,16 @@ public class ResistancePlotCard
 
     /// <summary>The position in the shuffled deck; the lowest is drawn first.</summary>
     public int DeckOrder { get; set; }
+
+    /// <summary>The player an immediate card was played on; null until it is played.</summary>
+    public Guid? TargetPlayerId { get; set; }
+
+    /// <summary>When the card was played; orders the public log.</summary>
+    public DateTimeOffset? PlayedAt { get; set; }
+
+    /// <summary>The mission during which the card was played.</summary>
+    public int PlayedInMission { get; set; }
+
+    /// <summary>Whether the player who saw the identity card has confirmed it.</summary>
+    public bool IsConfirmed { get; set; }
 }
