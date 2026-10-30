@@ -22,6 +22,7 @@ namespace PartyKing.Contract.V1.Games;
 /// <see cref="RequiredFails"/> is how many of them fail the current mission. Three successes or three failures win.
 /// In the Spotlight forces one team member to play openly: <see cref="OpenMissionPlayerId"/> is that player and
 /// <see cref="OpenMissionCard"/> their card (true = Success), public once they have played it.
+/// <see cref="YourPeeks"/> are the mission cards the caller looked at with Keeping a Close Eye this mission.
 /// In the leader or confidence window (a Strong Leader or No Confidence is out there) <see cref="LeaderWindowPassedPlayerIds"/> lists who confirmed.
 /// </summary>
 public record ResistanceGameDto(
@@ -58,7 +59,11 @@ public record ResistanceGameDto(
     IReadOnlyList<ResistanceCardRevealDto> YourReveals,
     Guid? OpenMissionPlayerId,
     bool? OpenMissionCard,
-    IReadOnlyList<Guid> LeaderWindowPassedPlayerIds);
+    IReadOnlyList<Guid> LeaderWindowPassedPlayerIds,
+    IReadOnlyList<ResistanceMissionPeekDto> YourPeeks);
+
+/// <summary>A mission card the caller looked at with Keeping a Close Eye (true = Success); private to the peeker.</summary>
+public record ResistanceMissionPeekDto(Guid PlayerId, bool Success);
 
 /// <summary>
 /// A plot card that was played; public, newest first. The identity card it showed stays with its viewer.

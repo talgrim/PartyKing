@@ -46,6 +46,10 @@ internal sealed class MeteredResistanceGamesRepository
         Guid sessionId, Guid? callerPlayerId, int cardId, CancellationToken cancellationToken) =>
         MeasureAsync(nameof(TakeLeadAsync), () => _inner.TakeLeadAsync(sessionId, callerPlayerId, cardId, cancellationToken));
 
+    public Task<ResistancePlayCardResult> PeekMissionCardAsync(
+        Guid sessionId, Guid? callerPlayerId, int cardId, Guid targetPlayerId, CancellationToken cancellationToken) =>
+        MeasureAsync(nameof(PeekMissionCardAsync), () => _inner.PeekMissionCardAsync(sessionId, callerPlayerId, cardId, targetPlayerId, cancellationToken));
+
     public Task<ResistancePlayCardResult> PlayNoConfidenceAsync(
         Guid sessionId, Guid? callerPlayerId, int cardId, CancellationToken cancellationToken) =>
         MeasureAsync(nameof(PlayNoConfidenceAsync), () => _inner.PlayNoConfidenceAsync(sessionId, callerPlayerId, cardId, cancellationToken));

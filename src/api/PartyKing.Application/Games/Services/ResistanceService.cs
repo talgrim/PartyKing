@@ -111,6 +111,10 @@ public interface IResistanceService
     Task<ErrorOr<ResistanceGameDto>> TakeLeadAsync(
         Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken);
 
+    /// <summary>The holder of Keeping a Close Eye looks at a team member's mission card after the mission.</summary>
+    Task<ErrorOr<ResistanceGameDto>> PeekMissionCardAsync(
+        Guid sessionId, int cardId, Guid targetPlayerId, GameCaller caller, CancellationToken cancellationToken);
+
     /// <summary>In the confidence window the holder of No Confidence cancels the approved team.</summary>
     Task<ErrorOr<ResistanceGameDto>> PlayNoConfidenceAsync(
         Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken);
@@ -486,6 +490,25 @@ internal class ResistanceService : IResistanceService
         return await FinishPlotCardAsync(sessionId, result, caller, cancellationToken);
     }
 
+    public async Task<ErrorOr<ResistanceGameDto>> PeekMissionCardAsync(
+        Guid sessionId, int cardId, Guid targetPlayerId, GameCaller caller, CancellationToken cancellationToken)
+    {
+        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
+        if (access.IsError)
+        {
+            return access.Errors;
+        }
+
+        if (access.Value.Game is null)
+        {
+            return _lobby.NoGame;
+        }
+
+        var result = await _games.PeekMissionCardAsync(sessionId, caller.PlayerId, cardId, targetPlayerId, cancellationToken);
+
+        return await FinishPlotCardAsync(sessionId, result, caller, cancellationToken);
+    }
+
     public async Task<ErrorOr<ResistanceGameDto>> PlayNoConfidenceAsync(
         Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken)
     {
@@ -830,7 +853,13 @@ internal class ResistanceService : IResistanceService
             game.Players.FirstOrDefault(x => x.PlayerId == ResistanceRoles.OpenMissionPlayerId(game))?.MissionCard,
             game.Phase is ResistancePhase.LeaderWindow or ResistancePhase.ConfidenceWindow
                 ? game.Players.Where(x => x.PassedLeaderWindow).OrderBy(x => x.Order).Select(x => x.PlayerId).ToList()
-                : []);
+                : [],
+            // Only the peeker sees the card they looked at, until the next mission starts
+            you is null
+                ? []
+                : ResistanceRoles.PeekedCards(game, you.PlayerId)
+                    .Select(x => new ResistanceMissionPeekDto(x.PlayerId, x.Success))
+                    .ToList());
     }
 
     private sealed class ResistanceLobbyNotifier : IGameLobbyNotifier

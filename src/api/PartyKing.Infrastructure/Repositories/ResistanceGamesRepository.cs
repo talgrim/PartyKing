@@ -69,6 +69,13 @@ public interface IResistanceGamesRepository : ILobbyGamesRepository<ResistanceGa
         Guid sessionId, Guid? callerPlayerId, int cardId, CancellationToken cancellationToken);
 
     /// <summary>
+    /// After a mission is played (until "Dalej") the holder of Keeping a Close Eye looks at one team member's mission
+    /// card; a card can be looked at by one player only and never your own. The play is public, the card is not.
+    /// </summary>
+    Task<ResistancePlayCardResult> PeekMissionCardAsync(
+        Guid sessionId, Guid? callerPlayerId, int cardId, Guid targetPlayerId, CancellationToken cancellationToken);
+
+    /// <summary>
     /// In the confidence window the holder of No Confidence cancels the approved team: it counts as rejected (the fifth
     /// ends the game) and the lead passes on.
     /// </summary>
@@ -765,6 +772,54 @@ internal class ResistanceGamesRepository
         card.IsConfirmed = true;
         game.LeaderPlayerId = callerPlayerId;
         ResistanceRoles.AfterWindow(game);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return new ResistancePlayCardResult(ResistancePlayCardStatus.Done, game);
+    }
+
+    public async Task<ResistancePlayCardResult> PeekMissionCardAsync(
+        Guid sessionId, Guid? callerPlayerId, int cardId, Guid targetPlayerId, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await CreateWriterAsync(cancellationToken);
+
+        var (early, game) = await LoadStartedAsync(dbContext, sessionId, cancellationToken);
+        if (early is { } status)
+        {
+            return new ResistancePlayCardResult(status, game);
+        }
+
+        var card = game!.PlotCards.Find(x => x.CardId == cardId);
+        if (card is null || card.Type != ResistancePlotCardType.KeepingCloseEye
+            || card.Location is not (ResistancePlotCardLocation.Hand or ResistancePlotCardLocation.Played))
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.UnknownCard, game);
+        }
+
+        if (callerPlayerId is null || card.HolderPlayerId != callerPlayerId)
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.NotAllowed, game);
+        }
+
+        if (card.Location == ResistancePlotCardLocation.Played)
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.WrongState, game);
+        }
+
+        if (game.Phase != ResistancePhase.MissionResult)
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.WrongPhase, game);
+        }
+
+        if (!ResistanceRoles.CanPeek(game, callerPlayerId.Value, targetPlayerId))
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.InvalidTarget, game);
+        }
+
+        card.Location = ResistancePlotCardLocation.Played;
+        card.TargetPlayerId = targetPlayerId;
+        card.PlayedAt = DateTimeOffset.UtcNow;
+        card.PlayedInMission = game.MissionNumber;
+        card.IsConfirmed = true;
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return new ResistancePlayCardResult(ResistancePlayCardStatus.Done, game);

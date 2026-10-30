@@ -49,6 +49,30 @@ public static class ResistanceRoles
         game.Phase = ResistancePhase.PlayingMission;
     }
 
+    /// <summary>
+    /// Whether <paramref name="target"/>'s mission card of the finished mission can still be peeked at: it was played,
+    /// is not the peeker's own and no Keeping a Close Eye looked at it yet.
+    /// </summary>
+    public static bool CanPeek(ResistanceGame game, Guid peeker, Guid target) =>
+        game.Phase == ResistancePhase.MissionResult
+        && target != peeker
+        && game.Players.Any(x => x.PlayerId == target && x.MissionCard is not null)
+        && !game.PlotCards.Any(x => x.Type == ResistancePlotCardType.KeepingCloseEye
+                                    && x.Location == ResistancePlotCardLocation.Played
+                                    && x.PlayedInMission == game.MissionNumber
+                                    && x.TargetPlayerId == target);
+
+    /// <summary>The mission cards <paramref name="peeker"/> looked at this mission (player id, true = Success); private to them.</summary>
+    public static IEnumerable<(Guid PlayerId, bool Success)> PeekedCards(ResistanceGame game, Guid peeker) =>
+        game.Phase != ResistancePhase.MissionResult
+            ? []
+            : game.PlotCards
+                .Where(x => x.Type == ResistancePlotCardType.KeepingCloseEye
+                            && x.Location == ResistancePlotCardLocation.Played
+                            && x.PlayedInMission == game.MissionNumber
+                            && x.HolderPlayerId == peeker && x.TargetPlayerId is not null)
+                .Select(x => (x.TargetPlayerId!.Value, game.Players.First(p => p.PlayerId == x.TargetPlayerId).MissionCard == true));
+
     /// <summary>Whether a No Confidence waits in anyone's hand, so the approval can be cancelled.</summary>
     public static bool HasPlayableNoConfidence(ResistanceGame game) =>
         game.Rules.PlotCardsEnabled

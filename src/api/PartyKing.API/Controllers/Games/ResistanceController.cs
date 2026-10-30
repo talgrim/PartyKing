@@ -147,6 +147,23 @@ public class ResistanceController : GameControllerBase
     }
 
     /// <summary>
+    /// The holder of Keeping a Close Eye looks at a team member's mission card once the mission is played (until
+    /// "Dalej"). 403 for anyone else, 404 for an unknown card, 409 outside that step or once played, 400 for your own
+    /// card, a player who did not play or a card someone already looked at.
+    /// </summary>
+    [HttpPut("cards/{cardId:int}/peek")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> PeekResistanceMissionCard(
+        Guid sessionId, int cardId, ResistancePlayPlotCardRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.PeekMissionCardAsync(
+            sessionId, cardId, request.TargetPlayerId, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>
     /// The holder of No Confidence cancels the approved team in the confidence window; it counts as a rejected team.
     /// 403 for anyone else, 404 for an unknown card, 409 outside the window or once played.
     /// </summary>
