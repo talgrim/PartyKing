@@ -37,6 +37,9 @@ public class ResistanceGame : LobbyGame<ResistancePlayer>
     /// <summary>The outcomes of the missions finished so far, public.</summary>
     public List<ResistanceMissionResult> MissionResults { get; set; } = [];
 
+    /// <summary>The plot cards of the add-on (deck, drawn and in hands); empty when the add-on is off.</summary>
+    public List<ResistancePlotCard> PlotCards { get; set; } = [];
+
     /// <summary>Successful missions so far; three of them win the game for the resistance.</summary>
     public int ResistanceScore => MissionResults.Count(x => x.Succeeded);
 

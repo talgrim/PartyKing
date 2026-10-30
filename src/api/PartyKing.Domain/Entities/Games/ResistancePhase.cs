@@ -20,4 +20,10 @@ public enum ResistancePhase
 
     /// <summary>All cards are in and the outcome of the mission is public. It moves on when someone continues.</summary>
     MissionResult,
+
+    /// <summary>
+    /// Plot cards add-on: the mission's leader drew cards and hands them to the other players before picking the
+    /// team. Only entered at the start of a mission, not after a rejected team.
+    /// </summary>
+    DealingCards,
 }

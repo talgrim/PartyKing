@@ -164,6 +164,31 @@ namespace PartyKing.Persistence.Migrations
                     b.ToTable("ResistancePlayers");
                 });
 
+            modelBuilder.Entity("PartyKing.Domain.Entities.Games.ResistancePlotCard", b =>
+                {
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CardId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("DeckOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("HolderPlayerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Location")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("SessionId", "CardId");
+
+                    b.ToTable("ResistancePlotCards");
+                });
+
             modelBuilder.Entity("PartyKing.Domain.Entities.Games.RingoFlip", b =>
                 {
                     b.Property<Guid>("SessionId")
@@ -463,6 +488,15 @@ namespace PartyKing.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("PartyKing.Domain.Entities.Games.ResistancePlotCard", b =>
+                {
+                    b.HasOne("PartyKing.Domain.Entities.Games.ResistanceGame", null)
+                        .WithMany("PlotCards")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("PartyKing.Domain.Entities.Games.RingoFlip", b =>
                 {
                     b.HasOne("PartyKing.Domain.Entities.Games.RingoGame", null)
@@ -532,6 +566,8 @@ namespace PartyKing.Persistence.Migrations
                     b.Navigation("MissionResults");
 
                     b.Navigation("Players");
+
+                    b.Navigation("PlotCards");
                 });
 
             modelBuilder.Entity("PartyKing.Domain.Entities.Games.RingoGame", b =>

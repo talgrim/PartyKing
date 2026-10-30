@@ -1,6 +1,6 @@
 namespace PartyKing.Domain.Entities.Games;
 
-/// <summary>Dealing the roles of a Resistance game.</summary>
+/// <summary>Dealing the roles (and plot cards) of a Resistance game and moving it from one step to the next.</summary>
 public static class ResistanceRoles
 {
     /// <summary>Missions one side has to win to win the game.</summary>
@@ -60,12 +60,78 @@ public static class ResistanceRoles
     {
         game.MissionNumber++;
         game.LeaderPlayerId = NextLeader(game);
-        game.Phase = ResistancePhase.SelectingTeam;
         foreach (var player in game.Players)
         {
             player.IsOnTeam = false;
             player.Vote = null;
             player.MissionCard = null;
+        }
+
+        BeginMission(game);
+    }
+
+    /// <summary>
+    /// The leader of a new mission picks the team, after drawing and handing out the plot cards when the add-on is on.
+    /// </summary>
+    public static void BeginMission(ResistanceGame game)
+    {
+        game.Phase = ResistancePhase.SelectingTeam;
+        if (!game.Rules.PlotCardsEnabled)
+        {
+            return;
+        }
+
+        var toDraw = game.Rules.PlotCardsPerRound(game.Players.Count);
+        foreach (var card in game.PlotCards
+                     .Where(x => x.Location == ResistancePlotCardLocation.Deck)
+                     .OrderBy(x => x.DeckOrder)
+                     .Take(toDraw))
+        {
+            card.Location = ResistancePlotCardLocation.Drawn;
+            card.HolderPlayerId = game.LeaderPlayerId;
+        }
+
+        game.Phase = ResistancePhase.DealingCards;
+    }
+
+    /// <summary>The cards the leader hands out: the drawn ones except Establish Confidence, which the leader plays on themselves.</summary>
+    public static IEnumerable<ResistancePlotCard> CardsToDeal(ResistanceGame game) =>
+        game.PlotCards.Where(x => x.Location == ResistancePlotCardLocation.Drawn
+                                  && x.Type != ResistancePlotCardType.EstablishConfidence);
+
+    /// <summary>
+    /// Builds and shuffles the deck from the rules' composition, or clears it when the add-on is off. The deck holds at
+    /// most 15 cards and a game draws at most 5 missions x 3 cards, so it never runs out.
+    /// </summary>
+    public static void BuildPlotDeck(ResistanceGame game, Random random)
+    {
+        if (!game.Rules.PlotCardsEnabled)
+        {
+            game.PlotCards.Clear();
+            return;
+        }
+
+        var types = game.Rules.PlotDeck
+            .OrderBy(x => x.Key)
+            .SelectMany(x => Enumerable.Repeat(x.Key, x.Value))
+            .ToList();
+        var order = Enumerable.Range(0, types.Count).OrderBy(_ => random.Next()).ToList();
+
+        // A restart reuses the rows (same keys), because deleting and re-adding a key in one save conflicts
+        game.PlotCards.RemoveAll(x => x.CardId >= types.Count);
+        for (var i = 0; i < types.Count; i++)
+        {
+            var card = game.PlotCards.Find(x => x.CardId == i);
+            if (card is null)
+            {
+                card = new ResistancePlotCard { SessionId = game.SessionId, CardId = i };
+                game.PlotCards.Add(card);
+            }
+
+            card.Type = types[i];
+            card.Location = ResistancePlotCardLocation.Deck;
+            card.HolderPlayerId = null;
+            card.DeckOrder = order[i];
         }
     }
 
@@ -116,7 +182,7 @@ public static class ResistanceRoles
         }
     }
 
-    /// <summary>Gives every player a random role and picks a random first leader.</summary>
+    /// <summary>Gives every player a random role, picks a random first leader and starts the first mission.</summary>
     public static void Deal(ResistanceGame game, Random random)
     {
         var shuffled = game.Players.OrderBy(_ => random.Next()).ToList();
@@ -128,5 +194,7 @@ public static class ResistanceRoles
         }
 
         game.LeaderPlayerId = game.Players[random.Next(game.Players.Count)].PlayerId;
+        BuildPlotDeck(game, random);
+        BeginMission(game);
     }
 }
