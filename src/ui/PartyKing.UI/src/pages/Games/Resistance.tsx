@@ -116,6 +116,15 @@ export const Resistance = (): ReactNode => {
     }
   };
 
+  const setPlotCards = async (enabled: boolean) => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.setResistancePlotCards(sessionId, enabled), { revalidate: false });
+    } catch {
+      setMessage('Could not change the plot cards.');
+    }
+  };
+
   const startGame = async () => {
     setMessage(undefined);
     try {
@@ -208,6 +217,7 @@ export const Resistance = (): ReactNode => {
       onStart={() => void startGame()}
       onOpen={() => void openGame()}
       onRefreshRules={() => void refreshRules()}
+      onSetPlotCards={(enabled) => void setPlotCards(enabled)}
       onContinue={() => void continueGame()}
       onRestart={() => void restartGame()}
     />

@@ -112,6 +112,10 @@ export type ResistanceMissionResultDto = {
 // Mirrors PartyKing.Contract.V1.Games.ResistanceRulesDto
 export type ResistanceRulesDto = {
   playerCounts: ResistanceCountRulesDto[];
+  /** Whether the plot cards add-on is played in this game. */
+  plotCardsEnabled: boolean;
+  /** How many plot cards the leader draws before each mission, at the current player count. */
+  plotCardsPerRound: number;
 };
 
 // Mirrors PartyKing.Contract.V1.Games.ResistanceCountRulesDto
