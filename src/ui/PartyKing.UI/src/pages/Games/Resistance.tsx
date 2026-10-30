@@ -88,7 +88,7 @@ export const Resistance = (): ReactNode => {
   const showPlayerView = isPlayer && !tv && (wide || !boardView);
   const showBoard = !showPlayerView || wide;
   // The TV tab shares the player's cookies, so it must not show the role or the "Ty" badge of whoever is logged in
-  const shownGame = game && tv ? { ...game, yourPlayerId: null, yourRole: null, fellowSpies: null, yourVote: null, yourMissionCard: null, yourPlotCards: [], yourReveals: [] } : game;
+  const shownGame = game && tv ? { ...game, yourPlayerId: null, yourRole: null, fellowSpies: null, yourVote: null, yourMissionCard: null, yourPlotCards: [], yourReveals: [], yourPeeks: [] } : game;
 
   const players = game?.players ?? [];
   const started = game?.startedAt != null;
@@ -178,6 +178,15 @@ export const Resistance = (): ReactNode => {
       await mutate(gamesApi.takeResistanceLead(sessionId, cardId), { revalidate: false });
     } catch {
       setMessage('Could not take the lead.');
+    }
+  };
+
+  const peekMissionCard = async (cardId: number, targetPlayerId: string) => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.peekResistanceMissionCard(sessionId, cardId, targetPlayerId), { revalidate: false });
+    } catch {
+      setMessage('Could not look at the card.');
     }
   };
 
@@ -372,6 +381,7 @@ export const Resistance = (): ReactNode => {
                   onTakeResponsibility={takeResponsibility}
                   onTakeLead={takeLead}
                   onNoConfidence={playNoConfidence}
+                  onPeekMissionCard={peekMissionCard}
                   onPassLeaderWindow={passLeaderWindow}
                   onConfirmPlotCard={confirmPlotCard}
                   onVote={castVote}

@@ -118,7 +118,12 @@ export type ResistanceGameDto = {
   openMissionCard: boolean | null;
   /** LeaderWindow or ConfidenceWindow: the players who confirmed they play no card; public. */
   leaderWindowPassedPlayerIds: string[];
+  /** The mission cards you looked at with Keeping a Close Eye this mission (true = Success); private. */
+  yourPeeks: ResistanceMissionPeekDto[];
 };
+
+// Mirrors PartyKing.Contract.V1.Games.ResistanceMissionPeekDto
+export type ResistanceMissionPeekDto = { playerId: string; success: boolean };
 
 // Mirrors PartyKing.Contract.V1.Games.ResistancePlayedPlotCardDto
 export type ResistancePlayedPlotCardDto = {

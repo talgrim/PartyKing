@@ -145,6 +145,12 @@ export const gamesApi = {
       withCredentials: true,
     }) as unknown as Promise<ResistanceGameDto>,
 
+  /** The holder of Keeping a Close Eye looks at a team member's mission card after the mission (until "Dalej"). 403 for anyone else, 409 outside that step or once played, 400 for your own card, a player off the team or a card already looked at. */
+  peekResistanceMissionCard: (sessionId: string, cardId: number, targetPlayerId: string) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/cards/${cardId}/peek`, { targetPlayerId }, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
   /** The holder of No Confidence cancels the approved team in the confidence window; it counts as a rejected team. 403 for anyone else, 409 outside the window or once played. */
   playResistanceNoConfidence: (sessionId: string, cardId: number) =>
     axios.put(`/sessions/${sessionId}/games/resistance/cards/${cardId}/no-confidence`, undefined, {

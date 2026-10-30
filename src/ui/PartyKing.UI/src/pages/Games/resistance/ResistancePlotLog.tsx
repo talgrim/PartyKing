@@ -13,6 +13,7 @@ const describe = (card: ResistancePlayedPlotCardDto, holder: string, target: str
   if (card.type === 'EstablishConfidence') return `${holder} (przywódca) zagrał/a „${name}” i ujawnia swoją kartę Tożsamości graczowi ${target}`;
   if (card.type === 'OpenUp') return `${holder} zagrał/a „${name}” i ujawnia swoją kartę Tożsamości graczowi ${target}`;
   if (card.type === 'TakeResponsibility') return `${holder} zagrał/a „${name}” i zabiera kartę Intrygi graczowi ${target}`;
+  if (card.type === 'KeepingCloseEye') return `${holder} zagrał/a „${name}” i podgląda kartę Misji gracza ${target}`;
   if (card.type === 'StrongLeader') return `${holder} zagrał/a „${name}” i przejmuje przywództwo od gracza ${target}`;
   if (card.type === 'NoConfidence') return `${holder} zagrał/a „${name}”: drużyna wybrana przez gracza ${target} zostaje odrzucona`;
   return `${holder} zagrał/a „${name}”`;
