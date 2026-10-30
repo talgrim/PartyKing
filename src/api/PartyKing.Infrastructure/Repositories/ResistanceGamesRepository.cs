@@ -138,6 +138,12 @@ public enum ResistanceVoteStatus
 
     /// <summary>No team is up for a vote: it is not picked yet, or the votes are already in.</summary>
     NotVoting,
+
+    /// <summary>The caller is an Opinion Maker and already revealed their vote, which can't be changed.</summary>
+    VoteLocked,
+
+    /// <summary>An Opinion Maker in play has not revealed their vote yet, so the others wait.</summary>
+    OpinionMakersFirst,
     Voted,
 }
 
@@ -456,7 +462,10 @@ internal class ResistanceGamesRepository
         foreach (var assignment in assignments)
         {
             var card = toDeal[assignment.CardId];
-            card.Location = ResistancePlotCardLocation.Hand;
+            // An Opinion Maker is played the moment it is dealt and stays face up
+            card.Location = card.Type == ResistancePlotCardType.OpinionMaker
+                ? ResistancePlotCardLocation.InPlay
+                : ResistancePlotCardLocation.Hand;
             card.HolderPlayerId = assignment.PlayerId;
         }
 
@@ -502,6 +511,19 @@ internal class ResistanceGamesRepository
         if (game.Phase != ResistancePhase.Voting)
         {
             return new ResistanceVoteResult(ResistanceVoteStatus.NotVoting, game);
+        }
+
+        var opinionMakers = ResistanceRoles.OpinionMakerIds(game);
+        if (opinionMakers.Contains(voter.PlayerId))
+        {
+            if (voter.Vote is not null)
+            {
+                return new ResistanceVoteResult(ResistanceVoteStatus.VoteLocked, game);
+            }
+        }
+        else if (opinionMakers.Any(id => game.Players.First(x => x.PlayerId == id).Vote is null))
+        {
+            return new ResistanceVoteResult(ResistanceVoteStatus.OpinionMakersFirst, game);
         }
 
         voter.Vote = approve;
