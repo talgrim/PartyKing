@@ -34,16 +34,16 @@ public enum ResistancePhase
     ResolvingCards,
 
     /// <summary>
-    /// Plot cards add-on: a Strong Leader is in someone's hand, so before the leader does anything (drawing cards,
-    /// picking the team) every player confirms they do not play it, or its holder takes the lead. Only opened when
-    /// such a card exists, so a window shows nothing but that a card is out there. Moves on when all confirmed or
-    /// one was played.
+    /// Plot cards add-on: some playable card is in a hand, so before the leader does anything (drawing cards,
+    /// picking the team) every player confirms they play no card, or a Strong Leader's holder takes the lead. Opened
+    /// for any playable hand card (not Opinion Maker), so it never tells which card is out there. Moves on when all
+    /// confirmed or one was played.
     /// </summary>
     LeaderWindow,
 
     /// <summary>
-    /// Plot cards add-on: the team was approved while a No Confidence sits in a hand, so everyone confirms they do not
-    /// play it, or its holder cancels the approval. Like <see cref="LeaderWindow"/> it only opens when such a card exists.
+    /// Plot cards add-on: the team was approved while a playable card sits in a hand, so everyone confirms they play
+    /// none, or a No Confidence's holder cancels the approval. Like <see cref="LeaderWindow"/> it opens for any such card.
     /// </summary>
     ConfidenceWindow,
 }

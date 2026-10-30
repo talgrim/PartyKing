@@ -30,7 +30,7 @@ public static class ResistanceRoles
     {
         if (IsApproved(game))
         {
-            if (HasPlayableNoConfidence(game))
+            if (HasPlayableCards(game))
             {
                 OpenWindow(game, ResistancePhase.ConfidenceWindow, beforeDraw: false);
                 return;
@@ -73,12 +73,6 @@ public static class ResistanceRoles
                             && x.HolderPlayerId == peeker && x.TargetPlayerId is not null)
                 .Select(x => (x.TargetPlayerId!.Value, game.Players.First(p => p.PlayerId == x.TargetPlayerId).MissionCard == true));
 
-    /// <summary>Whether a No Confidence waits in anyone's hand, so the approval can be cancelled.</summary>
-    public static bool HasPlayableNoConfidence(ResistanceGame game) =>
-        game.Rules.PlotCardsEnabled
-        && game.PlotCards.Any(x => x.Type == ResistancePlotCardType.NoConfidence
-                                   && x.Location == ResistancePlotCardLocation.Hand);
-
     /// <summary>
     /// Counts the team as rejected (a vote, or a No Confidence cancelling the approval): the fifth ends the game, else
     /// the lead passes on and the next leader picks.
@@ -101,18 +95,21 @@ public static class ResistanceRoles
             player.IsOnTeam = false;
         }
 
-        if (HasPlayableStrongLeader(game))
+        if (HasPlayableCards(game))
         {
             OpenWindow(game, ResistancePhase.LeaderWindow, beforeDraw: false);
         }
     }
 
-    /// <summary>Whether a Strong Leader waits in a hand of someone who is not the leader, so the leader can be challenged.</summary>
-    public static bool HasPlayableStrongLeader(ResistanceGame game) =>
+    /// <summary>
+    /// Whether anyone holds a playable plot card in their hand. The confirmation windows open exactly then, whatever
+    /// the cards are, so that the window itself never tells which card is out there (the hand sizes are public anyway).
+    /// A face-up Opinion Maker is not a card to play.
+    /// </summary>
+    public static bool HasPlayableCards(ResistanceGame game) =>
         game.Rules.PlotCardsEnabled
-        && game.PlotCards.Any(x => x.Type == ResistancePlotCardType.StrongLeader
-                                   && x.Location == ResistancePlotCardLocation.Hand
-                                   && x.HolderPlayerId != game.LeaderPlayerId);
+        && game.PlotCards.Any(x => x.Location == ResistancePlotCardLocation.Hand
+                                   && x.Type != ResistancePlotCardType.OpinionMaker);
 
     private static void OpenWindow(ResistanceGame game, ResistancePhase phase, bool beforeDraw)
     {
@@ -179,7 +176,7 @@ public static class ResistanceRoles
             return;
         }
 
-        if (HasPlayableStrongLeader(game))
+        if (HasPlayableCards(game))
         {
             OpenWindow(game, ResistancePhase.LeaderWindow, beforeDraw: true);
             return;
