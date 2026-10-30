@@ -33,7 +33,7 @@ ENV ASPNETCORE_ENVIRONMENT=Production \
     # Tiered compilation stays on (hot methods are re-optimized); PGO instrumentation only adds CPU at this traffic
     DOTNET_TieredPGO=0 \
     # One vCPU starts the pool with one thread, and SQLite blocks threads, so a burst of requests would queue behind it
-    DOTNET_ThreadPool_MinThreads=8 \
+    DOTNET_ThreadPool_MinThreads=32 \
     ASPNETCORE_WEBROOT=/data/wwwroot \
     PARTYKING_DATABASE_PATH=/data/PartyKing.db \
     DataProtection__KeysDirectory=/data/keys
