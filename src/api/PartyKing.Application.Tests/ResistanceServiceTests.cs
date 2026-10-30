@@ -1636,6 +1636,14 @@ public class ResistanceServiceTests
             CancellationToken cancellationToken) =>
             Task.FromResult(new ResistancePlayCardResult(PlayCardStatus, _games.GetValueOrDefault(sessionId)));
 
+        public Task<ResistancePlayCardResult> TakeLeadAsync(
+            Guid sessionId, Guid? callerPlayerId, int cardId, CancellationToken cancellationToken) =>
+            Task.FromResult(new ResistancePlayCardResult(PlayCardStatus, _games.GetValueOrDefault(sessionId)));
+
+        public Task<ResistancePlayCardResult> PassLeaderWindowAsync(
+            Guid sessionId, Guid? callerPlayerId, CancellationToken cancellationToken) =>
+            Task.FromResult(new ResistancePlayCardResult(PlayCardStatus, _games.GetValueOrDefault(sessionId)));
+
         public Task<ResistancePlayCardResult> ConfirmPlotCardAsync(
             Guid sessionId, Guid? callerPlayerId, int cardId, CancellationToken cancellationToken) =>
             Task.FromResult(new ResistancePlayCardResult(PlayCardStatus, _games.GetValueOrDefault(sessionId)));

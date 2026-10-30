@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { ResistanceGameDto } from '@/service/endpoints/games/types';
 import { ResistancePlotLog } from './ResistancePlotLog';
+import { ResistanceLeaderWindow } from './ResistanceLeaderWindow';
 import { ResistanceSpotlightPlayer } from './ResistanceSpotlightPlayer';
 import { ResistanceTakeResponsibility } from './ResistanceTakeResponsibility';
 import { ResistancePlotPlayer } from './ResistancePlotPlayer';
@@ -34,6 +35,7 @@ const game = (overrides: Partial<ResistanceGameDto> = {}): ResistanceGameDto =>
     yourReveals: [],
     openMissionPlayerId: null,
     openMissionCard: null,
+    leaderWindowPassedPlayerIds: [],
     ...overrides,
   }) as unknown as ResistanceGameDto;
 
@@ -259,5 +261,40 @@ describe('Take Responsibility', () => {
 
     const none = render(<ResistanceTakeResponsibility game={selecting({ yourPlotCards: [] })} onTake={vi.fn()} />);
     expect(none.container).toBeEmptyDOMElement();
+  });
+});
+
+describe('Strong Leader leader window', () => {
+  const strong = { id: 5, type: 'StrongLeader', toDeal: false, inPlay: false } as const;
+  const windowGame = (overrides: Partial<ResistanceGameDto> = {}) =>
+    game({ phase: 'LeaderWindow', yourPlotCards: [strong], ...overrides });
+
+  it('lets the holder take the lead', async () => {
+    const user = userEvent.setup();
+    const onTakeLead = vi.fn().mockResolvedValue(undefined);
+    render(<ResistanceLeaderWindow game={windowGame()} onTakeLead={onTakeLead} onPass={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: 'Przejmij przywództwo' }));
+
+    expect(onTakeLead).toHaveBeenCalledWith(5);
+  });
+
+  it('offers everybody the confirmation but the lead only to a holder who is not the leader', async () => {
+    const user = userEvent.setup();
+    const onPass = vi.fn().mockResolvedValue(undefined);
+    render(<ResistanceLeaderWindow game={windowGame({ yourPlotCards: [] })} onTakeLead={vi.fn()} onPass={onPass} />);
+
+    expect(screen.queryByRole('button', { name: 'Przejmij przywództwo' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Nie zagrywam karty' }));
+
+    expect(onPass).toHaveBeenCalled();
+  });
+
+  it('disables the confirmation once given and counts the confirmations in the phase line', () => {
+    const passed = windowGame({ leaderWindowPassedPlayerIds: ['p0', 'p2'] });
+    render(<ResistanceLeaderWindow game={passed} onTakeLead={vi.fn()} onPass={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Potwierdzono' })).toBeDisabled();
+    expect(resistancePhaseDescription(passed, { canManage: false, isAdmin: false }, 2)).toContain('Potwierdzili: 2/5');
   });
 });

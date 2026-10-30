@@ -207,7 +207,7 @@ public class ResistanceControllerTests
 
     private static ResistanceGameDto Game() => new(
         DateTimeOffset.UtcNow, true, [], null, 10, null, null, null, null, 1, null, [], null, 0, null, [], null,
-        null, null, null, new ResistanceRulesDto([], false, 1), null, [], null, [], [], [], [], [], [], [], null, null);
+        null, null, null, new ResistanceRulesDto([], false, 1), null, [], null, [], [], [], [], [], [], [], null, null, []);
 
     private sealed class FakeResistanceService : IResistanceService
     {
@@ -239,6 +239,18 @@ public class ResistanceControllerTests
         public Task<ErrorOr<ResistanceGameDto>> TakeResponsibilityAsync(Guid sessionId, int cardId, Guid targetPlayerId, bool? takeOpinionMaker, GameCaller caller, CancellationToken cancellationToken)
         {
             LastCall = ($"take-{cardId}-{targetPlayerId}-{takeOpinionMaker}", sessionId, null, caller.PlayerId);
+            return Task.FromResult(Result);
+        }
+
+        public Task<ErrorOr<ResistanceGameDto>> TakeLeadAsync(Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken)
+        {
+            LastCall = ($"take-lead-{cardId}", sessionId, null, caller.PlayerId);
+            return Task.FromResult(Result);
+        }
+
+        public Task<ErrorOr<ResistanceGameDto>> PassLeaderWindowAsync(Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
+        {
+            LastCall = ("pass-leader-window", sessionId, null, caller.PlayerId);
             return Task.FromResult(Result);
         }
 
