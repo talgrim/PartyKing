@@ -34,4 +34,16 @@ public interface ISessionMusicNotifier
 
     /// <summary>The image on display in the session's slideshow changed; clients fetch the current one.</summary>
     Task SlideshowChangedAsync(Guid sessionId, CancellationToken cancellationToken);
+
+    /// <summary>The session's Ringo game changed (started, flipped, continued or ended); clients fetch it again.</summary>
+    Task RingoChangedAsync(Guid sessionId, CancellationToken cancellationToken);
+
+    /// <summary>An admin opened the session's Ringo game to guests; guests are asked whether to join.</summary>
+    Task RingoOpenedAsync(Guid sessionId, CancellationToken cancellationToken);
+
+    /// <summary>The session's Resistance game changed (created, opened, a player joined or left, or ended); clients fetch it again.</summary>
+    Task ResistanceChangedAsync(Guid sessionId, CancellationToken cancellationToken);
+
+    /// <summary>An admin opened the session's Resistance game to guests; guests are asked whether to join.</summary>
+    Task ResistanceOpenedAsync(Guid sessionId, CancellationToken cancellationToken);
 }

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
+using PartyKing.Domain.Entities.Games;
 using PartyKing.Infrastructure.Authentication;
 
 namespace PartyKing.Infrastructure.Authorization;
@@ -22,6 +23,12 @@ public interface ICookieAuthorizationHandler
 
     /// <summary>Reads the stamp stored for the session; false when there is none or the cookie was tampered with.</summary>
     bool TryReadSessionAccess(HttpRequest request, Guid sessionId, out string stamp);
+
+    /// <summary>Remembers the player this browser joined the session's game as.</summary>
+    void GrantGamePlayer(GameKind game, Guid sessionId, Guid playerId, HttpContext? httpContext);
+
+    /// <summary>Reads the player id stored for the session's game; false when there is none or the cookie was tampered with.</summary>
+    bool TryReadGamePlayer(GameKind game, HttpRequest request, Guid sessionId, out Guid playerId);
 }
 
 internal class CookieAuthorizationHandler : ICookieAuthorizationHandler
@@ -36,12 +43,21 @@ internal class CookieAuthorizationHandler : ICookieAuthorizationHandler
     private readonly IDataProtector _userProtector;
     private readonly IDataProtector _adminProtector;
     private readonly IDataProtector _sessionAccessProtector;
+    private readonly Dictionary<GameKind, (string CookieName, IDataProtector Protector)> _gamePlayerCookies;
 
     public CookieAuthorizationHandler(IDataProtectionProvider dataProtectionProvider)
     {
         _userProtector = dataProtectionProvider.CreateProtector("PartyKing.UserCookie");
         _adminProtector = dataProtectionProvider.CreateProtector("PartyKing.AdminCookie");
         _sessionAccessProtector = dataProtectionProvider.CreateProtector("PartyKing.SessionAccessCookie");
+        _gamePlayerCookies = new()
+        {
+            [GameKind.Ringo] = (
+                Constants.RingoPlayerCookieName, dataProtectionProvider.CreateProtector("PartyKing.RingoPlayerCookie")),
+            [GameKind.Resistance] = (
+                Constants.ResistancePlayerCookieName,
+                dataProtectionProvider.CreateProtector("PartyKing.ResistancePlayerCookie")),
+        };
     }
 
     public void Authorize(string profileId, HttpContext? httpContext)
@@ -121,6 +137,49 @@ internal class CookieAuthorizationHandler : ICookieAuthorizationHandler
         stamp = ReadSessionAccess(request).LastOrDefault(x => x.SessionId == sessionId).Stamp ?? string.Empty;
 
         return stamp.Length > 0;
+    }
+
+    public void GrantGamePlayer(GameKind game, Guid sessionId, Guid playerId, HttpContext? httpContext)
+    {
+        var context = Require(httpContext);
+        var (cookieName, protector) = _gamePlayerCookies[game];
+
+        var players = ReadGamePlayers(game, context.Request)
+            .Where(x => x.SessionId != sessionId)
+            .Append((SessionId: sessionId, PlayerId: playerId))
+            .TakeLast(MaxUnlockedSessions);
+
+        context.Response.Cookies.Append(
+            cookieName,
+            protector.Protect(string.Join(';', players.Select(x => $"{x.SessionId:N}:{x.PlayerId:N}"))),
+            GetOptions(SessionAccessExpirationTime, context));
+    }
+
+    public bool TryReadGamePlayer(GameKind game, HttpRequest request, Guid sessionId, out Guid playerId)
+    {
+        playerId = ReadGamePlayers(game, request).LastOrDefault(x => x.SessionId == sessionId).PlayerId;
+
+        return playerId != Guid.Empty;
+    }
+
+    private IEnumerable<(Guid SessionId, Guid PlayerId)> ReadGamePlayers(GameKind game, HttpRequest request)
+    {
+        var (cookieName, protector) = _gamePlayerCookies[game];
+        if (!request.Cookies.TryGetValue(cookieName, out var protectedValue)
+            || !TryUnprotect(protector, protectedValue, out var value))
+        {
+            yield break;
+        }
+
+        foreach (var entry in value.Split(';', StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (entry.Split(':') is [var session, var player]
+                && Guid.TryParseExact(session, "N", out var sessionId)
+                && Guid.TryParseExact(player, "N", out var playerId))
+            {
+                yield return (sessionId, playerId);
+            }
+        }
     }
 
     private IEnumerable<(Guid SessionId, string Stamp)> ReadSessionAccess(HttpRequest request)

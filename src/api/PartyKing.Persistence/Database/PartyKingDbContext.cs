@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using PartyKing.Domain.Entities.Auth;
+using PartyKing.Domain.Entities.Games;
 using PartyKing.Domain.Entities.Lyrics;
 using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Entities.Sessions;
@@ -11,7 +12,13 @@ namespace PartyKing.Persistence.Database;
 public class ReaderDbContext : PartyKingDbContextBase
 {
     public ReaderDbContext()
-        : base(new DbContextOptions<PartyKingDbContextBase>())
+        : base(new DbContextOptions<ReaderDbContext>())
+    {
+    }
+
+    /// <summary>For a caller that configures the database itself (tests); otherwise the default file is used.</summary>
+    public ReaderDbContext(DbContextOptions<ReaderDbContext> options)
+        : base(options)
     {
     }
 }
@@ -19,7 +26,13 @@ public class ReaderDbContext : PartyKingDbContextBase
 public class WriterDbContext : PartyKingDbContextBase
 {
     public WriterDbContext()
-        : base(new DbContextOptions<PartyKingDbContextBase>())
+        : base(new DbContextOptions<WriterDbContext>())
+    {
+    }
+
+    /// <summary>For a caller that configures the database itself (tests); otherwise the default file is used.</summary>
+    public WriterDbContext(DbContextOptions<WriterDbContext> options)
+        : base(options)
     {
     }
 }
@@ -29,12 +42,18 @@ public class PartyKingDbContextBase : DbContext
     /// <summary>Environment variable that overrides the SQLite file location (defaults to PartyKing.db in the working directory).</summary>
     public const string DatabasePathVariable = "PARTYKING_DATABASE_PATH";
 
-    protected PartyKingDbContextBase(DbContextOptions<PartyKingDbContextBase> options) : base(options)
+    protected PartyKingDbContextBase(DbContextOptions options) : base(options)
     {
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
+        // Options given by the caller (tests) win over the default file
+        if (optionsBuilder.IsConfigured)
+        {
+            return;
+        }
+
         optionsBuilder.UseSqlite($"Data Source={Environment.GetEnvironmentVariable(DatabasePathVariable) ?? "PartyKing.db"}");
     }
 
@@ -51,4 +70,10 @@ public class PartyKingDbContextBase : DbContext
     public DbSet<AdminAccount> AdminAccounts { get; set; } = null!;
     public DbSet<OAuthState> OAuthStates { get; set; } = null!;
     public DbSet<LyricsOffset> LyricsOffsets { get; set; } = null!;
+    public DbSet<RingoGame> RingoGames { get; set; } = null!;
+    public DbSet<RingoFlip> RingoFlips { get; set; } = null!;
+    public DbSet<RingoPlayer> RingoPlayers { get; set; } = null!;
+    public DbSet<ResistanceGame> ResistanceGames { get; set; } = null!;
+    public DbSet<ResistancePlayer> ResistancePlayers { get; set; } = null!;
+    public DbSet<ResistanceMissionResult> ResistanceMissionResults { get; set; } = null!;
 }

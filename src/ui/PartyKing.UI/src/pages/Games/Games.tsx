@@ -2,6 +2,8 @@ import { ReactNode } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { useSWRConfig } from 'swr';
 import { NeverHaveIEverSuggestions } from '@/pages/Games/NeverHaveIEverSuggestions';
+import { ResistanceEntry } from '@/pages/Games/ResistanceEntry';
+import { RingoEntry } from '@/pages/Games/RingoEntry';
 import { SessionPasswordForm } from '@/components/Music/SessionPasswordForm';
 import { PageNavigation } from '@/components/common/PageNavigation';
 import { sessionPath } from '@/router/constants';
@@ -9,6 +11,8 @@ import { HTTP_STATUS_CODE } from '@/service/constants';
 import { useGames } from '@/service/endpoints/games/useGames';
 
 const NEVER_HAVE_I_EVER_ID = 'never-have-i-ever';
+const RESISTANCE_ID = 'resistance';
+const RINGO_ID = 'ringo';
 
 /**
  * Games of a session. Only the host and admins may open it: the server refuses guests, who are sent back to the
@@ -50,6 +54,8 @@ export const Games = (): ReactNode => {
               <li key={game.id} className="p-3 bg-slate-900 rounded-md">
                 <div className="text-lg text-slate-200">{game.name}</div>
                 <div className="text-sm text-slate-500">{game.description}</div>
+                {game.id === RESISTANCE_ID && <ResistanceEntry sessionId={sessionId} />}
+                {game.id === RINGO_ID && <RingoEntry sessionId={sessionId} />}
                 {game.id === NEVER_HAVE_I_EVER_ID && <NeverHaveIEverSuggestions sessionId={sessionId} />}
               </li>
             ))}

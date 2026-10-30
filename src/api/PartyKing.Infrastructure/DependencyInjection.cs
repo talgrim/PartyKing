@@ -47,6 +47,10 @@ public static class DependencyInjection
             (inner, metrics) => new MeteredAdminAccountsRepository(inner, metrics));
         services.AddMetered<ILyricsOffsetsRepository, LyricsOffsetsRepository>(
             (inner, metrics) => new MeteredLyricsOffsetsRepository(inner, metrics));
+        services.AddMetered<IRingoGamesRepository, RingoGamesRepository>(
+            (inner, metrics) => new MeteredRingoGamesRepository(inner, metrics));
+        services.AddMetered<IResistanceGamesRepository, ResistanceGamesRepository>(
+            (inner, metrics) => new MeteredResistanceGamesRepository(inner, metrics));
     }
 
     // Repositories hold state, so the implementation stays a singleton and the decorator wraps that one instance

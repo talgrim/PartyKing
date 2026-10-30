@@ -14,6 +14,8 @@ import { useAutoLyrics } from '@/components/Music/useAutoLyrics';
 import { useUploadDialog } from '@/components/Music/useUploadDialog';
 import { SessionPasswordForm } from '@/components/Music/SessionPasswordForm';
 import { PageNavigation } from '@/components/common/PageNavigation';
+import { ResistanceInvite } from '@/pages/Games/ResistanceInvite';
+import { RingoInvite } from '@/pages/Games/RingoInvite';
 import { SlideshowView } from '@/pages/Slideshow/SlideshowView';
 import { ROUTE_PATHS } from '@/router/constants';
 import { HTTP_STATUS_CODE } from '@/service/constants';
@@ -126,6 +128,10 @@ export const MusicQueue = (): ReactNode => {
 
   const hostPlayerPush = useRef<HostPlayerPushHandlers>({});
   const hub = useSessionMusicHub(sessionId, Boolean(session && !locked), hostPlayerPush);
+  const unlocked = Boolean(session && !locked);
+  const canManage = isHost || isAdmin;
+  // The admin opens the games, so everyone else (the host included) is invited to join
+  const invitable = unlocked && !isAdmin;
 
   return (
     <SessionHubContext.Provider value={hub}>
@@ -179,6 +185,8 @@ export const MusicQueue = (): ReactNode => {
         {locked && joinFailed && (
           <p className="px-2 pt-4 text-amber-500">This QR code has expired. Enter the password instead.</p>
         )}
+        {invitable && <RingoInvite sessionId={sessionId} enabled />}
+        {invitable && <ResistanceInvite sessionId={sessionId} enabled />}
         {locked && <SessionPasswordForm sessionId={sessionId} onJoined={onJoined} />}
 
         {error && !locked && (

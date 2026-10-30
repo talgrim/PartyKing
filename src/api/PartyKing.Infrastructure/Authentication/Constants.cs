@@ -8,4 +8,6 @@ public static class Constants
     public const string AuthCookieName = "cookie.partyKing.auth";
     public const string AdminCookieName = "cookie.partyKing.admin";
     public const string SessionAccessCookieName = "cookie.partyKing.sessions";
+    public const string RingoPlayerCookieName = "cookie.partyKing.ringo";
+    public const string ResistancePlayerCookieName = "cookie.partyKing.resistance";
 }

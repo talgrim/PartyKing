@@ -11,12 +11,16 @@ internal sealed class FakeChatClient : IChatClient
 
     public int Calls { get; private set; }
 
+    /// <summary>The text of the user message of the last call.</summary>
+    public string? LastUserPrompt { get; private set; }
+
     public Task<ChatResponse> GetResponseAsync(
         IEnumerable<ChatMessage> messages,
         ChatOptions? options = null,
         CancellationToken cancellationToken = default)
     {
         Calls++;
+        LastUserPrompt = messages.LastOrDefault(message => message.Role == ChatRole.User)?.Text;
 
         return Failure is null
             ? Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, Reply)))

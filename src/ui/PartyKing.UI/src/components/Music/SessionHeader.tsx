@@ -2,6 +2,7 @@ import { ReactNode, useState } from 'react';
 import { SessionDto } from '@/service/endpoints/sessions/types';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 import { JoinQrCode } from './JoinQrCode';
+import { OpenGamesMenu } from './OpenGamesMenu';
 import { SessionSettings } from './SessionSettings';
 
 type Props = {
@@ -15,7 +16,7 @@ type Props = {
 };
 
 /**
- * Card with the session name (and the QR code and settings icons for the host and admins), its code, and either who the host
+ * Card with the session name (the open games menu for everyone, the QR code and settings icons for the host and admins), its code, and either who the host
  * is or the login that makes the visitor the host.
  */
 export const SessionHeader = ({ session, isHost, isAdmin = false, onSessionChanged }: Props): ReactNode => {
@@ -42,12 +43,15 @@ export const SessionHeader = ({ session, isHost, isAdmin = false, onSessionChang
             <span className="px-2 py-0.5 font-mono text-amber-500 bg-slate-800 rounded-md">{session.code}</span>
           </div>
         </div>
-        {(isHost || isAdmin) && (
-          <div className="flex items-center gap-1 shrink-0">
-            <JoinQrCode sessionId={session.id} />
-            <SessionSettings session={session} onChanged={() => onSessionChanged?.()} />
-          </div>
-        )}
+        <div className="flex items-center gap-1 shrink-0">
+          <OpenGamesMenu sessionId={session.id} canManage={isHost || isAdmin} />
+          {(isHost || isAdmin) && (
+            <>
+              <JoinQrCode sessionId={session.id} />
+              <SessionSettings session={session} onChanged={() => onSessionChanged?.()} />
+            </>
+          )}
+        </div>
       </div>
 
       <div className="mt-3 pt-3 border-t border-slate-800">

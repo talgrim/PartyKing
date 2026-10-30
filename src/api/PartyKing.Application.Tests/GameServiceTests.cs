@@ -56,6 +56,6 @@ public class GameServiceTests
     {
         var result = await _service.ListAsync(_id, profileId, isAdmin, CancellationToken.None);
 
-        Assert.Equal(["ringo", "never-have-i-ever"], result.Value.Select(game => game.Id));
+        Assert.Equal(["resistance", "ringo", "never-have-i-ever"], result.Value.Select(game => game.Id));
     }
 }
