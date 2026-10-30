@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { ResistanceGameDto } from '@/service/endpoints/games/types';
 import { ResistancePlotLog } from './ResistancePlotLog';
+import { ResistanceCloseEye } from './ResistanceCloseEye';
 import { ResistanceLeaderWindow } from './ResistanceLeaderWindow';
 import { ResistanceSpotlightPlayer } from './ResistanceSpotlightPlayer';
 import { ResistanceTakeResponsibility } from './ResistanceTakeResponsibility';
@@ -36,6 +37,7 @@ const game = (overrides: Partial<ResistanceGameDto> = {}): ResistanceGameDto =>
     openMissionPlayerId: null,
     openMissionCard: null,
     leaderWindowPassedPlayerIds: [],
+    yourPeeks: [],
     ...overrides,
   }) as unknown as ResistanceGameDto;
 
@@ -309,5 +311,33 @@ describe('Strong Leader leader window', () => {
 
     expect(onNoConfidence).toHaveBeenCalledWith(7);
     expect(resistancePhaseDescription(approved, { canManage: false, isAdmin: false }, 2)).toContain('Nie ufajcie mu');
+  });
+});
+
+describe('Keeping a Close Eye', () => {
+  const eye = { id: 4, type: 'KeepingCloseEye', toDeal: false, inPlay: false } as const;
+  const afterMission = (overrides: Partial<ResistanceGameDto> = {}) =>
+    game({ phase: 'MissionResult', missionNumber: 1, teamPlayerIds: ['p0', 'p1', 'p2'], yourPlotCards: [eye], ...overrides });
+
+  it('offers the other team members whose card nobody looked at yet', async () => {
+    const user = userEvent.setup();
+    const onPeek = vi.fn().mockResolvedValue(undefined);
+    const looked = { id: 8, type: 'KeepingCloseEye', holderPlayerId: 'p3', targetPlayerId: 'p1', missionNumber: 1, isConfirmed: true } as const;
+    render(<ResistanceCloseEye game={afterMission({ playedPlotCards: [looked] })} onPeek={onPeek} />);
+
+    expect(screen.queryByRole('option', { name: 'Bartek' })).toBeNull();
+    await user.selectOptions(screen.getByLabelText('Której karcie Misji się przyglądasz'), 'p2');
+    await user.click(screen.getByRole('button', { name: 'Podejrzyj kartę' }));
+
+    expect(onPeek).toHaveBeenCalledWith(4, 'p2');
+  });
+
+  it('shows the card that was seen and hides the picker outside the mission result', () => {
+    const seen = render(<ResistanceCloseEye game={afterMission({ yourPlotCards: [], yourPeeks: [{ playerId: 'p2', success: false }] })} onPeek={vi.fn()} />);
+    expect(seen.getByText('Celina zagrał/a: Porażka')).toBeInTheDocument();
+    seen.unmount();
+
+    const early = render(<ResistanceCloseEye game={afterMission({ phase: 'PlayingMission' })} onPeek={vi.fn()} />);
+    expect(early.container).toBeEmptyDOMElement();
   });
 });

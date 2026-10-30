@@ -1640,6 +1640,10 @@ public class ResistanceServiceTests
             Guid sessionId, Guid? callerPlayerId, int cardId, CancellationToken cancellationToken) =>
             Task.FromResult(new ResistancePlayCardResult(PlayCardStatus, _games.GetValueOrDefault(sessionId)));
 
+        public Task<ResistancePlayCardResult> PeekMissionCardAsync(
+            Guid sessionId, Guid? callerPlayerId, int cardId, Guid targetPlayerId, CancellationToken cancellationToken) =>
+            Task.FromResult(new ResistancePlayCardResult(PlayCardStatus, _games.GetValueOrDefault(sessionId)));
+
         public Task<ResistancePlayCardResult> PlayNoConfidenceAsync(
             Guid sessionId, Guid? callerPlayerId, int cardId, CancellationToken cancellationToken) =>
             Task.FromResult(new ResistancePlayCardResult(PlayCardStatus, _games.GetValueOrDefault(sessionId)));

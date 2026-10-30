@@ -207,7 +207,7 @@ public class ResistanceControllerTests
 
     private static ResistanceGameDto Game() => new(
         DateTimeOffset.UtcNow, true, [], null, 10, null, null, null, null, 1, null, [], null, 0, null, [], null,
-        null, null, null, new ResistanceRulesDto([], false, 1), null, [], null, [], [], [], [], [], [], [], null, null, []);
+        null, null, null, new ResistanceRulesDto([], false, 1), null, [], null, [], [], [], [], [], [], [], null, null, [], []);
 
     private sealed class FakeResistanceService : IResistanceService
     {
@@ -245,6 +245,12 @@ public class ResistanceControllerTests
         public Task<ErrorOr<ResistanceGameDto>> TakeLeadAsync(Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken)
         {
             LastCall = ($"take-lead-{cardId}", sessionId, null, caller.PlayerId);
+            return Task.FromResult(Result);
+        }
+
+        public Task<ErrorOr<ResistanceGameDto>> PeekMissionCardAsync(Guid sessionId, int cardId, Guid targetPlayerId, GameCaller caller, CancellationToken cancellationToken)
+        {
+            LastCall = ($"peek-{cardId}", sessionId, null, caller.PlayerId);
             return Task.FromResult(Result);
         }
 

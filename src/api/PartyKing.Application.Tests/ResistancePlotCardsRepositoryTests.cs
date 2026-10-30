@@ -932,4 +932,84 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         await _repository.PlayNoConfidenceAsync(_sessionId, card.HolderPlayerId, card.CardId, ct);
         Assert.Equal(ResistancePlayCardStatus.WrongState, (await _repository.PlayNoConfidenceAsync(_sessionId, card.HolderPlayerId, card.CardId, ct)).Status);
     }
+
+    /// <summary>A game whose first mission was played (everybody on the team played Success) while Keeping a Close Eye was in a hand.</summary>
+    private async Task<(ResistanceGame Game, ResistancePlotCard Card)> AfterTheMissionWithCloseEyeAsync()
+    {
+        var game = await StartAsync(5, plotCards: true, onlyType: ResistancePlotCardType.KeepingCloseEye);
+        await DealAsync(game);
+        await SelectTeamAndVoteAsync(await ReloadAsync(), approve: true);
+        game = await ReloadAsync();
+        foreach (var member in game.Players.Where(x => x.IsOnTeam))
+        {
+            await _repository.PlayMissionCardAsync(_sessionId, member.PlayerId, true, CancellationToken.None);
+        }
+
+        game = await ReloadAsync();
+        Assert.Equal(ResistancePhase.MissionResult, game.Phase);
+
+        return (game, game.PlotCards.Single(x => x.Location == ResistancePlotCardLocation.Hand));
+    }
+
+    [Fact]
+    public async Task KeepingCloseEye_LetsTheHolderSeeATeamMembersCardAndNobodyElse()
+    {
+        var (game, card) = await AfterTheMissionWithCloseEyeAsync();
+        var target = game.Players.First(x => x.IsOnTeam && x.PlayerId != card.HolderPlayerId).PlayerId;
+
+        var peeked = await _repository.PeekMissionCardAsync(_sessionId, card.HolderPlayerId, card.CardId, target, CancellationToken.None);
+
+        Assert.Equal(ResistancePlayCardStatus.Done, peeked.Status);
+        var after = await ReloadAsync();
+        Assert.Equal([(target, true)], ResistanceRoles.PeekedCards(after, card.HolderPlayerId!.Value));
+        Assert.Empty(ResistanceRoles.PeekedCards(after, target));
+        Assert.Equal(ResistancePlotCardLocation.Played, after.PlotCards.Single(x => x.CardId == card.CardId).Location);
+    }
+
+    [Fact]
+    public async Task KeepingCloseEye_RefusesYourOwnCardPlayersOffTheTeamTheWrongCallerAndStep()
+    {
+        var ct = CancellationToken.None;
+        var (game, card) = await AfterTheMissionWithCloseEyeAsync();
+        var holder = card.HolderPlayerId!.Value;
+        var outsider = game.Players.First(x => !x.IsOnTeam && x.PlayerId != holder).PlayerId;
+        var member = game.Players.First(x => x.IsOnTeam && x.PlayerId != holder).PlayerId;
+
+        Assert.Equal(ResistancePlayCardStatus.InvalidTarget, (await _repository.PeekMissionCardAsync(_sessionId, holder, card.CardId, holder, ct)).Status);
+        Assert.Equal(ResistancePlayCardStatus.InvalidTarget, (await _repository.PeekMissionCardAsync(_sessionId, holder, card.CardId, outsider, ct)).Status);
+        Assert.Equal(ResistancePlayCardStatus.NotAllowed, (await _repository.PeekMissionCardAsync(_sessionId, member, card.CardId, member, ct)).Status);
+        Assert.Equal(ResistancePlayCardStatus.Done, (await _repository.PeekMissionCardAsync(_sessionId, holder, card.CardId, member, ct)).Status);
+        Assert.Equal(ResistancePlayCardStatus.WrongState, (await _repository.PeekMissionCardAsync(_sessionId, holder, card.CardId, member, ct)).Status);
+    }
+
+    [Fact]
+    public async Task KeepingCloseEye_CannotBePlayedBeforeTheMissionIsPlayedOrAfterTheNextStarts()
+    {
+        var ct = CancellationToken.None;
+        var game = await StartAsync(5, plotCards: true, onlyType: ResistancePlotCardType.KeepingCloseEye);
+        await DealAsync(game);
+        game = await ReloadAsync();
+        var card = game.PlotCards.Single(x => x.Location == ResistancePlotCardLocation.Hand);
+        var other = game.Players.First(x => x.PlayerId != card.HolderPlayerId).PlayerId;
+
+        var early = await _repository.PeekMissionCardAsync(_sessionId, card.HolderPlayerId, card.CardId, other, ct);
+
+        Assert.Equal(ResistancePlayCardStatus.WrongPhase, early.Status);
+    }
+
+    [Fact]
+    public async Task KeepingCloseEye_ASecondHolderCannotLookAtTheSameCard()
+    {
+        var ct = CancellationToken.None;
+        var (game, card) = await AfterTheMissionWithCloseEyeAsync();
+        var holder = card.HolderPlayerId!.Value;
+        var target = game.Players.First(x => x.IsOnTeam && x.PlayerId != holder).PlayerId;
+        var second = game.Players.First(x => x.PlayerId != holder && x.PlayerId != target).PlayerId;
+        await SetCardAsync(SpareCardId(game), second, ResistancePlotCardLocation.Hand, ResistancePlotCardType.KeepingCloseEye);
+        await _repository.PeekMissionCardAsync(_sessionId, holder, card.CardId, target, ct);
+
+        var again = await _repository.PeekMissionCardAsync(_sessionId, second, SpareCardId(game), target, ct);
+
+        Assert.Equal(ResistancePlayCardStatus.InvalidTarget, again.Status);
+    }
 }
