@@ -112,6 +112,10 @@ export type ResistanceGameDto = {
   playedPlotCards: ResistancePlayedPlotCardDto[];
   /** The identity cards played cards show the caller, until they confirm having seen them; private. */
   yourReveals: ResistanceCardRevealDto[];
+  /** The team member In the Spotlight forces to play their mission card openly this mission; public, null when none. */
+  openMissionPlayerId: string | null;
+  /** That player's mission card (true = Success), public once they played it. */
+  openMissionCard: boolean | null;
 };
 
 // Mirrors PartyKing.Contract.V1.Games.ResistancePlayedPlotCardDto

@@ -80,7 +80,14 @@ export const resistancePhaseDescription = (
           ? ' Zagraj swoją kartę misji.'
           : ' Twoja karta jest zagrana.';
 
-      return `Drużyna (${names.join(', ')}) została zatwierdzona (${tally}) i wykonuje ${mission} misję. ${progress}${rule}${mine}`;
+      const openName = game.players.find((player) => player.id === game.openMissionPlayerId)?.name;
+      const open = openName == null
+        ? ''
+        : game.openMissionCard == null
+          ? ` ${openName} musi zagrać kartę misji jawnie („Pod obserwacją”).`
+          : ` ${openName} zagrał/a kartę jawnie: ${game.openMissionCard ? 'Sukces' : 'Porażka'}.`;
+
+      return `Drużyna (${names.join(', ')}) została zatwierdzona (${tally}) i wykonuje ${mission} misję. ${progress}${rule}${mine}${open}`;
     }
 
     if (game.phase === 'MissionResult') {

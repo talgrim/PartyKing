@@ -7,6 +7,7 @@ import { ResistanceVotePanel } from './ResistanceVotePanel';
 import { ResistancePlotDealer } from './ResistancePlotDealer';
 import { ResistancePlotHand } from './ResistancePlotHand';
 import { ResistancePlotPlayer } from './ResistancePlotPlayer';
+import { ResistanceSpotlightPlayer } from './ResistanceSpotlightPlayer';
 
 type Props = {
   game: ResistanceGameDto;
@@ -52,6 +53,9 @@ export const ResistancePlayerView = ({ game, onSubmitTeam, onDealPlotCards, onPl
         />
       )}
       {resolves && <ResistancePlotPlayer game={game} onPlay={onPlayPlotCard} onConfirm={onConfirmPlotCard} />}
+      {isPlayer && game.phase === 'PlayingMission' && (
+        <ResistanceSpotlightPlayer game={game} onPlay={onPlayPlotCard} />
+      )}
       <ResistancePlotHand cards={game.yourPlotCards} />
       {picksTeam && (
         <ResistanceTeamPicker
