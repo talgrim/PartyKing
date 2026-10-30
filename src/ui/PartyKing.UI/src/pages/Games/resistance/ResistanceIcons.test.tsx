@@ -11,10 +11,12 @@ import {
   PlotCloseEyeCardIcon,
   PlotEstablishConfidenceCardIcon,
   PlotNoConfidenceCardIcon,
+  PlotOpenUpCardIcon,
   PlotOpinionMakerCardIcon,
   PlotOverheardConversationCardIcon,
   PlotSpotlightCardIcon,
   PlotStrongLeaderCardIcon,
+  PlotTakeResponsibilityCardIcon,
   SpyCardIcon,
   TeamTokenIcon,
   VoteApproveCardIcon,
@@ -39,6 +41,8 @@ const cards = {
   PlotNoConfidenceCardIcon,
   PlotSpotlightCardIcon,
   PlotOpinionMakerCardIcon,
+  PlotOpenUpCardIcon,
+  PlotTakeResponsibilityCardIcon,
 };
 
 describe('ResistanceIcons', () => {

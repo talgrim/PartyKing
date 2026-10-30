@@ -26,6 +26,8 @@ const game = (count: number, extra: Partial<ResistanceGameDto> = {}): Resistance
   playedMissionPlayerIds: [],
   yourMissionCard: null,
   missionResults: [],
+  yourPlotCards: [],
+  plotCardCounts: [],
   rules: {
     playerCounts: [5, 6, 7, 8, 9, 10].map((playerCount) => ({
       playerCount,
@@ -210,5 +212,19 @@ describe('resistancePhaseDescription', () => {
 
       expect(text).toContain('Odrzucone drużyny z rzędu: 3/5');
     });
+  });
+
+  it('tells the leader to deal the drawn plot cards and others who is dealing', () => {
+    const dealing = game(5, {
+      startedAt: '2026-10-29T10:05:00Z',
+      phase: 'DealingCards',
+      leaderPlayerId: 'p1',
+      yourPlayerId: 'p1',
+    });
+
+    expect(resistancePhaseDescription(dealing, guest, 2)).toMatch(/Ty jesteś liderem.*rozdaj dobrane karty Intryg/);
+    expect(resistancePhaseDescription({ ...dealing, yourPlayerId: 'p2' }, guest, 2)).toMatch(
+      /Liderem jest Gracz 1.*rozdaje dobrane karty Intryg/,
+    );
   });
 });
