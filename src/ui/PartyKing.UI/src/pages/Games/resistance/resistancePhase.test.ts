@@ -32,6 +32,8 @@ const game = (count: number, extra: Partial<ResistanceGameDto> = {}): Resistance
   opinionMakerVotes: [],
   playedPlotCards: [],
   yourReveals: [],
+  openMissionPlayerId: null,
+  openMissionCard: null,
   rules: {
     playerCounts: [5, 6, 7, 8, 9, 10].map((playerCount) => ({
       playerCount,

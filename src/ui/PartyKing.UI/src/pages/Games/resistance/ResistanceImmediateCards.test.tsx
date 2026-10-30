@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { ResistanceGameDto } from '@/service/endpoints/games/types';
 import { ResistancePlotLog } from './ResistancePlotLog';
+import { ResistanceSpotlightPlayer } from './ResistanceSpotlightPlayer';
 import { ResistancePlotPlayer } from './ResistancePlotPlayer';
 import { resistancePhaseDescription } from './resistancePhase';
 
@@ -30,6 +31,8 @@ const game = (overrides: Partial<ResistanceGameDto> = {}): ResistanceGameDto =>
     opinionMakerVotes: [],
     playedPlotCards: [],
     yourReveals: [],
+    openMissionPlayerId: null,
+    openMissionCard: null,
     ...overrides,
   }) as unknown as ResistanceGameDto;
 
@@ -170,5 +173,47 @@ describe('resistancePhaseDescription while the immediate cards are played', () =
     );
 
     expect(text).not.toContain('Czekamy na potwierdzenie');
+  });
+});
+
+describe('In the Spotlight', () => {
+  const spotlight = { id: 7, type: 'InTheSpotlight', toDeal: false, inPlay: false } as const;
+  const mission = (overrides: Partial<ResistanceGameDto> = {}) =>
+    game({
+      phase: 'PlayingMission',
+      teamPlayerIds: ['p1', 'p2', 'p0'],
+      playedMissionPlayerIds: ['p2'],
+      yourPlotCards: [spotlight],
+      ...overrides,
+    });
+
+  it('offers only the other team members who have not played their mission card', async () => {
+    const user = userEvent.setup();
+    const onPlay = vi.fn().mockResolvedValue(undefined);
+    render(<ResistanceSpotlightPlayer game={mission()} onPlay={onPlay} />);
+
+    const options = screen.getAllByRole('option').map((option) => option.textContent);
+    expect(options).toEqual(['Wybierz gracza z drużyny', 'Bartek']);
+
+    await user.selectOptions(screen.getByLabelText('Kogo zmuszasz do jawnej karty misji'), 'p1');
+    await user.click(screen.getByRole('button', { name: 'Zagraj kartę' }));
+    expect(onPlay).toHaveBeenCalledWith(7, 'p1');
+  });
+
+  it('renders nothing without the card or once a player is forced open', () => {
+    const noCard = render(<ResistanceSpotlightPlayer game={mission({ yourPlotCards: [] })} onPlay={vi.fn()} />);
+    expect(noCard.container).toBeEmptyDOMElement();
+
+    const forced = render(<ResistanceSpotlightPlayer game={mission({ openMissionPlayerId: 'p1' })} onPlay={vi.fn()} />);
+    expect(forced.container).toBeEmptyDOMElement();
+  });
+
+  it('names the forced player and then their open card in the phase line', () => {
+    const viewer = { canManage: false, isAdmin: false };
+    const before = resistancePhaseDescription(mission({ openMissionPlayerId: 'p1' }), viewer, 2);
+    const after = resistancePhaseDescription(mission({ openMissionPlayerId: 'p1', openMissionCard: false }), viewer, 2);
+
+    expect(before).toContain('Bartek musi zagrać kartę misji jawnie');
+    expect(after).toContain('Bartek zagrał/a kartę jawnie: Porażka');
   });
 });

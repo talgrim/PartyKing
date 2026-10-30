@@ -599,4 +599,80 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         var restarted = await ReloadAsync();
         Assert.DoesNotContain(restarted.PlotCards, x => x.Location == ResistancePlotCardLocation.Played || x.IsConfirmed || x.TargetPlayerId is not null);
     }
+
+    /// <summary>A started 5-player game whose approved team plays the mission, with the one drawn In the Spotlight dealt.</summary>
+    private async Task<(ResistanceGame Game, ResistancePlotCard Card)> PlayingWithSpotlightAsync()
+    {
+        var game = await StartAsync(5, plotCards: true, onlyType: ResistancePlotCardType.InTheSpotlight);
+        await DealAsync(game);
+        await SelectTeamAndVoteAsync(await ReloadAsync(), approve: true);
+        game = await ReloadAsync();
+        Assert.Equal(ResistancePhase.PlayingMission, game.Phase);
+
+        return (game, game.PlotCards.Single(x => x.Location == ResistancePlotCardLocation.Hand));
+    }
+
+    [Fact]
+    public async Task InTheSpotlight_ForcesATeamMemberToPlayOpenlyWithoutAskingForAConfirmation()
+    {
+        var ct = CancellationToken.None;
+        var (game, card) = await PlayingWithSpotlightAsync();
+        var target = game.Players.First(x => x.IsOnTeam && x.PlayerId != card.HolderPlayerId);
+
+        var played = await _repository.PlayPlotCardAsync(_sessionId, card.HolderPlayerId, card.CardId, target.PlayerId, ct);
+
+        Assert.Equal(ResistancePlayCardStatus.Done, played.Status);
+        var after = await ReloadAsync();
+        Assert.Equal(target.PlayerId, ResistanceRoles.OpenMissionPlayerId(after));
+        Assert.Empty(ResistanceRoles.UnconfirmedCards(after));
+        Assert.Equal(ResistancePhase.PlayingMission, after.Phase);
+    }
+
+    [Fact]
+    public async Task InTheSpotlight_IsPlayedOnlyWhileTheMissionIsPlayed()
+    {
+        var ct = CancellationToken.None;
+        var game = await StartAsync(5, plotCards: true, onlyType: ResistancePlotCardType.InTheSpotlight);
+        await DealAsync(game);
+        var card = (await ReloadAsync()).PlotCards.Single(x => x.Location == ResistancePlotCardLocation.Hand);
+        var target = game.Players.First(x => x.PlayerId != card.HolderPlayerId).PlayerId;
+
+        var early = await _repository.PlayPlotCardAsync(_sessionId, card.HolderPlayerId, card.CardId, target, ct);
+
+        Assert.Equal(ResistancePlayCardStatus.NotPlayingMission, early.Status);
+    }
+
+    [Fact]
+    public async Task InTheSpotlight_RejectsTargetsOutsideTheTeamPlayersWhoPlayedAndTheHolder()
+    {
+        var ct = CancellationToken.None;
+        var (game, card) = await PlayingWithSpotlightAsync();
+        var outsider = game.Players.First(x => !x.IsOnTeam && x.PlayerId != card.HolderPlayerId);
+        var member = game.Players.First(x => x.IsOnTeam && x.PlayerId != card.HolderPlayerId);
+        await _repository.PlayMissionCardAsync(_sessionId, member.PlayerId, true, ct);
+
+        foreach (var invalid in new[] { outsider.PlayerId, member.PlayerId, card.HolderPlayerId!.Value, Guid.NewGuid() })
+        {
+            var result = await _repository.PlayPlotCardAsync(_sessionId, card.HolderPlayerId, card.CardId, invalid, ct);
+            Assert.Equal(ResistancePlayCardStatus.InvalidTarget, result.Status);
+        }
+
+        Assert.Null(ResistanceRoles.OpenMissionPlayerId(await ReloadAsync()));
+    }
+
+    [Fact]
+    public async Task InTheSpotlight_CanOnlyBePlayedByItsHolderAndOnlyOnce()
+    {
+        var ct = CancellationToken.None;
+        var (game, card) = await PlayingWithSpotlightAsync();
+        var target = game.Players.First(x => x.IsOnTeam && x.PlayerId != card.HolderPlayerId).PlayerId;
+        var stranger = game.Players.First(x => x.PlayerId != card.HolderPlayerId).PlayerId;
+
+        var byStranger = await _repository.PlayPlotCardAsync(_sessionId, stranger, card.CardId, target, ct);
+        await _repository.PlayPlotCardAsync(_sessionId, card.HolderPlayerId, card.CardId, target, ct);
+        var again = await _repository.PlayPlotCardAsync(_sessionId, card.HolderPlayerId, card.CardId, target, ct);
+
+        Assert.Equal(ResistancePlayCardStatus.NotAllowed, byStranger.Status);
+        Assert.Equal(ResistancePlayCardStatus.WrongState, again.Status);
+    }
 }

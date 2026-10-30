@@ -568,6 +568,40 @@ public class ResistanceServiceTests
     }
 
     [Fact]
+    public async Task InTheSpotlight_MakesTheTargetsMissionCardPublicOnceTheyPlayedIt()
+    {
+        var ct = CancellationToken.None;
+        var callers = await OpenGameAndJoinAsync(5);
+        await _service.StartAsync(_id, Host, ct);
+        var game = (await _games.GetAsync(_id, ct))!;
+        var players = game.Players.OrderBy(x => x.Order).ToList();
+        game.Phase = ResistancePhase.PlayingMission;
+        players[1].IsOnTeam = true;
+        game.PlotCards.Add(new ResistancePlotCard
+        {
+            SessionId = _id,
+            CardId = 0,
+            Type = ResistancePlotCardType.InTheSpotlight,
+            Location = ResistancePlotCardLocation.Played,
+            HolderPlayerId = players[0].PlayerId,
+            TargetPlayerId = players[1].PlayerId,
+            PlayedAt = DateTimeOffset.UtcNow,
+            PlayedInMission = game.MissionNumber,
+            IsConfirmed = true,
+        });
+        var bystander = callers.First(x => x.PlayerId == players[2].PlayerId);
+
+        var before = (await _service.GetAsync(_id, bystander, ct)).Value;
+        players[1].MissionCard = false;
+        var after = (await _service.GetAsync(_id, bystander, ct)).Value;
+
+        Assert.Equal(players[1].PlayerId, before.OpenMissionPlayerId);
+        Assert.Null(before.OpenMissionCard);
+        Assert.Equal(false, after.OpenMissionCard);
+        Assert.Null(after.YourMissionCard);
+    }
+
+    [Fact]
     public async Task WithoutThePlotCards_TheGameShowsNoCardsAndPicksAtOnce()
     {
         var ct = CancellationToken.None;
