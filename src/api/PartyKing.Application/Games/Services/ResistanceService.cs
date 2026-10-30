@@ -91,6 +91,14 @@ public interface IResistanceService
     Task<ErrorOr<ResistanceGameDto>> SetPlotCardsAsync(
         Guid sessionId, bool enabled, GameCaller caller, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// The mission leader hands the drawn plot cards to the other players. Forbidden for anyone else (no manager
+    /// override), Conflict when there is nothing to hand out, Validation for a wrong or incomplete deal.
+    /// </summary>
+    Task<ErrorOr<ResistanceGameDto>> DealPlotCardsAsync(
+        Guid sessionId, IReadOnlyList<ResistancePlotCardAssignmentDto>? assignments, GameCaller caller,
+        CancellationToken cancellationToken);
+
     /// <summary>Host or admin: removes a player. NotFound for an unknown game or player.</summary>
     Task<ErrorOr<ResistanceGameDto>> KickAsync(
         Guid sessionId, Guid playerId, GameCaller caller, CancellationToken cancellationToken);
@@ -312,12 +320,59 @@ internal class ResistanceService : IResistanceService
                 return Error.Forbidden("Resistance.NotLeader", "Only the mission leader picks the team.");
             case ResistanceTeamStatus.AlreadySubmitted:
                 return Error.Conflict("Resistance.TeamSubmitted", "The team was already submitted.");
+            case ResistanceTeamStatus.CardsNotDealt:
+                return Error.Conflict("Resistance.CardsNotDealt", "The leader has to hand out the plot cards first.");
             case ResistanceTeamStatus.WrongSize:
                 return Error.Validation(
                     "Resistance.WrongTeamSize",
                     $"The team needs exactly {result.Game!.Rules.TeamSize(result.Game.Players.Count, result.Game.MissionNumber)} different players.");
             case ResistanceTeamStatus.UnknownPlayer:
                 return Error.Validation("Resistance.UnknownPlayer", "The team has a player who is not in the game.");
+        }
+
+        await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
+
+        return ToDto(result.Game!, caller);
+    }
+
+    public async Task<ErrorOr<ResistanceGameDto>> DealPlotCardsAsync(
+        Guid sessionId, IReadOnlyList<ResistancePlotCardAssignmentDto>? assignments, GameCaller caller,
+        CancellationToken cancellationToken)
+    {
+        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
+        if (access.IsError)
+        {
+            return access.Errors;
+        }
+
+        if (access.Value.Game is null)
+        {
+            return _lobby.NoGame;
+        }
+
+        var result = await _games.DealPlotCardsAsync(
+            sessionId,
+            caller.PlayerId,
+            (assignments ?? []).Select(x => new PlotCardAssignment(x.CardId, x.PlayerId)).ToList(),
+            cancellationToken);
+        switch (result.Status)
+        {
+            case ResistanceDealStatus.NoGame:
+                return _lobby.NoGame;
+            case ResistanceDealStatus.NotStarted:
+                return Error.Conflict("Resistance.NotStarted", "The game has not started yet.");
+            case ResistanceDealStatus.GameOver:
+                return GameOverError;
+            case ResistanceDealStatus.NotLeader:
+                return Error.Forbidden("Resistance.NotLeader", "Only the mission leader hands out the plot cards.");
+            case ResistanceDealStatus.NotDealing:
+                return Error.Conflict("Resistance.NotDealing", "There are no plot cards to hand out.");
+            case ResistanceDealStatus.UnknownCard:
+                return Error.Validation("Resistance.UnknownCard", "A card is not one the leader has to hand out, or is given twice.");
+            case ResistanceDealStatus.InvalidReceiver:
+                return Error.Validation("Resistance.InvalidReceiver", "Cards go to other players of the game.");
+            case ResistanceDealStatus.Incomplete:
+                return Error.Validation("Resistance.IncompleteDeal", "Every drawn card has to be handed out.");
         }
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
@@ -537,7 +592,25 @@ internal class ResistanceService : IResistanceService
             game.MissionResults
                 .OrderBy(x => x.MissionNumber)
                 .Select(x => new ResistanceMissionResultDto(x.MissionNumber, x.Succeeded, x.FailCount))
-                .ToList());
+                .ToList(),
+            you is null
+                ? []
+                : game.PlotCards
+                    .Where(x => x.HolderPlayerId == you.PlayerId)
+                    .OrderBy(x => x.CardId)
+                    .Select(x => new ResistancePlotCardDto(
+                        x.CardId,
+                        (ResistancePlotCardTypeDto)x.Type,
+                        x.Location == ResistancePlotCardLocation.Drawn && x.Type != ResistancePlotCardType.EstablishConfidence))
+                    .ToList(),
+            game.Rules.PlotCardsEnabled
+                ? game.Players
+                    .OrderBy(x => x.Order)
+                    .Select(x => new ResistancePlotCardCountDto(
+                        x.PlayerId,
+                        game.PlotCards.Count(c => c.HolderPlayerId == x.PlayerId && c.Location == ResistancePlotCardLocation.Hand)))
+                    .ToList()
+                : []);
     }
 
     private sealed class ResistanceLobbyNotifier : IGameLobbyNotifier

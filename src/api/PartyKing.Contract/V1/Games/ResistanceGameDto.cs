@@ -46,7 +46,36 @@ public record ResistanceGameDto(
     int? RequiredFails,
     IReadOnlyList<Guid> PlayedMissionPlayerIds,
     bool? YourMissionCard,
-    IReadOnlyList<ResistanceMissionResultDto> MissionResults);
+    IReadOnlyList<ResistanceMissionResultDto> MissionResults,
+    IReadOnlyList<ResistancePlotCardDto> YourPlotCards,
+    IReadOnlyList<ResistancePlotCardCountDto> PlotCardCounts);
+
+/// <summary>A plot card the caller holds. <paramref name="ToDeal"/> is true while the leader still has to hand it out.</summary>
+public record ResistancePlotCardDto(int Id, ResistancePlotCardTypeDto Type, bool ToDeal);
+
+/// <summary>How many plot cards a player holds in hand; public, the cards themselves are not.</summary>
+public record ResistancePlotCardCountDto(Guid PlayerId, int Count);
+
+/// <summary>Serialized by name, which the UI compares against.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum ResistancePlotCardTypeDto
+{
+    OverheardConversation,
+    OpinionMaker,
+    EstablishConfidence,
+    OpenUp,
+    NoConfidence,
+    KeepingCloseEye,
+    StrongLeader,
+    InTheSpotlight,
+    TakeResponsibility,
+}
+
+/// <summary>The leader gives the card with this id to the player.</summary>
+public record ResistancePlotCardAssignmentDto(int CardId, Guid PlayerId);
+
+/// <summary>Every drawn card except Establish Confidence (the leader keeps it) goes to a player other than the leader.</summary>
+public record ResistanceDealPlotCardsRequest(IReadOnlyList<ResistancePlotCardAssignmentDto> Assignments);
 
 /// <summary>The public outcome of a finished mission: how many Fail cards were played, not by whom.</summary>
 public record ResistanceMissionResultDto(int MissionNumber, bool Succeeded, int FailCount);
@@ -73,6 +102,7 @@ public enum ResistancePhaseDto
     GameOver,
     PlayingMission,
     MissionResult,
+    DealingCards,
 }
 
 /// <summary>How one player voted on the team; public once everybody has voted.</summary>

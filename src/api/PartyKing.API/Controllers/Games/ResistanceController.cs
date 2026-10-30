@@ -99,6 +99,22 @@ public class ResistanceController : GameControllerBase
         return result.Match(Ok, Problem);
     }
 
+    /// <summary>
+    /// The mission leader hands the plot cards they drew to the other players, which moves on to picking the team.
+    /// 403 for anyone else, 409 when nothing is to be handed out, 400 for a wrong or incomplete deal.
+    /// </summary>
+    [HttpPut("cards/deal")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> DealResistancePlotCards(
+        Guid sessionId, [FromBody] ResistanceDealPlotCardsRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.DealPlotCardsAsync(
+            sessionId, request.Assignments, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
     /// <summary>Admin only: opens the Resistance game to guests (idempotent), 403 for the host.</summary>
     [HttpPost("open")]
     [RequireSessionAccess]
