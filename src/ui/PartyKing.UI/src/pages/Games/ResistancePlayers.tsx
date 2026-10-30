@@ -10,10 +10,12 @@ type Props = {
   leaderId?: string | null;
   /** Extra badges after a player's name (votes, roles). */
   marks?: (playerId: string) => ReactNode;
+  /** A card shown beside a player's tag, on the side facing the board (face-up plot cards). */
+  beside?: (playerId: string) => ReactNode;
 };
 
 /** The players who joined, seated along the left, bottom and right edges in seating order. */
-export const ResistancePlayers = ({ players, yourPlayerId, leaderId = null, marks }: Props): ReactNode => {
+export const ResistancePlayers = ({ players, yourPlayerId, leaderId = null, marks, beside }: Props): ReactNode => {
   const seats = seatPositions(players.length);
 
   return (
@@ -21,6 +23,9 @@ export const ResistancePlayers = ({ players, yourPlayerId, leaderId = null, mark
       {players.map((player, index) => {
         const you = player.id === yourPlayerId;
         const leader = player.id === leaderId;
+        const seat = seats[index];
+        const side = seat.top >= 90 ? 'bottom-full mb-1 left-1/2 -translate-x-1/2' : seat.left < 50 ? 'left-full ml-1 top-1/2 -translate-y-1/2' : 'right-full mr-1 top-1/2 -translate-y-1/2';
+        const card = beside?.(player.id);
 
         return (
           <li
@@ -44,6 +49,7 @@ export const ResistancePlayers = ({ players, yourPlayerId, leaderId = null, mark
               </span>
             )}
             {marks?.(player.id)}
+            {card && <span className={`absolute ${side} w-[5vw] min-w-12`}>{card}</span>}
           </li>
         );
       })}

@@ -3,6 +3,7 @@ import { ResistanceGameDto } from '@/service/endpoints/games/types';
 import { ResistancePlayers } from '../ResistancePlayers';
 import { ResistanceMissionBoard } from './ResistanceMissionBoard';
 import { ResistanceMissionCards } from './ResistanceMissionCards';
+import { PlotOpinionMakerCardIcon } from './ResistanceIcons';
 import { ResistancePlayerMarks } from './ResistancePlayerMarks';
 import { ResistanceTeamCards } from './ResistanceTeamCards';
 import { ResistanceVoteCards } from './ResistanceVoteCards';
@@ -23,7 +24,10 @@ export const ResistanceTvBoard = ({ game, board, banner, yourPlayerId }: Props):
   // The votes show from the moment all voted until the next leader submits a team (after a rejection) or the mission
   // is over. The server only sends them while they are public.
   const votesShown = game?.phase === 'SelectingTeam' || game?.phase === 'PlayingMission';
-  const votes = votesShown && game?.votes && game.votes.length > 0 ? game.votes : null;
+  const allVotes = votesShown && game?.votes && game.votes.length > 0 ? game.votes : null;
+  // While the others are still voting, the Opinion Makers' final votes are already public.
+  const earlyVotes = game?.phase === 'Voting' && game.opinionMakerVotes.length > 0 ? game.opinionMakerVotes : null;
+  const votes = allVotes ?? earlyVotes;
 
   // The cards of the mission that just finished, until "Dalej" starts the next one (also when it ended the game).
   const finished = game?.phase === 'MissionResult' || game?.phase === 'GameOver'
@@ -61,6 +65,11 @@ export const ResistanceTvBoard = ({ game, board, banner, yourPlayerId }: Props):
           yourPlayerId={yourPlayerId}
           leaderId={game.leaderPlayerId}
           marks={(playerId) => <ResistancePlayerMarks game={game} playerId={playerId} />}
+          beside={(playerId) =>
+            game.opinionMakerPlayerIds.includes(playerId) ? (
+              <PlotOpinionMakerCardIcon className="w-full" title="Kreator opinii" />
+            ) : null
+          }
         />
       )}
     </>
