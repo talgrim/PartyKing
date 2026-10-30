@@ -133,6 +133,12 @@ export const gamesApi = {
       withCredentials: true,
     }) as unknown as Promise<ResistanceGameDto>,
 
+  /** The holder of Take Responsibility takes a card from a player; takeOpinionMaker is needed only when the target has a face-up Opinion Maker and cards in hand. 403 for anyone else, 409 while a team is voted on or once played, 400 for a bad target or a missing choice. */
+  takeResistanceResponsibility: (sessionId: string, cardId: number, targetPlayerId: string, takeOpinionMaker: boolean | null) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/cards/${cardId}/take`, { targetPlayerId, takeOpinionMaker }, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
   /** The player who saw the identity card confirms it; the last confirmation moves on to the team. 403 for anyone else, 409 when not played or confirmed already. */
   confirmResistancePlotCard: (sessionId: string, cardId: number) =>
     axios.put(`/sessions/${sessionId}/games/resistance/cards/${cardId}/confirm`, undefined, {

@@ -12,6 +12,7 @@ const describe = (card: ResistancePlayedPlotCardDto, holder: string, target: str
   if (card.type === 'OverheardConversation') return `${holder} zagrał/a „${name}” i ogląda kartę Tożsamości gracza ${target}`;
   if (card.type === 'EstablishConfidence') return `${holder} (przywódca) zagrał/a „${name}” i ujawnia swoją kartę Tożsamości graczowi ${target}`;
   if (card.type === 'OpenUp') return `${holder} zagrał/a „${name}” i ujawnia swoją kartę Tożsamości graczowi ${target}`;
+  if (card.type === 'TakeResponsibility') return `${holder} zagrał/a „${name}” i zabiera kartę Intrygi graczowi ${target}`;
   return `${holder} zagrał/a „${name}”`;
 };
 

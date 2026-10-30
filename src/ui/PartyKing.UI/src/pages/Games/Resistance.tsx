@@ -163,6 +163,15 @@ export const Resistance = (): ReactNode => {
     }
   };
 
+  const takeResponsibility = async (cardId: number, targetPlayerId: string, takeOpinionMaker: boolean | null) => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.takeResistanceResponsibility(sessionId, cardId, targetPlayerId, takeOpinionMaker), { revalidate: false });
+    } catch {
+      setMessage('Could not take the card.');
+    }
+  };
+
   const confirmPlotCard = async (cardId: number) => {
     setMessage(undefined);
     try {
@@ -333,6 +342,7 @@ export const Resistance = (): ReactNode => {
                   onSubmitTeam={submitTeam}
                   onDealPlotCards={dealPlotCards}
                   onPlayPlotCard={playPlotCard}
+                  onTakeResponsibility={takeResponsibility}
                   onConfirmPlotCard={confirmPlotCard}
                   onVote={castVote}
                   onPlayMissionCard={playMissionCard}

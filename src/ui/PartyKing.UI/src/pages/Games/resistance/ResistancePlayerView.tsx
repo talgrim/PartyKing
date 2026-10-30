@@ -8,6 +8,7 @@ import { ResistancePlotDealer } from './ResistancePlotDealer';
 import { ResistancePlotHand } from './ResistancePlotHand';
 import { ResistancePlotPlayer } from './ResistancePlotPlayer';
 import { ResistanceSpotlightPlayer } from './ResistanceSpotlightPlayer';
+import { ResistanceTakeResponsibility } from './ResistanceTakeResponsibility';
 
 type Props = {
   game: ResistanceGameDto;
@@ -19,6 +20,8 @@ type Props = {
   onDealPlotCards: (assignments: { cardId: number; playerId: string }[]) => Promise<void>;
   /** Plays an immediate plot card on a player; only its holder sees the picker, and only while the cards are played. */
   onPlayPlotCard: (cardId: number, targetPlayerId: string) => Promise<void>;
+  /** Takes a plot card from a player (Take Responsibility); the choice is null unless the target has an Opinion Maker and a hand. */
+  onTakeResponsibility: (cardId: number, targetPlayerId: string, takeOpinionMaker: boolean | null) => Promise<void>;
   /** Confirms having seen the identity card a played plot card showed. */
   onConfirmPlotCard: (cardId: number) => Promise<void>;
   /** Plays a mission card (true = Success); only a member of the approved team sees the cards. */
@@ -28,7 +31,7 @@ type Props = {
 };
 
 /** The view of a player: their secret role and, as the round goes, the team picker, the vote or the continue button. */
-export const ResistancePlayerView = ({ game, onSubmitTeam, onDealPlotCards, onPlayPlotCard, onConfirmPlotCard, onVote, onPlayMissionCard, onContinue }: Props): ReactNode => {
+export const ResistancePlayerView = ({ game, onSubmitTeam, onDealPlotCards, onPlayPlotCard, onTakeResponsibility, onConfirmPlotCard, onVote, onPlayMissionCard, onContinue }: Props): ReactNode => {
   const isPlayer = game.yourPlayerId != null;
   const leads = isPlayer && game.yourPlayerId === game.leaderPlayerId;
   const deals = leads && game.phase === 'DealingCards';
@@ -56,6 +59,7 @@ export const ResistancePlayerView = ({ game, onSubmitTeam, onDealPlotCards, onPl
       {isPlayer && game.phase === 'PlayingMission' && (
         <ResistanceSpotlightPlayer game={game} onPlay={onPlayPlotCard} />
       )}
+      {isPlayer && <ResistanceTakeResponsibility game={game} onTake={onTakeResponsibility} />}
       <ResistancePlotHand cards={game.yourPlotCards} />
       {picksTeam && (
         <ResistanceTeamPicker
