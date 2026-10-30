@@ -50,6 +50,14 @@ export const resistancePhaseDescription = (
       return `Koniec gry! ${game.winner === 'Spy' ? 'Szpiedzy wygrali' : 'Ruch Oporu wygrał'}: ${why} (${score}). Wszystkie role zostały ujawnione.`;
     }
 
+    if (game.phase === 'DealingCards') {
+      const task = youLead
+        ? 'rozdaj dobrane karty Intryg innym graczom'
+        : 'rozdaje dobrane karty Intryg innym graczom';
+
+      return `${who} (korona): ${task}. Potem wybierze drużynę na ${mission} misję.`;
+    }
+
     if (game.phase === 'PlayingMission') {
       const progress = `Zagrano ${game.playedMissionPlayerIds.length}/${game.teamPlayerIds.length} kart.`;
       const fails = game.requiredFails ?? 1;

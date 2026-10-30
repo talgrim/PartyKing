@@ -4,6 +4,8 @@ import { ResistanceRoleCard } from '../ResistanceRoleCard';
 import { ResistanceTeamPicker } from './ResistanceTeamPicker';
 import { ResistanceMissionPanel } from './ResistanceMissionPanel';
 import { ResistanceVotePanel } from './ResistanceVotePanel';
+import { ResistancePlotDealer } from './ResistancePlotDealer';
+import { ResistancePlotHand } from './ResistancePlotHand';
 
 type Props = {
   game: ResistanceGameDto;
@@ -11,6 +13,8 @@ type Props = {
   onSubmitTeam: (playerIds: string[]) => Promise<void>;
   /** Votes on the submitted team (true approves); only a player sees the vote buttons, and only while the vote is on. */
   onVote: (approve: boolean) => Promise<void>;
+  /** Hands the drawn plot cards to the other players; only the leader sees the dealer, and only while dealing. */
+  onDealPlotCards: (assignments: { cardId: number; playerId: string }[]) => Promise<void>;
   /** Plays a mission card (true = Success); only a member of the approved team sees the cards. */
   onPlayMissionCard: (success: boolean) => Promise<void>;
   /** Moves on after a finished mission; the leader sees the button then. */
@@ -18,9 +22,10 @@ type Props = {
 };
 
 /** The view of a player: their secret role and, as the round goes, the team picker, the vote or the continue button. */
-export const ResistancePlayerView = ({ game, onSubmitTeam, onVote, onPlayMissionCard, onContinue }: Props): ReactNode => {
+export const ResistancePlayerView = ({ game, onSubmitTeam, onDealPlotCards, onVote, onPlayMissionCard, onContinue }: Props): ReactNode => {
   const isPlayer = game.yourPlayerId != null;
   const leads = isPlayer && game.yourPlayerId === game.leaderPlayerId;
+  const deals = leads && game.phase === 'DealingCards';
   const picksTeam = leads && game.phase === 'SelectingTeam' && game.requiredTeamSize != null;
   const votes = isPlayer && game.phase === 'Voting';
   const plays = isPlayer && game.phase === 'PlayingMission' && game.teamPlayerIds.includes(game.yourPlayerId!);
@@ -31,6 +36,16 @@ export const ResistancePlayerView = ({ game, onSubmitTeam, onVote, onPlayMission
       {game.yourRole != null && (
         <ResistanceRoleCard role={game.yourRole} players={game.players} fellowSpyIds={game.fellowSpies ?? []} />
       )}
+      {deals && (
+        <ResistancePlotDealer
+          key={game.missionNumber}
+          leaderId={game.yourPlayerId!}
+          players={game.players}
+          cards={game.yourPlotCards.filter((card) => card.toDeal)}
+          onSubmit={onDealPlotCards}
+        />
+      )}
+      <ResistancePlotHand cards={game.yourPlotCards} />
       {picksTeam && (
         <ResistanceTeamPicker
           key={`${game.missionNumber}-${game.rejectedTeams}`}

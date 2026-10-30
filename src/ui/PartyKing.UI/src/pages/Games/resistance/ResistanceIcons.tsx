@@ -366,6 +366,29 @@ export const PlotOpinionMakerCardIcon = ({ className, title }: IconProps): React
   </PlotCardFace>
 );
 
+/** Plot card "Open Up": the holder shows their identity card to another player (an open card with an arrow). */
+export const PlotOpenUpCardIcon = ({ className, title }: IconProps): ReactNode => (
+  <PlotCardFace className={className} title={title} label={['OTWÓRZ SIĘ']}>
+    <rect x="22" y="34" width="46" height="34" rx="5" fill={COLORS.paper} stroke={COLORS.gold} strokeWidth="2.5" />
+    <Person x={37} y={56} scale={0.6} fill={COLORS.resistance} />
+    <rect x="48" y="44" width="14" height="4" rx="2" fill={COLORS.muted} />
+    <rect x="48" y="54" width="14" height="4" rx="2" fill={COLORS.muted} />
+    <path d="M60 82 L84 82 M76 74 L84 82 L76 90" fill="none" stroke={COLORS.paper} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+  </PlotCardFace>
+);
+
+/** Plot card "Take Responsibility": take a plot card from another player (a hand grabbing a card). */
+export const PlotTakeResponsibilityCardIcon = ({ className, title }: IconProps): ReactNode => (
+  <PlotCardFace className={className} title={title} label={['PRZEJMUJESZ', 'ODPOWIEDZIALNOŚĆ']}>
+    <rect x="34" y="24" width="32" height="44" rx="4" fill="#e7d9b0" stroke={COLORS.gold} strokeWidth="2.5" />
+    <text x="50" y="54" textAnchor="middle" fontSize="22" fontWeight="700" fill="#3b2f1a" fontFamily="serif">
+      ?
+    </text>
+    <path d="M24 90 L24 66 Q24 58 32 58 L50 58 Q58 58 58 66 L58 90 Z" fill={COLORS.gold} stroke={COLORS.paper} strokeWidth="2.5" strokeLinejoin="round" />
+    <path d="M76 70 L58 70 M66 62 L58 70 L66 78" fill="none" stroke={COLORS.paper} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+  </PlotCardFace>
+);
+
 export type MissionResult = 'success' | 'fail' | null;
 
 type MissionBoardProps = {

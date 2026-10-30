@@ -87,7 +87,7 @@ export const Resistance = (): ReactNode => {
   const showPlayerView = isPlayer && !tv && (wide || !boardView);
   const showBoard = !showPlayerView || wide;
   // The TV tab shares the player's cookies, so it must not show the role or the "Ty" badge of whoever is logged in
-  const shownGame = game && tv ? { ...game, yourPlayerId: null, yourRole: null, fellowSpies: null, yourVote: null, yourMissionCard: null } : game;
+  const shownGame = game && tv ? { ...game, yourPlayerId: null, yourRole: null, fellowSpies: null, yourVote: null, yourMissionCard: null, yourPlotCards: [] } : game;
 
   const players = game?.players ?? [];
   const started = game?.startedAt != null;
@@ -141,6 +141,15 @@ export const Resistance = (): ReactNode => {
       await mutate(gamesApi.selectResistanceTeam(sessionId, playerIds), { revalidate: false });
     } catch {
       setMessage('Could not submit the team.');
+    }
+  };
+
+  const dealPlotCards = async (assignments: { cardId: number; playerId: string }[]) => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.dealResistancePlotCards(sessionId, assignments), { revalidate: false });
+    } catch {
+      setMessage('Could not deal the cards.');
     }
   };
 
@@ -300,6 +309,7 @@ export const Resistance = (): ReactNode => {
                 <ResistancePlayerView
                   game={game}
                   onSubmitTeam={submitTeam}
+                  onDealPlotCards={dealPlotCards}
                   onVote={castVote}
                   onPlayMissionCard={playMissionCard}
                   onContinue={continueGame}

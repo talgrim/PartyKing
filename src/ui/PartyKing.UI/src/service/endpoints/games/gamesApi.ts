@@ -121,6 +121,12 @@ export const gamesApi = {
       withCredentials: true,
     }) as unknown as Promise<ResistanceGameDto>,
 
+  /** The leader hands the drawn plot cards to the other players (one assignment per card to deal); 403 for anyone else, 409 outside the dealing phase, 400 for a wrong deal. */
+  dealResistancePlotCards: (sessionId: string, assignments: { cardId: number; playerId: string }[]) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/cards/deal`, { assignments }, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
   /** The mission leader submits the team (exactly `requiredTeamSize` distinct players), which locks it; 403 for anyone else, 409 once submitted, 400 for a wrong team. */
   selectResistanceTeam: (sessionId: string, playerIds: string[]) =>
     axios.put(`/sessions/${sessionId}/games/resistance/team`, { playerIds }, {

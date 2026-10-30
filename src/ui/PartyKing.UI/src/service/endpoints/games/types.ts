@@ -100,7 +100,36 @@ export type ResistanceGameDto = {
   yourMissionCard: boolean | null;
   /** The finished missions, in order. */
   missionResults: ResistanceMissionResultDto[];
+  /** The plot cards the caller holds (drawn or in hand); empty for observers and without the add-on. */
+  yourPlotCards: ResistancePlotCardDto[];
+  /** How many plot cards each player holds in hand (not which); public, empty without the add-on. */
+  plotCardCounts: ResistancePlotCardCountDto[];
 };
+
+// Mirrors PartyKing.Contract.V1.Games.ResistancePlotCardDto
+export type ResistancePlotCardDto = {
+  id: number;
+  type: ResistancePlotCardType;
+  /** True for a card the leader just drew and has to hand to another player. */
+  toDeal: boolean;
+};
+
+// Mirrors PartyKing.Contract.V1.Games.ResistancePlotCardCountDto
+export type ResistancePlotCardCountDto = {
+  playerId: string;
+  count: number;
+};
+
+export type ResistancePlotCardType =
+  | 'OverheardConversation'
+  | 'OpinionMaker'
+  | 'EstablishConfidence'
+  | 'OpenUp'
+  | 'NoConfidence'
+  | 'KeepingCloseEye'
+  | 'StrongLeader'
+  | 'InTheSpotlight'
+  | 'TakeResponsibility';
 
 // Mirrors PartyKing.Contract.V1.Games.ResistanceMissionResultDto
 export type ResistanceMissionResultDto = {
@@ -130,8 +159,14 @@ export type ResistanceCountRulesDto = {
 
 export type ResistanceRole = 'Resistance' | 'Spy';
 
-/** SelectingTeam: the leader picks (the votes that rejected the last team stay public until then); Voting: the team is up for a vote; PlayingMission: the approved team plays cards; MissionResult: the outcome waits for "Dalej". */
-export type ResistancePhase = 'SelectingTeam' | 'Voting' | 'PlayingMission' | 'MissionResult' | 'GameOver';
+/** DealingCards: the leader hands out the plot cards just drawn (add-on only); SelectingTeam: the leader picks (the votes that rejected the last team stay public until then); Voting: the team is up for a vote; PlayingMission: the approved team plays cards; MissionResult: the outcome waits for "Dalej". */
+export type ResistancePhase =
+  | 'SelectingTeam'
+  | 'Voting'
+  | 'PlayingMission'
+  | 'MissionResult'
+  | 'GameOver'
+  | 'DealingCards';
 
 // Mirrors PartyKing.Contract.V1.Games.ResistanceVoteDto
 export type ResistanceVoteDto = {

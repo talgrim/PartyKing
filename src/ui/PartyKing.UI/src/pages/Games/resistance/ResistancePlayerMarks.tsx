@@ -18,10 +18,18 @@ export const ResistancePlayerMarks = ({ game, playerId }: Props): ReactNode => {
   const role = game.revealedRoles?.find((x) => x.playerId === playerId)?.role;
   const waiting = game.phase === 'Voting' && game.votedPlayerIds.includes(playerId);
 
+  const cardCount = game.plotCardCounts.find((x) => x.playerId === playerId)?.count ?? 0;
+
   const played = game.phase === 'PlayingMission' && game.playedMissionPlayerIds.includes(playerId);
 
   return (
     <>
+      {cardCount > 0 && (
+        <span title={`Karty Intryg: ${cardCount}`} className={`${badge} bg-amber-700 text-white`}>
+          <span aria-hidden="true">🂠 {cardCount}</span>
+          <span className="sr-only">Karty Intryg: {cardCount}</span>
+        </span>
+      )}
       {played && (
         <span title="Zagrał/a kartę" className={`${badge} bg-slate-700 text-slate-200`}>
           <span aria-hidden="true">✓</span>
