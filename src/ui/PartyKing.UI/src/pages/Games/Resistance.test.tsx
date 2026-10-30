@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   openResistance: vi.fn(),
   startResistance: vi.fn(),
   refreshResistanceRules: vi.fn(),
+  setResistancePlotCards: vi.fn(),
   selectResistanceTeam: vi.fn(),
   voteResistanceTeam: vi.fn(),
   playResistanceMissionCard: vi.fn(),
@@ -26,6 +27,7 @@ vi.mock('@/service/endpoints/games/gamesApi', () => ({
     openResistance: mocks.openResistance,
     startResistance: mocks.startResistance,
     refreshResistanceRules: mocks.refreshResistanceRules,
+    setResistancePlotCards: mocks.setResistancePlotCards,
     selectResistanceTeam: mocks.selectResistanceTeam,
     voteResistanceTeam: mocks.voteResistanceTeam,
     playResistanceMissionCard: mocks.playResistanceMissionCard,
@@ -67,6 +69,8 @@ const lobby = (names: string[], isOpen = false) => ({
       teamSizes: ({ 5: [2, 3, 2, 3, 3], 6: [2, 3, 4, 3, 4], 7: [2, 3, 3, 4, 4] } as Record<number, number[]>)[playerCount] ?? [3, 4, 4, 5, 5],
       requiredFails: [1, 1, 1, playerCount >= 7 ? 2 : 1, 1],
     })),
+    plotCardsEnabled: false,
+    plotCardsPerRound: 1,
   },
 });
 
@@ -100,6 +104,7 @@ describe('Resistance', () => {
     mocks.openResistance.mockReset();
     mocks.startResistance.mockReset();
     mocks.refreshResistanceRules.mockReset();
+    mocks.setResistancePlotCards.mockReset();
     mocks.selectResistanceTeam.mockReset();
     mocks.endResistance.mockReset();
     mocks.getResistance.mockResolvedValue(lobby([]));
@@ -171,6 +176,29 @@ describe('Resistance', () => {
 
     await screen.findByRole('img', { name: 'Leader' });
     expect(screen.queryByRole('button', { name: 'Refresh rules' })).not.toBeInTheDocument();
+  });
+
+  it('switches the plot cards on before the game is opened', async () => {
+    mocks.setResistancePlotCards.mockResolvedValue(lobby([]));
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Plot cards' }));
+
+    expect(mocks.setResistancePlotCards).toHaveBeenCalledWith('session-1', true);
+  });
+
+  it('locks the plot cards toggle once the game is open and hides it after the start', async () => {
+    mocks.getResistance.mockResolvedValue(lobby(['Ala'], true));
+    const { unmount } = renderPage();
+
+    expect(await screen.findByRole('checkbox', { name: 'Plot cards' })).toBeDisabled();
+    unmount();
+
+    mocks.getResistance.mockResolvedValue(started(['Ala', 'Ola', 'Ela', 'Ula', 'Ewa']));
+    renderPage();
+
+    await screen.findByRole('img', { name: 'Leader' });
+    expect(screen.queryByRole('checkbox', { name: 'Plot cards' })).not.toBeInTheDocument();
   });
 
   it('gives the host no Open button and links back to the games', async () => {
