@@ -44,5 +44,5 @@ primary_region = 'fra'
   path = '/metrics'
 
 [[vm]]
-  size = 'shared-cpu-1x'
+  size = 'shared-cpu-2x'
   memory = '512mb'

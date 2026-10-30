@@ -4,7 +4,7 @@ namespace PartyKing.Application.Admin.Services;
 
 public interface IPasswordHasher
 {
-    string Hash(string password);
+    string Hash(string password, int iterations = PasswordHasher.AdminIterations);
     bool Verify(string password, string hash);
 
     /// <summary>True when the value has the format produced by <see cref="Hash"/>.</summary>
@@ -16,14 +16,22 @@ public class PasswordHasher : IPasswordHasher
 {
     private const int SaltSize = 16;
     private const int HashSize = 32;
-    private const int Iterations = 600_000;
 
-    public string Hash(string password)
+    /// <summary>The default, for admin passwords, which are rare and worth the cost.</summary>
+    public const int AdminIterations = 600_000;
+
+    /// <summary>
+    /// For session passwords: every guest joining a session pays one hash on a small shared CPU, and a party
+    /// password guards only a slideshow and a queue. The iteration count is stored in the hash, so old hashes still verify.
+    /// </summary>
+    public const int SessionIterations = 100_000;
+
+    public string Hash(string password, int iterations = AdminIterations)
     {
         var salt = RandomNumberGenerator.GetBytes(SaltSize);
-        var hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, Iterations, HashAlgorithmName.SHA256, HashSize);
+        var hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA256, HashSize);
 
-        return $"pbkdf2${Iterations}${Convert.ToBase64String(salt)}${Convert.ToBase64String(hash)}";
+        return $"pbkdf2${iterations}${Convert.ToBase64String(salt)}${Convert.ToBase64String(hash)}";
     }
 
     public bool IsHash(string value)

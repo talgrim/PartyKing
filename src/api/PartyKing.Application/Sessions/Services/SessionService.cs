@@ -134,7 +134,7 @@ internal class SessionService : ISessionService
         _musicNotifier = musicNotifier;
         _connectionWatchdog = connectionWatchdog;
         _logger = logger;
-        _dummyHash = passwordHasher.Hash(Guid.NewGuid().ToString());
+        _dummyHash = passwordHasher.Hash(Guid.NewGuid().ToString(), PasswordHasher.SessionIterations);
     }
 
     public async Task<IReadOnlyList<SessionDto>> GetAllAsync(CancellationToken cancellationToken)
@@ -184,7 +184,7 @@ internal class SessionService : ISessionService
             return invalid;
         }
 
-        var passwordHash = _passwordHasher.Hash(password!);
+        var passwordHash = _passwordHasher.Hash(password!, PasswordHasher.SessionIterations);
 
         for (var attempt = 0; attempt < MaxCodeAttempts; attempt++)
         {
@@ -286,7 +286,7 @@ internal class SessionService : ISessionService
             return invalid;
         }
 
-        var passwordHash = _passwordHasher.Hash(password!);
+        var passwordHash = _passwordHasher.Hash(password!, PasswordHasher.SessionIterations);
         var updated = await _sessionsRepository.UpdatePasswordHashAsync(id, passwordHash, cancellationToken);
 
         if (updated)
