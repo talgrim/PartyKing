@@ -318,7 +318,12 @@ internal class ResistanceGamesRepository
 
     protected override IQueryable<ResistanceGame> Games(PartyKingDbContextBase dbContext)
     {
-        return dbContext.ResistanceGames.Include(x => x.Players).Include(x => x.MissionResults).Include(x => x.PlotCards);
+        // Split, so the three collections don't multiply into players x results x cards rows
+        return dbContext.ResistanceGames
+            .Include(x => x.Players)
+            .Include(x => x.MissionResults)
+            .Include(x => x.PlotCards)
+            .AsSplitQuery();
     }
 
     protected override DbSet<ResistanceGame> Table(PartyKingDbContextBase dbContext) => dbContext.ResistanceGames;
