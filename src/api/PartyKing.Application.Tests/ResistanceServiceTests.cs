@@ -87,7 +87,7 @@ public class ResistanceServiceTests
     }
 
     [Fact]
-    public async Task PlotCards_AreOffByDefaultAndSwitchedBeforeTheGameIsOpened()
+    public async Task PlotCards_AreOffByDefaultAndSwitchedUntilTheGameStarts()
     {
         var created = await _service.CreateAsync(_id, Host, CancellationToken.None);
         Assert.False(created.Value.Rules.PlotCardsEnabled);
@@ -98,8 +98,8 @@ public class ResistanceServiceTests
         await _service.OpenAsync(_id, Admin, CancellationToken.None);
         var afterOpen = await _service.SetPlotCardsAsync(_id, false, Host, CancellationToken.None);
 
-        Assert.Equal(ErrorOr.ErrorType.Conflict, afterOpen.FirstError.Type);
-        Assert.True((await _service.GetAsync(_id, Host, CancellationToken.None)).Value.Rules.PlotCardsEnabled);
+        Assert.False(afterOpen.IsError);
+        Assert.False((await _service.GetAsync(_id, Host, CancellationToken.None)).Value.Rules.PlotCardsEnabled);
     }
 
     [Fact]
@@ -1058,7 +1058,7 @@ public class ResistanceServiceTests
     }
 
     [Fact]
-    public async Task Restart_AfterTheGameEnded_DealsAgainAndStartsOver()
+    public async Task Restart_AfterTheGameEnded_ReturnsToTheOpenLobby()
     {
         var ct = CancellationToken.None;
         var callers = await EndGameAsync();
@@ -1068,7 +1068,6 @@ public class ResistanceServiceTests
 
         Assert.False(restarted.IsError);
         var game = restarted.Value;
-        Assert.Equal(ResistancePhaseDto.SelectingTeam, game.Phase);
         Assert.Equal(1, game.MissionNumber);
         Assert.Equal(0, game.RejectedTeams);
         Assert.Null(game.Winner);
@@ -1076,8 +1075,10 @@ public class ResistanceServiceTests
         Assert.Null(game.Votes);
         Assert.Empty(game.MissionResults);
         Assert.Equal(5, game.Players.Count);
-        Assert.Contains(game.Players, x => x.Id == game.LeaderPlayerId);
-        Assert.Contains(callers, x => (_service.GetAsync(_id, x, ct).Result.Value).YourRole is not null);
+        Assert.Null(game.StartedAt);
+        Assert.True(game.IsOpen);
+        Assert.Null(game.LeaderPlayerId);
+        Assert.All(callers, x => Assert.Null(_service.GetAsync(_id, x, ct).Result.Value.YourRole));
         Assert.Equal(before + 1, _notifier.ResistanceChanges.Count);
     }
 
@@ -1401,7 +1402,7 @@ public class ResistanceServiceTests
                 return Task.FromResult(new ResistanceRulesResult(ResistanceRulesStatus.NoGame, null));
             }
 
-            if (game.IsOpen || game.IsStarted)
+            if (game.IsStarted)
             {
                 return Task.FromResult(new ResistanceRulesResult(ResistanceRulesStatus.NotEditable, game));
             }
@@ -1545,7 +1546,7 @@ public class ResistanceServiceTests
         }
 
         public Task<ResistanceRestartResult> RestartAsync(
-            Guid sessionId, DateTimeOffset startedAt, CancellationToken cancellationToken)
+            Guid sessionId, CancellationToken cancellationToken)
         {
             var status = ResistanceRestartStatus.Restarted;
             _games.TryGetValue(sessionId, out var game);
@@ -1564,8 +1565,7 @@ public class ResistanceServiceTests
             else
             {
                 ResistanceRoles.Reset(game);
-                ResistanceRoles.Deal(game, new Random(2));
-                game.StartedAt = startedAt;
+                game.StartedAt = null;
             }
 
             return Task.FromResult(new ResistanceRestartResult(status, game));

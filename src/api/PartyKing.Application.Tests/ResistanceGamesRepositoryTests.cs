@@ -247,7 +247,7 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Restart_AfterTheGameEnded_ClearsTheResultsAndDealsAgain()
+    public async Task Restart_AfterTheGameEnded_ClearsTheResultsAndReturnsToTheLobby()
     {
         var ct = CancellationToken.None;
         await StartGameWithTeamAsync(5);
@@ -258,7 +258,7 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         }
 
         await _repository.ContinueAsync(_sessionId, null, isManager: true, ct);
-        Assert.Equal(ResistanceRestartStatus.NotOver, (await _repository.RestartAsync(_sessionId, DateTimeOffset.UtcNow, ct)).Status);
+        Assert.Equal(ResistanceRestartStatus.NotOver, (await _repository.RestartAsync(_sessionId, ct)).Status);
 
         for (var i = 1; i <= 5; i++)
         {
@@ -269,9 +269,7 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         }
 
         Assert.Equal(ResistancePhase.GameOver, (await ReloadAsync()).Phase);
-        var restartedAt = DateTimeOffset.UtcNow;
-
-        var result = await _repository.RestartAsync(_sessionId, restartedAt, ct);
+        var result = await _repository.RestartAsync(_sessionId, ct);
 
         Assert.Equal(ResistanceRestartStatus.Restarted, result.Status);
         var game = await ReloadAsync();
@@ -287,9 +285,37 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
             Assert.Null(x.Vote);
             Assert.Null(x.MissionCard);
         });
-        Assert.Equal(2, game.Players.Count(x => x.Role == ResistanceRole.Spy));
-        Assert.Contains(_players, x => x == game.LeaderPlayerId);
-        Assert.Equal(restartedAt, game.StartedAt);
+        Assert.All(game.Players, x => Assert.Null(x.Role));
+        Assert.Null(game.LeaderPlayerId);
+        Assert.Null(game.StartedAt);
+        Assert.True(game.IsOpen);
+
+        var started = await _repository.StartAsync(_sessionId, DateTimeOffset.UtcNow, ct);
+
+        Assert.Equal(ResistanceStartStatus.Started, started.Status);
+        Assert.Equal(2, (await ReloadAsync()).Players.Count(x => x.Role == ResistanceRole.Spy));
+    }
+
+    [Fact]
+    public async Task PlotCards_CanBeSwitchedInTheOpenLobbyButNotOnceTheGameStarted()
+    {
+        var ct = CancellationToken.None;
+        await StartGameWithTeamAsync(5);
+
+        Assert.Equal(ResistanceRulesStatus.NotEditable, (await _repository.SetPlotCardsAsync(_sessionId, true, ct)).Status);
+
+        for (var i = 1; i <= 5; i++)
+        {
+            var current = await ReloadAsync();
+            var size = current.Rules.TeamSize(5, current.MissionNumber);
+            await _repository.SelectTeamAsync(_sessionId, current.LeaderPlayerId, _players.Take(size).ToList(), ct);
+            await VoteAsync(false, false, false, false, false);
+        }
+
+        await _repository.RestartAsync(_sessionId, ct);
+
+        Assert.Equal(ResistanceRulesStatus.Refreshed, (await _repository.SetPlotCardsAsync(_sessionId, true, ct)).Status);
+        Assert.True((await ReloadAsync()).Rules.PlotCardsEnabled);
     }
 
     [Fact]

@@ -373,9 +373,12 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
 
         Assert.Equal(ResistancePhase.GameOver, (await ReloadAsync()).Phase);
 
-        var restarted = await _repository.RestartAsync(_sessionId, DateTimeOffset.UtcNow, CancellationToken.None);
+        var restarted = await _repository.RestartAsync(_sessionId, CancellationToken.None);
 
         Assert.Equal(ResistanceRestartStatus.Restarted, restarted.Status);
+        Assert.Empty((await ReloadAsync()).PlotCards);
+
+        await _repository.StartAsync(_sessionId, DateTimeOffset.UtcNow, CancellationToken.None);
         var after = await ReloadAsync();
         Assert.Equal(15, after.PlotCards.Count);
         Assert.Equal(ResistancePhase.DealingCards, after.Phase);
@@ -459,7 +462,7 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         }
 
         Assert.Equal(ResistancePhase.GameOver, game.Phase);
-        Assert.Equal(ResistanceRestartStatus.Restarted, (await _repository.RestartAsync(_sessionId, DateTimeOffset.UtcNow, ct)).Status);
+        Assert.Equal(ResistanceRestartStatus.Restarted, (await _repository.RestartAsync(_sessionId, ct)).Status);
         Assert.Empty(ResistanceRoles.OpinionMakerIds(await ReloadAsync()));
     }
 
@@ -619,7 +622,7 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
 
         Assert.Equal(ResistancePhase.GameOver, game.Phase);
         Assert.Contains(game.PlotCards, x => x.Location == ResistancePlotCardLocation.Played);
-        Assert.Equal(ResistanceRestartStatus.Restarted, (await _repository.RestartAsync(_sessionId, DateTimeOffset.UtcNow, ct)).Status);
+        Assert.Equal(ResistanceRestartStatus.Restarted, (await _repository.RestartAsync(_sessionId, ct)).Status);
         var restarted = await ReloadAsync();
         Assert.DoesNotContain(restarted.PlotCards, x => x.Location == ResistancePlotCardLocation.Played || x.IsConfirmed || x.TargetPlayerId is not null);
     }

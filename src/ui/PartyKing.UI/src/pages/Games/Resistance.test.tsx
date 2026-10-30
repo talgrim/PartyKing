@@ -195,11 +195,11 @@ describe('Resistance', () => {
     expect(mocks.setResistancePlotCards).toHaveBeenCalledWith('session-1', true);
   });
 
-  it('locks the plot cards toggle once the game is open and hides it after the start', async () => {
+  it('keeps the plot cards toggle usable in the open lobby and hides it after the start', async () => {
     mocks.getResistance.mockResolvedValue(lobby(['Ala'], true));
     const { unmount } = renderPage();
 
-    expect(await screen.findByRole('checkbox', { name: 'Plot cards' })).toBeDisabled();
+    expect(await screen.findByRole('checkbox', { name: 'Plot cards' })).toBeEnabled();
     unmount();
 
     mocks.getResistance.mockResolvedValue(started(['Ala', 'Ola', 'Ela', 'Ula', 'Ewa']));
@@ -828,13 +828,15 @@ describe('Resistance', () => {
       mocks.getResistance.mockResolvedValue(
         rejected({ yourPlayerId: null, yourRole: null, phase: 'GameOver', winner: 'Spy', rejectedTeams: 5, revealedRoles: [] }),
       );
-      mocks.restartResistance.mockResolvedValue(started(five, { yourPlayerId: null, yourRole: null }));
+      mocks.restartResistance.mockResolvedValue(lobby(five, true));
       renderPage('/s/session-1/games/resistance?tv=1');
 
       await userEvent.click(await screen.findByRole('button', { name: 'Restart game' }));
 
       expect(mocks.restartResistance).toHaveBeenCalledWith('session-1');
       await waitFor(() => expect(screen.queryByRole('button', { name: 'Restart game' })).not.toBeInTheDocument());
+      expect(await screen.findByRole('button', { name: 'Start game' })).toBeEnabled();
+      expect(screen.getByRole('checkbox', { name: 'Plot cards' })).toBeEnabled();
     });
 
     it('offers no restart while the game is on', async () => {
