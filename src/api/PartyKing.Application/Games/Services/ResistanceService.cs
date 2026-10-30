@@ -84,6 +84,53 @@ public interface IResistanceService
     Task<ErrorOr<ResistanceGameDto>> RefreshRulesAsync(
         Guid sessionId, GameCaller caller, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Host or admin: switches the plot cards add-on on or off. NotFound without a game, Conflict once the game is
+    /// open or started.
+    /// </summary>
+    Task<ErrorOr<ResistanceGameDto>> SetPlotCardsAsync(
+        Guid sessionId, bool enabled, GameCaller caller, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The mission leader hands the drawn plot cards to the other players. Forbidden for anyone else (no manager
+    /// override), Conflict when there is nothing to hand out, Validation for a wrong or incomplete deal.
+    /// </summary>
+    /// <summary>The holder plays an immediate plot card on a player.</summary>
+    Task<ErrorOr<ResistanceGameDto>> PlayPlotCardAsync(
+        Guid sessionId, int cardId, Guid targetPlayerId, GameCaller caller, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The holder of Take Responsibility takes a plot card from another player; Validation when the choice between a
+    /// face-up Opinion Maker and a hand card is missing.
+    /// </summary>
+    Task<ErrorOr<ResistanceGameDto>> TakeResponsibilityAsync(
+        Guid sessionId, int cardId, Guid targetPlayerId, bool? takeOpinionMaker, GameCaller caller,
+        CancellationToken cancellationToken);
+
+    /// <summary>In the leader window the holder of Strong Leader takes the lead.</summary>
+    Task<ErrorOr<ResistanceGameDto>> TakeLeadAsync(
+        Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken);
+
+    /// <summary>The holder of Keeping a Close Eye looks at a team member's mission card after the mission.</summary>
+    Task<ErrorOr<ResistanceGameDto>> PeekMissionCardAsync(
+        Guid sessionId, int cardId, Guid targetPlayerId, GameCaller caller, CancellationToken cancellationToken);
+
+    /// <summary>In the confidence window the holder of No Confidence cancels the approved team.</summary>
+    Task<ErrorOr<ResistanceGameDto>> PlayNoConfidenceAsync(
+        Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken);
+
+    /// <summary>A player confirms in the leader or confidence window that they play no card; the last confirmation ends it.</summary>
+    Task<ErrorOr<ResistanceGameDto>> PassLeaderWindowAsync(
+        Guid sessionId, GameCaller caller, CancellationToken cancellationToken);
+
+    /// <summary>The player who saw the identity card confirms it; the last confirmation moves on to the team.</summary>
+    Task<ErrorOr<ResistanceGameDto>> ConfirmPlotCardAsync(
+        Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken);
+
+    Task<ErrorOr<ResistanceGameDto>> DealPlotCardsAsync(
+        Guid sessionId, IReadOnlyList<ResistancePlotCardAssignmentDto>? assignments, GameCaller caller,
+        CancellationToken cancellationToken);
+
     /// <summary>Host or admin: removes a player. NotFound for an unknown game or player.</summary>
     Task<ErrorOr<ResistanceGameDto>> KickAsync(
         Guid sessionId, Guid playerId, GameCaller caller, CancellationToken cancellationToken);
@@ -195,6 +242,29 @@ internal class ResistanceService : IResistanceService
         return ToDto(result.Game!, caller);
     }
 
+    public async Task<ErrorOr<ResistanceGameDto>> SetPlotCardsAsync(
+        Guid sessionId, bool enabled, GameCaller caller, CancellationToken cancellationToken)
+    {
+        if (await _lobby.AuthorizeAsync(sessionId, caller, cancellationToken) is { IsError: true } denied)
+        {
+            return denied.Errors;
+        }
+
+        var result = await _games.SetPlotCardsAsync(sessionId, enabled, cancellationToken);
+        switch (result.Status)
+        {
+            case ResistanceRulesStatus.NoGame:
+                return _lobby.NoGame;
+            case ResistanceRulesStatus.NotEditable:
+                return Error.Conflict(
+                    "Resistance.RulesLocked", "The plot cards can only be switched before the game starts.");
+        }
+
+        await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
+
+        return ToDto(result.Game!, caller);
+    }
+
     public async Task<ErrorOr<ResistanceGameDto>> OpenAsync(
         Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
     {
@@ -239,7 +309,7 @@ internal class ResistanceService : IResistanceService
             return denied.Errors;
         }
 
-        var result = await _games.RestartAsync(sessionId, _clock.UtcNow, cancellationToken);
+        var result = await _games.RestartAsync(sessionId, cancellationToken);
         switch (result.Status)
         {
             case ResistanceRestartStatus.NoGame:
@@ -282,12 +352,230 @@ internal class ResistanceService : IResistanceService
                 return Error.Forbidden("Resistance.NotLeader", "Only the mission leader picks the team.");
             case ResistanceTeamStatus.AlreadySubmitted:
                 return Error.Conflict("Resistance.TeamSubmitted", "The team was already submitted.");
+            case ResistanceTeamStatus.CardsNotDealt:
+                return Error.Conflict("Resistance.CardsNotDealt", "The leader has to hand out the plot cards first.");
             case ResistanceTeamStatus.WrongSize:
                 return Error.Validation(
                     "Resistance.WrongTeamSize",
                     $"The team needs exactly {result.Game!.Rules.TeamSize(result.Game.Players.Count, result.Game.MissionNumber)} different players.");
             case ResistanceTeamStatus.UnknownPlayer:
                 return Error.Validation("Resistance.UnknownPlayer", "The team has a player who is not in the game.");
+        }
+
+        await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
+
+        return ToDto(result.Game!, caller);
+    }
+
+    public async Task<ErrorOr<ResistanceGameDto>> DealPlotCardsAsync(
+        Guid sessionId, IReadOnlyList<ResistancePlotCardAssignmentDto>? assignments, GameCaller caller,
+        CancellationToken cancellationToken)
+    {
+        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
+        if (access.IsError)
+        {
+            return access.Errors;
+        }
+
+        if (access.Value.Game is null)
+        {
+            return _lobby.NoGame;
+        }
+
+        var result = await _games.DealPlotCardsAsync(
+            sessionId,
+            caller.PlayerId,
+            (assignments ?? []).Select(x => new PlotCardAssignment(x.CardId, x.PlayerId)).ToList(),
+            cancellationToken);
+        switch (result.Status)
+        {
+            case ResistanceDealStatus.NoGame:
+                return _lobby.NoGame;
+            case ResistanceDealStatus.NotStarted:
+                return Error.Conflict("Resistance.NotStarted", "The game has not started yet.");
+            case ResistanceDealStatus.GameOver:
+                return GameOverError;
+            case ResistanceDealStatus.NotLeader:
+                return Error.Forbidden("Resistance.NotLeader", "Only the mission leader hands out the plot cards.");
+            case ResistanceDealStatus.NotDealing:
+                return Error.Conflict("Resistance.NotDealing", "There are no plot cards to hand out.");
+            case ResistanceDealStatus.UnknownCard:
+                return Error.Validation("Resistance.UnknownCard", "A card is not one the leader has to hand out, or is given twice.");
+            case ResistanceDealStatus.InvalidReceiver:
+                return Error.Validation("Resistance.InvalidReceiver", "Cards go to other players of the game.");
+            case ResistanceDealStatus.Incomplete:
+                return Error.Validation("Resistance.IncompleteDeal", "Every drawn card has to be handed out.");
+        }
+
+        await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
+
+        return ToDto(result.Game!, caller);
+    }
+
+    public async Task<ErrorOr<ResistanceGameDto>> PlayPlotCardAsync(
+        Guid sessionId, int cardId, Guid targetPlayerId, GameCaller caller, CancellationToken cancellationToken)
+    {
+        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
+        if (access.IsError)
+        {
+            return access.Errors;
+        }
+
+        if (access.Value.Game is null)
+        {
+            return _lobby.NoGame;
+        }
+
+        var result = await _games.PlayPlotCardAsync(sessionId, caller.PlayerId, cardId, targetPlayerId, cancellationToken);
+
+        return await FinishPlotCardAsync(sessionId, result, caller, cancellationToken);
+    }
+
+    public async Task<ErrorOr<ResistanceGameDto>> ConfirmPlotCardAsync(
+        Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken)
+    {
+        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
+        if (access.IsError)
+        {
+            return access.Errors;
+        }
+
+        if (access.Value.Game is null)
+        {
+            return _lobby.NoGame;
+        }
+
+        var result = await _games.ConfirmPlotCardAsync(sessionId, caller.PlayerId, cardId, cancellationToken);
+
+        return await FinishPlotCardAsync(sessionId, result, caller, cancellationToken);
+    }
+
+    public async Task<ErrorOr<ResistanceGameDto>> TakeResponsibilityAsync(
+        Guid sessionId, int cardId, Guid targetPlayerId, bool? takeOpinionMaker, GameCaller caller,
+        CancellationToken cancellationToken)
+    {
+        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
+        if (access.IsError)
+        {
+            return access.Errors;
+        }
+
+        if (access.Value.Game is null)
+        {
+            return _lobby.NoGame;
+        }
+
+        var result = await _games.TakeResponsibilityAsync(
+            sessionId, caller.PlayerId, cardId, targetPlayerId, takeOpinionMaker, cancellationToken);
+
+        return await FinishPlotCardAsync(sessionId, result, caller, cancellationToken);
+    }
+
+    public async Task<ErrorOr<ResistanceGameDto>> TakeLeadAsync(
+        Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken)
+    {
+        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
+        if (access.IsError)
+        {
+            return access.Errors;
+        }
+
+        if (access.Value.Game is null)
+        {
+            return _lobby.NoGame;
+        }
+
+        var result = await _games.TakeLeadAsync(sessionId, caller.PlayerId, cardId, cancellationToken);
+
+        return await FinishPlotCardAsync(sessionId, result, caller, cancellationToken);
+    }
+
+    public async Task<ErrorOr<ResistanceGameDto>> PeekMissionCardAsync(
+        Guid sessionId, int cardId, Guid targetPlayerId, GameCaller caller, CancellationToken cancellationToken)
+    {
+        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
+        if (access.IsError)
+        {
+            return access.Errors;
+        }
+
+        if (access.Value.Game is null)
+        {
+            return _lobby.NoGame;
+        }
+
+        var result = await _games.PeekMissionCardAsync(sessionId, caller.PlayerId, cardId, targetPlayerId, cancellationToken);
+
+        return await FinishPlotCardAsync(sessionId, result, caller, cancellationToken);
+    }
+
+    public async Task<ErrorOr<ResistanceGameDto>> PlayNoConfidenceAsync(
+        Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken)
+    {
+        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
+        if (access.IsError)
+        {
+            return access.Errors;
+        }
+
+        if (access.Value.Game is null)
+        {
+            return _lobby.NoGame;
+        }
+
+        var result = await _games.PlayNoConfidenceAsync(sessionId, caller.PlayerId, cardId, cancellationToken);
+
+        return await FinishPlotCardAsync(sessionId, result, caller, cancellationToken);
+    }
+
+    public async Task<ErrorOr<ResistanceGameDto>> PassLeaderWindowAsync(
+        Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
+    {
+        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
+        if (access.IsError)
+        {
+            return access.Errors;
+        }
+
+        if (access.Value.Game is null)
+        {
+            return _lobby.NoGame;
+        }
+
+        var result = await _games.PassLeaderWindowAsync(sessionId, caller.PlayerId, cancellationToken);
+
+        return await FinishPlotCardAsync(sessionId, result, caller, cancellationToken);
+    }
+
+    private async Task<ErrorOr<ResistanceGameDto>> FinishPlotCardAsync(
+        Guid sessionId, ResistancePlayCardResult result, GameCaller caller, CancellationToken cancellationToken)
+    {
+        switch (result.Status)
+        {
+            case ResistancePlayCardStatus.NoGame:
+                return _lobby.NoGame;
+            case ResistancePlayCardStatus.NotStarted:
+                return Error.Conflict("Resistance.NotStarted", "The game has not started yet.");
+            case ResistancePlayCardStatus.GameOver:
+                return GameOverError;
+            case ResistancePlayCardStatus.NotResolving:
+                return Error.Conflict("Resistance.NotResolving", "No plot cards are being played now.");
+            case ResistancePlayCardStatus.NotPlayer:
+                return Error.Forbidden("Resistance.NotPlayer", "Only the players of the game confirm.");
+            case ResistancePlayCardStatus.WrongPhase:
+                return Error.Conflict("Resistance.CardNotPlayableNow", "That card can't be played in this step of the round.");
+            case ResistancePlayCardStatus.ChoiceRequired:
+                return Error.Validation("Resistance.ChoiceRequired", "Say whether to take the Opinion Maker or a card from the hand.");
+            case ResistancePlayCardStatus.NotPlayingMission:
+                return Error.Conflict("Resistance.NotPlayingMission", "The mission cards are not being played now.");
+            case ResistancePlayCardStatus.UnknownCard:
+                return Error.NotFound("Resistance.UnknownCard", "There is no such card to play.");
+            case ResistancePlayCardStatus.NotAllowed:
+                return Error.Forbidden("Resistance.NotYourCard", "This is not your card to play or to confirm.");
+            case ResistancePlayCardStatus.WrongState:
+                return Error.Conflict("Resistance.CardState", "The card was played already, or has not been played yet.");
+            case ResistancePlayCardStatus.InvalidTarget:
+                return Error.Validation("Resistance.InvalidTarget", "The card cannot be played on that player.");
         }
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
@@ -322,6 +610,10 @@ internal class ResistanceService : IResistanceService
                 return Error.Forbidden("Resistance.NotPlayer", "Only the players of the game vote.");
             case ResistanceVoteStatus.NotVoting:
                 return Error.Conflict("Resistance.NotVoting", "No team is up for a vote.");
+            case ResistanceVoteStatus.VoteLocked:
+                return Error.Conflict("Resistance.VoteLocked", "An Opinion Maker's vote can't be changed.");
+            case ResistanceVoteStatus.OpinionMakersFirst:
+                return Error.Conflict("Resistance.OpinionMakersFirst", "The Opinion Makers vote first.");
         }
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
@@ -468,6 +760,11 @@ internal class ResistanceService : IResistanceService
         var revealed = game.Phase != ResistancePhase.Voting && game.Players.All(x => x.Vote is not null);
         var voted = game.Players.Where(x => x.Vote is not null).OrderBy(x => x.Order).ToList();
 
+        // Opinion Makers are public; their votes are too once every one of them has voted (before the others may)
+        var opinionMakers = ResistanceRoles.OpinionMakerIds(game);
+        var opinionMakersRevealed = opinionMakers.Count > 0
+            && game.Players.Where(x => opinionMakers.Contains(x.PlayerId)).All(x => x.Vote is not null);
+
         return new ResistanceGameDto(
             game.CreatedAt,
             game.IsOpen,
@@ -498,14 +795,71 @@ internal class ResistanceService : IResistanceService
                 game.Rules.PlayerCounts
                     .OrderBy(x => x.Key)
                     .Select(x => new ResistanceCountRulesDto(x.Key, x.Value.Spies, x.Value.TeamSizes, x.Value.RequiredFails))
-                    .ToList()),
+                    .ToList(),
+                game.Rules.PlotCardsEnabled,
+                game.Rules.PlotCardsPerRound(game.Players.Count)),
             game.IsStarted ? game.Rules.RequiredFails(game.Players.Count, game.MissionNumber) : null,
             game.Players.Where(x => x.MissionCard is not null).OrderBy(x => x.Order).Select(x => x.PlayerId).ToList(),
             you?.MissionCard,
             game.MissionResults
                 .OrderBy(x => x.MissionNumber)
                 .Select(x => new ResistanceMissionResultDto(x.MissionNumber, x.Succeeded, x.FailCount))
-                .ToList());
+                .ToList(),
+            you is null
+                ? []
+                : game.PlotCards
+                    .Where(x => x.HolderPlayerId == you.PlayerId && x.Location != ResistancePlotCardLocation.Played)
+                    .OrderBy(x => x.CardId)
+                    .Select(x => new ResistancePlotCardDto(
+                        x.CardId,
+                        (ResistancePlotCardTypeDto)x.Type,
+                        x.Location == ResistancePlotCardLocation.Drawn && x.Type != ResistancePlotCardType.EstablishConfidence,
+                        x.Location == ResistancePlotCardLocation.InPlay))
+                    .ToList(),
+            game.Rules.PlotCardsEnabled
+                ? game.Players
+                    .OrderBy(x => x.Order)
+                    .Select(x => new ResistancePlotCardCountDto(
+                        x.PlayerId,
+                        game.PlotCards.Count(c => c.HolderPlayerId == x.PlayerId && c.Location == ResistancePlotCardLocation.Hand)))
+                    .ToList()
+                : [],
+            game.Players.Where(x => opinionMakers.Contains(x.PlayerId)).OrderBy(x => x.Order).Select(x => x.PlayerId).ToList(),
+            opinionMakersRevealed
+                ? game.Players
+                    .Where(x => opinionMakers.Contains(x.PlayerId))
+                    .OrderBy(x => x.Order)
+                    .Select(x => new ResistanceVoteDto(x.PlayerId, x.Vote!.Value))
+                    .ToList()
+                : [],
+            game.PlotCards
+                .Where(x => x.Location == ResistancePlotCardLocation.Played)
+                .OrderByDescending(x => x.PlayedAt)
+                .Select(x => new ResistancePlayedPlotCardDto(
+                    x.CardId, (ResistancePlotCardTypeDto)x.Type, x.HolderPlayerId!.Value, x.TargetPlayerId,
+                    x.PlayedInMission, x.IsConfirmed))
+                .ToList(),
+            // Only the player an identity card is shown to sees it, and only until they confirm
+            you is null
+                ? []
+                : ResistanceRoles.UnconfirmedCards(game)
+                    .Where(x => ResistanceRoles.Viewer(x) == you.PlayerId)
+                    .Select(x => new ResistanceCardRevealDto(
+                        x.CardId,
+                        ResistanceRoles.Revealed(x)!.Value,
+                        (ResistanceRoleDto)game.Players.First(p => p.PlayerId == ResistanceRoles.Revealed(x)).Role!.Value))
+                    .ToList(),
+            ResistanceRoles.OpenMissionPlayerId(game),
+            game.Players.FirstOrDefault(x => x.PlayerId == ResistanceRoles.OpenMissionPlayerId(game))?.MissionCard,
+            game.Phase is ResistancePhase.LeaderWindow or ResistancePhase.ConfidenceWindow
+                ? game.Players.Where(x => x.PassedLeaderWindow).OrderBy(x => x.Order).Select(x => x.PlayerId).ToList()
+                : [],
+            // Only the peeker sees the card they looked at, until the next mission starts
+            you is null
+                ? []
+                : ResistanceRoles.PeekedCards(game, you.PlayerId)
+                    .Select(x => new ResistanceMissionPeekDto(x.PlayerId, x.Success))
+                    .ToList());
     }
 
     private sealed class ResistanceLobbyNotifier : IGameLobbyNotifier

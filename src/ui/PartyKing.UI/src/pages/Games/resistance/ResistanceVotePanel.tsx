@@ -21,6 +21,14 @@ const card = (selected: boolean, tone: 'emerald' | 'rose', disabled: boolean) =>
 export const ResistanceVotePanel = ({ game, onVote }: Props): ReactNode => {
   const [sending, setSending] = useState(false);
   const voted = game.yourVote != null;
+  const makers = game.opinionMakerPlayerIds;
+  const youAreMaker = game.yourPlayerId != null && makers.includes(game.yourPlayerId);
+  // An Opinion Maker's vote is final, and the others wait until every Opinion Maker has revealed theirs
+  const locked = youAreMaker && voted;
+  const waitingFor = youAreMaker
+    ? []
+    : game.players.filter((player) => makers.includes(player.id) && !game.votedPlayerIds.includes(player.id));
+  const blocked = locked || waitingFor.length > 0;
 
   const vote = async (approve: boolean) => {
     setSending(true);
@@ -42,23 +50,29 @@ export const ResistanceVotePanel = ({ game, onVote }: Props): ReactNode => {
       <div className="flex justify-center gap-4">
         <VoteApproveCardIcon
           title="Zatwierdź"
-          className={card(game.yourVote === true, 'emerald', sending)}
+          className={card(game.yourVote === true, 'emerald', sending || blocked)}
           pressed={game.yourVote === true}
-          disabled={sending}
+          disabled={sending || blocked}
           onClick={() => void vote(true)}
         />
         <VoteRejectCardIcon
           title="Odrzuć"
-          className={card(game.yourVote === false, 'rose', sending)}
+          className={card(game.yourVote === false, 'rose', sending || blocked)}
           pressed={game.yourVote === false}
-          disabled={sending}
+          disabled={sending || blocked}
           onClick={() => void vote(false)}
         />
       </div>
       <p className="text-sm text-slate-400">
-        {voted
-          ? 'Twój głos jest zapisany. Możesz go zmienić, dopóki nie zagłosują wszyscy.'
-          : 'Głosy są jawne dopiero wtedy, gdy zagłosują wszyscy.'}
+        {waitingFor.length > 0
+          ? `Najpierw głosuje kreator opinii: ${waitingFor.map((player) => player.name).join(', ')}.`
+          : locked
+            ? 'Twój głos jako kreatora opinii jest jawny i nie można go zmienić.'
+            : voted
+              ? 'Twój głos jest zapisany. Możesz go zmienić, dopóki nie zagłosują wszyscy.'
+              : youAreMaker
+                ? 'Jako kreator opinii głosujesz pierwszy, a twój głos jest jawny i ostateczny.'
+                : 'Głosy są jawne dopiero wtedy, gdy zagłosują wszyscy.'}
       </p>
     </section>
   );

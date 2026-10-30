@@ -100,7 +100,75 @@ export type ResistanceGameDto = {
   yourMissionCard: boolean | null;
   /** The finished missions, in order. */
   missionResults: ResistanceMissionResultDto[];
+  /** The plot cards the caller holds (drawn or in hand); empty for observers and without the add-on. */
+  yourPlotCards: ResistancePlotCardDto[];
+  /** How many plot cards each player holds in hand (not which); public, empty without the add-on. */
+  plotCardCounts: ResistancePlotCardCountDto[];
+  /** Players with an Opinion Maker in play, face up for everyone; they reveal their vote before the others vote. */
+  opinionMakerPlayerIds: string[];
+  /** The Opinion Makers' votes, once every one of them has voted (the vote is final); empty before. */
+  opinionMakerVotes: ResistanceVoteDto[];
+  /** The immediate plot cards played so far, newest first; public. */
+  playedPlotCards: ResistancePlayedPlotCardDto[];
+  /** The identity cards played cards show the caller, until they confirm having seen them; private. */
+  yourReveals: ResistanceCardRevealDto[];
+  /** The team member In the Spotlight forces to play their mission card openly this mission; public, null when none. */
+  openMissionPlayerId: string | null;
+  /** That player's mission card (true = Success), public once they played it. */
+  openMissionCard: boolean | null;
+  /** LeaderWindow or ConfidenceWindow: the players who confirmed they play no card; public. */
+  leaderWindowPassedPlayerIds: string[];
+  /** The mission cards you looked at with Keeping a Close Eye this mission (true = Success); private. */
+  yourPeeks: ResistanceMissionPeekDto[];
 };
+
+// Mirrors PartyKing.Contract.V1.Games.ResistanceMissionPeekDto
+export type ResistanceMissionPeekDto = { playerId: string; success: boolean };
+
+// Mirrors PartyKing.Contract.V1.Games.ResistancePlayedPlotCardDto
+export type ResistancePlayedPlotCardDto = {
+  id: number;
+  type: ResistancePlotCardType;
+  holderPlayerId: string;
+  /** The neighbour (Overheard Conversation) or the player the card was played on. */
+  targetPlayerId: string | null;
+  missionNumber: number;
+  isConfirmed: boolean;
+};
+
+// Mirrors PartyKing.Contract.V1.Games.ResistanceCardRevealDto
+export type ResistanceCardRevealDto = {
+  cardId: number;
+  playerId: string;
+  role: ResistanceRole;
+};
+
+// Mirrors PartyKing.Contract.V1.Games.ResistancePlotCardDto
+export type ResistancePlotCardDto = {
+  id: number;
+  type: ResistancePlotCardType;
+  /** True for a card the leader just drew and has to hand to another player. */
+  toDeal: boolean;
+  /** True for an Opinion Maker, which is played face up the moment it is dealt. */
+  inPlay: boolean;
+};
+
+// Mirrors PartyKing.Contract.V1.Games.ResistancePlotCardCountDto
+export type ResistancePlotCardCountDto = {
+  playerId: string;
+  count: number;
+};
+
+export type ResistancePlotCardType =
+  | 'OverheardConversation'
+  | 'OpinionMaker'
+  | 'EstablishConfidence'
+  | 'OpenUp'
+  | 'NoConfidence'
+  | 'KeepingCloseEye'
+  | 'StrongLeader'
+  | 'InTheSpotlight'
+  | 'TakeResponsibility';
 
 // Mirrors PartyKing.Contract.V1.Games.ResistanceMissionResultDto
 export type ResistanceMissionResultDto = {
@@ -112,6 +180,10 @@ export type ResistanceMissionResultDto = {
 // Mirrors PartyKing.Contract.V1.Games.ResistanceRulesDto
 export type ResistanceRulesDto = {
   playerCounts: ResistanceCountRulesDto[];
+  /** Whether the plot cards add-on is played in this game. */
+  plotCardsEnabled: boolean;
+  /** How many plot cards the leader draws before each mission, at the current player count. */
+  plotCardsPerRound: number;
 };
 
 // Mirrors PartyKing.Contract.V1.Games.ResistanceCountRulesDto
@@ -126,8 +198,17 @@ export type ResistanceCountRulesDto = {
 
 export type ResistanceRole = 'Resistance' | 'Spy';
 
-/** SelectingTeam: the leader picks (the votes that rejected the last team stay public until then); Voting: the team is up for a vote; PlayingMission: the approved team plays cards; MissionResult: the outcome waits for "Dalej". */
-export type ResistancePhase = 'SelectingTeam' | 'Voting' | 'PlayingMission' | 'MissionResult' | 'GameOver';
+/** DealingCards: the leader hands out the plot cards just drawn (add-on only); ResolvingCards: the immediate plot cards are played and their receivers confirm; SelectingTeam: the leader picks (the votes that rejected the last team stay public until then); Voting: the team is up for a vote; PlayingMission: the approved team plays cards; LeaderWindow: a Strong Leader is out there, so everyone confirms they play no card or its holder takes the lead; ConfidenceWindow: the team was approved while a No Confidence is out there, so everyone confirms they play no card or its holder cancels the approval; MissionResult: the outcome waits for "Dalej". */
+export type ResistancePhase =
+  | 'SelectingTeam'
+  | 'Voting'
+  | 'PlayingMission'
+  | 'MissionResult'
+  | 'GameOver'
+  | 'DealingCards'
+  | 'ResolvingCards'
+  | 'LeaderWindow'
+  | 'ConfidenceWindow';
 
 // Mirrors PartyKing.Contract.V1.Games.ResistanceVoteDto
 export type ResistanceVoteDto = {

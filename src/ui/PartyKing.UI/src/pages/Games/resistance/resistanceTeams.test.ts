@@ -8,6 +8,8 @@ const rules: ResistanceRulesDto = {
     { playerCount: 7, spies: 3, teamSizes: [2, 3, 3, 4, 4], requiredFails: [1, 1, 1, 2, 1] },
     { playerCount: 10, spies: 4, teamSizes: [3, 4, 4, 5, 5], requiredFails: [1, 1, 1, 2, 1] },
   ],
+  plotCardsEnabled: false,
+  plotCardsPerRound: 1,
 };
 
 describe('missionBoardFor', () => {
@@ -32,7 +34,7 @@ describe('missionBoardFor', () => {
   });
 
   it('follows a changed configuration', () => {
-    const changed = { playerCounts: [{ ...rules.playerCounts[0], requiredFails: [1, 1, 1, 2, 1] }] };
+    const changed = { ...rules, playerCounts: [{ ...rules.playerCounts[0], requiredFails: [1, 1, 1, 2, 1] }] };
 
     expect(missionBoardFor(5, changed).fourthMissionNeedsTwoFails).toBe(true);
   });

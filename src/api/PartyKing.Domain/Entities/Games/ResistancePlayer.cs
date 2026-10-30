@@ -20,4 +20,7 @@ public class ResistancePlayer : LobbyPlayer
     /// played. Never sent to anyone else, and cleared when the next team is picked.
     /// </summary>
     public bool? MissionCard { get; set; }
+
+    /// <summary>Whether the player confirmed in the open <see cref="ResistancePhase.LeaderWindow"/> that they do not play a card.</summary>
+    public bool PassedLeaderWindow { get; set; }
 }

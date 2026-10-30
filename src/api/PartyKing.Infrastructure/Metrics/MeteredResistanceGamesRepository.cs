@@ -21,6 +21,59 @@ internal sealed class MeteredResistanceGamesRepository
             nameof(RefreshRulesAsync), () => _inner.RefreshRulesAsync(sessionId, rules, cancellationToken));
     }
 
+    public Task<ResistanceRulesResult> SetPlotCardsAsync(
+        Guid sessionId, bool enabled, CancellationToken cancellationToken)
+    {
+        return MeasureAsync(
+            nameof(SetPlotCardsAsync), () => _inner.SetPlotCardsAsync(sessionId, enabled, cancellationToken));
+    }
+
+    public Task<ResistancePlayCardResult> PlayPlotCardAsync(
+        Guid sessionId, Guid? callerPlayerId, int cardId, Guid targetPlayerId, CancellationToken cancellationToken) =>
+        MeasureAsync(
+            nameof(PlayPlotCardAsync),
+            () => _inner.PlayPlotCardAsync(sessionId, callerPlayerId, cardId, targetPlayerId, cancellationToken));
+
+    public Task<ResistancePlayCardResult> TakeResponsibilityAsync(
+        Guid sessionId, Guid? callerPlayerId, int cardId, Guid targetPlayerId, bool? takeOpinionMaker,
+        CancellationToken cancellationToken) =>
+        MeasureAsync(
+            nameof(TakeResponsibilityAsync),
+            () => _inner.TakeResponsibilityAsync(
+                sessionId, callerPlayerId, cardId, targetPlayerId, takeOpinionMaker, cancellationToken));
+
+    public Task<ResistancePlayCardResult> TakeLeadAsync(
+        Guid sessionId, Guid? callerPlayerId, int cardId, CancellationToken cancellationToken) =>
+        MeasureAsync(nameof(TakeLeadAsync), () => _inner.TakeLeadAsync(sessionId, callerPlayerId, cardId, cancellationToken));
+
+    public Task<ResistancePlayCardResult> PeekMissionCardAsync(
+        Guid sessionId, Guid? callerPlayerId, int cardId, Guid targetPlayerId, CancellationToken cancellationToken) =>
+        MeasureAsync(nameof(PeekMissionCardAsync), () => _inner.PeekMissionCardAsync(sessionId, callerPlayerId, cardId, targetPlayerId, cancellationToken));
+
+    public Task<ResistancePlayCardResult> PlayNoConfidenceAsync(
+        Guid sessionId, Guid? callerPlayerId, int cardId, CancellationToken cancellationToken) =>
+        MeasureAsync(nameof(PlayNoConfidenceAsync), () => _inner.PlayNoConfidenceAsync(sessionId, callerPlayerId, cardId, cancellationToken));
+
+    public Task<ResistancePlayCardResult> PassLeaderWindowAsync(
+        Guid sessionId, Guid? callerPlayerId, CancellationToken cancellationToken) =>
+        MeasureAsync(
+            nameof(PassLeaderWindowAsync), () => _inner.PassLeaderWindowAsync(sessionId, callerPlayerId, cancellationToken));
+
+    public Task<ResistancePlayCardResult> ConfirmPlotCardAsync(
+        Guid sessionId, Guid? callerPlayerId, int cardId, CancellationToken cancellationToken) =>
+        MeasureAsync(
+            nameof(ConfirmPlotCardAsync),
+            () => _inner.ConfirmPlotCardAsync(sessionId, callerPlayerId, cardId, cancellationToken));
+
+    public Task<ResistanceDealResult> DealPlotCardsAsync(
+        Guid sessionId, Guid? callerPlayerId, IReadOnlyList<PlotCardAssignment> assignments,
+        CancellationToken cancellationToken)
+    {
+        return MeasureAsync(
+            nameof(DealPlotCardsAsync),
+            () => _inner.DealPlotCardsAsync(sessionId, callerPlayerId, assignments, cancellationToken));
+    }
+
     public Task<ResistanceStartResult> StartAsync(
         Guid sessionId, DateTimeOffset startedAt, CancellationToken cancellationToken)
     {
@@ -28,9 +81,9 @@ internal sealed class MeteredResistanceGamesRepository
     }
 
     public Task<ResistanceRestartResult> RestartAsync(
-        Guid sessionId, DateTimeOffset startedAt, CancellationToken cancellationToken)
+        Guid sessionId, CancellationToken cancellationToken)
     {
-        return MeasureAsync(nameof(RestartAsync), () => _inner.RestartAsync(sessionId, startedAt, cancellationToken));
+        return MeasureAsync(nameof(RestartAsync), () => _inner.RestartAsync(sessionId, cancellationToken));
     }
 
     public Task<ResistanceTeamResult> SelectTeamAsync(

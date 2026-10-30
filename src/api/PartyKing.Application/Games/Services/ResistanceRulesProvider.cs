@@ -53,5 +53,7 @@ internal class ResistanceRulesProvider : IResistanceRulesProvider
     {
         PlayerCounts = rules.PlayerCounts.ToDictionary(
             x => x.Key, x => new ResistanceCountRules(x.Value.Spies, [.. x.Value.TeamSizes], [.. x.Value.RequiredFails])),
+        PlotCardsEnabled = rules.PlotCardsEnabled,
+        PlotDeck = new Dictionary<ResistancePlotCardType, int>(rules.PlotDeck),
     };
 }

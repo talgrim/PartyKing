@@ -20,4 +20,30 @@ public enum ResistancePhase
 
     /// <summary>All cards are in and the outcome of the mission is public. It moves on when someone continues.</summary>
     MissionResult,
+
+    /// <summary>
+    /// Plot cards add-on: the mission's leader drew cards and hands them to the other players before picking the
+    /// team. Only entered at the start of a mission, not after a rejected team.
+    /// </summary>
+    DealingCards,
+
+    /// <summary>
+    /// Plot cards add-on: the immediate cards (Overheard Conversation, Establish Confidence, Open Up) are played, in
+    /// any order, and their receivers confirm what they saw. Moves on to picking the team when all are confirmed.
+    /// </summary>
+    ResolvingCards,
+
+    /// <summary>
+    /// Plot cards add-on: some playable card is in a hand, so before the leader does anything (drawing cards,
+    /// picking the team) every player confirms they play no card, or a Strong Leader's holder takes the lead. Opened
+    /// for any playable hand card (not Opinion Maker), so it never tells which card is out there. Moves on when all
+    /// confirmed or one was played.
+    /// </summary>
+    LeaderWindow,
+
+    /// <summary>
+    /// Plot cards add-on: the team was approved while a playable card sits in a hand, so everyone confirms they play
+    /// none, or a No Confidence's holder cancels the approval. Like <see cref="LeaderWindow"/> it opens for any such card.
+    /// </summary>
+    ConfidenceWindow,
 }

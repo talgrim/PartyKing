@@ -115,6 +115,60 @@ export const gamesApi = {
       withCredentials: true,
     }) as unknown as Promise<ResistanceGameDto>,
 
+  /** Host or admin: switches the plot cards add-on on or off; 409 once the game is open or started. */
+  setResistancePlotCards: (sessionId: string, enabled: boolean) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/rules/plot-cards`, { enabled }, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
+  /** The leader hands the drawn plot cards to the other players (one assignment per card to deal); 403 for anyone else, 409 outside the dealing phase, 400 for a wrong deal. */
+  dealResistancePlotCards: (sessionId: string, assignments: { cardId: number; playerId: string }[]) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/cards/deal`, { assignments }, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
+  /** The holder plays an immediate plot card on a player (a neighbour for Overheard Conversation); 403 for anyone else, 409 outside the playing phase or once played, 400 for a wrong target. */
+  playResistancePlotCard: (sessionId: string, cardId: number, targetPlayerId: string) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/cards/${cardId}/play`, { targetPlayerId }, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
+  /** The holder of Take Responsibility takes a card from a player; takeOpinionMaker is needed only when the target has a face-up Opinion Maker and cards in hand. 403 for anyone else, 409 while a team is voted on or once played, 400 for a bad target or a missing choice. */
+  takeResistanceResponsibility: (sessionId: string, cardId: number, targetPlayerId: string, takeOpinionMaker: boolean | null) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/cards/${cardId}/take`, { targetPlayerId, takeOpinionMaker }, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
+  /** The holder of Strong Leader takes the lead in the leader window. 403 for anyone else, 409 outside the window or once played. */
+  takeResistanceLead: (sessionId: string, cardId: number) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/cards/${cardId}/take-lead`, undefined, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
+  /** The holder of Keeping a Close Eye looks at a team member's mission card after the mission (until "Dalej"). 403 for anyone else, 409 outside that step or once played, 400 for your own card, a player off the team or a card already looked at. */
+  peekResistanceMissionCard: (sessionId: string, cardId: number, targetPlayerId: string) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/cards/${cardId}/peek`, { targetPlayerId }, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
+  /** The holder of No Confidence cancels the approved team in the confidence window; it counts as a rejected team. 403 for anyone else, 409 outside the window or once played. */
+  playResistanceNoConfidence: (sessionId: string, cardId: number) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/cards/${cardId}/no-confidence`, undefined, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
+  /** A player confirms in the leader or confidence window that they play no card; the last confirmation ends it. 403 for a non-player, 409 outside the window. */
+  passResistanceLeaderWindow: (sessionId: string) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/leader-window/pass`, undefined, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
+  /** The player who saw the identity card confirms it; the last confirmation moves on to the team. 403 for anyone else, 409 when not played or confirmed already. */
+  confirmResistancePlotCard: (sessionId: string, cardId: number) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/cards/${cardId}/confirm`, undefined, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
   /** The mission leader submits the team (exactly `requiredTeamSize` distinct players), which locks it; 403 for anyone else, 409 once submitted, 400 for a wrong team. */
   selectResistanceTeam: (sessionId: string, playerIds: string[]) =>
     axios.put(`/sessions/${sessionId}/games/resistance/team`, { playerIds }, {

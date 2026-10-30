@@ -86,6 +86,147 @@ public class ResistanceController : GameControllerBase
         return result.Match(Ok, Problem);
     }
 
+    /// <summary>Host or admin: switches the plot cards add-on on or off. 409 once the game is open or started.</summary>
+    [HttpPut("rules/plot-cards")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> SetResistancePlotCards(
+        Guid sessionId, [FromBody] ResistancePlotCardsRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.SetPlotCardsAsync(
+            sessionId, request.Enabled, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>
+    /// The mission leader hands the plot cards they drew to the other players, which moves on to picking the team.
+    /// 403 for anyone else, 409 when nothing is to be handed out, 400 for a wrong or incomplete deal.
+    /// </summary>
+    [HttpPut("cards/deal")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> DealResistancePlotCards(
+        Guid sessionId, [FromBody] ResistanceDealPlotCardsRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.DealPlotCardsAsync(
+            sessionId, request.Assignments, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>
+    /// The holder of an immediate plot card plays it on a player. 403 for anyone else, 404 for an unknown card,
+    /// 409 when the cards are not being played or it was played already, 400 for a target the card can't be played on.
+    /// </summary>
+    [HttpPut("cards/{cardId:int}/play")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> PlayResistancePlotCard(
+        Guid sessionId, int cardId, [FromBody] ResistancePlayPlotCardRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.PlayPlotCardAsync(
+            sessionId, cardId, request.TargetPlayerId, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>
+    /// The holder of Strong Leader takes the lead in the leader window. 403 for anyone else, 404 for an unknown card,
+    /// 409 outside the window or once played, 400 when the holder already leads.
+    /// </summary>
+    [HttpPut("cards/{cardId:int}/take-lead")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> TakeResistanceLead(
+        Guid sessionId, int cardId, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.TakeLeadAsync(sessionId, cardId, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>
+    /// The holder of Keeping a Close Eye looks at a team member's mission card once the mission is played (until
+    /// "Dalej"). 403 for anyone else, 404 for an unknown card, 409 outside that step or once played, 400 for your own
+    /// card, a player who did not play or a card someone already looked at.
+    /// </summary>
+    [HttpPut("cards/{cardId:int}/peek")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> PeekResistanceMissionCard(
+        Guid sessionId, int cardId, ResistancePlayPlotCardRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.PeekMissionCardAsync(
+            sessionId, cardId, request.TargetPlayerId, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>
+    /// The holder of No Confidence cancels the approved team in the confidence window; it counts as a rejected team.
+    /// 403 for anyone else, 404 for an unknown card, 409 outside the window or once played.
+    /// </summary>
+    [HttpPut("cards/{cardId:int}/no-confidence")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> PlayResistanceNoConfidence(
+        Guid sessionId, int cardId, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.PlayNoConfidenceAsync(sessionId, cardId, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>
+    /// A player confirms in the leader or confidence window that they play no card; the last confirmation ends it. 403 for a host or
+    /// admin who did not join, 409 outside the window.
+    /// </summary>
+    [HttpPut("leader-window/pass")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> PassResistanceLeaderWindow(Guid sessionId, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.PassLeaderWindowAsync(sessionId, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>
+    /// The holder of Take Responsibility takes a plot card from another player. 403 for anyone else, 404 for an unknown
+    /// card, 409 when it was played already or the round is in a step where it can't be, 400 for a bad target or a
+    /// missing choice between the Opinion Maker and a hand card.
+    /// </summary>
+    [HttpPut("cards/{cardId:int}/take")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> TakeResistanceResponsibility(
+        Guid sessionId, int cardId, [FromBody] ResistanceTakeResponsibilityRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.TakeResponsibilityAsync(
+            sessionId, cardId, request.TargetPlayerId, request.TakeOpinionMaker, await Caller(sessionId),
+            cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>
+    /// The player an identity card was shown to confirms having seen it; the last confirmation moves on to picking the
+    /// team. 403 for anyone else, 409 when the card has not been played or is confirmed already.
+    /// </summary>
+    [HttpPut("cards/{cardId:int}/confirm")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ConfirmResistancePlotCard(
+        Guid sessionId, int cardId, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.ConfirmPlotCardAsync(
+            sessionId, cardId, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
     /// <summary>Admin only: opens the Resistance game to guests (idempotent), 403 for the host.</summary>
     [HttpPost("open")]
     [RequireSessionAccess]
