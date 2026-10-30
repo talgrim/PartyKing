@@ -431,6 +431,16 @@ export const Resistance = (): ReactNode => {
             <section key={rule.title}>
               <h2 className="text-slate-200">{rule.title}</h2>
               <p className="text-sm text-slate-400">{rule.text}</p>
+              {rule.items && (
+                <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-slate-400">
+                  {rule.items.map((item) => (
+                    <li key={item.name}>
+                      <strong className="font-medium text-slate-200">{item.name}</strong> – {item.text}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {rule.footer && <p className="mt-1 text-sm text-slate-400">{rule.footer}</p>}
             </section>
           ))}
         </DialogContent>
