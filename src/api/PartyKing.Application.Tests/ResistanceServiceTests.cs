@@ -465,6 +465,8 @@ public class ResistanceServiceTests
     [InlineData(ResistancePlayCardStatus.NotAllowed, "Resistance.NotYourCard")]
     [InlineData(ResistancePlayCardStatus.WrongState, "Resistance.CardState")]
     [InlineData(ResistancePlayCardStatus.InvalidTarget, "Resistance.InvalidTarget")]
+    [InlineData(ResistancePlayCardStatus.WrongPhase, "Resistance.CardNotPlayableNow")]
+    [InlineData(ResistancePlayCardStatus.ChoiceRequired, "Resistance.ChoiceRequired")]
     public async Task PlayingAndConfirmingAPlotCard_MapTheRepositoryStatusToAnError(ResistancePlayCardStatus status, string code)
     {
         var ct = CancellationToken.None;
@@ -1627,6 +1629,11 @@ public class ResistanceServiceTests
 
         public Task<ResistancePlayCardResult> PlayPlotCardAsync(
             Guid sessionId, Guid? callerPlayerId, int cardId, Guid targetPlayerId, CancellationToken cancellationToken) =>
+            Task.FromResult(new ResistancePlayCardResult(PlayCardStatus, _games.GetValueOrDefault(sessionId)));
+
+        public Task<ResistancePlayCardResult> TakeResponsibilityAsync(
+            Guid sessionId, Guid? callerPlayerId, int cardId, Guid targetPlayerId, bool? takeOpinionMaker,
+            CancellationToken cancellationToken) =>
             Task.FromResult(new ResistancePlayCardResult(PlayCardStatus, _games.GetValueOrDefault(sessionId)));
 
         public Task<ResistancePlayCardResult> ConfirmPlotCardAsync(

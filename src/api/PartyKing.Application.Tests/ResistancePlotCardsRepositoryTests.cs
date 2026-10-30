@@ -675,4 +675,115 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         Assert.Equal(ResistancePlayCardStatus.NotAllowed, byStranger.Status);
         Assert.Equal(ResistancePlayCardStatus.WrongState, again.Status);
     }
+
+    /// <summary>A game with Take Responsibility dealt to one player; the other deck cards can be moved around with <see cref="SetCardAsync"/>.</summary>
+    private async Task<(ResistanceGame Game, ResistancePlotCard Card, Guid Target)> WithTakeResponsibilityAsync()
+    {
+        var game = await StartAsync(5, plotCards: true, onlyType: ResistancePlotCardType.TakeResponsibility);
+        await DealAsync(game);
+        game = await ReloadAsync();
+        var card = game.PlotCards.Single(x => x.Location == ResistancePlotCardLocation.Hand);
+        var target = game.Players.First(x => x.PlayerId != card.HolderPlayerId).PlayerId;
+        Assert.Equal(ResistancePhase.SelectingTeam, game.Phase);
+
+        return (game, card, target);
+    }
+
+    private async Task SetCardAsync(
+        int cardId, Guid holder, ResistancePlotCardLocation location, ResistancePlotCardType? type = null)
+    {
+        await using var dbContext = await _writer.CreateDbContextAsync();
+        var card = await dbContext.Set<ResistancePlotCard>().SingleAsync(x => x.SessionId == _sessionId && x.CardId == cardId);
+        (card.HolderPlayerId, card.Location) = (holder, location);
+        card.Type = type ?? card.Type;
+        await dbContext.SaveChangesAsync();
+    }
+
+    private int SpareCardId(ResistanceGame game, int skip = 0) =>
+        game.PlotCards.Where(x => x.Location == ResistancePlotCardLocation.Deck).OrderBy(x => x.CardId).Skip(skip).First().CardId;
+
+    [Fact]
+    public async Task TakeResponsibility_TakesARandomHandCardFromTheTarget()
+    {
+        var (game, card, target) = await WithTakeResponsibilityAsync();
+        var spare = SpareCardId(game);
+        await SetCardAsync(spare, target, ResistancePlotCardLocation.Hand);
+
+        var result = await _repository.TakeResponsibilityAsync(_sessionId, card.HolderPlayerId, card.CardId, target, null, CancellationToken.None);
+
+        Assert.Equal(ResistancePlayCardStatus.Done, result.Status);
+        var after = await ReloadAsync();
+        Assert.Equal(card.HolderPlayerId, after.PlotCards.Single(x => x.CardId == spare).HolderPlayerId);
+        var played = after.PlotCards.Single(x => x.CardId == card.CardId);
+        Assert.Equal((ResistancePlotCardLocation.Played, target, true), (played.Location, played.TargetPlayerId, played.IsConfirmed));
+        Assert.Empty(ResistanceRoles.UnconfirmedCards(after));
+    }
+
+    [Fact]
+    public async Task TakeResponsibility_TakesAFaceUpOpinionMakerWithoutAskingWhenTheHandIsEmpty()
+    {
+        var (game, card, target) = await WithTakeResponsibilityAsync();
+        var spare = SpareCardId(game);
+        await SetCardAsync(spare, target, ResistancePlotCardLocation.InPlay, ResistancePlotCardType.OpinionMaker);
+
+        await _repository.TakeResponsibilityAsync(_sessionId, card.HolderPlayerId, card.CardId, target, null, CancellationToken.None);
+
+        var after = await ReloadAsync();
+        Assert.Equal([card.HolderPlayerId!.Value], ResistanceRoles.OpinionMakerIds(after));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task TakeResponsibility_AsksWhichToTakeWhenTheTargetHasBoth(bool takeOpinionMaker)
+    {
+        var (game, card, target) = await WithTakeResponsibilityAsync();
+        var (maker, handCard) = (SpareCardId(game), SpareCardId(game, 1));
+        await SetCardAsync(maker, target, ResistancePlotCardLocation.InPlay, ResistancePlotCardType.OpinionMaker);
+        await SetCardAsync(handCard, target, ResistancePlotCardLocation.Hand);
+
+        var unanswered = await _repository.TakeResponsibilityAsync(_sessionId, card.HolderPlayerId, card.CardId, target, null, CancellationToken.None);
+        var answered = await _repository.TakeResponsibilityAsync(_sessionId, card.HolderPlayerId, card.CardId, target, takeOpinionMaker, CancellationToken.None);
+
+        Assert.Equal(ResistancePlayCardStatus.ChoiceRequired, unanswered.Status);
+        Assert.Equal(ResistancePlayCardStatus.Done, answered.Status);
+        var after = await ReloadAsync();
+        Assert.Equal(takeOpinionMaker ? card.HolderPlayerId : target, after.PlotCards.Single(x => x.CardId == maker).HolderPlayerId);
+        Assert.Equal(takeOpinionMaker ? target : card.HolderPlayerId, after.PlotCards.Single(x => x.CardId == handCard).HolderPlayerId);
+    }
+
+    [Fact]
+    public async Task TakeResponsibility_IsLostWhenTheTargetHasNothing()
+    {
+        var (_, card, target) = await WithTakeResponsibilityAsync();
+
+        var result = await _repository.TakeResponsibilityAsync(_sessionId, card.HolderPlayerId, card.CardId, target, null, CancellationToken.None);
+
+        Assert.Equal(ResistancePlayCardStatus.Done, result.Status);
+        Assert.Equal(ResistancePlotCardLocation.Played, (await ReloadAsync()).PlotCards.Single(x => x.CardId == card.CardId).Location);
+    }
+
+    [Fact]
+    public async Task TakeResponsibility_RefusesTheWrongCallerTargetAndStep()
+    {
+        var ct = CancellationToken.None;
+        var (game, card, target) = await WithTakeResponsibilityAsync();
+
+        Assert.Equal(ResistancePlayCardStatus.NotAllowed, (await _repository.TakeResponsibilityAsync(_sessionId, target, card.CardId, card.HolderPlayerId!.Value, null, ct)).Status);
+        Assert.Equal(ResistancePlayCardStatus.InvalidTarget, (await _repository.TakeResponsibilityAsync(_sessionId, card.HolderPlayerId, card.CardId, card.HolderPlayerId!.Value, null, ct)).Status);
+        Assert.Equal(ResistancePlayCardStatus.InvalidTarget, (await _repository.TakeResponsibilityAsync(_sessionId, card.HolderPlayerId, card.CardId, Guid.NewGuid(), null, ct)).Status);
+
+        var team = game.Players.OrderBy(x => x.Order).Take(game.Rules.TeamSize(5, 1)).Select(x => x.PlayerId).ToList();
+        await _repository.SelectTeamAsync(_sessionId, game.LeaderPlayerId, team, ct);
+        var voting = await _repository.TakeResponsibilityAsync(_sessionId, card.HolderPlayerId, card.CardId, target, null, ct);
+        Assert.Equal(ResistancePlayCardStatus.WrongPhase, voting.Status);
+
+        foreach (var player in game.Players)
+        {
+            await _repository.VoteAsync(_sessionId, player.PlayerId, true, ct);
+        }
+
+        Assert.Equal(ResistancePlayCardStatus.Done, (await _repository.TakeResponsibilityAsync(_sessionId, card.HolderPlayerId, card.CardId, target, null, ct)).Status);
+        Assert.Equal(ResistancePlayCardStatus.WrongState, (await _repository.TakeResponsibilityAsync(_sessionId, card.HolderPlayerId, card.CardId, target, null, ct)).Status);
+    }
 }

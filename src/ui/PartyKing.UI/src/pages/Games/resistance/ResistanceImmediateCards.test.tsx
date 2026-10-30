@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ResistanceGameDto } from '@/service/endpoints/games/types';
 import { ResistancePlotLog } from './ResistancePlotLog';
 import { ResistanceSpotlightPlayer } from './ResistanceSpotlightPlayer';
+import { ResistanceTakeResponsibility } from './ResistanceTakeResponsibility';
 import { ResistancePlotPlayer } from './ResistancePlotPlayer';
 import { resistancePhaseDescription } from './resistancePhase';
 
@@ -215,5 +216,48 @@ describe('In the Spotlight', () => {
 
     expect(before).toContain('Bartek musi zagrać kartę misji jawnie');
     expect(after).toContain('Bartek zagrał/a kartę jawnie: Porażka');
+  });
+});
+
+describe('Take Responsibility', () => {
+  const take = { id: 9, type: 'TakeResponsibility', toDeal: false, inPlay: false } as const;
+  const selecting = (overrides: Partial<ResistanceGameDto> = {}) =>
+    game({ phase: 'SelectingTeam', yourPlotCards: [take], ...overrides });
+
+  it('takes from a player without a choice when they have no Opinion Maker', async () => {
+    const user = userEvent.setup();
+    const onTake = vi.fn().mockResolvedValue(undefined);
+    render(<ResistanceTakeResponsibility game={selecting()} onTake={onTake} />);
+
+    await user.selectOptions(screen.getByLabelText('Któremu graczowi zabierasz kartę'), 'p3');
+    await user.click(screen.getByRole('button', { name: 'Zabierz kartę' }));
+
+    expect(onTake).toHaveBeenCalledWith(9, 'p3', null);
+  });
+
+  it('asks which card to take when the target has an Opinion Maker and cards in hand', async () => {
+    const user = userEvent.setup();
+    const onTake = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ResistanceTakeResponsibility
+        game={selecting({ opinionMakerPlayerIds: ['p3'], plotCardCounts: [{ playerId: 'p3', count: 2 }] })}
+        onTake={onTake}
+      />,
+    );
+
+    await user.selectOptions(screen.getByLabelText('Któremu graczowi zabierasz kartę'), 'p3');
+    expect(screen.getByRole('button', { name: 'Zabierz kartę' })).toBeDisabled();
+    await user.click(screen.getByLabelText('Losowa karta z ręki'));
+    await user.click(screen.getByRole('button', { name: 'Zabierz kartę' }));
+
+    expect(onTake).toHaveBeenCalledWith(9, 'p3', false);
+  });
+
+  it('is hidden while a team is voted on and without the card', () => {
+    const voting = render(<ResistanceTakeResponsibility game={selecting({ phase: 'Voting' })} onTake={vi.fn()} />);
+    expect(voting.container).toBeEmptyDOMElement();
+
+    const none = render(<ResistanceTakeResponsibility game={selecting({ yourPlotCards: [] })} onTake={vi.fn()} />);
+    expect(none.container).toBeEmptyDOMElement();
   });
 });

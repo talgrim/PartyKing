@@ -236,6 +236,12 @@ public class ResistanceControllerTests
             return Task.FromResult(Result);
         }
 
+        public Task<ErrorOr<ResistanceGameDto>> TakeResponsibilityAsync(Guid sessionId, int cardId, Guid targetPlayerId, bool? takeOpinionMaker, GameCaller caller, CancellationToken cancellationToken)
+        {
+            LastCall = ($"take-{cardId}-{targetPlayerId}-{takeOpinionMaker}", sessionId, null, caller.PlayerId);
+            return Task.FromResult(Result);
+        }
+
         public Task<ErrorOr<ResistanceGameDto>> PlayPlotCardAsync(Guid sessionId, int cardId, Guid targetPlayerId, GameCaller caller, CancellationToken cancellationToken)
         {
             LastCall = ($"play-{cardId}-{targetPlayerId}", sessionId, null, caller.PlayerId);
