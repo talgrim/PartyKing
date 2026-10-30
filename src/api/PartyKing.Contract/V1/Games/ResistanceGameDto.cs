@@ -55,7 +55,10 @@ public record ResistanceMissionResultDto(int MissionNumber, bool Succeeded, int 
 /// The numbers the game was created with (copied from the server configuration, refreshed on request until the game
 /// is open): for every player count the spies, the team size of each mission and the fails each mission needs.
 /// </summary>
-public record ResistanceRulesDto(IReadOnlyList<ResistanceCountRulesDto> PlayerCounts);
+/// <param name="PlotCardsEnabled">Whether the plot cards add-on is played in this game.</param>
+/// <param name="PlotCardsPerRound">How many plot cards the leader draws before each mission, at the current player count.</param>
+public record ResistanceRulesDto(
+    IReadOnlyList<ResistanceCountRulesDto> PlayerCounts, bool PlotCardsEnabled, int PlotCardsPerRound);
 
 public record ResistanceCountRulesDto(
     int PlayerCount, int Spies, IReadOnlyList<int> TeamSizes, IReadOnlyList<int> RequiredFails);
@@ -102,6 +105,9 @@ public record ResistancePlayersOrderRequest(IReadOnlyList<Guid>? PlayerIds);
 
 /// <summary>The ids of the players the leader sends on the mission.</summary>
 public record ResistanceTeamRequest(IReadOnlyList<Guid>? PlayerIds);
+
+/// <summary>Switches the plot cards add-on on or off (only before the game is opened).</summary>
+public record ResistancePlotCardsRequest(bool Enabled);
 
 /// <summary>The caller's vote on the submitted team: true approves, false rejects.</summary>
 public record ResistanceVoteRequest(bool Approve);

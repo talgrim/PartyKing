@@ -84,6 +84,13 @@ public interface IResistanceService
     Task<ErrorOr<ResistanceGameDto>> RefreshRulesAsync(
         Guid sessionId, GameCaller caller, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Host or admin: switches the plot cards add-on on or off. NotFound without a game, Conflict once the game is
+    /// open or started.
+    /// </summary>
+    Task<ErrorOr<ResistanceGameDto>> SetPlotCardsAsync(
+        Guid sessionId, bool enabled, GameCaller caller, CancellationToken cancellationToken);
+
     /// <summary>Host or admin: removes a player. NotFound for an unknown game or player.</summary>
     Task<ErrorOr<ResistanceGameDto>> KickAsync(
         Guid sessionId, Guid playerId, GameCaller caller, CancellationToken cancellationToken);
@@ -188,6 +195,29 @@ internal class ResistanceService : IResistanceService
             case ResistanceRulesStatus.NotEditable:
                 return Error.Conflict(
                     "Resistance.RulesLocked", "The rules can only be refreshed before the game is opened.");
+        }
+
+        await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
+
+        return ToDto(result.Game!, caller);
+    }
+
+    public async Task<ErrorOr<ResistanceGameDto>> SetPlotCardsAsync(
+        Guid sessionId, bool enabled, GameCaller caller, CancellationToken cancellationToken)
+    {
+        if (await _lobby.AuthorizeAsync(sessionId, caller, cancellationToken) is { IsError: true } denied)
+        {
+            return denied.Errors;
+        }
+
+        var result = await _games.SetPlotCardsAsync(sessionId, enabled, cancellationToken);
+        switch (result.Status)
+        {
+            case ResistanceRulesStatus.NoGame:
+                return _lobby.NoGame;
+            case ResistanceRulesStatus.NotEditable:
+                return Error.Conflict(
+                    "Resistance.RulesLocked", "The plot cards can only be switched before the game is opened.");
         }
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
@@ -498,7 +528,9 @@ internal class ResistanceService : IResistanceService
                 game.Rules.PlayerCounts
                     .OrderBy(x => x.Key)
                     .Select(x => new ResistanceCountRulesDto(x.Key, x.Value.Spies, x.Value.TeamSizes, x.Value.RequiredFails))
-                    .ToList()),
+                    .ToList(),
+                game.Rules.PlotCardsEnabled,
+                game.Rules.PlotCardsPerRound(game.Players.Count)),
             game.IsStarted ? game.Rules.RequiredFails(game.Players.Count, game.MissionNumber) : null,
             game.Players.Where(x => x.MissionCard is not null).OrderBy(x => x.Order).Select(x => x.PlayerId).ToList(),
             you?.MissionCard,

@@ -86,6 +86,19 @@ public class ResistanceController : GameControllerBase
         return result.Match(Ok, Problem);
     }
 
+    /// <summary>Host or admin: switches the plot cards add-on on or off. 409 once the game is open or started.</summary>
+    [HttpPut("rules/plot-cards")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> SetResistancePlotCards(
+        Guid sessionId, [FromBody] ResistancePlotCardsRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.SetPlotCardsAsync(
+            sessionId, request.Enabled, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
     /// <summary>Admin only: opens the Resistance game to guests (idempotent), 403 for the host.</summary>
     [HttpPost("open")]
     [RequireSessionAccess]

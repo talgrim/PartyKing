@@ -14,6 +14,12 @@ public interface IResistanceGamesRepository : ILobbyGamesRepository<ResistanceGa
         Guid sessionId, ResistanceRules rules, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Switches the plot cards add-on on or off in the game's rules. Only while the game is still closed and not
+    /// started, like <see cref="RefreshRulesAsync"/>.
+    /// </summary>
+    Task<ResistanceRulesResult> SetPlotCardsAsync(Guid sessionId, bool enabled, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Starts the open game: deals the roles and picks the first leader (see <see cref="ResistanceRoles"/>), which
     /// locks the players. Atomic with the players joining, so a join either makes it into the roles or is rejected.
     /// </summary>
@@ -202,7 +208,36 @@ internal class ResistanceGamesRepository
             return new ResistanceRulesResult(ResistanceRulesStatus.NotEditable, game);
         }
 
+        rules.PlotCardsEnabled = game.Rules.PlotCardsEnabled;
         game.Rules = rules;
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return new ResistanceRulesResult(ResistanceRulesStatus.Refreshed, game);
+    }
+
+    public async Task<ResistanceRulesResult> SetPlotCardsAsync(
+        Guid sessionId, bool enabled, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await CreateWriterAsync(cancellationToken);
+
+        var game = await LoadAsync(dbContext, sessionId, cancellationToken);
+        if (game is null)
+        {
+            return new ResistanceRulesResult(ResistanceRulesStatus.NoGame, null);
+        }
+
+        if (game.IsOpen || game.IsStarted)
+        {
+            return new ResistanceRulesResult(ResistanceRulesStatus.NotEditable, game);
+        }
+
+        // Rules is a JSON column compared by reference, so assign a copy to have the change detected.
+        game.Rules = new ResistanceRules
+        {
+            PlayerCounts = game.Rules.PlayerCounts,
+            PlotDeck = game.Rules.PlotDeck,
+            PlotCardsEnabled = enabled,
+        };
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return new ResistanceRulesResult(ResistanceRulesStatus.Refreshed, game);
