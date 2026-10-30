@@ -248,6 +248,12 @@ public class ResistanceControllerTests
             return Task.FromResult(Result);
         }
 
+        public Task<ErrorOr<ResistanceGameDto>> PlayNoConfidenceAsync(Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken)
+        {
+            LastCall = ($"no-confidence-{cardId}", sessionId, null, caller.PlayerId);
+            return Task.FromResult(Result);
+        }
+
         public Task<ErrorOr<ResistanceGameDto>> PassLeaderWindowAsync(Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
         {
             LastCall = ("pass-leader-window", sessionId, null, caller.PlayerId);

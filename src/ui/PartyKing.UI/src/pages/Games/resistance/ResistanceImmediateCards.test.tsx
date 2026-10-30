@@ -272,7 +272,7 @@ describe('Strong Leader leader window', () => {
   it('lets the holder take the lead', async () => {
     const user = userEvent.setup();
     const onTakeLead = vi.fn().mockResolvedValue(undefined);
-    render(<ResistanceLeaderWindow game={windowGame()} onTakeLead={onTakeLead} onPass={vi.fn()} />);
+    render(<ResistanceLeaderWindow game={windowGame()} onTakeLead={onTakeLead} onNoConfidence={vi.fn()} onPass={vi.fn()} />);
 
     await user.click(screen.getByRole('button', { name: 'Przejmij przywództwo' }));
 
@@ -282,7 +282,7 @@ describe('Strong Leader leader window', () => {
   it('offers everybody the confirmation but the lead only to a holder who is not the leader', async () => {
     const user = userEvent.setup();
     const onPass = vi.fn().mockResolvedValue(undefined);
-    render(<ResistanceLeaderWindow game={windowGame({ yourPlotCards: [] })} onTakeLead={vi.fn()} onPass={onPass} />);
+    render(<ResistanceLeaderWindow game={windowGame({ yourPlotCards: [] })} onTakeLead={vi.fn()} onNoConfidence={vi.fn()} onPass={onPass} />);
 
     expect(screen.queryByRole('button', { name: 'Przejmij przywództwo' })).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Nie zagrywam karty' }));
@@ -292,9 +292,22 @@ describe('Strong Leader leader window', () => {
 
   it('disables the confirmation once given and counts the confirmations in the phase line', () => {
     const passed = windowGame({ leaderWindowPassedPlayerIds: ['p0', 'p2'] });
-    render(<ResistanceLeaderWindow game={passed} onTakeLead={vi.fn()} onPass={vi.fn()} />);
+    render(<ResistanceLeaderWindow game={passed} onTakeLead={vi.fn()} onNoConfidence={vi.fn()} onPass={vi.fn()} />);
 
     expect(screen.getByRole('button', { name: 'Potwierdzono' })).toBeDisabled();
     expect(resistancePhaseDescription(passed, { canManage: false, isAdmin: false }, 2)).toContain('Potwierdzili: 2/5');
+  });
+
+  it('lets the holder of No Confidence cancel the approval in the confidence window', async () => {
+    const user = userEvent.setup();
+    const onNoConfidence = vi.fn().mockResolvedValue(undefined);
+    const noConfidence = { id: 7, type: 'NoConfidence', toDeal: false, inPlay: false } as const;
+    const approved = windowGame({ phase: 'ConfidenceWindow', yourPlotCards: [noConfidence], teamPlayerIds: ['p0', 'p1'] });
+    render(<ResistanceLeaderWindow game={approved} onTakeLead={vi.fn()} onNoConfidence={onNoConfidence} onPass={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: 'Odrzuć zatwierdzoną drużynę' }));
+
+    expect(onNoConfidence).toHaveBeenCalledWith(7);
+    expect(resistancePhaseDescription(approved, { canManage: false, isAdmin: false }, 2)).toContain('Nie ufajcie mu');
   });
 });
