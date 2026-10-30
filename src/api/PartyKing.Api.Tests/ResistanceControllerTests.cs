@@ -69,6 +69,31 @@ public class ResistanceControllerTests
     }
 
     [Fact]
+    public async Task MissionCard_PassesTheChoiceAndTheCookiesPlayerToTheService()
+    {
+        var game = Game();
+        _service.Result = game;
+
+        var result = await _controller.PlayResistanceMissionCard(
+            _sessionId, new ResistanceMissionCardRequest(false), CancellationToken.None);
+
+        Assert.Equal(("mission", _sessionId, false, _playerId), _service.LastCall);
+        Assert.Same(game, Assert.IsType<OkObjectResult>(result).Value);
+    }
+
+    [Theory]
+    [MemberData(nameof(Errors))]
+    public async Task MissionCard_MapsServiceErrorsToTheirStatusCodes(Error error, int status)
+    {
+        _service.Result = error;
+
+        var result = await _controller.PlayResistanceMissionCard(
+            _sessionId, new ResistanceMissionCardRequest(true), CancellationToken.None);
+
+        Assert.Equal(status, Assert.IsType<ObjectResult>(result).StatusCode);
+    }
+
+    [Fact]
     public async Task Continue_PassesTheCookiesPlayerToTheService()
     {
         _service.Result = Game();
@@ -100,7 +125,7 @@ public class ResistanceControllerTests
 
     private static ResistanceGameDto Game() => new(
         DateTimeOffset.UtcNow, true, [], null, 10, null, null, null, null, 1, null, [], null, 0, null, [], null,
-        null, null, null, new ResistanceRulesDto([]));
+        null, null, null, new ResistanceRulesDto([]), null, [], null, []);
 
     private sealed class FakeResistanceService : IResistanceService
     {
@@ -112,6 +137,13 @@ public class ResistanceControllerTests
             Guid sessionId, bool approve, GameCaller caller, CancellationToken cancellationToken)
         {
             LastCall = ("vote", sessionId, approve, caller.PlayerId);
+            return Task.FromResult(Result);
+        }
+
+        public Task<ErrorOr<ResistanceGameDto>> PlayMissionCardAsync(
+            Guid sessionId, bool success, GameCaller caller, CancellationToken cancellationToken)
+        {
+            LastCall = ("mission", sessionId, success, caller.PlayerId);
             return Task.FromResult(Result);
         }
 

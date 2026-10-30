@@ -480,7 +480,7 @@ public class ResistanceServiceTests
         foreach (var viewer in new[] { callers[3], Host, Admin })
         {
             var game = (await _service.GetAsync(_id, viewer, ct)).Value;
-            Assert.Equal(ResistancePhaseDto.VoteResult, game.Phase);
+            Assert.Equal(ResistancePhaseDto.PlayingMission, game.Phase);
             Assert.True(game.VoteApproved);
             Assert.Equal(5, game.Votes!.Count);
             Assert.Equal(3, game.Votes.Count(x => x.Approve));
@@ -489,7 +489,7 @@ public class ResistanceServiceTests
     }
 
     [Fact]
-    public async Task AnApprovedTeam_StaysPutAndCannotBeContinuedFrom()
+    public async Task AnApprovedTeam_PlaysItsMission_AndCannotBeContinuedFromUntilItIsOver()
     {
         var ct = CancellationToken.None;
         var (callers, leader) = await StartWithTeamAsync(5);
@@ -500,13 +500,192 @@ public class ResistanceServiceTests
         Assert.Equal("Resistance.NothingToContinue", result.FirstError.Code);
         var game = (await _service.GetAsync(_id, Host, ct)).Value;
         Assert.Equal(2, game.TeamPlayerIds.Count);
-        Assert.Equal(ResistancePhaseDto.VoteResult, game.Phase);
+        Assert.Equal(ResistancePhaseDto.PlayingMission, game.Phase);
+        Assert.Equal(1, game.RequiredFails);
+        Assert.Empty(game.PlayedMissionPlayerIds);
+        Assert.Empty(game.MissionResults);
+    }
+
+    [Fact]
+    public async Task MissionCards_NeedAPlayerOnTheApprovedTeam()
+    {
+        var ct = CancellationToken.None;
+        var (callers, leader) = await StartWithTeamAsync(5);
+        Assert.Equal("Resistance.NotPlayingMission", (await _service.PlayMissionCardAsync(_id, true, leader, ct)).FirstError.Code);
+        await VoteAsync(callers, true, true, true, true, true);
+
+        var team = (await _service.GetAsync(_id, Host, ct)).Value.TeamPlayerIds;
+        var outsider = callers.First(x => !team.Contains(x.PlayerId!.Value));
+
+        Assert.Equal("Resistance.NotPlayer", (await _service.PlayMissionCardAsync(_id, true, Host, ct)).FirstError.Code);
+        Assert.Equal("Resistance.NotPlayer", (await _service.PlayMissionCardAsync(_id, true, Admin, ct)).FirstError.Code);
+        var notOnTeam = await _service.PlayMissionCardAsync(_id, true, outsider, ct);
+        Assert.Equal("Resistance.NotOnTeam", notOnTeam.FirstError.Code);
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, notOnTeam.FirstError.Type);
+    }
+
+    [Fact]
+    public async Task AMemberOfTheResistance_CanOnlyPlaySuccess_AndEachCardIsPlayedOnce()
+    {
+        var ct = CancellationToken.None;
+        var mission = await StartMissionAsync(5, spiesOnTeam: 1);
+
+        var failed = await _service.PlayMissionCardAsync(_id, false, mission.Resistance[0], ct);
+        Assert.Equal("Resistance.MustSucceed", failed.FirstError.Code);
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, failed.FirstError.Type);
+
+        var played = await _service.PlayMissionCardAsync(_id, true, mission.Resistance[0], ct);
+        Assert.False(played.IsError);
+        Assert.Equal("Resistance.AlreadyPlayed", (await _service.PlayMissionCardAsync(_id, true, mission.Resistance[0], ct)).FirstError.Code);
+        Assert.False((await _service.PlayMissionCardAsync(_id, false, mission.Spies[0], ct)).IsError);
+    }
+
+    [Fact]
+    public async Task TheCards_AreSecret_OnlyWhoPlayedIsPublic()
+    {
+        var ct = CancellationToken.None;
+        var mission = await StartMissionAsync(5, spiesOnTeam: 1);
+        var before = _notifier.ResistanceChanges.Count;
+
+        await _service.PlayMissionCardAsync(_id, false, mission.Spies[0], ct);
+
+        Assert.Equal(before + 1, _notifier.ResistanceChanges.Count);
+        var asSpy = (await _service.GetAsync(_id, mission.Spies[0], ct)).Value;
+        var asOther = (await _service.GetAsync(_id, mission.Resistance[0], ct)).Value;
+        var asHost = (await _service.GetAsync(_id, Host, ct)).Value;
+
+        Assert.False(asSpy.YourMissionCard);
+        Assert.Null(asOther.YourMissionCard);
+        Assert.Null(asHost.YourMissionCard);
+        foreach (var view in new[] { asSpy, asOther, asHost })
+        {
+            Assert.Equal([mission.Spies[0].PlayerId!.Value], view.PlayedMissionPlayerIds);
+            Assert.Equal(ResistancePhaseDto.PlayingMission, view.Phase);
+            Assert.Empty(view.MissionResults);
+        }
+    }
+
+    [Fact]
+    public async Task TheLastCard_ResolvesTheMission_AndOnlyTheFailCountIsPublic()
+    {
+        var ct = CancellationToken.None;
+        var mission = await StartMissionAsync(5, spiesOnTeam: 1);
+
+        await _service.PlayMissionCardAsync(_id, true, mission.Resistance[0], ct);
+        await _service.PlayMissionCardAsync(_id, false, mission.Spies[0], ct);
+
+        var game = (await _service.GetAsync(_id, Host, ct)).Value;
+        Assert.Equal(ResistancePhaseDto.MissionResult, game.Phase);
+        var result = Assert.Single(game.MissionResults);
+        Assert.Equal(new ResistanceMissionResultDto(1, false, 1), result);
+        Assert.Equal(1, game.MissionNumber);
+    }
+
+    [Fact]
+    public async Task AMissionWithoutFailCards_Succeeds()
+    {
+        var ct = CancellationToken.None;
+        var mission = await StartMissionAsync(5, spiesOnTeam: 1);
+
+        foreach (var caller in mission.Team)
+        {
+            await _service.PlayMissionCardAsync(_id, true, caller, ct);
+        }
+
+        var result = Assert.Single((await _service.GetAsync(_id, Host, ct)).Value.MissionResults);
+        Assert.Equal(new ResistanceMissionResultDto(1, true, 0), result);
+    }
+
+    [Fact]
+    public async Task TheRequiredFails_ComeFromTheRulesOfTheGame()
+    {
+        var ct = CancellationToken.None;
+        _rules.Rules.PlayerCounts[5] = new ResistanceCountRules(2, [2, 3, 2, 3, 3], [2, 1, 1, 1, 1]);
+        var mission = await StartMissionAsync(5, spiesOnTeam: 1);
+        Assert.Equal(2, (await _service.GetAsync(_id, Host, ct)).Value.RequiredFails);
+
+        await _service.PlayMissionCardAsync(_id, true, mission.Resistance[0], ct);
+        await _service.PlayMissionCardAsync(_id, false, mission.Spies[0], ct);
+
+        var result = Assert.Single((await _service.GetAsync(_id, Host, ct)).Value.MissionResults);
+        Assert.Equal(new ResistanceMissionResultDto(1, true, 1), result);
+    }
+
+    [Fact]
+    public async Task ContinuingAfterAMission_StartsTheNextOneWithTheNextLeader()
+    {
+        var ct = CancellationToken.None;
+        var mission = await StartMissionAsync(5, spiesOnTeam: 1);
+        var leaderId = (await _service.GetAsync(_id, Host, ct)).Value.LeaderPlayerId;
+        foreach (var caller in mission.Team)
+        {
+            await _service.PlayMissionCardAsync(_id, caller.Equals(mission.Spies[0]) ? false : true, caller, ct);
+        }
+
+        var continued = (await _service.ContinueAsync(_id, Host, ct)).Value;
+
+        var order = continued.Players.Select(x => x.Id).ToList();
+        Assert.Equal(order[(order.IndexOf(leaderId!.Value) + 1) % 5], continued.LeaderPlayerId);
+        Assert.Equal(ResistancePhaseDto.SelectingTeam, continued.Phase);
+        Assert.Equal(2, continued.MissionNumber);
+        Assert.Equal(3, continued.RequiredTeamSize);
+        Assert.Empty(continued.TeamPlayerIds);
+        Assert.Empty(continued.PlayedMissionPlayerIds);
+        Assert.Null(continued.Votes);
+        Assert.Single(continued.MissionResults);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ThirdSuccessOrFailure_EndsTheGameAndRevealsTheRoles(bool resistanceWins)
+    {
+        var ct = CancellationToken.None;
+        var callers = await OpenGameAndJoinAsync(5);
+        await _service.StartAsync(_id, Host, ct);
+
+        for (var round = 0; round < 3; round++)
+        {
+            await PlayRoundAsync(callers, fail: !resistanceWins);
+            if (round < 2)
+            {
+                await _service.ContinueAsync(_id, Host, ct);
+            }
+        }
+
+        var game = (await _service.GetAsync(_id, callers[0], ct)).Value;
+        Assert.Equal(ResistancePhaseDto.GameOver, game.Phase);
+        Assert.Equal(resistanceWins ? ResistanceRoleDto.Resistance : ResistanceRoleDto.Spy, game.Winner);
+        Assert.Equal(3, game.MissionResults.Count(x => x.Succeeded == resistanceWins));
+        Assert.Equal(5, game.RevealedRoles!.Count);
+        Assert.Equal("Resistance.GameOver", (await _service.ContinueAsync(_id, Host, ct)).FirstError.Code);
+        Assert.Equal("Resistance.GameOver", (await _service.PlayMissionCardAsync(_id, true, callers[0], ct)).FirstError.Code);
+    }
+
+    [Fact]
+    public async Task TheGame_GoesOnAfterTwoSuccessesAndOneFailure()
+    {
+        var ct = CancellationToken.None;
+        var callers = await OpenGameAndJoinAsync(5);
+        await _service.StartAsync(_id, Host, ct);
+
+        foreach (var fail in new[] { false, true, false })
+        {
+            await PlayRoundAsync(callers, fail);
+            await _service.ContinueAsync(_id, Host, ct);
+        }
+
+        var game = (await _service.GetAsync(_id, Host, ct)).Value;
+        Assert.Equal(ResistancePhaseDto.SelectingTeam, game.Phase);
+        Assert.Equal(4, game.MissionNumber);
+        Assert.Equal([true, false, true], game.MissionResults.Select(x => x.Succeeded));
+        Assert.Null(game.Winner);
     }
 
     [Theory]
     [InlineData(5)]
     [InlineData(6)]
-    public async Task ARejectedTeam_AndATie_PassTheLeadershipOnContinue(int playerCount)
+    public async Task ARejectedTeam_AndATie_PassTheLeadershipAtOnceAndKeepTheVotes(int playerCount)
     {
         var ct = CancellationToken.None;
         var (callers, leader) = await StartWithTeamAsync(playerCount);
@@ -516,17 +695,16 @@ public class ResistanceServiceTests
         var rejected = (await _service.GetAsync(_id, Host, ct)).Value;
         Assert.False(rejected.VoteApproved);
         Assert.Equal(1, rejected.RejectedTeams);
-        Assert.Equal(ResistancePhaseDto.VoteResult, rejected.Phase);
-        Assert.Equal(2, rejected.TeamPlayerIds.Count);
+        Assert.Equal(ResistancePhaseDto.SelectingTeam, rejected.Phase);
+        Assert.Empty(rejected.TeamPlayerIds);
+        Assert.Equal(playerCount, rejected.Votes!.Count);
 
-        var continued = (await _service.ContinueAsync(_id, Host, ct)).Value;
+        var continued = rejected;
 
         var order = continued.Players.Select(x => x.Id).ToList();
         Assert.Equal(order[(order.IndexOf(leader.PlayerId!.Value) + 1) % playerCount], continued.LeaderPlayerId);
         Assert.Equal(ResistancePhaseDto.SelectingTeam, continued.Phase);
         Assert.Empty(continued.TeamPlayerIds);
-        Assert.Empty(continued.VotedPlayerIds);
-        Assert.Null(continued.Votes);
         Assert.Equal(1, continued.RejectedTeams);
         Assert.Equal(1, continued.MissionNumber);
     }
@@ -545,7 +723,7 @@ public class ResistanceServiceTests
             var leader = callers.First(x => x.PlayerId == seen[^1]);
             await _service.SelectTeamAsync(_id, order.Take(2).ToList(), leader, ct);
             await VoteAsync(callers, false, false, false, false, false);
-            seen.Add((await _service.ContinueAsync(_id, Host, ct)).Value.LeaderPlayerId);
+            seen.Add((await _service.GetAsync(_id, Host, ct)).Value.LeaderPlayerId);
         }
 
         Assert.Equal(5, seen.Distinct().Count());
@@ -557,19 +735,23 @@ public class ResistanceServiceTests
     }
 
     [Fact]
-    public async Task Continuing_IsForTheLeaderAndManagersOnly()
+    public async Task Continuing_IsForTheLeaderAndManagersOnly_AndOnlyAfterAMission()
     {
         var ct = CancellationToken.None;
-        var (callers, leader) = await StartWithTeamAsync(5);
-        Assert.Equal("Resistance.NothingToContinue", (await _service.ContinueAsync(_id, leader, ct)).FirstError.Code);
-        await VoteAsync(callers, false, false, false, false, false);
+        var mission = await StartMissionAsync(5, spiesOnTeam: 1);
+        foreach (var caller in mission.Team)
+        {
+            await _service.PlayMissionCardAsync(_id, !mission.Spies.Contains(caller), caller, ct);
+        }
 
-        var other = callers.First(x => x.PlayerId != leader.PlayerId);
+        var game = (await _service.GetAsync(_id, Host, ct)).Value;
+        var other = mission.Team.First(x => x.PlayerId != game.LeaderPlayerId);
         var denied = await _service.ContinueAsync(_id, other, ct);
         Assert.Equal("Resistance.NotAllowed", denied.FirstError.Code);
         Assert.Equal(ErrorOr.ErrorType.Forbidden, denied.FirstError.Type);
         Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _service.ContinueAsync(_id, new GameCaller("guest", false), ct)).FirstError.Type);
-        Assert.False((await _service.ContinueAsync(_id, leader, ct)).IsError);
+        Assert.False((await _service.ContinueAsync(_id, Host, ct)).IsError);
+        Assert.Equal("Resistance.NothingToContinue", (await _service.ContinueAsync(_id, Host, ct)).FirstError.Code);
     }
 
     [Fact]
@@ -588,7 +770,7 @@ public class ResistanceServiceTests
             if (i < 5)
             {
                 Assert.Equal(i, (await _service.GetAsync(_id, Host, ct)).Value.RejectedTeams);
-                leaderId = (await _service.ContinueAsync(_id, Host, ct)).Value.LeaderPlayerId;
+                leaderId = (await _service.GetAsync(_id, Host, ct)).Value.LeaderPlayerId;
             }
         }
 
@@ -609,7 +791,7 @@ public class ResistanceServiceTests
         var ct = CancellationToken.None;
         var (callers, leader) = await StartWithTeamAsync(5);
         await VoteAsync(callers, false, false, false, false, false);
-        var next = (await _service.ContinueAsync(_id, Host, ct)).Value;
+        var next = (await _service.GetAsync(_id, Host, ct)).Value;
         var team = next.Players.Take(2).Select(x => x.Id).ToList();
         await _service.SelectTeamAsync(_id, team, callers.First(x => x.PlayerId == next.LeaderPlayerId), ct);
 
@@ -742,6 +924,65 @@ public class ResistanceServiceTests
         await _service.SelectTeamAsync(_id, started.Players.Take(2).Select(x => x.Id).ToList(), leader, ct);
 
         return (callers, leader);
+    }
+
+    /// <summary>
+    /// Starts a game whose leader submits a team of <paramref name="spiesOnTeam"/> spies filled up with members of the
+    /// resistance, and everybody approves it. Spies and the resistance are told apart by the role each one sees.
+    /// </summary>
+    private async Task<(List<GameCaller> Team, List<GameCaller> Spies, List<GameCaller> Resistance)> StartMissionAsync(
+        int count, int spiesOnTeam)
+    {
+        var ct = CancellationToken.None;
+        var callers = await OpenGameAndJoinAsync(count);
+        var started = (await _service.StartAsync(_id, Host, ct)).Value;
+
+        var spies = new List<GameCaller>();
+        var resistance = new List<GameCaller>();
+        foreach (var caller in callers)
+        {
+            var role = (await _service.GetAsync(_id, caller, ct)).Value.YourRole;
+            (role == ResistanceRoleDto.Spy ? spies : resistance).Add(caller);
+        }
+
+        var team = spies.Take(spiesOnTeam).Concat(resistance).Take(started.RequiredTeamSize!.Value).ToList();
+        var leader = callers.First(x => x.PlayerId == started.LeaderPlayerId);
+        var selected = await _service.SelectTeamAsync(_id, team.Select(x => x.PlayerId!.Value).ToList(), leader, ct);
+        Assert.False(selected.IsError);
+        await VoteAsync(callers, Enumerable.Repeat(true, count).ToArray());
+
+        return (
+            team,
+            spies.Where(team.Contains).ToList(),
+            resistance.Where(team.Contains).ToList());
+    }
+
+    /// <summary>
+    /// Plays one whole mission: the leader picks a team (with a spy to play Fail when <paramref name="fail"/>, else
+    /// only members of the resistance), everybody approves and the team plays.
+    /// </summary>
+    private async Task PlayRoundAsync(List<GameCaller> callers, bool fail)
+    {
+        var ct = CancellationToken.None;
+        var game = (await _service.GetAsync(_id, Host, ct)).Value;
+        var roles = new Dictionary<Guid, ResistanceRoleDto>();
+        foreach (var caller in callers)
+        {
+            roles[caller.PlayerId!.Value] = (await _service.GetAsync(_id, caller, ct)).Value.YourRole!.Value;
+        }
+
+        var spies = callers.Where(x => roles[x.PlayerId!.Value] == ResistanceRoleDto.Spy);
+        var resistance = callers.Where(x => roles[x.PlayerId!.Value] == ResistanceRoleDto.Resistance);
+        var team = (fail ? spies.Take(1).Concat(resistance) : resistance).Take(game.RequiredTeamSize!.Value).ToList();
+
+        var leader = callers.First(x => x.PlayerId == game.LeaderPlayerId);
+        Assert.False((await _service.SelectTeamAsync(_id, team.Select(x => x.PlayerId!.Value).ToList(), leader, ct)).IsError);
+        await VoteAsync(callers, Enumerable.Repeat(true, callers.Count).ToArray());
+        foreach (var caller in team)
+        {
+            var success = roles[caller.PlayerId!.Value] == ResistanceRoleDto.Resistance;
+            Assert.False((await _service.PlayMissionCardAsync(_id, success, caller, ct)).IsError);
+        }
     }
 
     /// <summary>Every player votes, in joining order.</summary>
@@ -997,6 +1238,7 @@ public class ResistanceServiceTests
                 {
                     player.IsOnTeam = playerIds.Contains(player.PlayerId);
                     player.Vote = null;
+                    player.MissionCard = null;
                 }
 
                 game.Phase = ResistancePhase.Voting;
@@ -1043,6 +1285,56 @@ public class ResistanceServiceTests
             return Task.FromResult(new ResistanceVoteResult(status, game));
         }
 
+        public Task<ResistanceMissionCardResult> PlayMissionCardAsync(
+            Guid sessionId, Guid? callerPlayerId, bool success, CancellationToken cancellationToken)
+        {
+            _games.TryGetValue(sessionId, out var game);
+            var player = game?.Players.FirstOrDefault(x => x.PlayerId == callerPlayerId);
+            var status = ResistanceMissionStatus.Played;
+            if (game is null)
+            {
+                status = ResistanceMissionStatus.NoGame;
+            }
+            else if (!game.IsStarted)
+            {
+                status = ResistanceMissionStatus.NotStarted;
+            }
+            else if (game.Phase == ResistancePhase.GameOver)
+            {
+                status = ResistanceMissionStatus.GameOver;
+            }
+            else if (player is null)
+            {
+                status = ResistanceMissionStatus.NotPlayer;
+            }
+            else if (game.Phase != ResistancePhase.PlayingMission)
+            {
+                status = ResistanceMissionStatus.NotPlaying;
+            }
+            else if (!player.IsOnTeam)
+            {
+                status = ResistanceMissionStatus.NotOnTeam;
+            }
+            else if (player.MissionCard is not null)
+            {
+                status = ResistanceMissionStatus.AlreadyPlayed;
+            }
+            else if (!success && player.Role == ResistanceRole.Resistance)
+            {
+                status = ResistanceMissionStatus.MustSucceed;
+            }
+            else
+            {
+                player.MissionCard = success;
+                if (ResistanceRoles.AllCardsPlayed(game))
+                {
+                    ResistanceRoles.ResolveMission(game);
+                }
+            }
+
+            return Task.FromResult(new ResistanceMissionCardResult(status, game));
+        }
+
         public Task<ResistanceContinueResult> ContinueAsync(
             Guid sessionId, Guid? callerPlayerId, bool isManager, CancellationToken cancellationToken)
         {
@@ -1064,7 +1356,7 @@ public class ResistanceServiceTests
             {
                 status = ResistanceContinueStatus.NotAllowed;
             }
-            else if (game.Phase != ResistancePhase.VoteResult || ResistanceRoles.IsApproved(game))
+            else if (game.Phase != ResistancePhase.MissionResult)
             {
                 status = ResistanceContinueStatus.NothingToContinue;
             }
