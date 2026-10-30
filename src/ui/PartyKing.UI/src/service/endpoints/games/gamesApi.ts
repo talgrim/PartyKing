@@ -27,6 +27,12 @@ export const gamesApi = {
       withCredentials: true,
     }) as unknown as Promise<RingoGameDto>,
 
+  /** The host or an admin starts the finished game over with the same players: roles are dealt again; 409 unless the game is over. */
+  restartResistance: (sessionId: string) =>
+    axios.post(`/sessions/${sessionId}/games/resistance/restart`, null, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
   /** Joins the open game as a player; rejects with 409 when the name is taken, 400 for a bad name. The host's name is taken from Spotify. */
   joinRingo: (sessionId: string, name: string) =>
     axios.post(`/sessions/${sessionId}/games/ringo/join`, { name }, { withCredentials: true }) as unknown as Promise<void>,

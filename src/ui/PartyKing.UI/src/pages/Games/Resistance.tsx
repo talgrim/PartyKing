@@ -162,6 +162,15 @@ export const Resistance = (): ReactNode => {
     }
   };
 
+  const restartGame = async () => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.restartResistance(sessionId), { revalidate: false });
+    } catch {
+      setMessage('Could not restart the game.');
+    }
+  };
+
   const endGame = async () => {
     try {
       await gamesApi.endResistance(sessionId);
@@ -200,6 +209,7 @@ export const Resistance = (): ReactNode => {
       onOpen={() => void openGame()}
       onRefreshRules={() => void refreshRules()}
       onContinue={() => void continueGame()}
+      onRestart={() => void restartGame()}
     />
   );
 
