@@ -10,7 +10,7 @@ type Props = {
   leaderId?: string | null;
   /** Extra badges after a player's name (votes, roles). */
   marks?: (playerId: string) => ReactNode;
-  /** A card shown beside a player's tag, on the side facing the board (face-up plot cards). */
+  /** A card shown by a player's tag (face-up plot cards): above it along the bottom, below it along the side margins, so it stays out of the board. */
   beside?: (playerId: string) => ReactNode;
 };
 
@@ -24,7 +24,7 @@ export const ResistancePlayers = ({ players, yourPlayerId, leaderId = null, mark
         const you = player.id === yourPlayerId;
         const leader = player.id === leaderId;
         const seat = seats[index];
-        const side = seat.top >= 90 ? 'bottom-full mb-1 left-1/2 -translate-x-1/2' : seat.left < 50 ? 'left-full ml-1 top-1/2 -translate-y-1/2' : 'right-full mr-1 top-1/2 -translate-y-1/2';
+        const side = seat.top >= 90 ? 'bottom-full mb-1 left-1/2 -translate-x-1/2' : 'top-full mt-1 left-1/2 -translate-x-1/2';
         const card = beside?.(player.id);
 
         return (
