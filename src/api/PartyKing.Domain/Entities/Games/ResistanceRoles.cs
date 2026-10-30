@@ -100,6 +100,22 @@ public static class ResistanceRoles
         game.Phase = ResistancePhase.MissionResult;
     }
 
+    /// <summary>Clears everything a game accumulated (results, rejections, teams, votes, cards, winner) but keeps the players and rules.</summary>
+    public static void Reset(ResistanceGame game)
+    {
+        game.MissionResults.Clear();
+        game.MissionNumber = 1;
+        game.RejectedTeams = 0;
+        game.Winner = null;
+        game.Phase = ResistancePhase.SelectingTeam;
+        foreach (var player in game.Players)
+        {
+            player.IsOnTeam = false;
+            player.Vote = null;
+            player.MissionCard = null;
+        }
+    }
+
     /// <summary>Gives every player a random role and picks a random first leader.</summary>
     public static void Deal(ResistanceGame game, Random random)
     {

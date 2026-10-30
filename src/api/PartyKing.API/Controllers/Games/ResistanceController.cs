@@ -59,6 +59,20 @@ public class ResistanceController : GameControllerBase
     }
 
     /// <summary>
+    /// Host or admin: starts a finished Resistance game over with the same players (new roles and leader, mission 1).
+    /// 409 until the game is over.
+    /// </summary>
+    [HttpPost("restart")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> RestartResistance(Guid sessionId, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.RestartAsync(sessionId, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>
     /// Host or admin: replaces the game's rules (spies, team sizes, fails needed) with the current server
     /// configuration. 409 once the game is open or started.
     /// </summary>

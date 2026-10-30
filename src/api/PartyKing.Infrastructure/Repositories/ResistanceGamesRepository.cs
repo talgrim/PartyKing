@@ -19,6 +19,9 @@ public interface IResistanceGamesRepository : ILobbyGamesRepository<ResistanceGa
     /// </summary>
     Task<ResistanceStartResult> StartAsync(Guid sessionId, DateTimeOffset startedAt, CancellationToken cancellationToken);
 
+    /// <summary>Starts a finished game over with the same players: new roles and leader, mission 1, no results.</summary>
+    Task<ResistanceRestartResult> RestartAsync(Guid sessionId, DateTimeOffset startedAt, CancellationToken cancellationToken);
+
     /// <summary>
     /// The leader submits the team of the current mission, which locks it. Checked and saved in one writer context,
     /// so it can't race another submission.
@@ -147,6 +150,18 @@ public enum ResistanceStartStatus
 
 public record ResistanceStartResult(ResistanceStartStatus Status, ResistanceGame? Game);
 
+public enum ResistanceRestartStatus
+{
+    NoGame,
+    NotStarted,
+
+    /// <summary>The game is still being played; only a finished one restarts.</summary>
+    NotOver,
+    Restarted,
+}
+
+public record ResistanceRestartResult(ResistanceRestartStatus Status, ResistanceGame? Game);
+
 internal class ResistanceGamesRepository
     : LobbyGamesRepository<ResistanceGame, ResistancePlayer>, IResistanceGamesRepository
 {
@@ -224,6 +239,35 @@ internal class ResistanceGamesRepository
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return new ResistanceStartResult(ResistanceStartStatus.Started, game);
+    }
+
+    public async Task<ResistanceRestartResult> RestartAsync(
+        Guid sessionId, DateTimeOffset startedAt, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await CreateWriterAsync(cancellationToken);
+
+        var game = await LoadAsync(dbContext, sessionId, cancellationToken);
+        if (game is null)
+        {
+            return new ResistanceRestartResult(ResistanceRestartStatus.NoGame, null);
+        }
+
+        if (!game.IsStarted)
+        {
+            return new ResistanceRestartResult(ResistanceRestartStatus.NotStarted, game);
+        }
+
+        if (game.Phase != ResistancePhase.GameOver)
+        {
+            return new ResistanceRestartResult(ResistanceRestartStatus.NotOver, game);
+        }
+
+        ResistanceRoles.Reset(game);
+        ResistanceRoles.Deal(game, Random.Shared);
+        game.StartedAt = startedAt;
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return new ResistanceRestartResult(ResistanceRestartStatus.Restarted, game);
     }
 
     public async Task<ResistanceTeamResult> SelectTeamAsync(

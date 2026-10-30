@@ -41,6 +41,12 @@ public interface IResistanceService
     Task<ErrorOr<ResistanceGameDto>> StartAsync(Guid sessionId, GameCaller caller, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Host or admin: starts a finished game over with the same players (new roles and leader, mission 1). NotFound
+    /// without a game, Conflict before the start and while the game is still being played.
+    /// </summary>
+    Task<ErrorOr<ResistanceGameDto>> RestartAsync(Guid sessionId, GameCaller caller, CancellationToken cancellationToken);
+
+    /// <summary>
     /// The mission leader submits the team of the current mission: exactly <c>RequiredTeamSize</c> distinct players,
     /// which locks it. Forbidden for anyone but the leader (the host and admins get no override), NotFound without a
     /// game, Conflict before the start or once a team was submitted, Validation for a wrong size or unknown player.
@@ -218,6 +224,30 @@ internal class ResistanceService : IResistanceService
                 return Error.Conflict(
                     "Resistance.NotEnoughPlayers",
                     $"The game needs at least {ResistanceGame.MinPlayers} players to start.");
+        }
+
+        await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
+
+        return ToDto(result.Game!, caller);
+    }
+
+    public async Task<ErrorOr<ResistanceGameDto>> RestartAsync(
+        Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
+    {
+        if (await _lobby.AuthorizeAsync(sessionId, caller, cancellationToken) is { IsError: true } denied)
+        {
+            return denied.Errors;
+        }
+
+        var result = await _games.RestartAsync(sessionId, _clock.UtcNow, cancellationToken);
+        switch (result.Status)
+        {
+            case ResistanceRestartStatus.NoGame:
+                return _lobby.NoGame;
+            case ResistanceRestartStatus.NotStarted:
+                return Error.Conflict("Resistance.NotStarted", "The game has not started yet.");
+            case ResistanceRestartStatus.NotOver:
+                return Error.Conflict("Resistance.NotOver", "The game is still being played.");
         }
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
