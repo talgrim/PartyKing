@@ -34,6 +34,9 @@ const hubUrl = (sessionId: string) => {
   return `${base}/hubs/session?sessionId=${encodeURIComponent(sessionId)}`;
 };
 
+/** A burst of pushes (everyone voting at once) is answered with one refetch per client instead of one per push. */
+const RESISTANCE_REVALIDATE_DEBOUNCE_MS = 250;
+
 const revalidateSession = (sessionId: string) => {
   void mutate(queueSongsKey(sessionId));
   void mutate(nowPlayingKey(sessionId));
@@ -71,6 +74,7 @@ export const useSessionMusicHub = (
 
     let cancelled = false;
     let connection: HubConnection | undefined;
+    let resistanceTimer: ReturnType<typeof setTimeout> | undefined;
 
     const start = async () => {
       connection = new HubConnectionBuilder()
@@ -144,8 +148,11 @@ export const useSessionMusicHub = (
       });
 
       connection.on(SESSION_MUSIC_EVENTS.ResistanceChanged, () => {
-        void mutate(resistanceKey(sessionId));
-        void mutate(resistanceLobbyKey(sessionId));
+        clearTimeout(resistanceTimer);
+        resistanceTimer = setTimeout(() => {
+          void mutate(resistanceKey(sessionId));
+          void mutate(resistanceLobbyKey(sessionId));
+        }, RESISTANCE_REVALIDATE_DEBOUNCE_MS);
       });
 
       connection.on(SESSION_MUSIC_EVENTS.ResistanceOpened, () => {
@@ -174,6 +181,7 @@ export const useSessionMusicHub = (
 
     return () => {
       cancelled = true;
+      clearTimeout(resistanceTimer);
       const active = connection;
       connection = undefined;
       if (active && active.state !== HubConnectionState.Disconnected) {
