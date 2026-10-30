@@ -310,7 +310,7 @@ describe('Strong Leader leader window', () => {
     await user.click(screen.getByRole('button', { name: 'Odrzuć zatwierdzoną drużynę' }));
 
     expect(onNoConfidence).toHaveBeenCalledWith(7);
-    expect(resistancePhaseDescription(approved, { canManage: false, isAdmin: false }, 2)).toContain('Nie ufajcie mu');
+    expect(resistancePhaseDescription(approved, { canManage: false, isAdmin: false }, 2)).toContain('decydują, czy zagrywają karty');
   });
 });
 

@@ -146,7 +146,23 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
     private static Guid ResistanceTarget(ResistanceGame game, ResistancePlotCard card) =>
         ResistanceRoles.Neighbours(game, card.HolderPlayerId!.Value)[0];
 
-    private async Task SelectTeamAndVoteAsync(ResistanceGame game, bool approve)
+    /// <summary>Everybody confirms in an open leader or confidence window; nothing happens when none is open.</summary>
+    private async Task PassWindowsAsync()
+    {
+        var game = await ReloadAsync();
+        if (game.Phase is not (ResistancePhase.LeaderWindow or ResistancePhase.ConfidenceWindow))
+        {
+            return;
+        }
+
+        foreach (var player in game.Players)
+        {
+            await _repository.PassLeaderWindowAsync(_sessionId, player.PlayerId, CancellationToken.None);
+        }
+    }
+
+    /// <param name="passWindows">Confirms the window a vote may open (any card in a hand opens one), so the round goes on.</param>
+    private async Task SelectTeamAndVoteAsync(ResistanceGame game, bool approve, bool passWindows = true)
     {
         var ct = CancellationToken.None;
         var size = game.Rules.TeamSize(game.Players.Count, game.MissionNumber);
@@ -156,6 +172,11 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         foreach (var player in game.Players.OrderBy(x => makers.Contains(x.PlayerId) ? 0 : 1))
         {
             await _repository.VoteAsync(_sessionId, player.PlayerId, approve, ct);
+        }
+
+        if (passWindows)
+        {
+            await PassWindowsAsync();
         }
     }
 
@@ -324,6 +345,7 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         }
 
         await _repository.ContinueAsync(_sessionId, game.LeaderPlayerId, true, ct);
+        await PassWindowsAsync();
 
         var after = await ReloadAsync();
         Assert.Equal(2, after.MissionNumber);
@@ -785,6 +807,8 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
             await _repository.VoteAsync(_sessionId, player.PlayerId, true, ct);
         }
 
+        await PassWindowsAsync();
+
         Assert.Equal(ResistancePlayCardStatus.Done, (await _repository.TakeResponsibilityAsync(_sessionId, card.HolderPlayerId, card.CardId, target, null, ct)).Status);
         Assert.Equal(ResistancePlayCardStatus.WrongState, (await _repository.TakeResponsibilityAsync(_sessionId, card.HolderPlayerId, card.CardId, target, null, ct)).Status);
     }
@@ -801,7 +825,7 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         var holder = game.Players.First(x => x.PlayerId != game.LeaderPlayerId && x.PlayerId != next).PlayerId;
         await SetCardAsync(card.CardId, holder, ResistancePlotCardLocation.Hand);
 
-        await SelectTeamAndVoteAsync(await ReloadAsync(), approve: false);
+        await SelectTeamAndVoteAsync(await ReloadAsync(), approve: false, passWindows: false);
         game = await ReloadAsync();
         Assert.Equal(ResistancePhase.LeaderWindow, game.Phase);
 
@@ -863,7 +887,7 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
     {
         var game = await StartAsync(5, plotCards: true, onlyType: ResistancePlotCardType.NoConfidence);
         await DealAsync(game);
-        await SelectTeamAndVoteAsync(await ReloadAsync(), approve: true);
+        await SelectTeamAndVoteAsync(await ReloadAsync(), approve: true, passWindows: false);
         game = await ReloadAsync();
         Assert.Equal(ResistancePhase.ConfidenceWindow, game.Phase);
 
@@ -1011,5 +1035,30 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         var again = await _repository.PeekMissionCardAsync(_sessionId, second, SpareCardId(game), target, ct);
 
         Assert.Equal(ResistancePlayCardStatus.InvalidTarget, again.Status);
+    }
+
+    [Theory]
+    [InlineData(ResistancePlotCardType.InTheSpotlight)]
+    [InlineData(ResistancePlotCardType.TakeResponsibility)]
+    [InlineData(ResistancePlotCardType.KeepingCloseEye)]
+    public async Task AnyCardInAHand_OpensTheConfidenceWindowSoItNeverTellsWhichCardIsOut(ResistancePlotCardType type)
+    {
+        var game = await StartAsync(5, plotCards: true, onlyType: type);
+        await DealAsync(game);
+
+        await SelectTeamAndVoteAsync(await ReloadAsync(), approve: true, passWindows: false);
+
+        Assert.Equal(ResistancePhase.ConfidenceWindow, (await ReloadAsync()).Phase);
+    }
+
+    [Fact]
+    public async Task WithoutPlayableCardsInAHand_NoWindowOpens()
+    {
+        var game = await StartAsync(5, plotCards: true, onlyOpinionMakers: true);
+        await DealAsync(game);
+
+        await SelectTeamAndVoteAsync(await ReloadAsync(), approve: true, passWindows: false);
+
+        Assert.Equal(ResistancePhase.PlayingMission, (await ReloadAsync()).Phase);
     }
 }
