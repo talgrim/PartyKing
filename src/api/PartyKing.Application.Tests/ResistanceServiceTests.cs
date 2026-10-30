@@ -1,3 +1,4 @@
+using ErrorOr;
 using Microsoft.Extensions.Logging.Abstractions;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Games.Services;
@@ -785,6 +786,78 @@ public class ResistanceServiceTests
         Assert.Equal("Resistance.GameOver", (await _service.SelectTeamAsync(_id, team, callers.First(x => x.PlayerId == leaderId), ct)).FirstError.Code);
     }
 
+    private async Task<List<GameCaller>> EndGameAsync()
+    {
+        var ct = CancellationToken.None;
+        var callers = await OpenGameAndJoinAsync(5);
+        var started = (await _service.StartAsync(_id, Host, ct)).Value;
+        var team = started.Players.Take(2).Select(x => x.Id).ToList();
+        var leaderId = started.LeaderPlayerId;
+        for (var i = 1; i <= 5; i++)
+        {
+            await _service.SelectTeamAsync(_id, team, callers.First(x => x.PlayerId == leaderId), ct);
+            await VoteAsync(callers, false, false, false, false, false);
+            leaderId = (await _service.GetAsync(_id, Host, ct)).Value.LeaderPlayerId;
+        }
+
+        return callers;
+    }
+
+    [Fact]
+    public async Task Restart_AfterTheGameEnded_DealsAgainAndStartsOver()
+    {
+        var ct = CancellationToken.None;
+        var callers = await EndGameAsync();
+
+        var before = _notifier.ResistanceChanges.Count;
+        var restarted = await _service.RestartAsync(_id, Host, ct);
+
+        Assert.False(restarted.IsError);
+        var game = restarted.Value;
+        Assert.Equal(ResistancePhaseDto.SelectingTeam, game.Phase);
+        Assert.Equal(1, game.MissionNumber);
+        Assert.Equal(0, game.RejectedTeams);
+        Assert.Null(game.Winner);
+        Assert.Null(game.RevealedRoles);
+        Assert.Null(game.Votes);
+        Assert.Empty(game.MissionResults);
+        Assert.Equal(5, game.Players.Count);
+        Assert.Contains(game.Players, x => x.Id == game.LeaderPlayerId);
+        Assert.Contains(callers, x => (_service.GetAsync(_id, x, ct).Result.Value).YourRole is not null);
+        Assert.Equal(before + 1, _notifier.ResistanceChanges.Count);
+    }
+
+    [Fact]
+    public async Task Restart_WhileTheGameIsOn_Conflicts()
+    {
+        await StartWithTeamAsync(5);
+
+        var result = await _service.RestartAsync(_id, Host, CancellationToken.None);
+
+        Assert.Equal("Resistance.NotOver", result.FirstError.Code);
+    }
+
+    [Fact]
+    public async Task Restart_BeforeTheStart_Conflicts()
+    {
+        await OpenGameAndJoinAsync(5);
+
+        var result = await _service.RestartAsync(_id, Host, CancellationToken.None);
+
+        Assert.Equal("Resistance.NotStarted", result.FirstError.Code);
+    }
+
+    [Fact]
+    public async Task Restart_IsNotForPlayers()
+    {
+        var callers = await EndGameAsync();
+
+        var result = await _service.RestartAsync(_id, callers[0], CancellationToken.None);
+
+        Assert.True(result.IsError);
+        Assert.Equal(ErrorType.Forbidden, result.FirstError.Type);
+    }
+
     [Fact]
     public async Task AnApproval_ResetsTheRejectionCount()
     {
@@ -1196,6 +1269,33 @@ public class ResistanceServiceTests
             }
 
             return Task.FromResult(new ResistanceStartResult(status, game));
+        }
+
+        public Task<ResistanceRestartResult> RestartAsync(
+            Guid sessionId, DateTimeOffset startedAt, CancellationToken cancellationToken)
+        {
+            var status = ResistanceRestartStatus.Restarted;
+            _games.TryGetValue(sessionId, out var game);
+            if (game is null)
+            {
+                status = ResistanceRestartStatus.NoGame;
+            }
+            else if (!game.IsStarted)
+            {
+                status = ResistanceRestartStatus.NotStarted;
+            }
+            else if (game.Phase != ResistancePhase.GameOver)
+            {
+                status = ResistanceRestartStatus.NotOver;
+            }
+            else
+            {
+                ResistanceRoles.Reset(game);
+                ResistanceRoles.Deal(game, new Random(2));
+                game.StartedAt = startedAt;
+            }
+
+            return Task.FromResult(new ResistanceRestartResult(status, game));
         }
 
         public Task<ResistanceTeamResult> SelectTeamAsync(

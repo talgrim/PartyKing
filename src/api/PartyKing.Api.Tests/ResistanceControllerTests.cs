@@ -115,6 +115,28 @@ public class ResistanceControllerTests
         Assert.Equal(status, Assert.IsType<ObjectResult>(result).StatusCode);
     }
 
+    [Fact]
+    public async Task Restart_PassesTheCallerToTheService()
+    {
+        _service.Result = Game();
+
+        var result = await _controller.RestartResistance(_sessionId, CancellationToken.None);
+
+        Assert.Equal(("restart", _sessionId, null, _playerId), _service.LastCall);
+        Assert.IsType<OkObjectResult>(result);
+    }
+
+    [Theory]
+    [MemberData(nameof(Errors))]
+    public async Task Restart_MapsServiceErrorsToTheirStatusCodes(Error error, int status)
+    {
+        _service.Result = error;
+
+        var result = await _controller.RestartResistance(_sessionId, CancellationToken.None);
+
+        Assert.Equal(status, Assert.IsType<ObjectResult>(result).StatusCode);
+    }
+
     public static TheoryData<Error, int> Errors => new()
     {
         { Error.Forbidden("Resistance.NotPlayer", "x"), StatusCodes.Status403Forbidden },
@@ -166,6 +188,13 @@ public class ResistanceControllerTests
         public Task<ErrorOr<ResistanceGameDto>> OpenAsync(Guid sessionId, GameCaller caller, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<ErrorOr<Guid>> JoinAsync(Guid sessionId, string? name, GameCaller caller, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<ErrorOr<ResistanceGameDto>> StartAsync(Guid sessionId, GameCaller caller, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<ErrorOr<ResistanceGameDto>> RestartAsync(
+            Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
+        {
+            LastCall = ("restart", sessionId, null, caller.PlayerId);
+            return Task.FromResult(Result);
+        }
+
         public Task<ErrorOr<ResistanceGameDto>> SelectTeamAsync(Guid sessionId, IReadOnlyList<Guid>? playerIds, GameCaller caller, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<ErrorOr<ResistanceGameDto>> KickAsync(Guid sessionId, Guid playerId, GameCaller caller, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<ErrorOr<ResistanceGameDto>> ReorderAsync(Guid sessionId, IReadOnlyList<Guid>? playerIds, GameCaller caller, CancellationToken cancellationToken) => throw new NotSupportedException();

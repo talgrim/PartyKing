@@ -246,6 +246,52 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Restart_AfterTheGameEnded_ClearsTheResultsAndDealsAgain()
+    {
+        var ct = CancellationToken.None;
+        await StartGameWithTeamAsync(5);
+        await VoteAsync(true, true, true, true, true);
+        foreach (var member in (await ReloadAsync()).Players.Where(x => x.IsOnTeam).ToList())
+        {
+            await _repository.PlayMissionCardAsync(_sessionId, member.PlayerId, member.Role == ResistanceRole.Resistance, ct);
+        }
+
+        await _repository.ContinueAsync(_sessionId, null, isManager: true, ct);
+        Assert.Equal(ResistanceRestartStatus.NotOver, (await _repository.RestartAsync(_sessionId, DateTimeOffset.UtcNow, ct)).Status);
+
+        for (var i = 1; i <= 5; i++)
+        {
+            var current = await ReloadAsync();
+            var size = current.Rules.TeamSize(5, current.MissionNumber);
+            Assert.Equal(ResistanceTeamStatus.Selected, (await _repository.SelectTeamAsync(_sessionId, current.LeaderPlayerId, _players.Take(size).ToList(), ct)).Status);
+            await VoteAsync(false, false, false, false, false);
+        }
+
+        Assert.Equal(ResistancePhase.GameOver, (await ReloadAsync()).Phase);
+        var restartedAt = DateTimeOffset.UtcNow;
+
+        var result = await _repository.RestartAsync(_sessionId, restartedAt, ct);
+
+        Assert.Equal(ResistanceRestartStatus.Restarted, result.Status);
+        var game = await ReloadAsync();
+        Assert.Equal(ResistancePhase.SelectingTeam, game.Phase);
+        Assert.Equal(1, game.MissionNumber);
+        Assert.Equal(0, game.RejectedTeams);
+        Assert.Null(game.Winner);
+        Assert.Empty(game.MissionResults);
+        Assert.Equal(5, game.Players.Count);
+        Assert.All(game.Players, x =>
+        {
+            Assert.False(x.IsOnTeam);
+            Assert.Null(x.Vote);
+            Assert.Null(x.MissionCard);
+        });
+        Assert.Equal(2, game.Players.Count(x => x.Role == ResistanceRole.Spy));
+        Assert.Contains(_players, x => x == game.LeaderPlayerId);
+        Assert.Equal(restartedAt, game.StartedAt);
+    }
+
+    [Fact]
     public async Task TheFifthRejectedTeamInARow_EndsTheGameWithTheSpiesWinning()
     {
         var ct = CancellationToken.None;
