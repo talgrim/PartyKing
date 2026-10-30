@@ -25,6 +25,7 @@ export const ResistancePlotHand = ({ cards }: Props): ReactNode => {
               <div className="min-w-0">
                 <p className="font-medium text-slate-100">{name}</p>
                 <p className="text-sm text-slate-400">{effect}</p>
+                {card.inPlay && <p className="text-sm text-amber-300">W grze, widoczna dla wszystkich.</p>}
               </div>
             </li>
           );

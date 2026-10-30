@@ -104,6 +104,10 @@ export type ResistanceGameDto = {
   yourPlotCards: ResistancePlotCardDto[];
   /** How many plot cards each player holds in hand (not which); public, empty without the add-on. */
   plotCardCounts: ResistancePlotCardCountDto[];
+  /** Players with an Opinion Maker in play, face up for everyone; they reveal their vote before the others vote. */
+  opinionMakerPlayerIds: string[];
+  /** The Opinion Makers' votes, once every one of them has voted (the vote is final); empty before. */
+  opinionMakerVotes: ResistanceVoteDto[];
 };
 
 // Mirrors PartyKing.Contract.V1.Games.ResistancePlotCardDto
@@ -112,6 +116,8 @@ export type ResistancePlotCardDto = {
   type: ResistancePlotCardType;
   /** True for a card the leader just drew and has to hand to another player. */
   toDeal: boolean;
+  /** True for an Opinion Maker, which is played face up the moment it is dealt. */
+  inPlay: boolean;
 };
 
 // Mirrors PartyKing.Contract.V1.Games.ResistancePlotCardCountDto

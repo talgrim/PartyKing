@@ -14,7 +14,7 @@ export const RESISTANCE_RULES: { title: string; text: string }[] = [
   },
   {
     title: 'Karty Intryg (dodatek)',
-    text: 'Gdy host włączy dodatek przed otwarciem gry, Lider na początku każdej misji (nie po odrzuceniu drużyny) dobiera karty Intryg: 1 przy 5-6 graczach, 2 przy 7-8, 3 przy 9-10, i rozdaje je innym graczom. Karta „To kwestia zaufania” zostaje u Lidera. Liczba kart w ręku każdego gracza jest jawna, same karty są tajne.',
+    text: 'Gdy host włączy dodatek przed otwarciem gry, Lider na początku każdej misji (nie po odrzuceniu drużyny) dobiera karty Intryg: 1 przy 5-6 graczach, 2 przy 7-8, 3 przy 9-10, i rozdaje je innym graczom. Karta „To kwestia zaufania” zostaje u Lidera. Liczba kart w ręku każdego gracza jest jawna, same karty są tajne. „Kreator opinii” trafia od razu na stół, widoczny dla wszystkich: jego właściciel głosuje nad drużyną pierwszy, jawnie i bez możliwości zmiany, a pozostali czekają (dwóch kreatorów głosuje jednocześnie).',
   },
   {
     title: 'Koniec gry',

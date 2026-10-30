@@ -16,7 +16,10 @@ export const ResistancePlayerMarks = ({ game, playerId }: Props): ReactNode => {
   const votesShown = game.phase === 'SelectingTeam' || game.phase === 'PlayingMission';
   const vote = votesShown ? game.votes?.find((x) => x.playerId === playerId) : undefined;
   const role = game.revealedRoles?.find((x) => x.playerId === playerId)?.role;
-  const waiting = game.phase === 'Voting' && game.votedPlayerIds.includes(playerId);
+  const maker = game.opinionMakerPlayerIds.includes(playerId);
+  // A revealed Opinion Maker vote replaces the plain "voted" tick while the vote is on
+  const makerVote = game.phase === 'Voting' ? game.opinionMakerVotes.find((x) => x.playerId === playerId) : undefined;
+  const waiting = game.phase === 'Voting' && game.votedPlayerIds.includes(playerId) && makerVote == null;
 
   const cardCount = game.plotCardCounts.find((x) => x.playerId === playerId)?.count ?? 0;
 
@@ -24,6 +27,16 @@ export const ResistancePlayerMarks = ({ game, playerId }: Props): ReactNode => {
 
   return (
     <>
+      {maker && (
+        <span title="Kreator opinii" className={`${badge} bg-amber-400 text-slate-900`}>
+          Kreator opinii
+        </span>
+      )}
+      {makerVote && (
+        <span className={`${badge} ${makerVote.approve ? 'bg-emerald-400 text-slate-900' : 'bg-rose-400 text-slate-900'}`}>
+          {makerVote.approve ? 'Za' : 'Przeciw'}
+        </span>
+      )}
       {cardCount > 0 && (
         <span title={`Karty Intryg: ${cardCount}`} className={`${badge} bg-amber-700 text-white`}>
           <span aria-hidden="true">🂠 {cardCount}</span>

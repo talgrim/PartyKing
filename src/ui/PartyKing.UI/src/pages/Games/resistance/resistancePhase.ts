@@ -92,7 +92,14 @@ export const resistancePhaseDescription = (
             ? ' Zagłosuj: zatwierdź albo odrzuć drużynę.'
             : ' Twój głos możesz zmienić, dopóki nie zagłosują wszyscy.';
 
-      return `${who} (korona) zgłosił/a drużynę na ${mission} misję: ${names.join(', ')}. Teraz drużyna idzie pod głosowanie. ${progress}${mine}${card}`;
+      const makers = game.players.filter((player) => game.opinionMakerPlayerIds.includes(player.id));
+      const pendingMakers = makers.filter((player) => !game.votedPlayerIds.includes(player.id));
+      const order =
+        pendingMakers.length > 0
+          ? ` Najpierw głosuje kreator opinii: ${pendingMakers.map((player) => player.name).join(', ')}.`
+          : '';
+
+      return `${who} (korona) zgłosił/a drużynę na ${mission} misję: ${names.join(', ')}. Teraz drużyna idzie pod głosowanie. ${progress}${order}${mine}${card}`;
     }
 
     const task = youLead
