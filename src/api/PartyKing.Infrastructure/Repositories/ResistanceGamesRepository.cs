@@ -36,6 +36,14 @@ public interface IResistanceGamesRepository : ILobbyGamesRepository<ResistanceGa
         Guid sessionId, Guid? callerPlayerId, IReadOnlyList<Guid> playerIds, CancellationToken cancellationToken);
 
     /// <summary>
+    /// The leader hands the cards drawn for this mission to the other players (every card but Establish Confidence,
+    /// which the leader keeps), which moves the game on to picking the team. Checked and saved in one writer context.
+    /// </summary>
+    Task<ResistanceDealResult> DealPlotCardsAsync(
+        Guid sessionId, Guid? callerPlayerId, IReadOnlyList<PlotCardAssignment> assignments,
+        CancellationToken cancellationToken);
+
+    /// <summary>
     /// A player votes on the submitted team (a repeated vote replaces the earlier one). The vote that completes the
     /// round is tallied in the same save: a majority approves, otherwise (a tie too) the team is rejected, which
     /// counts towards the five that make the spies win.
@@ -80,6 +88,9 @@ public enum ResistanceTeamStatus
     NotLeader,
     AlreadySubmitted,
 
+    /// <summary>The leader still has to hand out the plot cards.</summary>
+    CardsNotDealt,
+
     /// <summary>Not exactly <see cref="ResistanceRules.TeamSize"/> distinct players.</summary>
     WrongSize,
     UnknownPlayer,
@@ -87,6 +98,34 @@ public enum ResistanceTeamStatus
 }
 
 public record ResistanceTeamResult(ResistanceTeamStatus Status, ResistanceGame? Game);
+
+/// <summary>The leader gives the card with this id to the player.</summary>
+public record PlotCardAssignment(int CardId, Guid PlayerId);
+
+public enum ResistanceDealStatus
+{
+    NoGame,
+    NotStarted,
+    GameOver,
+
+    /// <summary>The caller is not the player leading the mission.</summary>
+    NotLeader,
+
+    /// <summary>No cards are waiting to be handed out (add-on off, or already dealt).</summary>
+    NotDealing,
+
+    /// <summary>A card that was not drawn, is kept by the leader, or is given twice.</summary>
+    UnknownCard,
+
+    /// <summary>A receiver that is not a player, or the leader themselves.</summary>
+    InvalidReceiver,
+
+    /// <summary>Some of the cards to hand out are left.</summary>
+    Incomplete,
+    Dealt,
+}
+
+public record ResistanceDealResult(ResistanceDealStatus Status, ResistanceGame? Game);
 
 public enum ResistanceVoteStatus
 {
@@ -184,7 +223,7 @@ internal class ResistanceGamesRepository
 
     protected override IQueryable<ResistanceGame> Games(PartyKingDbContextBase dbContext)
     {
-        return dbContext.ResistanceGames.Include(x => x.Players).Include(x => x.MissionResults);
+        return dbContext.ResistanceGames.Include(x => x.Players).Include(x => x.MissionResults).Include(x => x.PlotCards);
     }
 
     protected override DbSet<ResistanceGame> Table(PartyKingDbContextBase dbContext) => dbContext.ResistanceGames;
@@ -331,6 +370,11 @@ internal class ResistanceGamesRepository
             return new ResistanceTeamResult(ResistanceTeamStatus.NotLeader, game);
         }
 
+        if (game.Phase == ResistancePhase.DealingCards)
+        {
+            return new ResistanceTeamResult(ResistanceTeamStatus.CardsNotDealt, game);
+        }
+
         if (game.Phase != ResistancePhase.SelectingTeam)
         {
             return new ResistanceTeamResult(ResistanceTeamStatus.AlreadySubmitted, game);
@@ -358,6 +402,74 @@ internal class ResistanceGamesRepository
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return new ResistanceTeamResult(ResistanceTeamStatus.Selected, game);
+    }
+
+    public async Task<ResistanceDealResult> DealPlotCardsAsync(
+        Guid sessionId, Guid? callerPlayerId, IReadOnlyList<PlotCardAssignment> assignments,
+        CancellationToken cancellationToken)
+    {
+        await using var dbContext = await CreateWriterAsync(cancellationToken);
+
+        var game = await LoadAsync(dbContext, sessionId, cancellationToken);
+        if (game is null)
+        {
+            return new ResistanceDealResult(ResistanceDealStatus.NoGame, null);
+        }
+
+        if (!game.IsStarted)
+        {
+            return new ResistanceDealResult(ResistanceDealStatus.NotStarted, game);
+        }
+
+        if (game.Phase == ResistancePhase.GameOver)
+        {
+            return new ResistanceDealResult(ResistanceDealStatus.GameOver, game);
+        }
+
+        if (callerPlayerId is null || callerPlayerId != game.LeaderPlayerId)
+        {
+            return new ResistanceDealResult(ResistanceDealStatus.NotLeader, game);
+        }
+
+        if (game.Phase != ResistancePhase.DealingCards)
+        {
+            return new ResistanceDealResult(ResistanceDealStatus.NotDealing, game);
+        }
+
+        var toDeal = ResistanceRoles.CardsToDeal(game).ToDictionary(x => x.CardId);
+        if (assignments.Any(x => !toDeal.ContainsKey(x.CardId))
+            || assignments.Select(x => x.CardId).Distinct().Count() != assignments.Count)
+        {
+            return new ResistanceDealResult(ResistanceDealStatus.UnknownCard, game);
+        }
+
+        if (assignments.Any(x => x.PlayerId == game.LeaderPlayerId || game.Players.All(p => p.PlayerId != x.PlayerId)))
+        {
+            return new ResistanceDealResult(ResistanceDealStatus.InvalidReceiver, game);
+        }
+
+        if (assignments.Count != toDeal.Count)
+        {
+            return new ResistanceDealResult(ResistanceDealStatus.Incomplete, game);
+        }
+
+        foreach (var assignment in assignments)
+        {
+            var card = toDeal[assignment.CardId];
+            card.Location = ResistancePlotCardLocation.Hand;
+            card.HolderPlayerId = assignment.PlayerId;
+        }
+
+        // The leader keeps the cards they play on themselves (Establish Confidence)
+        foreach (var kept in game.PlotCards.Where(x => x.Location == ResistancePlotCardLocation.Drawn))
+        {
+            kept.Location = ResistancePlotCardLocation.Hand;
+        }
+
+        game.Phase = ResistancePhase.SelectingTeam;
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return new ResistanceDealResult(ResistanceDealStatus.Dealt, game);
     }
 
     public async Task<ResistanceVoteResult> VoteAsync(
