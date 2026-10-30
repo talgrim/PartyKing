@@ -120,7 +120,7 @@ export type ResistancePlayedPlotCardDto = {
   type: ResistancePlotCardType;
   holderPlayerId: string;
   /** The neighbour (Overheard Conversation) or the player the card was played on. */
-  targetPlayerId: string;
+  targetPlayerId: string | null;
   missionNumber: number;
   isConfirmed: boolean;
 };

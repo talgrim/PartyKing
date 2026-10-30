@@ -55,11 +55,12 @@ public record ResistanceGameDto(
     IReadOnlyList<ResistanceCardRevealDto> YourReveals);
 
 /// <summary>
-/// An immediate plot card that was played; public, newest first. The identity card it showed stays with its viewer.
-/// <paramref name="TargetPlayerId"/> is the neighbour (Overheard Conversation) or the player it was played on.
+/// A plot card that was played; public, newest first. The identity card it showed stays with its viewer.
+/// <paramref name="TargetPlayerId"/> is the neighbour (Overheard Conversation) or the player it was played on, and
+/// null for a card without a target.
 /// </summary>
 public record ResistancePlayedPlotCardDto(
-    int Id, ResistancePlotCardTypeDto Type, Guid HolderPlayerId, Guid TargetPlayerId, int MissionNumber, bool IsConfirmed);
+    int Id, ResistancePlotCardTypeDto Type, Guid HolderPlayerId, Guid? TargetPlayerId, int MissionNumber, bool IsConfirmed);
 
 /// <summary>The identity card a played card shows the caller, until they confirm having seen it.</summary>
 public record ResistanceCardRevealDto(int CardId, Guid PlayerId, ResistanceRoleDto Role);

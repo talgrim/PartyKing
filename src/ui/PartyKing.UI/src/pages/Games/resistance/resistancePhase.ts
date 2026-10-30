@@ -1,4 +1,5 @@
 import { ResistanceGameDto } from '@/service/endpoints/games/types';
+import { IMMEDIATE_PLOT_CARDS } from './resistancePlotCards';
 import { MIN_PLAYERS } from './resistanceTeams';
 
 const MAX_REJECTED_TEAMS = 5;
@@ -60,7 +61,7 @@ export const resistancePhaseDescription = (
 
     if (game.phase === 'ResolvingCards') {
       const waiting = game.playedPlotCards
-        .filter((card) => !card.isConfirmed)
+        .filter((card) => IMMEDIATE_PLOT_CARDS.includes(card.type) && !card.isConfirmed)
         .map((card) => game.players.find((player) => player.id === (card.type === 'OverheardConversation' ? card.holderPlayerId : card.targetPlayerId))?.name)
         .filter((name) => name != null);
       const confirm = waiting.length > 0 ? ` Czekamy na potwierdzenie: ${waiting.join(', ')}.` : '';

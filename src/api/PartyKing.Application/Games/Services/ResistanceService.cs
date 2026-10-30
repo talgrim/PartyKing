@@ -707,7 +707,7 @@ internal class ResistanceService : IResistanceService
                 .Where(x => x.Location == ResistancePlotCardLocation.Played)
                 .OrderByDescending(x => x.PlayedAt)
                 .Select(x => new ResistancePlayedPlotCardDto(
-                    x.CardId, (ResistancePlotCardTypeDto)x.Type, x.HolderPlayerId!.Value, x.TargetPlayerId!.Value,
+                    x.CardId, (ResistancePlotCardTypeDto)x.Type, x.HolderPlayerId!.Value, x.TargetPlayerId,
                     x.PlayedInMission, x.IsConfirmed))
                 .ToList(),
             // Only the player an identity card is shown to sees it, and only until they confirm

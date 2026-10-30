@@ -11,7 +11,8 @@ const describe = (card: ResistancePlayedPlotCardDto, holder: string, target: str
   const { name } = PLOT_CARDS[card.type];
   if (card.type === 'OverheardConversation') return `${holder} zagrał/a „${name}” i ogląda kartę Tożsamości gracza ${target}`;
   if (card.type === 'EstablishConfidence') return `${holder} (przywódca) zagrał/a „${name}” i ujawnia swoją kartę Tożsamości graczowi ${target}`;
-  return `${holder} zagrał/a „${name}” i ujawnia swoją kartę Tożsamości graczowi ${target}`;
+  if (card.type === 'OpenUp') return `${holder} zagrał/a „${name}” i ujawnia swoją kartę Tożsamości graczowi ${target}`;
+  return `${holder} zagrał/a „${name}”`;
 };
 
 /** The public log of the played immediate plot cards, newest first. Who saw what stays with the receiver. */
@@ -27,7 +28,7 @@ export const ResistancePlotLog = ({ cards, players }: Props): ReactNode => {
         {cards.map((card) => (
           <li key={card.id}>
             <span className="text-slate-500">Misja {card.missionNumber}: </span>
-            {describe(card, nameOf(card.holderPlayerId), nameOf(card.targetPlayerId))}
+            {describe(card, nameOf(card.holderPlayerId), card.targetPlayerId ? nameOf(card.targetPlayerId) : '')}
             {!card.isConfirmed && <span className="text-amber-300"> (czeka na potwierdzenie)</span>}
           </li>
         ))}

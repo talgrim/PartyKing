@@ -109,9 +109,9 @@ public static class ResistanceRoles
     public static IEnumerable<ResistancePlotCard> UnplayedImmediateCards(ResistanceGame game) =>
         game.PlotCards.Where(x => x.Location == ResistancePlotCardLocation.Hand && IsImmediate(x.Type));
 
-    /// <summary>The played cards whose receiver has not confirmed yet.</summary>
+    /// <summary>The played immediate cards whose receiver has not confirmed yet; other cards show nobody an identity card.</summary>
     public static IEnumerable<ResistancePlotCard> UnconfirmedCards(ResistanceGame game) =>
-        game.PlotCards.Where(x => x.Location == ResistancePlotCardLocation.Played && !x.IsConfirmed);
+        game.PlotCards.Where(x => x.Location == ResistancePlotCardLocation.Played && IsImmediate(x.Type) && !x.IsConfirmed);
 
     /// <summary>The player who sees the identity card an immediate card shows: the holder of Overheard Conversation, else the target.</summary>
     public static Guid? Viewer(ResistancePlotCard card) =>
