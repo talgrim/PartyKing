@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Data.Common;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using PartyKing.Domain.Entities.Auth;
 using PartyKing.Domain.Entities.Games;
 using PartyKing.Domain.Entities.Lyrics;
@@ -37,6 +39,30 @@ public class WriterDbContext : PartyKingDbContextBase
     }
 }
 
+/// <summary>
+/// WAL (set once at startup) is safe with synchronous=NORMAL: a power cut can lose the last commits but never corrupts
+/// the file, and a write no longer waits for an fsync. The setting belongs to the connection, so it is applied on every open.
+/// </summary>
+internal sealed class SynchronousNormalInterceptor : DbConnectionInterceptor
+{
+    public static readonly SynchronousNormalInterceptor Instance = new();
+
+    public override void ConnectionOpened(DbConnection connection, ConnectionEndEventData eventData)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "PRAGMA synchronous=NORMAL;";
+        command.ExecuteNonQuery();
+    }
+
+    public override async Task ConnectionOpenedAsync(
+        DbConnection connection, ConnectionEndEventData eventData, CancellationToken cancellationToken = default)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = "PRAGMA synchronous=NORMAL;";
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+}
+
 public class PartyKingDbContextBase : DbContext
 {
     /// <summary>Environment variable that overrides the SQLite file location (defaults to PartyKing.db in the working directory).</summary>
@@ -54,7 +80,9 @@ public class PartyKingDbContextBase : DbContext
             return;
         }
 
-        optionsBuilder.UseSqlite($"Data Source={Environment.GetEnvironmentVariable(DatabasePathVariable) ?? "PartyKing.db"}");
+        optionsBuilder
+            .UseSqlite($"Data Source={Environment.GetEnvironmentVariable(DatabasePathVariable) ?? "PartyKing.db"}")
+            .AddInterceptors(SynchronousNormalInterceptor.Instance);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
