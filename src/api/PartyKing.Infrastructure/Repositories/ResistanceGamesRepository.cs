@@ -349,7 +349,7 @@ internal class ResistanceGamesRepository
 
         rules.PlotCardsEnabled = game.Rules.PlotCardsEnabled;
         game.Rules = rules;
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await SaveAsync(dbContext, cancellationToken);
 
         return new ResistanceRulesResult(ResistanceRulesStatus.Refreshed, game);
     }
@@ -377,7 +377,7 @@ internal class ResistanceGamesRepository
             PlotDeck = game.Rules.PlotDeck,
             PlotCardsEnabled = enabled,
         };
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await SaveAsync(dbContext, cancellationToken);
 
         return new ResistanceRulesResult(ResistanceRulesStatus.Refreshed, game);
     }
@@ -410,7 +410,7 @@ internal class ResistanceGamesRepository
 
         ResistanceRoles.Deal(game, Random.Shared);
         game.StartedAt = startedAt;
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await SaveAsync(dbContext, cancellationToken);
 
         return new ResistanceStartResult(ResistanceStartStatus.Started, game);
     }
@@ -438,7 +438,7 @@ internal class ResistanceGamesRepository
 
         ResistanceRoles.Reset(game);
         game.StartedAt = null;
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await SaveAsync(dbContext, cancellationToken);
 
         return new ResistanceRestartResult(ResistanceRestartStatus.Restarted, game);
     }
@@ -498,7 +498,7 @@ internal class ResistanceGamesRepository
         }
 
         game.Phase = ResistancePhase.Voting;
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await SaveAsync(dbContext, cancellationToken);
 
         return new ResistanceTeamResult(ResistanceTeamStatus.Selected, game);
     }
@@ -569,7 +569,7 @@ internal class ResistanceGamesRepository
         }
 
         ResistanceRoles.AfterDeal(game);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await SaveAsync(dbContext, cancellationToken);
 
         return new ResistanceDealResult(ResistanceDealStatus.Dealt, game);
     }
@@ -647,7 +647,7 @@ internal class ResistanceGamesRepository
         card.PlayedAt = DateTimeOffset.UtcNow;
         card.PlayedInMission = game.MissionNumber;
         card.IsConfirmed = spotlight;
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await SaveAsync(dbContext, cancellationToken);
 
         return new ResistancePlayCardResult(ResistancePlayCardStatus.Done, game);
     }
@@ -725,7 +725,7 @@ internal class ResistanceGamesRepository
         card.PlayedAt = DateTimeOffset.UtcNow;
         card.PlayedInMission = game.MissionNumber;
         card.IsConfirmed = true;
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await SaveAsync(dbContext, cancellationToken);
 
         return new ResistancePlayCardResult(ResistancePlayCardStatus.Done, game);
     }
@@ -776,7 +776,7 @@ internal class ResistanceGamesRepository
         card.IsConfirmed = true;
         game.LeaderPlayerId = callerPlayerId;
         ResistanceRoles.AfterWindow(game);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await SaveAsync(dbContext, cancellationToken);
 
         return new ResistancePlayCardResult(ResistancePlayCardStatus.Done, game);
     }
@@ -824,7 +824,7 @@ internal class ResistanceGamesRepository
         card.PlayedAt = DateTimeOffset.UtcNow;
         card.PlayedInMission = game.MissionNumber;
         card.IsConfirmed = true;
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await SaveAsync(dbContext, cancellationToken);
 
         return new ResistancePlayCardResult(ResistancePlayCardStatus.Done, game);
     }
@@ -873,7 +873,7 @@ internal class ResistanceGamesRepository
         }
 
         ResistanceRoles.RejectTeam(game);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await SaveAsync(dbContext, cancellationToken);
 
         return new ResistancePlayCardResult(ResistancePlayCardStatus.Done, game);
     }
@@ -906,7 +906,7 @@ internal class ResistanceGamesRepository
             ResistanceRoles.AfterWindow(game);
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await SaveAsync(dbContext, cancellationToken);
 
         return new ResistancePlayCardResult(ResistancePlayCardStatus.Done, game);
     }
@@ -965,7 +965,7 @@ internal class ResistanceGamesRepository
             game.Phase = ResistancePhase.SelectingTeam;
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await SaveAsync(dbContext, cancellationToken);
 
         return new ResistancePlayCardResult(ResistancePlayCardStatus.Done, game);
     }
@@ -1046,7 +1046,7 @@ internal class ResistanceGamesRepository
             ResistanceRoles.ResolveVotes(game);
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await SaveAsync(dbContext, cancellationToken);
 
         return new ResistanceVoteResult(ResistanceVoteStatus.Voted, game);
     }
@@ -1104,7 +1104,7 @@ internal class ResistanceGamesRepository
             ResistanceRoles.ResolveMission(game);
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await SaveAsync(dbContext, cancellationToken);
 
         return new ResistanceMissionCardResult(ResistanceMissionStatus.Played, game);
     }
@@ -1141,7 +1141,7 @@ internal class ResistanceGamesRepository
         }
 
         ResistanceRoles.PassLeadership(game);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await SaveAsync(dbContext, cancellationToken);
 
         return new ResistanceContinueResult(ResistanceContinueStatus.Continued, game);
     }

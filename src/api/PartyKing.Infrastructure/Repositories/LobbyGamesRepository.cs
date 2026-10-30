@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using PartyKing.Domain.Entities.Games;
 using PartyKing.Persistence.Database;
@@ -14,6 +15,9 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
 {
     private readonly IDbContextFactory<ReaderDbContext> _readerFactory;
     private readonly IDbContextFactory<WriterDbContext> _writerFactory;
+
+    // The read in flight per session, shared by every caller that asks for it meanwhile
+    private readonly ConcurrentDictionary<Guid, Lazy<Task<TGame?>>> _reads = new();
 
     protected LobbyGamesRepository(
         IDbContextFactory<ReaderDbContext> readerFactory,
@@ -56,13 +60,46 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
         return Games(dbContext).FirstOrDefaultAsync(x => x.SessionId == sessionId, cancellationToken);
     }
 
+    /// <summary>
+    /// Concurrent reads of one session share a single query: a push makes every client fetch the game at once, and
+    /// each query holds a thread while it waits for the database. A write drops the shared read, so a caller who
+    /// asks after a write finished never gets a result that started before it. The callers only read the result.
+    /// </summary>
     public async Task<TGame?> GetAsync(Guid sessionId, CancellationToken cancellationToken)
     {
-        await using var dbContext = await _readerFactory.CreateDbContextAsync(cancellationToken);
+        var read = _reads.GetOrAdd(sessionId, id => new Lazy<Task<TGame?>>(() => ReadSharedAsync(id)));
 
-        return await Games(dbContext)
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.SessionId == sessionId, cancellationToken);
+        // The query is shared, so one caller's cancellation must not cancel it for the others
+        return await read.Value.WaitAsync(cancellationToken);
+    }
+
+    private async Task<TGame?> ReadSharedAsync(Guid sessionId)
+    {
+        try
+        {
+            await using var dbContext = await _readerFactory.CreateDbContextAsync(CancellationToken.None);
+
+            return await Games(dbContext)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.SessionId == sessionId, CancellationToken.None);
+        }
+        finally
+        {
+            _reads.TryRemove(sessionId, out _);
+        }
+    }
+
+    /// <summary>Saves the changes and drops the shared reads, which may predate them.</summary>
+    protected async Task SaveAsync(DbContext dbContext, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        finally
+        {
+            _reads.Clear();
+        }
     }
 
     public async Task<bool> TryCreateAsync(TGame game, CancellationToken cancellationToken)
@@ -78,7 +115,7 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
 
         try
         {
-            await dbContext.SaveChangesAsync(cancellationToken);
+            await SaveAsync(dbContext, cancellationToken);
             return true;
         }
         catch (DbUpdateException)
@@ -96,7 +133,7 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
         if (game is not null && !game.IsOpen)
         {
             game.IsOpen = true;
-            await dbContext.SaveChangesAsync(cancellationToken);
+            await SaveAsync(dbContext, cancellationToken);
         }
 
         return game;
@@ -140,7 +177,7 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
 
         try
         {
-            await dbContext.SaveChangesAsync(cancellationToken);
+            await SaveAsync(dbContext, cancellationToken);
         }
         catch (DbUpdateException)
         {
@@ -183,7 +220,7 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
             player.Order = order++;
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await SaveAsync(dbContext, cancellationToken);
 
         return new LobbyResult<TGame>(LobbyStatus.Done, game);
     }
@@ -216,7 +253,7 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
             player.Order = playerIds.ToList().IndexOf(player.PlayerId);
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await SaveAsync(dbContext, cancellationToken);
 
         return new LobbyResult<TGame>(LobbyStatus.Done, game);
     }
@@ -228,6 +265,7 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
         var deleted = await Table(dbContext)
             .Where(x => x.SessionId == sessionId)
             .ExecuteDeleteAsync(cancellationToken);
+        _reads.Clear();
 
         return deleted > 0;
     }
