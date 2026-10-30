@@ -22,6 +22,10 @@ const game = (count: number, extra: Partial<ResistanceGameDto> = {}): Resistance
   votes: null,
   voteApproved: null,
   revealedRoles: null,
+  requiredFails: null,
+  playedMissionPlayerIds: [],
+  yourMissionCard: null,
+  missionResults: [],
   rules: {
     playerCounts: [5, 6, 7, 8, 9, 10].map((playerCount) => ({
       playerCount,
@@ -121,24 +125,68 @@ describe('resistancePhaseDescription', () => {
       expect(resistancePhaseDescription(voting(), host, 2)).not.toContain('Zagłosuj');
     });
 
-    it('reports an approved team with the tally', () => {
+    it('reports an approved team with the tally while the mission is played', () => {
       const votes = [true, true, true, false, false].map((approve, i) => ({ playerId: `p${i}`, approve }));
       const text = resistancePhaseDescription(
-        voting({ phase: 'VoteResult', voteApproved: true, votes }),
+        voting({ phase: 'PlayingMission', voteApproved: true, votes, playedMissionPlayerIds: ['p0'] }),
         guest,
         2,
       );
 
       expect(text).toContain('została zatwierdzona (za: 3, przeciw: 2)');
+      expect(text).toContain('Zagrano 1/');
+      expect(text).not.toContain('nie jest jeszcze gotowa');
     });
 
-    it('reports a rejected team with the count and who continues', () => {
-      const votes = [true, true, false, false, false].map((approve, i) => ({ playerId: `p${i}`, approve }));
-      const rejected = voting({ phase: 'VoteResult', voteApproved: false, votes, rejectedTeams: 2 });
+    it('asks a team member to play a card and mentions a rule of several fails', () => {
+      const text = resistancePhaseDescription(
+        voting({ phase: 'PlayingMission', teamPlayerIds: ['p1'], yourPlayerId: 'p1', requiredFails: 2 }),
+        guest,
+        2,
+      );
 
-      expect(resistancePhaseDescription(rejected, guest, 2)).toContain('Odrzucone drużyny z rzędu: 2/5');
-      expect(resistancePhaseDescription(rejected, guest, 2)).toContain('Lider lub host kliknie „Dalej”');
-      expect(resistancePhaseDescription(rejected, host, 2)).toContain('Kliknij „Dalej”');
+      expect(text).toContain('Zagraj swoją kartę misji');
+      expect(text).toContain('od 2 kart Porażka');
+    });
+
+    it('reports the mission result with the score and who continues', () => {
+      const text = resistancePhaseDescription(
+        voting({ phase: 'MissionResult', missionResults: [{ missionNumber: 1, succeeded: false, failCount: 1 }] }),
+        host,
+        2,
+      );
+
+      expect(text).toContain('porażką (kart Porażka: 1)');
+      expect(text).toContain('Ruch Oporu 0, Szpiedzy 1');
+      expect(text).toContain('Kliknij „Dalej”');
+    });
+
+    it('names the reason the game ended', () => {
+      const missions = [1, 2, 3].map((missionNumber) => ({ missionNumber, succeeded: true, failCount: 0 }));
+      const text = resistancePhaseDescription(
+        voting({ phase: 'GameOver', winner: 'Resistance', missionResults: missions }),
+        guest,
+        2,
+      );
+
+      expect(text).toContain('Ruch Oporu wygrał: trzy misje zakończyły się sukcesem (Ruch Oporu 3, Szpiedzy 0)');
+    });
+
+    it('reports the rejected team with the tally while the new leader picks', () => {
+      const votes = [true, true, false, false, false].map((approve, i) => ({ playerId: `p${i}`, approve }));
+      const rejected = voting({
+        phase: 'SelectingTeam',
+        teamPlayerIds: [],
+        leaderPlayerId: 'p1',
+        voteApproved: false,
+        votes,
+        rejectedTeams: 2,
+      });
+
+      const text = resistancePhaseDescription(rejected, guest, 2);
+      expect(text).toContain('Poprzednia drużyna została odrzucona (za: 2, przeciw: 3)');
+      expect(text).toContain('Odrzucone drużyny z rzędu: 2/5');
+      expect(text).not.toContain('Dalej');
     });
 
     it('announces the spies winning when the game is over', () => {
