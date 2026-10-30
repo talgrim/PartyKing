@@ -132,6 +132,25 @@ public class ResistanceController : GameControllerBase
     }
 
     /// <summary>
+    /// The holder of Take Responsibility takes a plot card from another player. 403 for anyone else, 404 for an unknown
+    /// card, 409 when it was played already or the round is in a step where it can't be, 400 for a bad target or a
+    /// missing choice between the Opinion Maker and a hand card.
+    /// </summary>
+    [HttpPut("cards/{cardId:int}/take")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> TakeResistanceResponsibility(
+        Guid sessionId, int cardId, [FromBody] ResistanceTakeResponsibilityRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.TakeResponsibilityAsync(
+            sessionId, cardId, request.TargetPlayerId, request.TakeOpinionMaker, await Caller(sessionId),
+            cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>
     /// The player an identity card was shown to confirms having seen it; the last confirmation moves on to picking the
     /// team. 403 for anyone else, 409 when the card has not been played or is confirmed already.
     /// </summary>

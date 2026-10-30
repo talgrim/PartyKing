@@ -99,6 +99,14 @@ public interface IResistanceService
     Task<ErrorOr<ResistanceGameDto>> PlayPlotCardAsync(
         Guid sessionId, int cardId, Guid targetPlayerId, GameCaller caller, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// The holder of Take Responsibility takes a plot card from another player; Validation when the choice between a
+    /// face-up Opinion Maker and a hand card is missing.
+    /// </summary>
+    Task<ErrorOr<ResistanceGameDto>> TakeResponsibilityAsync(
+        Guid sessionId, int cardId, Guid targetPlayerId, bool? takeOpinionMaker, GameCaller caller,
+        CancellationToken cancellationToken);
+
     /// <summary>The player who saw the identity card confirms it; the last confirmation moves on to the team.</summary>
     Task<ErrorOr<ResistanceGameDto>> ConfirmPlotCardAsync(
         Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken);
@@ -426,6 +434,27 @@ internal class ResistanceService : IResistanceService
         return await FinishPlotCardAsync(sessionId, result, caller, cancellationToken);
     }
 
+    public async Task<ErrorOr<ResistanceGameDto>> TakeResponsibilityAsync(
+        Guid sessionId, int cardId, Guid targetPlayerId, bool? takeOpinionMaker, GameCaller caller,
+        CancellationToken cancellationToken)
+    {
+        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
+        if (access.IsError)
+        {
+            return access.Errors;
+        }
+
+        if (access.Value.Game is null)
+        {
+            return _lobby.NoGame;
+        }
+
+        var result = await _games.TakeResponsibilityAsync(
+            sessionId, caller.PlayerId, cardId, targetPlayerId, takeOpinionMaker, cancellationToken);
+
+        return await FinishPlotCardAsync(sessionId, result, caller, cancellationToken);
+    }
+
     private async Task<ErrorOr<ResistanceGameDto>> FinishPlotCardAsync(
         Guid sessionId, ResistancePlayCardResult result, GameCaller caller, CancellationToken cancellationToken)
     {
@@ -439,6 +468,10 @@ internal class ResistanceService : IResistanceService
                 return GameOverError;
             case ResistancePlayCardStatus.NotResolving:
                 return Error.Conflict("Resistance.NotResolving", "No plot cards are being played now.");
+            case ResistancePlayCardStatus.WrongPhase:
+                return Error.Conflict("Resistance.CardNotPlayableNow", "That card can't be played in this step of the round.");
+            case ResistancePlayCardStatus.ChoiceRequired:
+                return Error.Validation("Resistance.ChoiceRequired", "Say whether to take the Opinion Maker or a card from the hand.");
             case ResistancePlayCardStatus.NotPlayingMission:
                 return Error.Conflict("Resistance.NotPlayingMission", "The mission cards are not being played now.");
             case ResistancePlayCardStatus.UnknownCard:

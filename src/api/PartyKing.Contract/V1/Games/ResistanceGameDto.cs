@@ -162,6 +162,12 @@ public record ResistancePlotCardsRequest(bool Enabled);
 /// <summary>The player an immediate plot card is played on.</summary>
 public record ResistancePlayPlotCardRequest(Guid TargetPlayerId);
 
+/// <summary>
+/// The player Take Responsibility takes a card from. <paramref name="TakeOpinionMaker"/> picks the face-up Opinion
+/// Maker (true) or a random card from the hand (false); needed only when the target has both.
+/// </summary>
+public record ResistanceTakeResponsibilityRequest(Guid TargetPlayerId, bool? TakeOpinionMaker);
+
 /// <summary>The caller's vote on the submitted team: true approves, false rejects.</summary>
 public record ResistanceVoteRequest(bool Approve);
 

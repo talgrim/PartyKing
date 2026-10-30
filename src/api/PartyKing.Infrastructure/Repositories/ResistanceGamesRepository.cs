@@ -53,6 +53,15 @@ public interface IResistanceGamesRepository : ILobbyGamesRepository<ResistanceGa
         Guid sessionId, Guid? callerPlayerId, int cardId, Guid targetPlayerId, CancellationToken cancellationToken);
 
     /// <summary>
+    /// The holder of Take Responsibility takes a plot card from another player, between the votes (not while a team is
+    /// voted on, which would change who votes first). With a face-up Opinion Maker and cards in hand the caller says
+    /// which to take (<paramref name="takeOpinionMaker"/>); a hand card is picked at random. Nothing to take is lost.
+    /// </summary>
+    Task<ResistancePlayCardResult> TakeResponsibilityAsync(
+        Guid sessionId, Guid? callerPlayerId, int cardId, Guid targetPlayerId, bool? takeOpinionMaker,
+        CancellationToken cancellationToken);
+
+    /// <summary>
     /// The player who saw the identity card confirms it. The last confirmation of the round moves on to picking the team.
     /// </summary>
     Task<ResistancePlayCardResult> ConfirmPlotCardAsync(
@@ -165,6 +174,12 @@ public enum ResistancePlayCardStatus
 
     /// <summary>The target is not a legal one for the card.</summary>
     InvalidTarget,
+
+    /// <summary>The card can't be played in this step of the round.</summary>
+    WrongPhase,
+
+    /// <summary>The target has a face-up Opinion Maker and cards in hand, and the caller did not say which to take.</summary>
+    ChoiceRequired,
     Done,
 }
 
@@ -597,6 +612,84 @@ internal class ResistanceGamesRepository
         card.PlayedAt = DateTimeOffset.UtcNow;
         card.PlayedInMission = game.MissionNumber;
         card.IsConfirmed = spotlight;
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return new ResistancePlayCardResult(ResistancePlayCardStatus.Done, game);
+    }
+
+    public async Task<ResistancePlayCardResult> TakeResponsibilityAsync(
+        Guid sessionId, Guid? callerPlayerId, int cardId, Guid targetPlayerId, bool? takeOpinionMaker,
+        CancellationToken cancellationToken)
+    {
+        await using var dbContext = await CreateWriterAsync(cancellationToken);
+
+        var game = await LoadAsync(dbContext, sessionId, cancellationToken);
+        if (game is null)
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.NoGame, null);
+        }
+
+        if (!game.IsStarted)
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.NotStarted, game);
+        }
+
+        if (game.Phase == ResistancePhase.GameOver)
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.GameOver, game);
+        }
+
+        var card = game.PlotCards.Find(x => x.CardId == cardId);
+        if (card is null || card.Type != ResistancePlotCardType.TakeResponsibility
+            || card.Location is not (ResistancePlotCardLocation.Hand or ResistancePlotCardLocation.Played))
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.UnknownCard, game);
+        }
+
+        if (callerPlayerId is null || card.HolderPlayerId != callerPlayerId)
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.NotAllowed, game);
+        }
+
+        if (card.Location == ResistancePlotCardLocation.Played)
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.WrongState, game);
+        }
+
+        if (game.Phase is not (ResistancePhase.SelectingTeam or ResistancePhase.PlayingMission or ResistancePhase.MissionResult))
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.WrongPhase, game);
+        }
+
+        if (targetPlayerId == callerPlayerId || game.Players.All(x => x.PlayerId != targetPlayerId))
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.InvalidTarget, game);
+        }
+
+        var opinionMaker = game.PlotCards.Find(x => x.HolderPlayerId == targetPlayerId
+                                                    && x.Location == ResistancePlotCardLocation.InPlay
+                                                    && x.Type == ResistancePlotCardType.OpinionMaker);
+        var hand = game.PlotCards
+            .Where(x => x.HolderPlayerId == targetPlayerId && x.Location == ResistancePlotCardLocation.Hand)
+            .ToList();
+        if (opinionMaker is not null && hand.Count > 0 && takeOpinionMaker is null)
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.ChoiceRequired, game);
+        }
+
+        var taken = opinionMaker is not null && (hand.Count == 0 || takeOpinionMaker == true)
+            ? opinionMaker
+            : hand.Count > 0 ? hand[Random.Shared.Next(hand.Count)] : null;
+        if (taken is not null)
+        {
+            taken.HolderPlayerId = callerPlayerId;
+        }
+
+        card.Location = ResistancePlotCardLocation.Played;
+        card.TargetPlayerId = targetPlayerId;
+        card.PlayedAt = DateTimeOffset.UtcNow;
+        card.PlayedInMission = game.MissionNumber;
+        card.IsConfirmed = true;
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return new ResistancePlayCardResult(ResistancePlayCardStatus.Done, game);
