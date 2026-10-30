@@ -44,6 +44,19 @@ public interface IResistanceGamesRepository : ILobbyGamesRepository<ResistanceGa
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// The holder of an immediate card (Overheard Conversation, Establish Confidence, Open Up) plays it on a player:
+    /// a neighbour for Overheard Conversation, any other player for the rest.
+    /// </summary>
+    Task<ResistancePlayCardResult> PlayPlotCardAsync(
+        Guid sessionId, Guid? callerPlayerId, int cardId, Guid targetPlayerId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The player who saw the identity card confirms it. The last confirmation of the round moves on to picking the team.
+    /// </summary>
+    Task<ResistancePlayCardResult> ConfirmPlotCardAsync(
+        Guid sessionId, Guid? callerPlayerId, int cardId, CancellationToken cancellationToken);
+
+    /// <summary>
     /// A player votes on the submitted team (a repeated vote replaces the earlier one). The vote that completes the
     /// round is tallied in the same save: a majority approves, otherwise (a tie too) the team is rejected, which
     /// counts towards the five that make the spies win.
@@ -126,6 +139,31 @@ public enum ResistanceDealStatus
 }
 
 public record ResistanceDealResult(ResistanceDealStatus Status, ResistanceGame? Game);
+
+public enum ResistancePlayCardStatus
+{
+    NoGame,
+    NotStarted,
+    GameOver,
+
+    /// <summary>The immediate cards are not being played.</summary>
+    NotResolving,
+
+    /// <summary>No such card, or it is not an immediate card.</summary>
+    UnknownCard,
+
+    /// <summary>The caller does not hold the card (to play it), or is not the one it shows the identity card to (to confirm it).</summary>
+    NotAllowed,
+
+    /// <summary>The card was played already (to play it), or has not been played yet (to confirm it).</summary>
+    WrongState,
+
+    /// <summary>The target is not a legal one for the card.</summary>
+    InvalidTarget,
+    Done,
+}
+
+public record ResistancePlayCardResult(ResistancePlayCardStatus Status, ResistanceGame? Game);
 
 public enum ResistanceVoteStatus
 {
@@ -376,7 +414,7 @@ internal class ResistanceGamesRepository
             return new ResistanceTeamResult(ResistanceTeamStatus.NotLeader, game);
         }
 
-        if (game.Phase == ResistancePhase.DealingCards)
+        if (game.Phase is ResistancePhase.DealingCards or ResistancePhase.ResolvingCards)
         {
             return new ResistanceTeamResult(ResistanceTeamStatus.CardsNotDealt, game);
         }
@@ -475,10 +513,120 @@ internal class ResistanceGamesRepository
             kept.Location = ResistancePlotCardLocation.Hand;
         }
 
-        game.Phase = ResistancePhase.SelectingTeam;
+        ResistanceRoles.AfterDeal(game);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return new ResistanceDealResult(ResistanceDealStatus.Dealt, game);
+    }
+
+    public async Task<ResistancePlayCardResult> PlayPlotCardAsync(
+        Guid sessionId, Guid? callerPlayerId, int cardId, Guid targetPlayerId, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await CreateWriterAsync(cancellationToken);
+
+        var (early, game) = await LoadResolvingAsync(dbContext, sessionId, cancellationToken);
+        if (early is { } status)
+        {
+            return new ResistancePlayCardResult(status, game);
+        }
+
+        var card = game!.PlotCards.Find(x => x.CardId == cardId);
+        if (card is null || !ResistanceRoles.IsImmediate(card.Type)
+            || card.Location is not (ResistancePlotCardLocation.Hand or ResistancePlotCardLocation.Played))
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.UnknownCard, game);
+        }
+
+        if (callerPlayerId is null || card.HolderPlayerId != callerPlayerId)
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.NotAllowed, game);
+        }
+
+        if (card.Location == ResistancePlotCardLocation.Played)
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.WrongState, game);
+        }
+
+        var validTarget = card.Type == ResistancePlotCardType.OverheardConversation
+            ? ResistanceRoles.Neighbours(game, card.HolderPlayerId!.Value).Contains(targetPlayerId)
+            : targetPlayerId != card.HolderPlayerId && game.Players.Any(x => x.PlayerId == targetPlayerId);
+        if (!validTarget)
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.InvalidTarget, game);
+        }
+
+        card.Location = ResistancePlotCardLocation.Played;
+        card.TargetPlayerId = targetPlayerId;
+        card.PlayedAt = DateTimeOffset.UtcNow;
+        card.PlayedInMission = game.MissionNumber;
+        card.IsConfirmed = false;
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return new ResistancePlayCardResult(ResistancePlayCardStatus.Done, game);
+    }
+
+    public async Task<ResistancePlayCardResult> ConfirmPlotCardAsync(
+        Guid sessionId, Guid? callerPlayerId, int cardId, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await CreateWriterAsync(cancellationToken);
+
+        var (early, game) = await LoadResolvingAsync(dbContext, sessionId, cancellationToken);
+        if (early is { } status)
+        {
+            return new ResistancePlayCardResult(status, game);
+        }
+
+        var card = game!.PlotCards.Find(x => x.CardId == cardId);
+        if (card is null || !ResistanceRoles.IsImmediate(card.Type)
+            || card.Location is not (ResistancePlotCardLocation.Hand or ResistancePlotCardLocation.Played))
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.UnknownCard, game);
+        }
+
+        if (card.Location == ResistancePlotCardLocation.Hand || card.IsConfirmed)
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.WrongState, game);
+        }
+
+        if (callerPlayerId is null || ResistanceRoles.Viewer(card) != callerPlayerId)
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.NotAllowed, game);
+        }
+
+        card.IsConfirmed = true;
+        if (!ResistanceRoles.UnplayedImmediateCards(game).Any() && !ResistanceRoles.UnconfirmedCards(game).Any())
+        {
+            game.Phase = ResistancePhase.SelectingTeam;
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return new ResistancePlayCardResult(ResistancePlayCardStatus.Done, game);
+    }
+
+    /// <summary>Loads the game and checks that the immediate cards are being played; the status is null when they are.</summary>
+    private async Task<(ResistancePlayCardStatus? Status, ResistanceGame? Game)> LoadResolvingAsync(
+        WriterDbContext dbContext, Guid sessionId, CancellationToken cancellationToken)
+    {
+        var game = await LoadAsync(dbContext, sessionId, cancellationToken);
+        if (game is null)
+        {
+            return (ResistancePlayCardStatus.NoGame, null);
+        }
+
+        if (!game.IsStarted)
+        {
+            return (ResistancePlayCardStatus.NotStarted, game);
+        }
+
+        if (game.Phase == ResistancePhase.GameOver)
+        {
+            return (ResistancePlayCardStatus.GameOver, game);
+        }
+
+        return game.Phase == ResistancePhase.ResolvingCards
+            ? (null, game)
+            : (ResistancePlayCardStatus.NotResolving, game);
     }
 
     public async Task<ResistanceVoteResult> VoteAsync(

@@ -178,8 +178,20 @@ namespace PartyKing.Persistence.Migrations
                     b.Property<Guid?>("HolderPlayerId")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsConfirmed")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("Location")
                         .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset?>("PlayedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PlayedInMission")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("TargetPlayerId")
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("Type")
                         .HasColumnType("INTEGER");
