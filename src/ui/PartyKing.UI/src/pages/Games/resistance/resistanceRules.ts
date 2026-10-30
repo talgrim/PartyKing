@@ -33,7 +33,7 @@ export const RESISTANCE_RULES: RuleSection[] = [
       { name: 'Przejmujesz odpowiedzialność', text: 'zabiera kartę Intrygi innemu graczowi (widocznego kreatora opinii albo losową kartę z ręki).' },
       { name: 'Mam cię na oku', text: 'po misji (przed „Dalej”) pozwala podejrzeć kartę Misji innego gracza; każdą kartę może podejrzeć tylko jeden gracz.' },
     ],
-    footer: 'Gdy ktoś ma „Charyzmatycznego Przywódcę” lub „Nie ufajcie mu”, przed wyborem drużyny albo po zatwierdzeniu wszyscy potwierdzają, że nie zagrywają karty, więc nie widać, kto ją ma.',
+    footer: 'Gdy ktoś ma w ręku jakąkolwiek kartę (poza Kreatorem opinii), przed wyborem drużyny albo po zatwierdzeniu wszyscy potwierdzają, że nie zagrywają karty, więc nie widać, kto ją ma.',
   },
   {
     title: 'Koniec gry',
