@@ -87,6 +87,57 @@ public class ResistanceServiceTests
     }
 
     [Fact]
+    public async Task PlotCards_AreOffByDefaultAndSwitchedBeforeTheGameIsOpened()
+    {
+        var created = await _service.CreateAsync(_id, Host, CancellationToken.None);
+        Assert.False(created.Value.Rules.PlotCardsEnabled);
+
+        var enabled = await _service.SetPlotCardsAsync(_id, true, Host, CancellationToken.None);
+        Assert.True(enabled.Value.Rules.PlotCardsEnabled);
+
+        await _service.OpenAsync(_id, Admin, CancellationToken.None);
+        var afterOpen = await _service.SetPlotCardsAsync(_id, false, Host, CancellationToken.None);
+
+        Assert.Equal(ErrorOr.ErrorType.Conflict, afterOpen.FirstError.Type);
+        Assert.True((await _service.GetAsync(_id, Host, CancellationToken.None)).Value.Rules.PlotCardsEnabled);
+    }
+
+    [Fact]
+    public async Task PlotCards_NeedAGameAndAManager()
+    {
+        var guest = new GameCaller("guest", false);
+
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _service.SetPlotCardsAsync(_id, true, guest, CancellationToken.None)).FirstError.Type);
+        Assert.Equal(ErrorOr.ErrorType.NotFound, (await _service.SetPlotCardsAsync(_id, true, Host, CancellationToken.None)).FirstError.Type);
+    }
+
+    [Fact]
+    public async Task RefreshingRules_KeepsThePlotCardsSwitch()
+    {
+        await _service.CreateAsync(_id, Host, CancellationToken.None);
+        await _service.SetPlotCardsAsync(_id, true, Host, CancellationToken.None);
+
+        var refreshed = await _service.RefreshRulesAsync(_id, Host, CancellationToken.None);
+
+        Assert.True(refreshed.Value.Rules.PlotCardsEnabled);
+    }
+
+    [Theory]
+    [InlineData(5, 1)]
+    [InlineData(6, 1)]
+    [InlineData(7, 2)]
+    [InlineData(8, 2)]
+    [InlineData(9, 3)]
+    [InlineData(10, 3)]
+    public void PlotCardsPerRound_GrowsWithThePlayerCount(int players, int expected)
+    {
+        var rules = ResistanceRules.Default();
+
+        Assert.Equal(expected, rules.PlotCardsPerRound(players));
+        Assert.Equal(15, rules.PlotDeck.Values.Sum());
+    }
+
+    [Fact]
     public async Task RefreshingRules_NeedsAGameAndAManager()
     {
         var guest = new GameCaller("guest", false);
@@ -1133,7 +1184,26 @@ public class ResistanceServiceTests
                 return Task.FromResult(new ResistanceRulesResult(ResistanceRulesStatus.NotEditable, game));
             }
 
+            rules.PlotCardsEnabled = game.Rules.PlotCardsEnabled;
             game.Rules = rules;
+            return Task.FromResult(new ResistanceRulesResult(ResistanceRulesStatus.Refreshed, game));
+        }
+
+        public Task<ResistanceRulesResult> SetPlotCardsAsync(
+            Guid sessionId, bool enabled, CancellationToken cancellationToken)
+        {
+            var game = _games.GetValueOrDefault(sessionId);
+            if (game is null)
+            {
+                return Task.FromResult(new ResistanceRulesResult(ResistanceRulesStatus.NoGame, null));
+            }
+
+            if (game.IsOpen || game.IsStarted)
+            {
+                return Task.FromResult(new ResistanceRulesResult(ResistanceRulesStatus.NotEditable, game));
+            }
+
+            game.Rules.PlotCardsEnabled = enabled;
             return Task.FromResult(new ResistanceRulesResult(ResistanceRulesStatus.Refreshed, game));
         }
 
