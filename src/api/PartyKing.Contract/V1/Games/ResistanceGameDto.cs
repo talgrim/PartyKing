@@ -22,6 +22,7 @@ namespace PartyKing.Contract.V1.Games;
 /// <see cref="RequiredFails"/> is how many of them fail the current mission. Three successes or three failures win.
 /// In the Spotlight forces one team member to play openly: <see cref="OpenMissionPlayerId"/> is that player and
 /// <see cref="OpenMissionCard"/> their card (true = Success), public once they have played it.
+/// In the leader window (a Strong Leader is out there) <see cref="LeaderWindowPassedPlayerIds"/> lists who confirmed.
 /// </summary>
 public record ResistanceGameDto(
     DateTimeOffset CreatedAt,
@@ -56,7 +57,8 @@ public record ResistanceGameDto(
     IReadOnlyList<ResistancePlayedPlotCardDto> PlayedPlotCards,
     IReadOnlyList<ResistanceCardRevealDto> YourReveals,
     Guid? OpenMissionPlayerId,
-    bool? OpenMissionCard);
+    bool? OpenMissionCard,
+    IReadOnlyList<Guid> LeaderWindowPassedPlayerIds);
 
 /// <summary>
 /// A plot card that was played; public, newest first. The identity card it showed stays with its viewer.
@@ -123,6 +125,7 @@ public enum ResistancePhaseDto
     MissionResult,
     DealingCards,
     ResolvingCards,
+    LeaderWindow,
 }
 
 /// <summary>How one player voted on the team; public once everybody has voted.</summary>

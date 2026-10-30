@@ -50,6 +50,45 @@ public static class ResistanceRoles
         {
             player.IsOnTeam = false;
         }
+
+        if (HasPlayableStrongLeader(game))
+        {
+            OpenLeaderWindow(game, beforeDraw: false);
+        }
+    }
+
+    /// <summary>Whether a Strong Leader waits in a hand of someone who is not the leader, so the leader can be challenged.</summary>
+    public static bool HasPlayableStrongLeader(ResistanceGame game) =>
+        game.Rules.PlotCardsEnabled
+        && game.PlotCards.Any(x => x.Type == ResistancePlotCardType.StrongLeader
+                                   && x.Location == ResistancePlotCardLocation.Hand
+                                   && x.HolderPlayerId != game.LeaderPlayerId);
+
+    private static void OpenLeaderWindow(ResistanceGame game, bool beforeDraw)
+    {
+        game.Phase = ResistancePhase.LeaderWindow;
+        game.LeaderWindowBeforeDraw = beforeDraw;
+        foreach (var player in game.Players)
+        {
+            player.PassedLeaderWindow = false;
+        }
+    }
+
+    /// <summary>Ends the leader window (everyone passed, or a Strong Leader was played): the leader draws their cards or picks the team.</summary>
+    public static void AfterLeaderWindow(ResistanceGame game)
+    {
+        foreach (var player in game.Players)
+        {
+            player.PassedLeaderWindow = false;
+        }
+
+        if (game.LeaderWindowBeforeDraw)
+        {
+            DrawPlotCards(game);
+            return;
+        }
+
+        game.Phase = ResistancePhase.SelectingTeam;
     }
 
     /// <summary>
@@ -81,6 +120,17 @@ public static class ResistanceRoles
             return;
         }
 
+        if (HasPlayableStrongLeader(game))
+        {
+            OpenLeaderWindow(game, beforeDraw: true);
+            return;
+        }
+
+        DrawPlotCards(game);
+    }
+
+    private static void DrawPlotCards(ResistanceGame game)
+    {
         var toDraw = game.Rules.PlotCardsPerRound(game.Players.Count);
         foreach (var card in game.PlotCards
                      .Where(x => x.Location == ResistancePlotCardLocation.Deck)
@@ -246,6 +296,7 @@ public static class ResistanceRoles
             player.IsOnTeam = false;
             player.Vote = null;
             player.MissionCard = null;
+            player.PassedLeaderWindow = false;
         }
     }
 

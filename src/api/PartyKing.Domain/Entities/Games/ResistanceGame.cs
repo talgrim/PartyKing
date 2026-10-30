@@ -22,6 +22,12 @@ public class ResistanceGame : LobbyGame<ResistancePlayer>
     /// <summary>The step of the current round; <see cref="ResistancePhase.SelectingTeam"/> until the leader submits a team.</summary>
     public ResistancePhase Phase { get; set; } = ResistancePhase.SelectingTeam;
 
+    /// <summary>
+    /// While <see cref="ResistancePhase.LeaderWindow"/>: whether the leader still draws their plot cards once it ends
+    /// (a new mission) or picks the team at once (after a rejected team).
+    /// </summary>
+    public bool LeaderWindowBeforeDraw { get; set; }
+
     /// <summary>Teams rejected in a row during the current mission; five of them make the spies win.</summary>
     public int RejectedTeams { get; set; }
 

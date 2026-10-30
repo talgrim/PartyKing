@@ -107,6 +107,14 @@ public interface IResistanceService
         Guid sessionId, int cardId, Guid targetPlayerId, bool? takeOpinionMaker, GameCaller caller,
         CancellationToken cancellationToken);
 
+    /// <summary>In the leader window the holder of Strong Leader takes the lead.</summary>
+    Task<ErrorOr<ResistanceGameDto>> TakeLeadAsync(
+        Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken);
+
+    /// <summary>A player confirms in the leader window that they play no card; the last confirmation ends it.</summary>
+    Task<ErrorOr<ResistanceGameDto>> PassLeaderWindowAsync(
+        Guid sessionId, GameCaller caller, CancellationToken cancellationToken);
+
     /// <summary>The player who saw the identity card confirms it; the last confirmation moves on to the team.</summary>
     Task<ErrorOr<ResistanceGameDto>> ConfirmPlotCardAsync(
         Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken);
@@ -455,6 +463,44 @@ internal class ResistanceService : IResistanceService
         return await FinishPlotCardAsync(sessionId, result, caller, cancellationToken);
     }
 
+    public async Task<ErrorOr<ResistanceGameDto>> TakeLeadAsync(
+        Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken)
+    {
+        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
+        if (access.IsError)
+        {
+            return access.Errors;
+        }
+
+        if (access.Value.Game is null)
+        {
+            return _lobby.NoGame;
+        }
+
+        var result = await _games.TakeLeadAsync(sessionId, caller.PlayerId, cardId, cancellationToken);
+
+        return await FinishPlotCardAsync(sessionId, result, caller, cancellationToken);
+    }
+
+    public async Task<ErrorOr<ResistanceGameDto>> PassLeaderWindowAsync(
+        Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
+    {
+        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
+        if (access.IsError)
+        {
+            return access.Errors;
+        }
+
+        if (access.Value.Game is null)
+        {
+            return _lobby.NoGame;
+        }
+
+        var result = await _games.PassLeaderWindowAsync(sessionId, caller.PlayerId, cancellationToken);
+
+        return await FinishPlotCardAsync(sessionId, result, caller, cancellationToken);
+    }
+
     private async Task<ErrorOr<ResistanceGameDto>> FinishPlotCardAsync(
         Guid sessionId, ResistancePlayCardResult result, GameCaller caller, CancellationToken cancellationToken)
     {
@@ -468,6 +514,8 @@ internal class ResistanceService : IResistanceService
                 return GameOverError;
             case ResistancePlayCardStatus.NotResolving:
                 return Error.Conflict("Resistance.NotResolving", "No plot cards are being played now.");
+            case ResistancePlayCardStatus.NotPlayer:
+                return Error.Forbidden("Resistance.NotPlayer", "Only the players of the game confirm.");
             case ResistancePlayCardStatus.WrongPhase:
                 return Error.Conflict("Resistance.CardNotPlayableNow", "That card can't be played in this step of the round.");
             case ResistancePlayCardStatus.ChoiceRequired:
@@ -756,7 +804,10 @@ internal class ResistanceService : IResistanceService
                         (ResistanceRoleDto)game.Players.First(p => p.PlayerId == ResistanceRoles.Revealed(x)).Role!.Value))
                     .ToList(),
             ResistanceRoles.OpenMissionPlayerId(game),
-            game.Players.FirstOrDefault(x => x.PlayerId == ResistanceRoles.OpenMissionPlayerId(game))?.MissionCard);
+            game.Players.FirstOrDefault(x => x.PlayerId == ResistanceRoles.OpenMissionPlayerId(game))?.MissionCard,
+            game.Phase == ResistancePhase.LeaderWindow
+                ? game.Players.Where(x => x.PassedLeaderWindow).OrderBy(x => x.Order).Select(x => x.PlayerId).ToList()
+                : []);
     }
 
     private sealed class ResistanceLobbyNotifier : IGameLobbyNotifier

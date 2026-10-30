@@ -132,6 +132,35 @@ public class ResistanceController : GameControllerBase
     }
 
     /// <summary>
+    /// The holder of Strong Leader takes the lead in the leader window. 403 for anyone else, 404 for an unknown card,
+    /// 409 outside the window or once played, 400 when the holder already leads.
+    /// </summary>
+    [HttpPut("cards/{cardId:int}/take-lead")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> TakeResistanceLead(
+        Guid sessionId, int cardId, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.TakeLeadAsync(sessionId, cardId, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>
+    /// A player confirms in the leader window that they play no card; the last confirmation ends it. 403 for a host or
+    /// admin who did not join, 409 outside the window.
+    /// </summary>
+    [HttpPut("leader-window/pass")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> PassResistanceLeaderWindow(Guid sessionId, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.PassLeaderWindowAsync(sessionId, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>
     /// The holder of Take Responsibility takes a plot card from another player. 403 for anyone else, 404 for an unknown
     /// card, 409 when it was played already or the round is in a step where it can't be, 400 for a bad target or a
     /// missing choice between the Opinion Maker and a hand card.

@@ -62,6 +62,20 @@ public interface IResistanceGamesRepository : ILobbyGamesRepository<ResistanceGa
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// In the leader window the holder of Strong Leader takes the lead, which ends the window: the new leader draws
+    /// their cards or picks the team.
+    /// </summary>
+    Task<ResistancePlayCardResult> TakeLeadAsync(
+        Guid sessionId, Guid? callerPlayerId, int cardId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// A player confirms in the leader window that they do not play a card (repeating it is fine). The last
+    /// confirmation ends the window.
+    /// </summary>
+    Task<ResistancePlayCardResult> PassLeaderWindowAsync(
+        Guid sessionId, Guid? callerPlayerId, CancellationToken cancellationToken);
+
+    /// <summary>
     /// The player who saw the identity card confirms it. The last confirmation of the round moves on to picking the team.
     /// </summary>
     Task<ResistancePlayCardResult> ConfirmPlotCardAsync(
@@ -177,6 +191,9 @@ public enum ResistancePlayCardStatus
 
     /// <summary>The card can't be played in this step of the round.</summary>
     WrongPhase,
+
+    /// <summary>The caller did not join the game (a host or admin who only watches).</summary>
+    NotPlayer,
 
     /// <summary>The target has a face-up Opinion Maker and cards in hand, and the caller did not say which to take.</summary>
     ChoiceRequired,
@@ -693,6 +710,110 @@ internal class ResistanceGamesRepository
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return new ResistancePlayCardResult(ResistancePlayCardStatus.Done, game);
+    }
+
+    public async Task<ResistancePlayCardResult> TakeLeadAsync(
+        Guid sessionId, Guid? callerPlayerId, int cardId, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await CreateWriterAsync(cancellationToken);
+
+        var (early, game) = await LoadStartedAsync(dbContext, sessionId, cancellationToken);
+        if (early is { } status)
+        {
+            return new ResistancePlayCardResult(status, game);
+        }
+
+        var card = game!.PlotCards.Find(x => x.CardId == cardId);
+        if (card is null || card.Type != ResistancePlotCardType.StrongLeader
+            || card.Location is not (ResistancePlotCardLocation.Hand or ResistancePlotCardLocation.Played))
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.UnknownCard, game);
+        }
+
+        if (callerPlayerId is null || card.HolderPlayerId != callerPlayerId)
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.NotAllowed, game);
+        }
+
+        if (card.Location == ResistancePlotCardLocation.Played)
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.WrongState, game);
+        }
+
+        if (game.Phase != ResistancePhase.LeaderWindow)
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.WrongPhase, game);
+        }
+
+        if (callerPlayerId == game.LeaderPlayerId)
+        {
+            // Taking the lead from yourself changes nothing
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.InvalidTarget, game);
+        }
+
+        card.Location = ResistancePlotCardLocation.Played;
+        card.TargetPlayerId = game.LeaderPlayerId;
+        card.PlayedAt = DateTimeOffset.UtcNow;
+        card.PlayedInMission = game.MissionNumber;
+        card.IsConfirmed = true;
+        game.LeaderPlayerId = callerPlayerId;
+        ResistanceRoles.AfterLeaderWindow(game);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return new ResistancePlayCardResult(ResistancePlayCardStatus.Done, game);
+    }
+
+    public async Task<ResistancePlayCardResult> PassLeaderWindowAsync(
+        Guid sessionId, Guid? callerPlayerId, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await CreateWriterAsync(cancellationToken);
+
+        var (early, game) = await LoadStartedAsync(dbContext, sessionId, cancellationToken);
+        if (early is { } status)
+        {
+            return new ResistancePlayCardResult(status, game);
+        }
+
+        var player = game!.Players.Find(x => x.PlayerId == callerPlayerId);
+        if (player is null)
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.NotPlayer, game);
+        }
+
+        if (game.Phase != ResistancePhase.LeaderWindow)
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.WrongPhase, game);
+        }
+
+        player.PassedLeaderWindow = true;
+        if (game.Players.All(x => x.PassedLeaderWindow))
+        {
+            ResistanceRoles.AfterLeaderWindow(game);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return new ResistancePlayCardResult(ResistancePlayCardStatus.Done, game);
+    }
+
+    /// <summary>Loads the game and checks that it is started and not over; the status is null when it is.</summary>
+    private async Task<(ResistancePlayCardStatus? Status, ResistanceGame? Game)> LoadStartedAsync(
+        WriterDbContext dbContext, Guid sessionId, CancellationToken cancellationToken)
+    {
+        var game = await LoadAsync(dbContext, sessionId, cancellationToken);
+        if (game is null)
+        {
+            return (ResistancePlayCardStatus.NoGame, null);
+        }
+
+        if (!game.IsStarted)
+        {
+            return (ResistancePlayCardStatus.NotStarted, game);
+        }
+
+        return game.Phase == ResistancePhase.GameOver
+            ? (ResistancePlayCardStatus.GameOver, game)
+            : (null, game);
     }
 
     public async Task<ResistancePlayCardResult> ConfirmPlotCardAsync(

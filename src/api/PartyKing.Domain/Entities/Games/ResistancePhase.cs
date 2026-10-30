@@ -32,4 +32,12 @@ public enum ResistancePhase
     /// any order, and their receivers confirm what they saw. Moves on to picking the team when all are confirmed.
     /// </summary>
     ResolvingCards,
+
+    /// <summary>
+    /// Plot cards add-on: a Strong Leader is in someone's hand, so before the leader does anything (drawing cards,
+    /// picking the team) every player confirms they do not play it, or its holder takes the lead. Only opened when
+    /// such a card exists, so a window shows nothing but that a card is out there. Moves on when all confirmed or
+    /// one was played.
+    /// </summary>
+    LeaderWindow,
 }

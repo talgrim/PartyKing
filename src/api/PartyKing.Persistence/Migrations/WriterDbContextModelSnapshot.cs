@@ -72,6 +72,9 @@ namespace PartyKing.Persistence.Migrations
                     b.Property<Guid?>("LeaderPlayerId")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("LeaderWindowBeforeDraw")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("MissionNumber")
                         .HasColumnType("INTEGER");
 
@@ -145,6 +148,9 @@ namespace PartyKing.Persistence.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Order")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("PassedLeaderWindow")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("ProfileId")
