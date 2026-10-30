@@ -22,6 +22,10 @@ public static class DependencyInjection
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<WriterDbContext>>();
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         await dbContext.Database.MigrateAsync();
+
+        // WAL lets readers go on while a write is in progress and syncs once per checkpoint instead of per commit;
+        // the mode is stored in the file, synchronous is per connection (see PartyKingDbContextBase)
+        await dbContext.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;");
     }
 
     private static void RegisterDatabase(this IServiceCollection services)

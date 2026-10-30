@@ -8,6 +8,8 @@ const NO_ROLE: ViewerRoleDto = { isHost: false, isAdmin: false };
 export const useViewerRole = (sessionId: string): ViewerRoleDto => {
   const { data } = useSWR(['viewer-role', sessionId], () => sessionsApi.getViewerRole(sessionId), {
     shouldRetryOnError: false,
+    // The role of a viewer hardly ever changes, so a tab coming back into focus needn't ask again
+    revalidateOnFocus: false,
   });
 
   return data ?? NO_ROLE;
