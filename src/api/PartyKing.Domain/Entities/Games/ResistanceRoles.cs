@@ -30,11 +30,37 @@ public static class ResistanceRoles
     {
         if (IsApproved(game))
         {
-            game.RejectedTeams = 0;
-            game.Phase = ResistancePhase.PlayingMission;
+            if (HasPlayableNoConfidence(game))
+            {
+                OpenWindow(game, ResistancePhase.ConfidenceWindow, beforeDraw: false);
+                return;
+            }
+
+            StartMission(game);
             return;
         }
 
+        RejectTeam(game);
+    }
+
+    private static void StartMission(ResistanceGame game)
+    {
+        game.RejectedTeams = 0;
+        game.Phase = ResistancePhase.PlayingMission;
+    }
+
+    /// <summary>Whether a No Confidence waits in anyone's hand, so the approval can be cancelled.</summary>
+    public static bool HasPlayableNoConfidence(ResistanceGame game) =>
+        game.Rules.PlotCardsEnabled
+        && game.PlotCards.Any(x => x.Type == ResistancePlotCardType.NoConfidence
+                                   && x.Location == ResistancePlotCardLocation.Hand);
+
+    /// <summary>
+    /// Counts the team as rejected (a vote, or a No Confidence cancelling the approval): the fifth ends the game, else
+    /// the lead passes on and the next leader picks.
+    /// </summary>
+    public static void RejectTeam(ResistanceGame game)
+    {
         game.RejectedTeams++;
         if (game.RejectedTeams >= MaxRejectedTeams)
         {
@@ -53,7 +79,7 @@ public static class ResistanceRoles
 
         if (HasPlayableStrongLeader(game))
         {
-            OpenLeaderWindow(game, beforeDraw: false);
+            OpenWindow(game, ResistancePhase.LeaderWindow, beforeDraw: false);
         }
     }
 
@@ -64,9 +90,9 @@ public static class ResistanceRoles
                                    && x.Location == ResistancePlotCardLocation.Hand
                                    && x.HolderPlayerId != game.LeaderPlayerId);
 
-    private static void OpenLeaderWindow(ResistanceGame game, bool beforeDraw)
+    private static void OpenWindow(ResistanceGame game, ResistancePhase phase, bool beforeDraw)
     {
-        game.Phase = ResistancePhase.LeaderWindow;
+        game.Phase = phase;
         game.LeaderWindowBeforeDraw = beforeDraw;
         foreach (var player in game.Players)
         {
@@ -74,12 +100,21 @@ public static class ResistanceRoles
         }
     }
 
-    /// <summary>Ends the leader window (everyone passed, or a Strong Leader was played): the leader draws their cards or picks the team.</summary>
-    public static void AfterLeaderWindow(ResistanceGame game)
+    /// <summary>
+    /// Ends a window (everyone passed, or a card was played). The leader window goes on to the draw or the team; the
+    /// confidence window, passed by everyone, starts the mission.
+    /// </summary>
+    public static void AfterWindow(ResistanceGame game)
     {
         foreach (var player in game.Players)
         {
             player.PassedLeaderWindow = false;
+        }
+
+        if (game.Phase == ResistancePhase.ConfidenceWindow)
+        {
+            StartMission(game);
+            return;
         }
 
         if (game.LeaderWindowBeforeDraw)
@@ -122,7 +157,7 @@ public static class ResistanceRoles
 
         if (HasPlayableStrongLeader(game))
         {
-            OpenLeaderWindow(game, beforeDraw: true);
+            OpenWindow(game, ResistancePhase.LeaderWindow, beforeDraw: true);
             return;
         }
 

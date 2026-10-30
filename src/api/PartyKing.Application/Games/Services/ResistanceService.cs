@@ -111,7 +111,11 @@ public interface IResistanceService
     Task<ErrorOr<ResistanceGameDto>> TakeLeadAsync(
         Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken);
 
-    /// <summary>A player confirms in the leader window that they play no card; the last confirmation ends it.</summary>
+    /// <summary>In the confidence window the holder of No Confidence cancels the approved team.</summary>
+    Task<ErrorOr<ResistanceGameDto>> PlayNoConfidenceAsync(
+        Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken);
+
+    /// <summary>A player confirms in the leader or confidence window that they play no card; the last confirmation ends it.</summary>
     Task<ErrorOr<ResistanceGameDto>> PassLeaderWindowAsync(
         Guid sessionId, GameCaller caller, CancellationToken cancellationToken);
 
@@ -482,6 +486,25 @@ internal class ResistanceService : IResistanceService
         return await FinishPlotCardAsync(sessionId, result, caller, cancellationToken);
     }
 
+    public async Task<ErrorOr<ResistanceGameDto>> PlayNoConfidenceAsync(
+        Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken)
+    {
+        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
+        if (access.IsError)
+        {
+            return access.Errors;
+        }
+
+        if (access.Value.Game is null)
+        {
+            return _lobby.NoGame;
+        }
+
+        var result = await _games.PlayNoConfidenceAsync(sessionId, caller.PlayerId, cardId, cancellationToken);
+
+        return await FinishPlotCardAsync(sessionId, result, caller, cancellationToken);
+    }
+
     public async Task<ErrorOr<ResistanceGameDto>> PassLeaderWindowAsync(
         Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
     {
@@ -805,7 +828,7 @@ internal class ResistanceService : IResistanceService
                     .ToList(),
             ResistanceRoles.OpenMissionPlayerId(game),
             game.Players.FirstOrDefault(x => x.PlayerId == ResistanceRoles.OpenMissionPlayerId(game))?.MissionCard,
-            game.Phase == ResistancePhase.LeaderWindow
+            game.Phase is ResistancePhase.LeaderWindow or ResistancePhase.ConfidenceWindow
                 ? game.Players.Where(x => x.PassedLeaderWindow).OrderBy(x => x.Order).Select(x => x.PlayerId).ToList()
                 : []);
     }

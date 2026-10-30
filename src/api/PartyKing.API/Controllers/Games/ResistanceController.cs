@@ -147,7 +147,22 @@ public class ResistanceController : GameControllerBase
     }
 
     /// <summary>
-    /// A player confirms in the leader window that they play no card; the last confirmation ends it. 403 for a host or
+    /// The holder of No Confidence cancels the approved team in the confidence window; it counts as a rejected team.
+    /// 403 for anyone else, 404 for an unknown card, 409 outside the window or once played.
+    /// </summary>
+    [HttpPut("cards/{cardId:int}/no-confidence")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> PlayResistanceNoConfidence(
+        Guid sessionId, int cardId, CancellationToken cancellationToken)
+    {
+        var result = await _resistanceService.PlayNoConfidenceAsync(sessionId, cardId, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>
+    /// A player confirms in the leader or confidence window that they play no card; the last confirmation ends it. 403 for a host or
     /// admin who did not join, 409 outside the window.
     /// </summary>
     [HttpPut("leader-window/pass")]

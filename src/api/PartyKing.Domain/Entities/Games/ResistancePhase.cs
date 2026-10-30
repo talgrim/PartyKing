@@ -40,4 +40,10 @@ public enum ResistancePhase
     /// one was played.
     /// </summary>
     LeaderWindow,
+
+    /// <summary>
+    /// Plot cards add-on: the team was approved while a No Confidence sits in a hand, so everyone confirms they do not
+    /// play it, or its holder cancels the approval. Like <see cref="LeaderWindow"/> it only opens when such a card exists.
+    /// </summary>
+    ConfidenceWindow,
 }

@@ -69,6 +69,13 @@ public interface IResistanceGamesRepository : ILobbyGamesRepository<ResistanceGa
         Guid sessionId, Guid? callerPlayerId, int cardId, CancellationToken cancellationToken);
 
     /// <summary>
+    /// In the confidence window the holder of No Confidence cancels the approved team: it counts as rejected (the fifth
+    /// ends the game) and the lead passes on.
+    /// </summary>
+    Task<ResistancePlayCardResult> PlayNoConfidenceAsync(
+        Guid sessionId, Guid? callerPlayerId, int cardId, CancellationToken cancellationToken);
+
+    /// <summary>
     /// A player confirms in the leader window that they do not play a card (repeating it is fine). The last
     /// confirmation ends the window.
     /// </summary>
@@ -757,7 +764,56 @@ internal class ResistanceGamesRepository
         card.PlayedInMission = game.MissionNumber;
         card.IsConfirmed = true;
         game.LeaderPlayerId = callerPlayerId;
-        ResistanceRoles.AfterLeaderWindow(game);
+        ResistanceRoles.AfterWindow(game);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return new ResistancePlayCardResult(ResistancePlayCardStatus.Done, game);
+    }
+
+    public async Task<ResistancePlayCardResult> PlayNoConfidenceAsync(
+        Guid sessionId, Guid? callerPlayerId, int cardId, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await CreateWriterAsync(cancellationToken);
+
+        var (early, game) = await LoadStartedAsync(dbContext, sessionId, cancellationToken);
+        if (early is { } status)
+        {
+            return new ResistancePlayCardResult(status, game);
+        }
+
+        var card = game!.PlotCards.Find(x => x.CardId == cardId);
+        if (card is null || card.Type != ResistancePlotCardType.NoConfidence
+            || card.Location is not (ResistancePlotCardLocation.Hand or ResistancePlotCardLocation.Played))
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.UnknownCard, game);
+        }
+
+        if (callerPlayerId is null || card.HolderPlayerId != callerPlayerId)
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.NotAllowed, game);
+        }
+
+        if (card.Location == ResistancePlotCardLocation.Played)
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.WrongState, game);
+        }
+
+        if (game.Phase != ResistancePhase.ConfidenceWindow)
+        {
+            return new ResistancePlayCardResult(ResistancePlayCardStatus.WrongPhase, game);
+        }
+
+        card.Location = ResistancePlotCardLocation.Played;
+        card.TargetPlayerId = game.LeaderPlayerId;
+        card.PlayedAt = DateTimeOffset.UtcNow;
+        card.PlayedInMission = game.MissionNumber;
+        card.IsConfirmed = true;
+        foreach (var player in game.Players)
+        {
+            player.PassedLeaderWindow = false;
+        }
+
+        ResistanceRoles.RejectTeam(game);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return new ResistancePlayCardResult(ResistancePlayCardStatus.Done, game);
@@ -780,7 +836,7 @@ internal class ResistanceGamesRepository
             return new ResistancePlayCardResult(ResistancePlayCardStatus.NotPlayer, game);
         }
 
-        if (game.Phase != ResistancePhase.LeaderWindow)
+        if (game.Phase is not (ResistancePhase.LeaderWindow or ResistancePhase.ConfidenceWindow))
         {
             return new ResistancePlayCardResult(ResistancePlayCardStatus.WrongPhase, game);
         }
@@ -788,7 +844,7 @@ internal class ResistanceGamesRepository
         player.PassedLeaderWindow = true;
         if (game.Players.All(x => x.PassedLeaderWindow))
         {
-            ResistanceRoles.AfterLeaderWindow(game);
+            ResistanceRoles.AfterWindow(game);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
