@@ -134,7 +134,7 @@ internal class RingoGamesRepository : LobbyGamesRepository<RingoGame, RingoPlaye
         });
         game.PendingCardId = cardId;
         game.CurrentPlayerId = current?.PlayerId;
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await SaveAsync(dbContext, cancellationToken);
 
         return new RingoFlipResult(RingoFlipStatus.Flipped, game);
     }
@@ -159,7 +159,7 @@ internal class RingoGamesRepository : LobbyGamesRepository<RingoGame, RingoPlaye
         {
             game.PendingCardId = null;
             game.CurrentPlayerId = RingoTurns.Next(game)?.PlayerId;
-            await dbContext.SaveChangesAsync(cancellationToken);
+            await SaveAsync(dbContext, cancellationToken);
         }
 
         return new RingoContinueResult(RingoContinueStatus.Continued, game);
