@@ -20,6 +20,10 @@ namespace PartyKing.Contract.V1.Games;
 /// who has (not which card) and <see cref="YourMissionCard"/> is the caller's own. Once all have played only the
 /// number of Fail cards of each finished mission is public (<see cref="MissionResults"/>), never who played them;
 /// <see cref="RequiredFails"/> is how many of them fail the current mission. Three successes or three failures win.
+/// In the Spotlight forces one team member to play openly: <see cref="OpenMissionPlayerId"/> is that player and
+/// <see cref="OpenMissionCard"/> their card (true = Success), public once they have played it.
+/// <see cref="YourPeeks"/> are the mission cards the caller looked at with Keeping a Close Eye this mission.
+/// In the leader or confidence window (a Strong Leader or No Confidence is out there) <see cref="LeaderWindowPassedPlayerIds"/> lists who confirmed.
 /// </summary>
 public record ResistanceGameDto(
     DateTimeOffset CreatedAt,
@@ -46,7 +50,58 @@ public record ResistanceGameDto(
     int? RequiredFails,
     IReadOnlyList<Guid> PlayedMissionPlayerIds,
     bool? YourMissionCard,
-    IReadOnlyList<ResistanceMissionResultDto> MissionResults);
+    IReadOnlyList<ResistanceMissionResultDto> MissionResults,
+    IReadOnlyList<ResistancePlotCardDto> YourPlotCards,
+    IReadOnlyList<ResistancePlotCardCountDto> PlotCardCounts,
+    IReadOnlyList<Guid> OpinionMakerPlayerIds,
+    IReadOnlyList<ResistanceVoteDto> OpinionMakerVotes,
+    IReadOnlyList<ResistancePlayedPlotCardDto> PlayedPlotCards,
+    IReadOnlyList<ResistanceCardRevealDto> YourReveals,
+    Guid? OpenMissionPlayerId,
+    bool? OpenMissionCard,
+    IReadOnlyList<Guid> LeaderWindowPassedPlayerIds,
+    IReadOnlyList<ResistanceMissionPeekDto> YourPeeks);
+
+/// <summary>A mission card the caller looked at with Keeping a Close Eye (true = Success); private to the peeker.</summary>
+public record ResistanceMissionPeekDto(Guid PlayerId, bool Success);
+
+/// <summary>
+/// A plot card that was played; public, newest first. The identity card it showed stays with its viewer.
+/// <paramref name="TargetPlayerId"/> is the neighbour (Overheard Conversation) or the player it was played on, and
+/// null for a card without a target.
+/// </summary>
+public record ResistancePlayedPlotCardDto(
+    int Id, ResistancePlotCardTypeDto Type, Guid HolderPlayerId, Guid? TargetPlayerId, int MissionNumber, bool IsConfirmed);
+
+/// <summary>The identity card a played card shows the caller, until they confirm having seen it.</summary>
+public record ResistanceCardRevealDto(int CardId, Guid PlayerId, ResistanceRoleDto Role);
+
+/// <summary>A plot card the caller holds. <paramref name="ToDeal"/> is true while the leader still has to hand it out.</summary>
+public record ResistancePlotCardDto(int Id, ResistancePlotCardTypeDto Type, bool ToDeal, bool InPlay);
+
+/// <summary>How many plot cards a player holds in hand; public, the cards themselves are not.</summary>
+public record ResistancePlotCardCountDto(Guid PlayerId, int Count);
+
+/// <summary>Serialized by name, which the UI compares against.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum ResistancePlotCardTypeDto
+{
+    OverheardConversation,
+    OpinionMaker,
+    EstablishConfidence,
+    OpenUp,
+    NoConfidence,
+    KeepingCloseEye,
+    StrongLeader,
+    InTheSpotlight,
+    TakeResponsibility,
+}
+
+/// <summary>The leader gives the card with this id to the player.</summary>
+public record ResistancePlotCardAssignmentDto(int CardId, Guid PlayerId);
+
+/// <summary>Every drawn card except Establish Confidence (the leader keeps it) goes to a player other than the leader.</summary>
+public record ResistanceDealPlotCardsRequest(IReadOnlyList<ResistancePlotCardAssignmentDto> Assignments);
 
 /// <summary>The public outcome of a finished mission: how many Fail cards were played, not by whom.</summary>
 public record ResistanceMissionResultDto(int MissionNumber, bool Succeeded, int FailCount);
@@ -55,7 +110,10 @@ public record ResistanceMissionResultDto(int MissionNumber, bool Succeeded, int 
 /// The numbers the game was created with (copied from the server configuration, refreshed on request until the game
 /// is open): for every player count the spies, the team size of each mission and the fails each mission needs.
 /// </summary>
-public record ResistanceRulesDto(IReadOnlyList<ResistanceCountRulesDto> PlayerCounts);
+/// <param name="PlotCardsEnabled">Whether the plot cards add-on is played in this game.</param>
+/// <param name="PlotCardsPerRound">How many plot cards the leader draws before each mission, at the current player count.</param>
+public record ResistanceRulesDto(
+    IReadOnlyList<ResistanceCountRulesDto> PlayerCounts, bool PlotCardsEnabled, int PlotCardsPerRound);
 
 public record ResistanceCountRulesDto(
     int PlayerCount, int Spies, IReadOnlyList<int> TeamSizes, IReadOnlyList<int> RequiredFails);
@@ -70,6 +128,10 @@ public enum ResistancePhaseDto
     GameOver,
     PlayingMission,
     MissionResult,
+    DealingCards,
+    ResolvingCards,
+    LeaderWindow,
+    ConfidenceWindow,
 }
 
 /// <summary>How one player voted on the team; public once everybody has voted.</summary>
@@ -102,6 +164,18 @@ public record ResistancePlayersOrderRequest(IReadOnlyList<Guid>? PlayerIds);
 
 /// <summary>The ids of the players the leader sends on the mission.</summary>
 public record ResistanceTeamRequest(IReadOnlyList<Guid>? PlayerIds);
+
+/// <summary>Switches the plot cards add-on on or off (only before the game is opened).</summary>
+public record ResistancePlotCardsRequest(bool Enabled);
+
+/// <summary>The player an immediate plot card is played on.</summary>
+public record ResistancePlayPlotCardRequest(Guid TargetPlayerId);
+
+/// <summary>
+/// The player Take Responsibility takes a card from. <paramref name="TakeOpinionMaker"/> picks the face-up Opinion
+/// Maker (true) or a random card from the hand (false); needed only when the target has both.
+/// </summary>
+public record ResistanceTakeResponsibilityRequest(Guid TargetPlayerId, bool? TakeOpinionMaker);
 
 /// <summary>The caller's vote on the submitted team: true approves, false rejects.</summary>
 public record ResistanceVoteRequest(bool Approve);

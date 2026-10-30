@@ -72,6 +72,9 @@ namespace PartyKing.Persistence.Migrations
                     b.Property<Guid?>("LeaderPlayerId")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("LeaderWindowBeforeDraw")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("MissionNumber")
                         .HasColumnType("INTEGER");
 
@@ -85,7 +88,7 @@ namespace PartyKing.Persistence.Migrations
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT")
-                        .HasDefaultValue("{\"PlayerCounts\":{\"5\":{\"Spies\":2,\"TeamSizes\":[2,3,2,3,3],\"RequiredFails\":[1,1,1,1,1]},\"6\":{\"Spies\":2,\"TeamSizes\":[2,3,4,3,4],\"RequiredFails\":[1,1,1,1,1]},\"7\":{\"Spies\":3,\"TeamSizes\":[2,3,3,4,4],\"RequiredFails\":[1,1,1,2,1]},\"8\":{\"Spies\":3,\"TeamSizes\":[3,4,4,5,5],\"RequiredFails\":[1,1,1,2,1]},\"9\":{\"Spies\":3,\"TeamSizes\":[3,4,4,5,5],\"RequiredFails\":[1,1,1,2,1]},\"10\":{\"Spies\":4,\"TeamSizes\":[3,4,4,5,5],\"RequiredFails\":[1,1,1,2,1]}}}");
+                        .HasDefaultValue("{\"PlayerCounts\":{\"5\":{\"Spies\":2,\"TeamSizes\":[2,3,2,3,3],\"RequiredFails\":[1,1,1,1,1]},\"6\":{\"Spies\":2,\"TeamSizes\":[2,3,4,3,4],\"RequiredFails\":[1,1,1,1,1]},\"7\":{\"Spies\":3,\"TeamSizes\":[2,3,3,4,4],\"RequiredFails\":[1,1,1,2,1]},\"8\":{\"Spies\":3,\"TeamSizes\":[3,4,4,5,5],\"RequiredFails\":[1,1,1,2,1]},\"9\":{\"Spies\":3,\"TeamSizes\":[3,4,4,5,5],\"RequiredFails\":[1,1,1,2,1]},\"10\":{\"Spies\":4,\"TeamSizes\":[3,4,4,5,5],\"RequiredFails\":[1,1,1,2,1]}},\"PlotCardsEnabled\":false,\"PlotDeck\":{\"OverheardConversation\":2,\"OpinionMaker\":2,\"EstablishConfidence\":1,\"OpenUp\":1,\"NoConfidence\":3,\"KeepingCloseEye\":2,\"StrongLeader\":2,\"InTheSpotlight\":1,\"TakeResponsibility\":1}}");
 
                     b.Property<DateTimeOffset?>("StartedAt")
                         .HasColumnType("TEXT");
@@ -147,6 +150,9 @@ namespace PartyKing.Persistence.Migrations
                     b.Property<int>("Order")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("PassedLeaderWindow")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("ProfileId")
                         .HasColumnType("TEXT");
 
@@ -162,6 +168,43 @@ namespace PartyKing.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("ResistancePlayers");
+                });
+
+            modelBuilder.Entity("PartyKing.Domain.Entities.Games.ResistancePlotCard", b =>
+                {
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CardId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("DeckOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("HolderPlayerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsConfirmed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Location")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset?>("PlayedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PlayedInMission")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("TargetPlayerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("SessionId", "CardId");
+
+                    b.ToTable("ResistancePlotCards");
                 });
 
             modelBuilder.Entity("PartyKing.Domain.Entities.Games.RingoFlip", b =>
@@ -463,6 +506,15 @@ namespace PartyKing.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("PartyKing.Domain.Entities.Games.ResistancePlotCard", b =>
+                {
+                    b.HasOne("PartyKing.Domain.Entities.Games.ResistanceGame", null)
+                        .WithMany("PlotCards")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("PartyKing.Domain.Entities.Games.RingoFlip", b =>
                 {
                     b.HasOne("PartyKing.Domain.Entities.Games.RingoGame", null)
@@ -532,6 +584,8 @@ namespace PartyKing.Persistence.Migrations
                     b.Navigation("MissionResults");
 
                     b.Navigation("Players");
+
+                    b.Navigation("PlotCards");
                 });
 
             modelBuilder.Entity("PartyKing.Domain.Entities.Games.RingoGame", b =>

@@ -33,5 +33,10 @@ public class ResistanceGameConfiguration : IEntityTypeConfiguration<ResistanceGa
             .WithOne()
             .HasForeignKey(x => x.SessionId)
             .OnDelete(DeleteBehavior.Cascade);
+        builder
+            .HasMany(x => x.PlotCards)
+            .WithOne()
+            .HasForeignKey(x => x.SessionId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

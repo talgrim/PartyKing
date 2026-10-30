@@ -1,4 +1,5 @@
 import { ResistanceGameDto } from '@/service/endpoints/games/types';
+import { IMMEDIATE_PLOT_CARDS } from './resistancePlotCards';
 import { MIN_PLAYERS } from './resistanceTeams';
 
 const MAX_REJECTED_TEAMS = 5;
@@ -50,6 +51,46 @@ export const resistancePhaseDescription = (
       return `Koniec gry! ${game.winner === 'Spy' ? 'Szpiedzy wygrali' : 'Ruch Oporu wygrał'}: ${why} (${score}). Wszystkie role zostały ujawnione.`;
     }
 
+    if (game.phase === 'DealingCards') {
+      const task = youLead
+        ? 'rozdaj dobrane karty Intryg innym graczom'
+        : 'rozdaje dobrane karty Intryg innym graczom';
+
+      return `${who} (korona): ${task}. Potem wybierze drużynę na ${mission} misję.`;
+    }
+
+    if (game.phase === 'LeaderWindow') {
+      const passed = game.leaderWindowPassedPlayerIds.length;
+      const mine = game.yourPlayerId == null
+        ? ''
+        : game.leaderWindowPassedPlayerIds.includes(game.yourPlayerId)
+          ? ' Twoje potwierdzenie jest zapisane.'
+          : ' Potwierdź, że nie zagrywasz karty (albo zagraj ją).';
+
+      return `${who} (korona), ale zanim cokolwiek zrobi, gracze decydują, czy zagrywają karty Intrygi. Potwierdzili: ${passed}/${count}.${mine}`;
+    }
+
+    if (game.phase === 'ConfidenceWindow') {
+      const passed = game.leaderWindowPassedPlayerIds.length;
+      const mine = game.yourPlayerId == null
+        ? ''
+        : game.leaderWindowPassedPlayerIds.includes(game.yourPlayerId)
+          ? ' Twoje potwierdzenie jest zapisane.'
+          : ' Potwierdź, że nie zagrywasz karty (albo zagraj ją).';
+
+      return `Drużyna (${names.join(', ')}) została zatwierdzona (${tally}), ale zanim wyruszy, gracze decydują, czy zagrywają karty Intrygi. Potwierdzili: ${passed}/${count}.${mine}`;
+    }
+
+    if (game.phase === 'ResolvingCards') {
+      const waiting = game.playedPlotCards
+        .filter((card) => IMMEDIATE_PLOT_CARDS.includes(card.type) && !card.isConfirmed)
+        .map((card) => game.players.find((player) => player.id === (card.type === 'OverheardConversation' ? card.holderPlayerId : card.targetPlayerId))?.name)
+        .filter((name) => name != null);
+      const confirm = waiting.length > 0 ? ` Czekamy na potwierdzenie: ${waiting.join(', ')}.` : '';
+
+      return `${who} (korona) rozdał/a karty Intryg. Gracze zagrywają karty natychmiastowe i potwierdzają, że zobaczyli kartę Tożsamości; potem drużynę wybierze lider.${confirm}`;
+    }
+
     if (game.phase === 'PlayingMission') {
       const progress = `Zagrano ${game.playedMissionPlayerIds.length}/${game.teamPlayerIds.length} kart.`;
       const fails = game.requiredFails ?? 1;
@@ -61,7 +102,14 @@ export const resistancePhaseDescription = (
           ? ' Zagraj swoją kartę misji.'
           : ' Twoja karta jest zagrana.';
 
-      return `Drużyna (${names.join(', ')}) została zatwierdzona (${tally}) i wykonuje ${mission} misję. ${progress}${rule}${mine}`;
+      const openName = game.players.find((player) => player.id === game.openMissionPlayerId)?.name;
+      const open = openName == null
+        ? ''
+        : game.openMissionCard == null
+          ? ` ${openName} musi zagrać kartę misji jawnie („Pod obserwacją”).`
+          : ` ${openName} zagrał/a kartę jawnie: ${game.openMissionCard ? 'Sukces' : 'Porażka'}.`;
+
+      return `Drużyna (${names.join(', ')}) została zatwierdzona (${tally}) i wykonuje ${mission} misję. ${progress}${rule}${mine}${open}`;
     }
 
     if (game.phase === 'MissionResult') {
@@ -84,7 +132,14 @@ export const resistancePhaseDescription = (
             ? ' Zagłosuj: zatwierdź albo odrzuć drużynę.'
             : ' Twój głos możesz zmienić, dopóki nie zagłosują wszyscy.';
 
-      return `${who} (korona) zgłosił/a drużynę na ${mission} misję: ${names.join(', ')}. Teraz drużyna idzie pod głosowanie. ${progress}${mine}${card}`;
+      const makers = game.players.filter((player) => game.opinionMakerPlayerIds.includes(player.id));
+      const pendingMakers = makers.filter((player) => !game.votedPlayerIds.includes(player.id));
+      const order =
+        pendingMakers.length > 0
+          ? ` Najpierw głosuje kreator opinii: ${pendingMakers.map((player) => player.name).join(', ')}.`
+          : '';
+
+      return `${who} (korona) zgłosił/a drużynę na ${mission} misję: ${names.join(', ')}. Teraz drużyna idzie pod głosowanie. ${progress}${order}${mine}${card}`;
     }
 
     const task = youLead
