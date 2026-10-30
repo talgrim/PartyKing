@@ -220,7 +220,8 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         await StartGameWithTeamAsync(5);
         await VoteAsync(true, true, true, true, true);
         var team = (await ReloadAsync()).Players.Where(x => x.IsOnTeam).ToList();
-        var spy = team.FirstOrDefault(x => x.Role == ResistanceRole.Spy);
+        // Every spy on the team plays Fail (both of them do when the random team of two is all spies)
+        var spies = team.Count(x => x.Role == ResistanceRole.Spy);
 
         foreach (var member in team)
         {
@@ -233,8 +234,8 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         Assert.Equal(ResistancePhase.MissionResult, game.Phase);
         var result = Assert.Single(game.MissionResults);
         Assert.Equal(1, result.MissionNumber);
-        Assert.Equal(spy is null, result.Succeeded);
-        Assert.Equal(spy is null ? 0 : 1, result.FailCount);
+        Assert.Equal(spies == 0, result.Succeeded);
+        Assert.Equal(spies, result.FailCount);
 
         var next = await _repository.ContinueAsync(_sessionId, null, isManager: true, ct);
         Assert.Equal(ResistanceContinueStatus.Continued, next.Status);

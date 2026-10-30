@@ -137,6 +137,66 @@ public class ResistanceControllerTests
         Assert.Equal(status, Assert.IsType<ObjectResult>(result).StatusCode);
     }
 
+    [Fact]
+    public async Task PlayPlotCard_PassesTheCardTheTargetAndTheCookiesPlayerToTheService()
+    {
+        var target = Guid.NewGuid();
+        var game = Game();
+        _service.Result = game;
+
+        var result = await _controller.PlayResistancePlotCard(
+            _sessionId, 4, new ResistancePlayPlotCardRequest(target), CancellationToken.None);
+
+        Assert.Equal(($"play-4-{target}", _sessionId, null, _playerId), _service.LastCall);
+        Assert.Same(game, Assert.IsType<OkObjectResult>(result).Value);
+    }
+
+    [Theory]
+    [MemberData(nameof(Errors))]
+    public async Task PlayPlotCard_MapsServiceErrorsToTheirStatusCodes(Error error, int status)
+    {
+        _service.Result = error;
+
+        var result = await _controller.PlayResistancePlotCard(
+            _sessionId, 4, new ResistancePlayPlotCardRequest(Guid.NewGuid()), CancellationToken.None);
+
+        Assert.Equal(status, Assert.IsType<ObjectResult>(result).StatusCode);
+    }
+
+    [Fact]
+    public async Task ConfirmPlotCard_PassesTheCardAndTheCookiesPlayerToTheService()
+    {
+        _service.Result = Game();
+
+        var result = await _controller.ConfirmResistancePlotCard(_sessionId, 7, CancellationToken.None);
+
+        Assert.Equal(("confirm-7", _sessionId, null, _playerId), _service.LastCall);
+        Assert.IsType<OkObjectResult>(result);
+    }
+
+    [Theory]
+    [MemberData(nameof(Errors))]
+    public async Task ConfirmPlotCard_MapsServiceErrorsToTheirStatusCodes(Error error, int status)
+    {
+        _service.Result = error;
+
+        var result = await _controller.ConfirmResistancePlotCard(_sessionId, 7, CancellationToken.None);
+
+        Assert.Equal(status, Assert.IsType<ObjectResult>(result).StatusCode);
+    }
+
+    [Fact]
+    public async Task DealPlotCards_PassesTheCookiesPlayerToTheService()
+    {
+        _service.Result = Game();
+
+        var result = await _controller.DealResistancePlotCards(
+            _sessionId, new ResistanceDealPlotCardsRequest([]), CancellationToken.None);
+
+        Assert.Equal(("deal-plot-cards", _sessionId, null, _playerId), _service.LastCall);
+        Assert.IsType<OkObjectResult>(result);
+    }
+
     public static TheoryData<Error, int> Errors => new()
     {
         { Error.Forbidden("Resistance.NotPlayer", "x"), StatusCodes.Status403Forbidden },
@@ -147,7 +207,7 @@ public class ResistanceControllerTests
 
     private static ResistanceGameDto Game() => new(
         DateTimeOffset.UtcNow, true, [], null, 10, null, null, null, null, 1, null, [], null, 0, null, [], null,
-        null, null, null, new ResistanceRulesDto([], false, 1), null, [], null, [], [], [], [], []);
+        null, null, null, new ResistanceRulesDto([], false, 1), null, [], null, [], [], [], [], [], [], []);
 
     private sealed class FakeResistanceService : IResistanceService
     {
@@ -173,6 +233,18 @@ public class ResistanceControllerTests
             Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
         {
             LastCall = ("continue", sessionId, null, caller.PlayerId);
+            return Task.FromResult(Result);
+        }
+
+        public Task<ErrorOr<ResistanceGameDto>> PlayPlotCardAsync(Guid sessionId, int cardId, Guid targetPlayerId, GameCaller caller, CancellationToken cancellationToken)
+        {
+            LastCall = ($"play-{cardId}-{targetPlayerId}", sessionId, null, caller.PlayerId);
+            return Task.FromResult(Result);
+        }
+
+        public Task<ErrorOr<ResistanceGameDto>> ConfirmPlotCardAsync(Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken)
+        {
+            LastCall = ($"confirm-{cardId}", sessionId, null, caller.PlayerId);
             return Task.FromResult(Result);
         }
 

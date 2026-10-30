@@ -49,16 +49,27 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         Directory.Delete(_directory, recursive: true);
     }
 
-    /// <param name="withoutEstablishConfidence">Swaps Establish Confidence for a third Overheard Conversation, which the
-    /// leader would keep instead of handing out, so a test can count on every drawn card being dealt.</param>
-    private async Task<ResistanceGame> StartAsync(int playerCount, bool plotCards, bool withoutEstablishConfidence = false, bool onlyOpinionMakers = false)
+    /// <param name="withoutImmediateCards">Swaps the immediate cards for No Confidence, so a test can count on every drawn
+    /// card being dealt into a hand and the team being picked right after.</param>
+    /// <param name="onlyType">Makes the whole deck of this type.</param>
+    private async Task<ResistanceGame> StartAsync(
+        int playerCount, bool plotCards, bool withoutImmediateCards = false, bool onlyOpinionMakers = false,
+        ResistancePlotCardType? onlyType = null)
     {
         var game = new ResistanceGame { SessionId = _sessionId, CreatedAt = DateTimeOffset.UtcNow, IsOpen = true };
         game.Rules.PlotCardsEnabled = plotCards;
-        if (withoutEstablishConfidence)
+        if (withoutImmediateCards)
         {
+            game.Rules.PlotDeck[ResistancePlotCardType.OverheardConversation] = 0;
             game.Rules.PlotDeck[ResistancePlotCardType.EstablishConfidence] = 0;
-            game.Rules.PlotDeck[ResistancePlotCardType.OverheardConversation] = 3;
+            game.Rules.PlotDeck[ResistancePlotCardType.OpenUp] = 0;
+            game.Rules.PlotDeck[ResistancePlotCardType.NoConfidence] = 7;
+        }
+
+        if (onlyType is { } type)
+        {
+            game.Rules.PlotDeck.Clear();
+            game.Rules.PlotDeck[type] = 15;
         }
 
         if (onlyOpinionMakers)
@@ -101,12 +112,37 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
             .ToList();
     }
 
+    /// <summary>Hands the drawn cards out and, when that leaves immediate cards to play, plays and confirms them all.</summary>
     private async Task DealAsync(ResistanceGame game)
+    {
+        await DealOnlyAsync(game);
+
+        var ct = CancellationToken.None;
+        var current = await ReloadAsync();
+        foreach (var card in ResistanceRoles.UnplayedImmediateCards(current).ToList())
+        {
+            var target = ResistanceTarget(current, card);
+            Assert.Equal(ResistancePlayCardStatus.Done, (await _repository.PlayPlotCardAsync(_sessionId, card.HolderPlayerId, card.CardId, target, ct)).Status);
+        }
+
+        current = await ReloadAsync();
+        foreach (var card in ResistanceRoles.UnconfirmedCards(current).ToList())
+        {
+            Assert.Equal(ResistancePlayCardStatus.Done, (await _repository.ConfirmPlotCardAsync(_sessionId, ResistanceRoles.Viewer(card), card.CardId, ct)).Status);
+        }
+    }
+
+    /// <summary>Hands the drawn cards out and leaves the immediate ones unplayed.</summary>
+    private async Task DealOnlyAsync(ResistanceGame game)
     {
         var dealt = await _repository.DealPlotCardsAsync(
             _sessionId, game.LeaderPlayerId, DealEvenly(game), CancellationToken.None);
         Assert.Equal(ResistanceDealStatus.Dealt, dealt.Status);
     }
+
+    /// <summary>A legal target: the holder's left neighbour for Overheard Conversation, else the next player after them.</summary>
+    private static Guid ResistanceTarget(ResistanceGame game, ResistancePlotCard card) =>
+        ResistanceRoles.Neighbours(game, card.HolderPlayerId!.Value)[0];
 
     private async Task SelectTeamAndVoteAsync(ResistanceGame game, bool approve)
     {
@@ -166,7 +202,7 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
     [Fact]
     public async Task DealingTheCards_PutsThemInTheHandsAndMovesOnToPickingTheTeam()
     {
-        var game = await StartAsync(7, plotCards: true, withoutEstablishConfidence: true);
+        var game = await StartAsync(7, plotCards: true, withoutImmediateCards: true);
 
         await DealAsync(game);
 
@@ -198,7 +234,7 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
     public async Task ADealThatIsWrong_ChangesNothing()
     {
         var ct = CancellationToken.None;
-        var game = await StartAsync(7, plotCards: true, withoutEstablishConfidence: true);
+        var game = await StartAsync(7, plotCards: true, withoutImmediateCards: true);
         var cards = ResistanceRoles.CardsToDeal(game).ToList();
         var other = game.Players.First(x => x.PlayerId != game.LeaderPlayerId).PlayerId;
 
@@ -227,7 +263,7 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
     public async Task EstablishConfidence_StaysWithTheLeaderAndCountsAsADrawnCard()
     {
         var ct = CancellationToken.None;
-        var game = await StartAsync(7, plotCards: true, withoutEstablishConfidence: true);
+        var game = await StartAsync(7, plotCards: true, withoutImmediateCards: true);
         var drawn = game.PlotCards.Where(x => x.Location == ResistancePlotCardLocation.Drawn).OrderBy(x => x.CardId).ToList();
         await using (var dbContext = await _writer.CreateDbContextAsync())
         {
@@ -246,7 +282,7 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
             [new PlotCardAssignment(toDeal[0].CardId, other), new PlotCardAssignment(drawn[0].CardId, other)], ct);
         Assert.Equal(ResistanceDealStatus.UnknownCard, keptAway.Status);
 
-        await DealAsync(game);
+        await DealOnlyAsync(game);
 
         var after = await ReloadAsync();
         var kept = after.PlotCards.Single(x => x.CardId == drawn[0].CardId);
@@ -258,7 +294,7 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
     [Fact]
     public async Task ARejectedTeam_DoesNotDrawAgain()
     {
-        var game = await StartAsync(5, plotCards: true);
+        var game = await StartAsync(5, plotCards: true, withoutImmediateCards: true);
         await DealAsync(game);
         game = await ReloadAsync();
 
@@ -275,7 +311,7 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
     public async Task TheNextMission_TheNewLeaderDrawsAndTheHandsStay()
     {
         var ct = CancellationToken.None;
-        var game = await StartAsync(5, plotCards: true);
+        var game = await StartAsync(5, plotCards: true, withoutImmediateCards: true);
         await DealAsync(game);
         game = await ReloadAsync();
         await SelectTeamAndVoteAsync(game, approve: true);
@@ -401,5 +437,166 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         Assert.Equal(ResistancePhase.GameOver, game.Phase);
         Assert.Equal(ResistanceRestartStatus.Restarted, (await _repository.RestartAsync(_sessionId, DateTimeOffset.UtcNow, ct)).Status);
         Assert.Empty(ResistanceRoles.OpinionMakerIds(await ReloadAsync()));
+    }
+
+    [Fact]
+    public async Task DealingAnImmediateCard_StartsPlayingItBeforeTheTeamIsPicked()
+    {
+        var game = await StartAsync(5, plotCards: true, onlyType: ResistancePlotCardType.OpenUp);
+
+        await DealOnlyAsync(game);
+
+        var after = await ReloadAsync();
+        Assert.Equal(ResistancePhase.ResolvingCards, after.Phase);
+        Assert.Equal(ResistanceTeamStatus.CardsNotDealt, (await _repository.SelectTeamAsync(
+            _sessionId, after.LeaderPlayerId, after.Players.Take(2).Select(x => x.PlayerId).ToList(), CancellationToken.None)).Status);
+    }
+
+    [Fact]
+    public async Task OverheardConversation_IsPlayedOnANeighbourAndTheHolderConfirmsWhatTheySaw()
+    {
+        var ct = CancellationToken.None;
+        var game = await StartAsync(5, plotCards: true, onlyType: ResistancePlotCardType.OverheardConversation);
+        await DealOnlyAsync(game);
+        var card = ResistanceRoles.UnplayedImmediateCards(await ReloadAsync()).Single();
+        var holder = card.HolderPlayerId!.Value;
+        var neighbours = ResistanceRoles.Neighbours(game, holder);
+        var farAway = game.Players.Select(x => x.PlayerId).First(x => x != holder && !neighbours.Contains(x));
+
+        Assert.Equal(ResistancePlayCardStatus.InvalidTarget, (await _repository.PlayPlotCardAsync(_sessionId, holder, card.CardId, farAway, ct)).Status);
+        Assert.Equal(ResistancePlayCardStatus.InvalidTarget, (await _repository.PlayPlotCardAsync(_sessionId, holder, card.CardId, holder, ct)).Status);
+        Assert.Equal(ResistancePlayCardStatus.NotAllowed, (await _repository.PlayPlotCardAsync(_sessionId, farAway, card.CardId, neighbours[0], ct)).Status);
+        Assert.Equal(ResistancePlayCardStatus.WrongState, (await _repository.ConfirmPlotCardAsync(_sessionId, holder, card.CardId, ct)).Status);
+
+        Assert.Equal(ResistancePlayCardStatus.Done, (await _repository.PlayPlotCardAsync(_sessionId, holder, card.CardId, neighbours[1], ct)).Status);
+
+        var played = await ReloadAsync();
+        var log = played.PlotCards.Single(x => x.CardId == card.CardId);
+        Assert.Equal(ResistancePlotCardLocation.Played, log.Location);
+        Assert.Equal(neighbours[1], log.TargetPlayerId);
+        Assert.Equal(1, log.PlayedInMission);
+        Assert.Equal(ResistancePhase.ResolvingCards, played.Phase);
+        Assert.Equal(ResistancePlayCardStatus.WrongState, (await _repository.PlayPlotCardAsync(_sessionId, holder, card.CardId, neighbours[0], ct)).Status);
+        // The holder sees the neighbour's identity card, so nobody else may confirm it
+        Assert.Equal(ResistancePlayCardStatus.NotAllowed, (await _repository.ConfirmPlotCardAsync(_sessionId, neighbours[1], card.CardId, ct)).Status);
+
+        Assert.Equal(ResistancePlayCardStatus.Done, (await _repository.ConfirmPlotCardAsync(_sessionId, holder, card.CardId, ct)).Status);
+        Assert.Equal(ResistancePhase.SelectingTeam, (await ReloadAsync()).Phase);
+        Assert.Equal(ResistancePlayCardStatus.NotResolving, (await _repository.ConfirmPlotCardAsync(_sessionId, holder, card.CardId, ct)).Status);
+    }
+
+    [Fact]
+    public async Task OpenUp_ShowsTheHoldersIdentityToTheChosenPlayerWhoConfirmsIt()
+    {
+        var ct = CancellationToken.None;
+        var game = await StartAsync(5, plotCards: true, onlyType: ResistancePlotCardType.OpenUp);
+        await DealOnlyAsync(game);
+        var card = ResistanceRoles.UnplayedImmediateCards(await ReloadAsync()).Single();
+        var holder = card.HolderPlayerId!.Value;
+        var chosen = game.Players.Select(x => x.PlayerId).First(x => x != holder && x != game.LeaderPlayerId);
+
+        Assert.Equal(ResistancePlayCardStatus.InvalidTarget, (await _repository.PlayPlotCardAsync(_sessionId, holder, card.CardId, holder, ct)).Status);
+        Assert.Equal(ResistancePlayCardStatus.InvalidTarget, (await _repository.PlayPlotCardAsync(_sessionId, holder, card.CardId, Guid.NewGuid(), ct)).Status);
+        Assert.Equal(ResistancePlayCardStatus.Done, (await _repository.PlayPlotCardAsync(_sessionId, holder, card.CardId, chosen, ct)).Status);
+
+        var played = (await ReloadAsync()).PlotCards.Single(x => x.CardId == card.CardId);
+        Assert.Equal(chosen, ResistanceRoles.Viewer(played));
+        Assert.Equal(holder, ResistanceRoles.Revealed(played));
+        Assert.Equal(ResistancePlayCardStatus.NotAllowed, (await _repository.ConfirmPlotCardAsync(_sessionId, holder, card.CardId, ct)).Status);
+        Assert.Equal(ResistancePlayCardStatus.Done, (await _repository.ConfirmPlotCardAsync(_sessionId, chosen, card.CardId, ct)).Status);
+        Assert.Equal(ResistancePhase.SelectingTeam, (await ReloadAsync()).Phase);
+    }
+
+    [Fact]
+    public async Task OpenUp_MayBeShownToTheLeader()
+    {
+        var game = await StartAsync(5, plotCards: true, onlyType: ResistancePlotCardType.OpenUp);
+        await DealOnlyAsync(game);
+        var card = ResistanceRoles.UnplayedImmediateCards(await ReloadAsync()).Single();
+
+        var played = await _repository.PlayPlotCardAsync(
+            _sessionId, card.HolderPlayerId, card.CardId, game.LeaderPlayerId!.Value, CancellationToken.None);
+
+        Assert.Equal(ResistancePlayCardStatus.Done, played.Status);
+    }
+
+    [Fact]
+    public async Task EstablishConfidence_StaysWithTheLeaderWhoPlaysItOnAnotherPlayer()
+    {
+        var ct = CancellationToken.None;
+        var game = await StartAsync(5, plotCards: true, onlyType: ResistancePlotCardType.EstablishConfidence);
+        // The only drawn card is the leader's own, so there is nothing to hand out
+        Assert.Empty(ResistanceRoles.CardsToDeal(game));
+        await DealOnlyAsync(game);
+        var leader = game.LeaderPlayerId!.Value;
+        var card = ResistanceRoles.UnplayedImmediateCards(await ReloadAsync()).Single();
+        var chosen = game.Players.Select(x => x.PlayerId).First(x => x != leader);
+
+        Assert.Equal(leader, card.HolderPlayerId);
+        Assert.Equal(ResistancePlayCardStatus.NotAllowed, (await _repository.PlayPlotCardAsync(_sessionId, chosen, card.CardId, leader, ct)).Status);
+        Assert.Equal(ResistancePlayCardStatus.InvalidTarget, (await _repository.PlayPlotCardAsync(_sessionId, leader, card.CardId, leader, ct)).Status);
+        Assert.Equal(ResistancePlayCardStatus.Done, (await _repository.PlayPlotCardAsync(_sessionId, leader, card.CardId, chosen, ct)).Status);
+        Assert.Equal(ResistancePlayCardStatus.NotAllowed, (await _repository.ConfirmPlotCardAsync(_sessionId, leader, card.CardId, ct)).Status);
+        Assert.Equal(ResistancePlayCardStatus.Done, (await _repository.ConfirmPlotCardAsync(_sessionId, chosen, card.CardId, ct)).Status);
+        Assert.Equal(ResistancePhase.SelectingTeam, (await ReloadAsync()).Phase);
+    }
+
+    [Fact]
+    public async Task SeveralImmediateCards_ArePlayedInAnyOrderAndTheTeamWaitsForTheLastConfirmation()
+    {
+        var ct = CancellationToken.None;
+        var game = await StartAsync(7, plotCards: true, onlyType: ResistancePlotCardType.OpenUp);
+        await DealOnlyAsync(game);
+        var cards = ResistanceRoles.UnplayedImmediateCards(await ReloadAsync()).OrderBy(x => x.CardId).ToList();
+        Assert.Equal(2, cards.Count);
+        var targets = cards.Select(x => game.Players.Select(p => p.PlayerId).First(p => p != x.HolderPlayerId)).ToList();
+
+        // The second card is played and confirmed before the first one is played at all
+        await _repository.PlayPlotCardAsync(_sessionId, cards[1].HolderPlayerId, cards[1].CardId, targets[1], ct);
+        await _repository.ConfirmPlotCardAsync(_sessionId, targets[1], cards[1].CardId, ct);
+        Assert.Equal(ResistancePhase.ResolvingCards, (await ReloadAsync()).Phase);
+
+        await _repository.PlayPlotCardAsync(_sessionId, cards[0].HolderPlayerId, cards[0].CardId, targets[0], ct);
+        Assert.Equal(ResistancePhase.ResolvingCards, (await ReloadAsync()).Phase);
+
+        await _repository.ConfirmPlotCardAsync(_sessionId, targets[0], cards[0].CardId, ct);
+        Assert.Equal(ResistancePhase.SelectingTeam, (await ReloadAsync()).Phase);
+    }
+
+    [Fact]
+    public async Task PlayingOrConfirming_IsRefusedOutsideThePlayingPhase()
+    {
+        var ct = CancellationToken.None;
+        var game = await StartAsync(5, plotCards: true, onlyType: ResistancePlotCardType.OpenUp);
+        var someone = game.Players.First(x => x.PlayerId != game.LeaderPlayerId).PlayerId;
+
+        Assert.Equal(ResistancePlayCardStatus.NotResolving, (await _repository.PlayPlotCardAsync(_sessionId, someone, 0, game.LeaderPlayerId!.Value, ct)).Status);
+        Assert.Equal(ResistancePlayCardStatus.NoGame, (await _repository.ConfirmPlotCardAsync(Guid.NewGuid(), someone, 0, ct)).Status);
+
+        await DealOnlyAsync(game);
+        Assert.Equal(ResistancePlayCardStatus.UnknownCard, (await _repository.PlayPlotCardAsync(_sessionId, someone, 99, game.LeaderPlayerId!.Value, ct)).Status);
+    }
+
+    [Fact]
+    public async Task RestartingAFinishedGame_ForgetsThePlayedCards()
+    {
+        var ct = CancellationToken.None;
+        var game = await StartAsync(5, plotCards: true, onlyType: ResistancePlotCardType.OpenUp);
+        for (var i = 0; i < 5 && game.Phase != ResistancePhase.GameOver; i++)
+        {
+            if (game.Phase == ResistancePhase.DealingCards)
+            {
+                await DealAsync(game);
+            }
+
+            await SelectTeamAndVoteAsync(await ReloadAsync(), approve: false);
+            game = await ReloadAsync();
+        }
+
+        Assert.Equal(ResistancePhase.GameOver, game.Phase);
+        Assert.Contains(game.PlotCards, x => x.Location == ResistancePlotCardLocation.Played);
+        Assert.Equal(ResistanceRestartStatus.Restarted, (await _repository.RestartAsync(_sessionId, DateTimeOffset.UtcNow, ct)).Status);
+        var restarted = await ReloadAsync();
+        Assert.DoesNotContain(restarted.PlotCards, x => x.Location == ResistancePlotCardLocation.Played || x.IsConfirmed || x.TargetPlayerId is not null);
     }
 }
