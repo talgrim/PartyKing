@@ -8,6 +8,13 @@ import {
   MissionSuccessCardIcon,
   OperativeCardIcon,
   PlotCardIcon,
+  PlotCloseEyeCardIcon,
+  PlotEstablishConfidenceCardIcon,
+  PlotNoConfidenceCardIcon,
+  PlotOpinionMakerCardIcon,
+  PlotOverheardConversationCardIcon,
+  PlotSpotlightCardIcon,
+  PlotStrongLeaderCardIcon,
   SpyCardIcon,
   TeamTokenIcon,
   VoteApproveCardIcon,
@@ -25,6 +32,13 @@ const cards = {
   MissionSuccessCardIcon,
   MissionFailCardIcon,
   PlotCardIcon,
+  PlotCloseEyeCardIcon,
+  PlotEstablishConfidenceCardIcon,
+  PlotStrongLeaderCardIcon,
+  PlotOverheardConversationCardIcon,
+  PlotNoConfidenceCardIcon,
+  PlotSpotlightCardIcon,
+  PlotOpinionMakerCardIcon,
 };
 
 describe('ResistanceIcons', () => {
