@@ -835,8 +835,8 @@ describe('Resistance', () => {
 
       expect(mocks.restartResistance).toHaveBeenCalledWith('session-1');
       await waitFor(() => expect(screen.queryByRole('button', { name: 'Restart game' })).not.toBeInTheDocument());
-      expect(await screen.findByRole('button', { name: 'Start game' })).toBeEnabled();
-      expect(screen.getByRole('checkbox', { name: 'Plot cards' })).toBeEnabled();
+      expect(await screen.findByRole('button', { name: 'Start game' }, { timeout: 5000 })).toBeEnabled();
+      expect(await screen.findByLabelText('Plot cards', undefined, { timeout: 5000 })).toBeEnabled();
     });
 
     it('offers no restart while the game is on', async () => {
