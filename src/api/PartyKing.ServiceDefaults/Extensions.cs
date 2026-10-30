@@ -43,14 +43,21 @@ public static class Extensions
     public static TBuilder ConfigureOpenTelemetry<TBuilder>(this TBuilder builder)
         where TBuilder : IHostApplicationBuilder
     {
-        builder.Logging.AddOpenTelemetry(logging =>
-        {
-            logging.IncludeFormattedMessage = true;
-            logging.IncludeScopes = true;
-        });
+        // Traces and the log bridge only matter when something exports them; otherwise they just cost CPU per request
+        var useOtlpExporter = !string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]);
 
-        builder.Services.AddOpenTelemetry()
-            .WithMetrics(metrics =>
+        if (useOtlpExporter)
+        {
+            builder.Logging.AddOpenTelemetry(logging =>
+            {
+                logging.IncludeFormattedMessage = true;
+                logging.IncludeScopes = true;
+            });
+        }
+
+        var telemetry = builder.Services.AddOpenTelemetry();
+
+        telemetry.WithMetrics(metrics =>
             {
                 metrics.AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
@@ -59,8 +66,11 @@ public static class Extensions
                     .AddMeter("PartyKing.Infrastructure.Spotify")
                     .AddMeter("PartyKing.Infrastructure")
                     .AddPrometheusExporter();
-            })
-            .WithTracing(tracing =>
+            });
+
+        if (useOtlpExporter)
+        {
+            telemetry.WithTracing(tracing =>
             {
                 tracing.AddSource(builder.Environment.ApplicationName)
                     .AddAspNetCoreInstrumentation()
@@ -68,6 +78,7 @@ public static class Extensions
                     //.AddGrpcClientInstrumentation()
                     .AddHttpClientInstrumentation();
             });
+        }
 
         builder.AddOpenTelemetryExporters();
 
