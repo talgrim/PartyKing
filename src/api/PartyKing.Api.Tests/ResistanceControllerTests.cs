@@ -147,7 +147,7 @@ public class ResistanceControllerTests
 
     private static ResistanceGameDto Game() => new(
         DateTimeOffset.UtcNow, true, [], null, 10, null, null, null, null, 1, null, [], null, 0, null, [], null,
-        null, null, null, new ResistanceRulesDto([], false, 1), null, [], null, [], [], []);
+        null, null, null, new ResistanceRulesDto([], false, 1), null, [], null, [], [], [], [], []);
 
     private sealed class FakeResistanceService : IResistanceService
     {

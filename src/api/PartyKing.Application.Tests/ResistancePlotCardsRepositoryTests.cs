@@ -51,7 +51,7 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
 
     /// <param name="withoutEstablishConfidence">Swaps Establish Confidence for a third Overheard Conversation, which the
     /// leader would keep instead of handing out, so a test can count on every drawn card being dealt.</param>
-    private async Task<ResistanceGame> StartAsync(int playerCount, bool plotCards, bool withoutEstablishConfidence = false)
+    private async Task<ResistanceGame> StartAsync(int playerCount, bool plotCards, bool withoutEstablishConfidence = false, bool onlyOpinionMakers = false)
     {
         var game = new ResistanceGame { SessionId = _sessionId, CreatedAt = DateTimeOffset.UtcNow, IsOpen = true };
         game.Rules.PlotCardsEnabled = plotCards;
@@ -59,6 +59,12 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         {
             game.Rules.PlotDeck[ResistancePlotCardType.EstablishConfidence] = 0;
             game.Rules.PlotDeck[ResistancePlotCardType.OverheardConversation] = 3;
+        }
+
+        if (onlyOpinionMakers)
+        {
+            game.Rules.PlotDeck.Clear();
+            game.Rules.PlotDeck[ResistancePlotCardType.OpinionMaker] = 15;
         }
 
         for (var i = 0; i < playerCount; i++)
@@ -79,6 +85,10 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
 
         return await ReloadAsync();
     }
+
+    /// <summary>In a hand or face up in front of a player (an Opinion Maker): dealt out either way.</summary>
+    private static bool IsHeld(ResistancePlotCard card) =>
+        card.Location is ResistancePlotCardLocation.Hand or ResistancePlotCardLocation.InPlay;
 
     private async Task<ResistanceGame> ReloadAsync() => (await _repository.GetAsync(_sessionId, CancellationToken.None))!;
 
@@ -104,7 +114,8 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         var size = game.Rules.TeamSize(game.Players.Count, game.MissionNumber);
         var team = game.Players.OrderBy(x => x.Order).Take(size).Select(x => x.PlayerId).ToList();
         Assert.Equal(ResistanceTeamStatus.Selected, (await _repository.SelectTeamAsync(_sessionId, game.LeaderPlayerId, team, ct)).Status);
-        foreach (var player in game.Players)
+        var makers = ResistanceRoles.OpinionMakerIds(game);
+        foreach (var player in game.Players.OrderBy(x => makers.Contains(x.PlayerId) ? 0 : 1))
         {
             await _repository.VoteAsync(_sessionId, player.PlayerId, approve, ct);
         }
@@ -162,7 +173,7 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         var after = await ReloadAsync();
         Assert.Equal(ResistancePhase.SelectingTeam, after.Phase);
         Assert.DoesNotContain(after.PlotCards, x => x.Location == ResistancePlotCardLocation.Drawn);
-        var inHands = after.PlotCards.Where(x => x.Location == ResistancePlotCardLocation.Hand).ToList();
+        var inHands = after.PlotCards.Where(IsHeld).ToList();
         Assert.Equal(2, inHands.Count);
         Assert.DoesNotContain(inHands, x => x.HolderPlayerId == after.LeaderPlayerId);
     }
@@ -256,7 +267,7 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         var after = await ReloadAsync();
         Assert.Equal(ResistancePhase.SelectingTeam, after.Phase);
         Assert.NotEqual(game.LeaderPlayerId, after.LeaderPlayerId);
-        Assert.Equal(1, after.PlotCards.Count(x => x.Location == ResistancePlotCardLocation.Hand));
+        Assert.Equal(1, after.PlotCards.Count(IsHeld));
         Assert.Equal(14, after.PlotCards.Count(x => x.Location == ResistancePlotCardLocation.Deck));
     }
 
@@ -282,7 +293,7 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         var drawn = after.PlotCards.Where(x => x.Location == ResistancePlotCardLocation.Drawn).ToList();
         Assert.Single(drawn);
         Assert.Equal(after.LeaderPlayerId, drawn[0].HolderPlayerId);
-        Assert.Equal(1, after.PlotCards.Count(x => x.Location == ResistancePlotCardLocation.Hand));
+        Assert.Equal(1, after.PlotCards.Count(IsHeld));
     }
 
     [Fact]
@@ -310,5 +321,85 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         Assert.Equal(ResistancePhase.DealingCards, after.Phase);
         Assert.Equal(1, after.PlotCards.Count(x => x.Location == ResistancePlotCardLocation.Drawn));
         Assert.Equal(14, after.PlotCards.Count(x => x.Location == ResistancePlotCardLocation.Deck));
+    }
+
+    [Fact]
+    public async Task AnOpinionMaker_IsPlayedWhenDealt_AndIsNotCountedInTheHand()
+    {
+        var game = await StartAsync(5, plotCards: true, onlyOpinionMakers: true);
+        await DealAsync(game);
+
+        game = await ReloadAsync();
+        var card = Assert.Single(game.PlotCards, x => x.Location == ResistancePlotCardLocation.InPlay);
+        Assert.Equal(ResistancePlotCardType.OpinionMaker, card.Type);
+        Assert.Equal(card.HolderPlayerId, Assert.Single(ResistanceRoles.OpinionMakerIds(game)));
+        Assert.DoesNotContain(game.PlotCards, x => x.Location == ResistancePlotCardLocation.Hand);
+    }
+
+    [Fact]
+    public async Task WhileAnOpinionMakerHasNotVoted_TheOthersCannotVote_AndTheirVoteIsLocked()
+    {
+        var ct = CancellationToken.None;
+        var game = await StartAsync(5, plotCards: true, onlyOpinionMakers: true);
+        await DealAsync(game);
+        game = await ReloadAsync();
+        var maker = ResistanceRoles.OpinionMakerIds(game).Single();
+        var other = game.Players.First(x => x.PlayerId != maker).PlayerId;
+        var size = game.Rules.TeamSize(game.Players.Count, game.MissionNumber);
+        var team = game.Players.OrderBy(x => x.Order).Take(size).Select(x => x.PlayerId).ToList();
+        await _repository.SelectTeamAsync(_sessionId, game.LeaderPlayerId, team, ct);
+
+        Assert.Equal(ResistanceVoteStatus.OpinionMakersFirst, (await _repository.VoteAsync(_sessionId, other, true, ct)).Status);
+        Assert.Equal(ResistanceVoteStatus.Voted, (await _repository.VoteAsync(_sessionId, maker, false, ct)).Status);
+        Assert.Equal(ResistanceVoteStatus.VoteLocked, (await _repository.VoteAsync(_sessionId, maker, true, ct)).Status);
+
+        Assert.Equal(ResistanceVoteStatus.Voted, (await _repository.VoteAsync(_sessionId, other, true, ct)).Status);
+        // Players other than the maker can still change their mind
+        Assert.Equal(ResistanceVoteStatus.Voted, (await _repository.VoteAsync(_sessionId, other, false, ct)).Status);
+        Assert.False((await ReloadAsync()).Players.Single(x => x.PlayerId == maker).Vote);
+    }
+
+    [Fact]
+    public async Task TwoOpinionMakers_BothMustVoteBeforeTheOthersMay()
+    {
+        var ct = CancellationToken.None;
+        var game = await StartAsync(7, plotCards: true, onlyOpinionMakers: true);
+        await DealAsync(game);
+        game = await ReloadAsync();
+        var makers = ResistanceRoles.OpinionMakerIds(game);
+        Assert.Equal(2, makers.Count);
+        var other = game.Players.First(x => !makers.Contains(x.PlayerId)).PlayerId;
+        var size = game.Rules.TeamSize(game.Players.Count, game.MissionNumber);
+        var team = game.Players.OrderBy(x => x.Order).Take(size).Select(x => x.PlayerId).ToList();
+        await _repository.SelectTeamAsync(_sessionId, game.LeaderPlayerId, team, ct);
+
+        await _repository.VoteAsync(_sessionId, makers[0], true, ct);
+        Assert.Equal(ResistanceVoteStatus.OpinionMakersFirst, (await _repository.VoteAsync(_sessionId, other, true, ct)).Status);
+
+        await _repository.VoteAsync(_sessionId, makers[1], true, ct);
+        Assert.Equal(ResistanceVoteStatus.Voted, (await _repository.VoteAsync(_sessionId, other, true, ct)).Status);
+    }
+
+    [Fact]
+    public async Task RestartingAFinishedGame_TakesTheOpinionMakersOutOfPlay()
+    {
+        var ct = CancellationToken.None;
+        var game = await StartAsync(5, plotCards: true, onlyOpinionMakers: true);
+        await DealAsync(game);
+        game = await ReloadAsync();
+        for (var i = 0; i < 5 && game.Phase != ResistancePhase.GameOver; i++)
+        {
+            await SelectTeamAndVoteAsync(game, approve: false);
+            game = await ReloadAsync();
+            if (game.Phase == ResistancePhase.DealingCards)
+            {
+                await DealAsync(game);
+                game = await ReloadAsync();
+            }
+        }
+
+        Assert.Equal(ResistancePhase.GameOver, game.Phase);
+        Assert.Equal(ResistanceRestartStatus.Restarted, (await _repository.RestartAsync(_sessionId, DateTimeOffset.UtcNow, ct)).Status);
+        Assert.Empty(ResistanceRoles.OpinionMakerIds(await ReloadAsync()));
     }
 }
