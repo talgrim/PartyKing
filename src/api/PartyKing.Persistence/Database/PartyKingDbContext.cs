@@ -81,9 +81,17 @@ public class PartyKingDbContextBase : DbContext
         }
 
         optionsBuilder
-            .UseSqlite($"Data Source={Environment.GetEnvironmentVariable(DatabasePathVariable) ?? "PartyKing.db"}")
+            .UseSqlite(
+                $"Data Source={Environment.GetEnvironmentVariable(DatabasePathVariable) ?? "PartyKing.db"};"
+                + $"Default Timeout={LockTimeoutSeconds}")
             .AddInterceptors(SynchronousNormalInterceptor.Instance);
     }
+
+    /// <summary>
+    /// How long a command waits for a lock before failing. The default is 30 s, longer than nginx waits for the API
+    /// (15 s), so a blocked request would hang until a 504 instead of failing at once and freeing its thread.
+    /// </summary>
+    private const int LockTimeoutSeconds = 3;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
