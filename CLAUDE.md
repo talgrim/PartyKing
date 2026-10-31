@@ -77,5 +77,6 @@ Frontend (`PartyKing.UI/src`):
 - Don't commit changes until explicitly stated.
 - Stick to SOLID.
 - Commit tests in a separate commit.
-- Commits should be atomic.
+- Commits should be atomic if possible. If working on a big task and commiting parts of the code in batches, separate commits may not build intermittently as long as the project builds after all changes are commited (no need to re-apply changes only to adhere to this convention).
 - When exploring automatically assume that the user is in "Interview" mode, meaning that you can ask him questions regarding the task. Also don't make any changes when prompt ask only for exploring and analysis.
+- All classes placed in the Contract project should end with "Dto", if they only specify a dto
