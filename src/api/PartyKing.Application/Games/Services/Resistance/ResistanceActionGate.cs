@@ -2,10 +2,9 @@ using ErrorOr;
 using PartyKing.Application.Mappings;
 using PartyKing.Application.Realtime;
 using PartyKing.Contract.V1.Games.Resistance;
-using PartyKing.Domain.Entities.Games;
 using PartyKing.Infrastructure.Results;
 
-namespace PartyKing.Application.Games.Services;
+namespace PartyKing.Application.Games.Services.Resistance;
 
 /// <summary>
 /// The frame every Resistance action shares: check who may act, call the repository, turn its status into an error,
@@ -13,10 +12,10 @@ namespace PartyKing.Application.Games.Services;
 /// </summary>
 internal sealed class ResistanceActionGate
 {
-    private readonly GameLobby<ResistanceGame, ResistancePlayer> _lobby;
+    private readonly ResistanceGameLobby _lobby;
     private readonly ISessionMusicNotifier _notifier;
 
-    public ResistanceActionGate(GameLobby<ResistanceGame, ResistancePlayer> lobby, ISessionMusicNotifier notifier)
+    public ResistanceActionGate(ResistanceGameLobby lobby, ISessionMusicNotifier notifier)
     {
         _lobby = lobby;
         _notifier = notifier;
@@ -29,7 +28,7 @@ internal sealed class ResistanceActionGate
     public async Task<ErrorOr<ResistanceGameDto>> RunAsPlayerAsync<TResult>(
         Guid sessionId,
         GameCaller caller,
-        Func<GameLobby<ResistanceGame, ResistancePlayer>.Access, Task<TResult>> call,
+        Func<ResistanceGameLobby.Access, Task<TResult>> call,
         Func<TResult, Error?> mapError,
         CancellationToken cancellationToken)
         where TResult : IResistanceResult

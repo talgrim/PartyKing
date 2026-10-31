@@ -11,14 +11,10 @@ public abstract class ResistanceControllerBase : LobbyGameControllerBase
 
     protected ResistanceControllerBase(
         IHttpContextAccessor httpContextAccessor,
-        IResistanceService resistanceService,
         ICookieAuthorizationHandler cookieAuthorizationHandler)
         : base(httpContextAccessor, cookieAuthorizationHandler)
     {
-        ResistanceService = resistanceService;
     }
-
-    protected IResistanceService ResistanceService { get; }
 
     protected override GameKind Kind => GameKind.Resistance;
 }

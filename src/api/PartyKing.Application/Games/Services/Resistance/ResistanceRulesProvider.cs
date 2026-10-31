@@ -2,7 +2,7 @@ using Microsoft.Extensions.Options;
 using PartyKing.Application.Configuration;
 using PartyKing.Domain.Entities.Games;
 
-namespace PartyKing.Application.Games.Services;
+namespace PartyKing.Application.Games.Services.Resistance;
 
 public interface IResistanceRulesProvider
 {

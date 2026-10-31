@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using PartyKing.API.Authorization;
+using PartyKing.Application.Games.Services.Resistance;
 using PartyKing.Application.Games.Services;
 using PartyKing.Contract.V1.Games.Resistance;
 using PartyKing.Infrastructure.Authorization;
@@ -12,11 +13,18 @@ public class ResistancePlotCardsController : ResistanceControllerBase
 {
     public ResistancePlotCardsController(
         IHttpContextAccessor httpContextAccessor,
-        IResistanceService resistanceService,
+        IResistancePlotCardService plotCardService,
+        IResistanceLobbyService lobbyService,
         ICookieAuthorizationHandler cookieAuthorizationHandler)
-        : base(httpContextAccessor, resistanceService, cookieAuthorizationHandler)
+        : base(httpContextAccessor, cookieAuthorizationHandler)
     {
+        PlotCards = plotCardService;
+        Lobby = lobbyService;
     }
+
+    private IResistancePlotCardService PlotCards { get; }
+
+    private IResistanceLobbyService Lobby { get; }
 
     /// <summary>Host or admin: switches the plot cards add-on on or off. 409 once the game is open or started.</summary>
     [HttpPut("rules/plot-cards")]
@@ -25,7 +33,7 @@ public class ResistancePlotCardsController : ResistanceControllerBase
     public async Task<IActionResult> SetEnabled(
         Guid sessionId, [FromBody] ResistancePlotCardsRequestDto request, CancellationToken cancellationToken)
     {
-        var result = await ResistanceService.SetPlotCardsAsync(
+        var result = await Lobby.SetPlotCardsAsync(
             sessionId, request.Enabled, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
@@ -41,7 +49,7 @@ public class ResistancePlotCardsController : ResistanceControllerBase
     public async Task<IActionResult> Deal(
         Guid sessionId, [FromBody] ResistanceDealPlotCardsRequestDto request, CancellationToken cancellationToken)
     {
-        var result = await ResistanceService.DealPlotCardsAsync(
+        var result = await PlotCards.DealPlotCardsAsync(
             sessionId, request.Assignments, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
@@ -57,7 +65,7 @@ public class ResistancePlotCardsController : ResistanceControllerBase
     public async Task<IActionResult> Play(
         Guid sessionId, int cardId, [FromBody] ResistancePlayPlotCardRequestDto request, CancellationToken cancellationToken)
     {
-        var result = await ResistanceService.PlayPlotCardAsync(
+        var result = await PlotCards.PlayPlotCardAsync(
             sessionId, cardId, request.TargetPlayerId, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
@@ -72,7 +80,7 @@ public class ResistancePlotCardsController : ResistanceControllerBase
     [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Confirm(Guid sessionId, int cardId, CancellationToken cancellationToken)
     {
-        var result = await ResistanceService.ConfirmPlotCardAsync(
+        var result = await PlotCards.ConfirmPlotCardAsync(
             sessionId, cardId, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
@@ -87,7 +95,7 @@ public class ResistancePlotCardsController : ResistanceControllerBase
     [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> TakeLead(Guid sessionId, int cardId, CancellationToken cancellationToken)
     {
-        var result = await ResistanceService.TakeLeadAsync(sessionId, cardId, await Caller(sessionId), cancellationToken);
+        var result = await PlotCards.TakeLeadAsync(sessionId, cardId, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
     }
@@ -103,7 +111,7 @@ public class ResistancePlotCardsController : ResistanceControllerBase
     public async Task<IActionResult> PeekMissionCard(
         Guid sessionId, int cardId, [FromBody] ResistancePlayPlotCardRequestDto request, CancellationToken cancellationToken)
     {
-        var result = await ResistanceService.PeekMissionCardAsync(
+        var result = await PlotCards.PeekMissionCardAsync(
             sessionId, cardId, request.TargetPlayerId, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
@@ -118,7 +126,7 @@ public class ResistancePlotCardsController : ResistanceControllerBase
     [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> PlayNoConfidence(Guid sessionId, int cardId, CancellationToken cancellationToken)
     {
-        var result = await ResistanceService.PlayNoConfidenceAsync(
+        var result = await PlotCards.PlayNoConfidenceAsync(
             sessionId, cardId, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
@@ -136,7 +144,7 @@ public class ResistancePlotCardsController : ResistanceControllerBase
         Guid sessionId, int cardId, [FromBody] ResistanceTakeResponsibilityRequestDto request,
         CancellationToken cancellationToken)
     {
-        var result = await ResistanceService.TakeResponsibilityAsync(
+        var result = await PlotCards.TakeResponsibilityAsync(
             sessionId, cardId, request.TargetPlayerId, request.TakeOpinionMaker, await Caller(sessionId),
             cancellationToken);
 

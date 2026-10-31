@@ -4,6 +4,9 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Configuration;
+using PartyKing.Application.Games.Services.NeverHaveIEver;
+using PartyKing.Application.Games.Services.Resistance;
+using PartyKing.Application.Games.Services.Ringo;
 using PartyKing.Application.Games.Services;
 using PartyKing.Application.Lyrics.Services;
 using PartyKing.Application.Player.Services;
@@ -93,8 +96,15 @@ public static class DependencyInjection
     private static void RegisterGames(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<IGameService, GameService>();
+        services.AddSingleton<RingoLobbyNotifier>();
+        services.AddScoped<RingoGameLobby>();
         services.AddScoped<IRingoService, RingoService>();
-        services.AddScoped<IResistanceService, ResistanceService>();
+        services.AddSingleton<ResistanceLobbyNotifier>();
+        services.AddScoped<ResistanceGameLobby>();
+        services.AddScoped<ResistanceActionGate>();
+        services.AddScoped<IResistanceLobbyService, ResistanceLobbyService>();
+        services.AddScoped<IResistanceRoundService, ResistanceRoundService>();
+        services.AddScoped<IResistancePlotCardService, ResistancePlotCardService>();
         services.AddSingleton<IResistanceRulesProvider, ResistanceRulesProvider>();
         services.AddSingleton<IValidateOptions<ResistanceConfiguration>, ResistanceConfigurationValidator>();
         services.Configure<ResistanceConfiguration>(configuration.GetSection(ResistanceConfiguration.SectionName));

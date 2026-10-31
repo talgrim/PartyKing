@@ -2,7 +2,7 @@ using ErrorOr;
 using PartyKing.Domain.Entities.Games;
 using PartyKing.Infrastructure.Results;
 
-namespace PartyKing.Application.Games;
+namespace PartyKing.Application.Games.Services.Resistance;
 
 /// <summary>
 /// The errors of the Resistance game: the ones every action shares, and one <c>From</c> overload per repository status

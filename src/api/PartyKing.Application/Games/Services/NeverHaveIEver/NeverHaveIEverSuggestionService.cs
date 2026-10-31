@@ -7,7 +7,7 @@ using PartyKing.Application.Sessions.Services;
 using PartyKing.Contract.V1.Games;
 using PartyKing.Infrastructure.Llm;
 
-namespace PartyKing.Application.Games.Services;
+namespace PartyKing.Application.Games.Services.NeverHaveIEver;
 
 public interface INeverHaveIEverSuggestionService
 {

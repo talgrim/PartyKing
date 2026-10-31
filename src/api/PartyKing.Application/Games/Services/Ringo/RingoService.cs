@@ -1,6 +1,5 @@
 using ErrorOr;
 using PartyKing.Application.Realtime;
-using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.System;
 using PartyKing.Contract.V1.Games.Ringo;
 using PartyKing.Domain.Entities.Games;
@@ -8,7 +7,7 @@ using PartyKing.Infrastructure.Repositories;
 using PartyKing.Infrastructure.Results;
 
 
-namespace PartyKing.Application.Games.Services;
+namespace PartyKing.Application.Games.Services.Ringo;
 
 public interface IRingoService
 {
@@ -63,20 +62,18 @@ internal class RingoService : IRingoService
     private readonly IRingoGamesRepository _games;
     private readonly IDateTimeProvider _clock;
     private readonly ISessionMusicNotifier _notifier;
-    private readonly GameLobby<RingoGame, RingoPlayer> _lobby;
+    private readonly RingoGameLobby _lobby;
 
     public RingoService(
-        ISessionService sessionService,
-        ISessionsRepository sessions,
+        RingoGameLobby lobby,
         IRingoGamesRepository games,
         IDateTimeProvider clock,
         ISessionMusicNotifier notifier)
     {
+        _lobby = lobby;
         _games = games;
         _clock = clock;
         _notifier = notifier;
-        _lobby = new GameLobby<RingoGame, RingoPlayer>(
-            sessionService, sessions, games, clock, new RingoLobbyNotifier(notifier), new GameLobbyOptions("Ringo"));
     }
 
     public async Task<ErrorOr<RingoGameDto>> GetAsync(
@@ -98,7 +95,7 @@ internal class RingoService : IRingoService
 
         return game is null
             ? _lobby.NoGame
-            : new RingoLobbyDto(game.Seed, game.IsOpen, GameLobby<RingoGame, RingoPlayer>.IsPlayer(game, caller));
+            : new RingoLobbyDto(game.Seed, game.IsOpen, RingoGameLobby.IsPlayer(game, caller));
     }
 
     public async Task<ErrorOr<RingoGameDto>> StartAsync(
@@ -255,22 +252,6 @@ internal class RingoService : IRingoService
             game.IsOpen,
             players,
             RingoTurns.Current(game)?.PlayerId,
-            GameLobby<RingoGame, RingoPlayer>.IsPlayer(game, caller) ? caller.PlayerId : null);
-    }
-
-    private sealed class RingoLobbyNotifier : IGameLobbyNotifier
-    {
-        private readonly ISessionMusicNotifier _notifier;
-
-        public RingoLobbyNotifier(ISessionMusicNotifier notifier)
-        {
-            _notifier = notifier;
-        }
-
-        public Task OpenedAsync(Guid sessionId, CancellationToken cancellationToken) =>
-            _notifier.RingoOpenedAsync(sessionId, cancellationToken);
-
-        public Task ChangedAsync(Guid sessionId, CancellationToken cancellationToken) =>
-            _notifier.RingoChangedAsync(sessionId, cancellationToken);
+            RingoGameLobby.IsPlayer(game, caller) ? caller.PlayerId : null);
     }
 }
