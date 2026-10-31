@@ -10,7 +10,7 @@ type Props = {
 };
 
 /**
- * The window before the leader acts (leader window) and the one after an approved vote (confidence window). It opens
+ * The window before the leader acts (leader window), the one after an approved vote (confidence window) and the one after the mission cards (peek window). It opens
  * whenever anyone holds a playable card, whatever it is, so everybody sees the same thing: a question whether to play a
  * card. Only a holder of the matching card (Strong Leader, No Confidence) gets the extra button, and nothing here names
  * a card to those who do not hold it. The window ends when all confirmed or a card was played.
@@ -23,7 +23,9 @@ export const ResistanceLeaderWindow = ({ game, onTakeLead, onNoConfidence, onPas
   const youLead = game.yourPlayerId === game.leaderPlayerId;
   const passed = game.yourPlayerId != null && game.leaderWindowPassedPlayerIds.includes(game.yourPlayerId);
   const { name, effect, Icon } = PLOT_CARDS[type];
-  const canPlay = card != null && (confidence || !youLead);
+  const peek = game.phase === 'PeekWindow';
+  // Keeping a Close Eye is played in ResistanceCloseEye; here the peek window only asks for the confirmation
+  const canPlay = !peek && card != null && (confidence || !youLead);
 
   const run = async (action: () => Promise<void>) => {
     setSubmitting(true);

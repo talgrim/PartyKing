@@ -46,4 +46,11 @@ public enum ResistancePhase
     /// none, or a No Confidence's holder cancels the approval. Like <see cref="LeaderWindow"/> it opens for any such card.
     /// </summary>
     ConfidenceWindow,
+
+    /// <summary>
+    /// Plot cards add-on: the mission is played and its outcome is public, but some playable card sits in a hand, so
+    /// everyone confirms they play none (Keeping a Close Eye is played here) before "Dalej" appears. Opens for any
+    /// playable card so it never tells who holds one.
+    /// </summary>
+    PeekWindow,
 }

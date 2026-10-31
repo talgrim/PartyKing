@@ -112,6 +112,21 @@ export const resistancePhaseDescription = (
       return `Drużyna (${names.join(', ')}) została zatwierdzona (${tally}) i wykonuje ${mission} misję. ${progress}${rule}${mine}${open}`;
     }
 
+    if (game.phase === 'PeekWindow') {
+      const last = results.find((result) => result.missionNumber === game.missionNumber);
+      const outcome = last?.succeeded
+        ? 'Misja zakończyła się sukcesem'
+        : `Misja zakończyła się porażką (kart Porażka: ${last?.failCount ?? 0})`;
+      const passed = game.leaderWindowPassedPlayerIds.length;
+      const mine = game.yourPlayerId == null
+        ? ''
+        : game.leaderWindowPassedPlayerIds.includes(game.yourPlayerId)
+          ? ' Twoje potwierdzenie jest zapisane.'
+          : ' Potwierdź, że nie zagrywasz karty (albo zagraj ją).';
+
+      return `${outcome}. Wynik: ${score}. Zanim lider przejdzie dalej, gracze decydują, czy zagrywają karty Intrygi. Potwierdzili: ${passed}/${count}.${mine}`;
+    }
+
     if (game.phase === 'MissionResult') {
       const last = results.find((result) => result.missionNumber === game.missionNumber);
       const next = youLead || viewer.canManage ? 'Kliknij „Dalej”' : 'Lider lub host kliknie „Dalej”';

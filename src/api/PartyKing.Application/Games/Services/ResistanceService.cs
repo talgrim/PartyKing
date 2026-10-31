@@ -810,7 +810,7 @@ internal class ResistanceService : IResistanceService
             you?.MissionCard,
             game.MissionResults
                 .OrderBy(x => x.MissionNumber)
-                .Select(x => new ResistanceMissionResultDto(x.MissionNumber, x.Succeeded, x.FailCount))
+                .Select(x => new ResistanceMissionResultDto(x.MissionNumber, x.Succeeded, x.FailCount, x.TeamPlayerIds))
                 .ToList(),
             you is null
                 ? []
@@ -858,7 +858,7 @@ internal class ResistanceService : IResistanceService
                     .ToList(),
             ResistanceRoles.OpenMissionPlayerId(game),
             game.Players.FirstOrDefault(x => x.PlayerId == ResistanceRoles.OpenMissionPlayerId(game))?.MissionCard,
-            game.Phase is ResistancePhase.LeaderWindow or ResistancePhase.ConfidenceWindow
+            game.Phase is ResistancePhase.LeaderWindow or ResistancePhase.ConfidenceWindow or ResistancePhase.PeekWindow
                 ? game.Players.Where(x => x.PassedLeaderWindow).OrderBy(x => x.Order).Select(x => x.PlayerId).ToList()
                 : [],
             // Only the peeker sees the card they looked at, until the next mission starts

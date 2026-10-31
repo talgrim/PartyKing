@@ -1,7 +1,8 @@
 namespace PartyKing.Domain.Entities.Games;
 
 /// <summary>
-/// The public outcome of one finished mission: only the number of Fail cards, never who played them. Keyed by
+/// The public outcome of one finished mission: the team that went and the number of Fail cards, never who played
+/// them. Keyed by
 /// <see cref="SessionId"/> and <see cref="MissionNumber"/>.
 /// </summary>
 public class ResistanceMissionResult
@@ -15,4 +16,7 @@ public class ResistanceMissionResult
     public int FailCount { get; set; }
 
     public bool Succeeded { get; set; }
+
+    /// <summary>The players on the mission's team, by <see cref="ResistancePlayer.Order"/>; empty for results recorded before the team was kept.</summary>
+    public List<Guid> TeamPlayerIds { get; set; } = [];
 }
