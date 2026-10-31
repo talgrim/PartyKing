@@ -69,7 +69,7 @@ Frontend (`PartyKing.UI/src`):
 - The API base URL comes from `src/envVariables.ts`: `VITE_API_URL` if set, else `http://127.0.0.1:4200` in dev (must match the API launch profile) and `/api` in production builds. To test from phones on the LAN, change both `envVariables.ts` (or set `VITE_API_URL`) and `src/api/PartyKing.API/Properties/launchSettings.json` to the machine's LAN IP, but don't commit that change. UI polling (SWR `refreshInterval`): slide 60 s with the hub connected and 5 s without (SlideChanged is pushed), queue 5 s, now-playing 4 s, session 30 s, session lists 10 s; the host player reports state every 10 s (and on every change) with an 8 s timeout. Axios is configured in `src/service/request.ts`, and the `@/` import alias maps to `src/`.
 
 ## CI
-`.github/workflows/ci.yml` (PRs) runs `dotnet test PartyKing.sln` (all backend tests), `npm test` (all frontend tests) and `npm run build`. `deploy.yml` runs `flyctl deploy --remote-only` on push to `master`. `/health`, `/alive` and `/metrics` are mapped in every environment (`MapDefaultEndpoints`); nginx keeps them off the public port.
+`.github/workflows/ci.yml` (PRs) runs `dotnet test PartyKing.sln` (all backend tests), `npm run lint`, `npm test` (all frontend tests) and `npm run build`. `deploy.yml` runs `flyctl deploy --remote-only` on push to `master`. `/health`, `/alive` and `/metrics` are mapped in every environment (`MapDefaultEndpoints`); nginx keeps them off the public port.
 
 ## Conventions
 - Commits follow the Conventional Commits format.
