@@ -171,7 +171,7 @@ internal class ResistanceService : IResistanceService
             games,
             clock,
             new ResistanceLobbyNotifier(notifier),
-            new GameLobbyOptions("Resistance", ResistanceGame.MaxPlayers));
+            new GameLobbyOptions(ResistanceErrors.GameName, ResistanceGame.MaxPlayers));
     }
 
     public async Task<ErrorOr<ResistanceGameDto>> GetAsync(
@@ -220,7 +220,7 @@ internal class ResistanceService : IResistanceService
         var game = new ResistanceGame { SessionId = sessionId, CreatedAt = _clock.UtcNow, Rules = _rulesProvider.Current() };
         if (!await _games.TryCreateAsync(game, cancellationToken))
         {
-            return Error.Conflict("Resistance.AlreadyCreated", "The session already has a Resistance game.");
+            return ResistanceErrors.AlreadyCreated;
         }
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
@@ -237,13 +237,9 @@ internal class ResistanceService : IResistanceService
         }
 
         var result = await _games.RefreshRulesAsync(sessionId, _rulesProvider.Current(), cancellationToken);
-        switch (result.Status)
+        if (ResistanceErrors.From(result.Status, "The rules can only be refreshed before the game is opened.") is { } error)
         {
-            case ResistanceRulesStatus.NoGame:
-                return _lobby.NoGame;
-            case ResistanceRulesStatus.NotEditable:
-                return Error.Conflict(
-                    "Resistance.RulesLocked", "The rules can only be refreshed before the game is opened.");
+            return error;
         }
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
@@ -260,13 +256,9 @@ internal class ResistanceService : IResistanceService
         }
 
         var result = await _games.SetPlotCardsAsync(sessionId, enabled, cancellationToken);
-        switch (result.Status)
+        if (ResistanceErrors.From(result.Status, "The plot cards can only be switched before the game starts.") is { } error)
         {
-            case ResistanceRulesStatus.NoGame:
-                return _lobby.NoGame;
-            case ResistanceRulesStatus.NotEditable:
-                return Error.Conflict(
-                    "Resistance.RulesLocked", "The plot cards can only be switched before the game starts.");
+            return error;
         }
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
@@ -291,18 +283,9 @@ internal class ResistanceService : IResistanceService
         }
 
         var result = await _games.StartAsync(sessionId, _clock.UtcNow, cancellationToken);
-        switch (result.Status)
+        if (ResistanceErrors.From(result.Status) is { } error)
         {
-            case ResistanceStartStatus.NoGame:
-                return _lobby.NoGame;
-            case ResistanceStartStatus.NotOpen:
-                return Error.Conflict("Resistance.NotOpen", "The game is not open to guests yet.");
-            case ResistanceStartStatus.AlreadyStarted:
-                return Error.Conflict("Resistance.AlreadyStarted", "The game has already started.");
-            case ResistanceStartStatus.NotEnoughPlayers:
-                return Error.Conflict(
-                    "Resistance.NotEnoughPlayers",
-                    $"The game needs at least {ResistanceGame.MinPlayers} players to start.");
+            return error;
         }
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
@@ -319,14 +302,9 @@ internal class ResistanceService : IResistanceService
         }
 
         var result = await _games.RestartAsync(sessionId, cancellationToken);
-        switch (result.Status)
+        if (ResistanceErrors.From(result.Status) is { } error)
         {
-            case ResistanceRestartStatus.NoGame:
-                return _lobby.NoGame;
-            case ResistanceRestartStatus.NotStarted:
-                return Error.Conflict("Resistance.NotStarted", "The game has not started yet.");
-            case ResistanceRestartStatus.NotOver:
-                return Error.Conflict("Resistance.NotOver", "The game is still being played.");
+            return error;
         }
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
@@ -349,26 +327,9 @@ internal class ResistanceService : IResistanceService
         }
 
         var result = await _games.SelectTeamAsync(sessionId, caller.PlayerId, playerIds ?? [], cancellationToken);
-        switch (result.Status)
+        if (ResistanceErrors.From(result.Status, result.Game) is { } error)
         {
-            case ResistanceTeamStatus.NoGame:
-                return _lobby.NoGame;
-            case ResistanceTeamStatus.NotStarted:
-                return Error.Conflict("Resistance.NotStarted", "The game has not started yet.");
-            case ResistanceTeamStatus.GameOver:
-                return GameOverError;
-            case ResistanceTeamStatus.NotLeader:
-                return Error.Forbidden("Resistance.NotLeader", "Only the mission leader picks the team.");
-            case ResistanceTeamStatus.AlreadySubmitted:
-                return Error.Conflict("Resistance.TeamSubmitted", "The team was already submitted.");
-            case ResistanceTeamStatus.CardsNotDealt:
-                return Error.Conflict("Resistance.CardsNotDealt", "The leader has to hand out the plot cards first.");
-            case ResistanceTeamStatus.WrongSize:
-                return Error.Validation(
-                    "Resistance.WrongTeamSize",
-                    $"The team needs exactly {result.Game!.Rules.TeamSize(result.Game.Players.Count, result.Game.MissionNumber)} different players.");
-            case ResistanceTeamStatus.UnknownPlayer:
-                return Error.Validation("Resistance.UnknownPlayer", "The team has a player who is not in the game.");
+            return error;
         }
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
@@ -396,24 +357,9 @@ internal class ResistanceService : IResistanceService
             caller.PlayerId,
             (assignments ?? []).Select(x => new PlotCardAssignment(x.CardId, x.PlayerId)).ToList(),
             cancellationToken);
-        switch (result.Status)
+        if (ResistanceErrors.From(result.Status) is { } error)
         {
-            case ResistanceDealStatus.NoGame:
-                return _lobby.NoGame;
-            case ResistanceDealStatus.NotStarted:
-                return Error.Conflict("Resistance.NotStarted", "The game has not started yet.");
-            case ResistanceDealStatus.GameOver:
-                return GameOverError;
-            case ResistanceDealStatus.NotLeader:
-                return Error.Forbidden("Resistance.NotLeader", "Only the mission leader hands out the plot cards.");
-            case ResistanceDealStatus.NotDealing:
-                return Error.Conflict("Resistance.NotDealing", "There are no plot cards to hand out.");
-            case ResistanceDealStatus.UnknownCard:
-                return Error.Validation("Resistance.UnknownCard", "A card is not one the leader has to hand out, or is given twice.");
-            case ResistanceDealStatus.InvalidReceiver:
-                return Error.Validation("Resistance.InvalidReceiver", "Cards go to other players of the game.");
-            case ResistanceDealStatus.Incomplete:
-                return Error.Validation("Resistance.IncompleteDeal", "Every drawn card has to be handed out.");
+            return error;
         }
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
@@ -559,32 +505,9 @@ internal class ResistanceService : IResistanceService
     private async Task<ErrorOr<ResistanceGameDto>> FinishPlotCardAsync(
         Guid sessionId, ResistancePlayCardResult result, GameCaller caller, CancellationToken cancellationToken)
     {
-        switch (result.Status)
+        if (ResistanceErrors.From(result.Status) is { } error)
         {
-            case ResistancePlayCardStatus.NoGame:
-                return _lobby.NoGame;
-            case ResistancePlayCardStatus.NotStarted:
-                return Error.Conflict("Resistance.NotStarted", "The game has not started yet.");
-            case ResistancePlayCardStatus.GameOver:
-                return GameOverError;
-            case ResistancePlayCardStatus.NotResolving:
-                return Error.Conflict("Resistance.NotResolving", "No plot cards are being played now.");
-            case ResistancePlayCardStatus.NotPlayer:
-                return Error.Forbidden("Resistance.NotPlayer", "Only the players of the game confirm.");
-            case ResistancePlayCardStatus.WrongPhase:
-                return Error.Conflict("Resistance.CardNotPlayableNow", "That card can't be played in this step of the round.");
-            case ResistancePlayCardStatus.ChoiceRequired:
-                return Error.Validation("Resistance.ChoiceRequired", "Say whether to take the Opinion Maker or a card from the hand.");
-            case ResistancePlayCardStatus.NotPlayingMission:
-                return Error.Conflict("Resistance.NotPlayingMission", "The mission cards are not being played now.");
-            case ResistancePlayCardStatus.UnknownCard:
-                return Error.NotFound("Resistance.UnknownCard", "There is no such card to play.");
-            case ResistancePlayCardStatus.NotAllowed:
-                return Error.Forbidden("Resistance.NotYourCard", "This is not your card to play or to confirm.");
-            case ResistancePlayCardStatus.WrongState:
-                return Error.Conflict("Resistance.CardState", "The card was played already, or has not been played yet.");
-            case ResistancePlayCardStatus.InvalidTarget:
-                return Error.Validation("Resistance.InvalidTarget", "The card cannot be played on that player.");
+            return error;
         }
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
@@ -607,22 +530,9 @@ internal class ResistanceService : IResistanceService
         }
 
         var result = await _games.VoteAsync(sessionId, caller.PlayerId, approve, cancellationToken);
-        switch (result.Status)
+        if (ResistanceErrors.From(result.Status) is { } error)
         {
-            case ResistanceVoteStatus.NoGame:
-                return _lobby.NoGame;
-            case ResistanceVoteStatus.NotStarted:
-                return Error.Conflict("Resistance.NotStarted", "The game has not started yet.");
-            case ResistanceVoteStatus.GameOver:
-                return GameOverError;
-            case ResistanceVoteStatus.NotPlayer:
-                return Error.Forbidden("Resistance.NotPlayer", "Only the players of the game vote.");
-            case ResistanceVoteStatus.NotVoting:
-                return Error.Conflict("Resistance.NotVoting", "No team is up for a vote.");
-            case ResistanceVoteStatus.VoteLocked:
-                return Error.Conflict("Resistance.VoteLocked", "An Opinion Maker's vote can't be changed.");
-            case ResistanceVoteStatus.OpinionMakersFirst:
-                return Error.Conflict("Resistance.OpinionMakersFirst", "The Opinion Makers vote first.");
+            return error;
         }
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
@@ -645,24 +555,9 @@ internal class ResistanceService : IResistanceService
         }
 
         var result = await _games.PlayMissionCardAsync(sessionId, caller.PlayerId, success, cancellationToken);
-        switch (result.Status)
+        if (ResistanceErrors.From(result.Status) is { } error)
         {
-            case ResistanceMissionStatus.NoGame:
-                return _lobby.NoGame;
-            case ResistanceMissionStatus.NotStarted:
-                return Error.Conflict("Resistance.NotStarted", "The game has not started yet.");
-            case ResistanceMissionStatus.GameOver:
-                return GameOverError;
-            case ResistanceMissionStatus.NotPlayer:
-                return Error.Forbidden("Resistance.NotPlayer", "Only the players of the game play the mission.");
-            case ResistanceMissionStatus.NotPlaying:
-                return Error.Conflict("Resistance.NotPlayingMission", "No approved team is playing a mission.");
-            case ResistanceMissionStatus.NotOnTeam:
-                return Error.Forbidden("Resistance.NotOnTeam", "Only the members of the team play the mission.");
-            case ResistanceMissionStatus.AlreadyPlayed:
-                return Error.Conflict("Resistance.AlreadyPlayed", "You already played your card.");
-            case ResistanceMissionStatus.MustSucceed:
-                return Error.Forbidden("Resistance.MustSucceed", "A member of the resistance can only play Success.");
+            return error;
         }
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
@@ -685,26 +580,15 @@ internal class ResistanceService : IResistanceService
         }
 
         var result = await _games.ContinueAsync(sessionId, caller.PlayerId, access.Value.IsManager, cancellationToken);
-        switch (result.Status)
+        if (ResistanceErrors.From(result.Status) is { } error)
         {
-            case ResistanceContinueStatus.NoGame:
-                return _lobby.NoGame;
-            case ResistanceContinueStatus.NotStarted:
-                return Error.Conflict("Resistance.NotStarted", "The game has not started yet.");
-            case ResistanceContinueStatus.GameOver:
-                return GameOverError;
-            case ResistanceContinueStatus.NotAllowed:
-                return Error.Forbidden("Resistance.NotAllowed", "Only the leader, the host or an admin continues.");
-            case ResistanceContinueStatus.NothingToContinue:
-                return Error.Conflict("Resistance.NothingToContinue", "There is no finished mission to move on from.");
+            return error;
         }
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
 
         return ResistanceGameViewBuilder.Build(result.Game!, caller);
     }
-
-    private static Error GameOverError => Error.Conflict("Resistance.GameOver", "The game is over.");
 
     public Task<ErrorOr<Guid>> JoinAsync(
         Guid sessionId, string? name, GameCaller caller, CancellationToken cancellationToken)
