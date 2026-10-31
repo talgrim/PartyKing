@@ -8,8 +8,8 @@ type Props = {
 };
 
 /**
- * In the Spotlight: while the mission is played, its holder forces another team member, who has not played yet, to
- * play their mission card openly. The card is announced before the target plays; one player is forced per mission.
+ * In the Spotlight: in the confidence window after an approved vote (before the mission cards) its holder forces another team member to play their mission
+ * card openly. The card is announced before the target plays; one player is forced per mission.
  */
 export const ResistanceSpotlightPlayer = ({ game, onPlay }: Props): ReactNode => {
   const [target, setTarget] = useState('');

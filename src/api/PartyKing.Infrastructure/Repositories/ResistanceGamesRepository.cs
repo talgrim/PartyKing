@@ -597,7 +597,7 @@ internal class ResistanceGamesRepository
 
         var card = game.PlotCards.Find(x => x.CardId == cardId);
         var spotlight = card?.Type == ResistancePlotCardType.InTheSpotlight;
-        if (spotlight && game.Phase != ResistancePhase.PlayingMission)
+        if (spotlight && game.Phase != ResistancePhase.ConfidenceWindow)
         {
             return new ResistancePlayCardResult(ResistancePlayCardStatus.NotPlayingMission, game);
         }
@@ -871,6 +871,18 @@ internal class ResistanceGamesRepository
         foreach (var player in game.Players)
         {
             player.PassedLeaderWindow = false;
+        }
+
+        // A rejected team never plays, so an In the Spotlight played in this window goes back to its holder's hand
+        foreach (var spotlight in game.PlotCards.Where(x => x.Type == ResistancePlotCardType.InTheSpotlight
+                                                           && x.Location == ResistancePlotCardLocation.Played
+                                                           && x.PlayedInMission == game.MissionNumber))
+        {
+            spotlight.Location = ResistancePlotCardLocation.Hand;
+            spotlight.TargetPlayerId = null;
+            spotlight.PlayedAt = null;
+            spotlight.PlayedInMission = 0;
+            spotlight.IsConfirmed = false;
         }
 
         ResistanceRoles.RejectTeam(game);

@@ -69,7 +69,7 @@ export const ResistancePlayerView = ({ game, onSubmitTeam, onDealPlotCards, onPl
         <ResistanceLeaderWindow game={game} onTakeLead={onTakeLead} onNoConfidence={onNoConfidence} onPass={onPassLeaderWindow} />
       )}
       {resolves && <ResistancePlotPlayer game={game} onPlay={onPlayPlotCard} onConfirm={onConfirmPlotCard} />}
-      {isPlayer && game.phase === 'PlayingMission' && (
+      {isPlayer && game.phase === 'ConfidenceWindow' && (
         <ResistanceSpotlightPlayer game={game} onPlay={onPlayPlotCard} />
       )}
       {isPlayer && <ResistanceCloseEye game={game} onPeek={onPeekMissionCard} />}

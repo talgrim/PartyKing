@@ -23,8 +23,8 @@ export const ResistanceLeaderWindow = ({ game, onTakeLead, onNoConfidence, onPas
   const youLead = game.yourPlayerId === game.leaderPlayerId;
   const passed = game.yourPlayerId != null && game.leaderWindowPassedPlayerIds.includes(game.yourPlayerId);
   const { name, effect, Icon } = PLOT_CARDS[type];
-  const peek = game.phase === 'PeekWindow';
   // Keeping a Close Eye is played in ResistanceCloseEye; here the peek window only asks for the confirmation
+  const peek = game.phase === 'PeekWindow';
   const canPlay = !peek && card != null && (confidence || !youLead);
 
   const run = async (action: () => Promise<void>) => {

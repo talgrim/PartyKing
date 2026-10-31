@@ -78,7 +78,10 @@ export const resistancePhaseDescription = (
           ? ' Twoje potwierdzenie jest zapisane.'
           : ' Potwierdź, że nie zagrywasz karty (albo zagraj ją).';
 
-      return `Drużyna (${names.join(', ')}) została zatwierdzona (${tally}), ale zanim wyruszy, gracze decydują, czy zagrywają karty Intrygi. Potwierdzili: ${passed}/${count}.${mine}`;
+      const openName = game.players.find((player) => player.id === game.openMissionPlayerId)?.name;
+      const open = openName == null ? '' : ` ${openName} musi zagrać kartę misji jawnie („Pod obserwacją”).`;
+
+      return `Drużyna (${names.join(', ')}) została zatwierdzona (${tally}), ale zanim wyruszy, gracze decydują, czy zagrywają karty Intrygi. Potwierdzili: ${passed}/${count}.${open}${mine}`;
     }
 
     if (game.phase === 'ResolvingCards') {
