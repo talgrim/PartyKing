@@ -374,5 +374,5 @@ public class ResistanceController : GameControllerBase
         return result.Match(_ => NoContent(), Problem);
     }
 
-    private Task<GameCaller> Caller(Guid sessionId) => ReadCallerAsync(GameKind.Resistance, sessionId);
+    private Task<GameCaller> Caller(Guid sessionId) => ReadCallerAsync(sessionId, GameKind.Resistance);
 }
