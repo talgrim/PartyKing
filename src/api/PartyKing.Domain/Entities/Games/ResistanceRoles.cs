@@ -206,10 +206,39 @@ public static class ResistanceRoles
         game.Phase = ResistancePhase.DealingCards;
     }
 
-    /// <summary>The cards the leader hands out: the drawn ones except Establish Confidence, which the leader plays on themselves.</summary>
+    /// <summary>Whether the leader still has to hand the card out: it is drawn and is not Establish Confidence, which the leader plays on themselves.</summary>
+    public static bool NeedsDealing(ResistancePlotCard card) =>
+        card.Location == ResistancePlotCardLocation.Drawn && card.Type != ResistancePlotCardType.EstablishConfidence;
+
+    /// <summary>The cards the leader hands out (see <see cref="NeedsDealing"/>).</summary>
     public static IEnumerable<ResistancePlotCard> CardsToDeal(ResistanceGame game) =>
-        game.PlotCards.Where(x => x.Location == ResistancePlotCardLocation.Drawn
-                                  && x.Type != ResistancePlotCardType.EstablishConfidence);
+        game.PlotCards.Where(NeedsDealing);
+
+    /// <summary>
+    /// A window in which every player confirms (or the holder of a card plays it) before the game goes on: the leader
+    /// window, the confidence window and the peek window.
+    /// </summary>
+    public static bool IsConfirmationWindow(ResistanceGame game) =>
+        game.Phase is ResistancePhase.LeaderWindow or ResistancePhase.ConfidenceWindow or ResistancePhase.PeekWindow;
+
+    /// <summary>
+    /// Whether everybody's vote is public: all have voted and the vote is no longer on (also while the next leader
+    /// picks after a rejection). While it is on, only who voted is known, not how.
+    /// </summary>
+    public static bool VotesRevealed(ResistanceGame game) =>
+        game.Phase != ResistancePhase.Voting && game.Players.All(x => x.Vote is not null);
+
+    /// <summary>
+    /// Whether the votes of the Opinion Makers are public: there is one in play and every one of them has voted, which
+    /// happens before the others may vote.
+    /// </summary>
+    public static bool OpinionMakerVotesRevealed(ResistanceGame game)
+    {
+        var opinionMakers = OpinionMakerIds(game);
+
+        return opinionMakers.Count > 0
+               && game.Players.Where(x => opinionMakers.Contains(x.PlayerId)).All(x => x.Vote is not null);
+    }
 
     /// <summary>Whether the card is played the moment it is dealt and needs its receiver to confirm what they saw.</summary>
     public static bool IsImmediate(ResistancePlotCardType type) =>

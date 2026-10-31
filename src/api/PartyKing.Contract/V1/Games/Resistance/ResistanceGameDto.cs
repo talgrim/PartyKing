@@ -1,61 +1,118 @@
 namespace PartyKing.Contract.V1.Games.Resistance;
 
 /// <summary>
-/// The session's Resistance game. <see cref="CreatedAt"/> tells one game from the next, <see cref="IsOpen"/> is whether
-/// guests may join, <see cref="Players"/> the players in seating order and <see cref="YourPlayerId"/> the caller's own
-/// player id (null when the caller only watches). <see cref="MaxPlayers"/> is how many may join.
-/// Once <see cref="StartedAt"/> is set the players are locked and <see cref="LeaderPlayerId"/> leads the mission.
-/// The roles are secret: <see cref="YourRole"/> is set only for a player of a started game, and
-/// <see cref="FellowSpies"/> (the other spies' player ids) only for a spy. Observers get neither.
-/// The leader picks <see cref="RequiredTeamSize"/> players for mission <see cref="MissionNumber"/> (null before the
-/// start); <see cref="TeamPlayerIds"/> is the submitted team, empty until then, and public.
-/// <see cref="Phase"/> is the step of the round (null before the start). While the players vote only
-/// <see cref="VotedPlayerIds"/> (who has voted, not how) and the caller's own <see cref="YourVote"/> are known; the
-/// <see cref="Votes"/> of everybody and <see cref="VoteApproved"/> appear once all have voted. <see cref="RejectedTeams"/>
-/// counts the teams rejected in a row; the fifth ends the game with the <see cref="Winner"/>, and then
-/// <see cref="RevealedRoles"/> shows every role.
-/// An approved team plays the mission: its members each play a secret card, <see cref="PlayedMissionPlayerIds"/> says
-/// who has (not which card) and <see cref="YourMissionCard"/> is the caller's own. Once all have played only the
-/// number of Fail cards of each finished mission is public (<see cref="MissionResults"/>), never who played them;
-/// <see cref="RequiredFails"/> is how many of them fail the current mission. Three successes or three failures win.
-/// In the Spotlight forces one team member to play openly: <see cref="OpenMissionPlayerId"/> is that player and
-/// <see cref="OpenMissionCard"/> their card (true = Success), public once they have played it.
-/// <see cref="YourPeeks"/> are the mission cards the caller looked at with Keeping a Close Eye this mission.
-/// In the leader or confidence window (a Strong Leader or No Confidence is out there) <see cref="LeaderWindowPassedPlayerIds"/> lists who confirmed.
+/// The session's Resistance game as one caller may see it. Hidden information (roles, votes, mission cards, plot
+/// cards, revealed identities) is filled in only for the people it belongs to; those properties start with "Your".
 /// </summary>
-public record ResistanceGameDto(
-    DateTimeOffset CreatedAt,
-    bool IsOpen,
-    IReadOnlyList<ResistancePlayerDto> Players,
-    Guid? YourPlayerId,
-    int MaxPlayers,
-    DateTimeOffset? StartedAt,
-    Guid? LeaderPlayerId,
-    ResistanceRoleDto? YourRole,
-    IReadOnlyList<Guid>? FellowSpies,
-    int MissionNumber,
-    int? RequiredTeamSize,
-    IReadOnlyList<Guid> TeamPlayerIds,
-    ResistancePhaseDto? Phase,
-    int RejectedTeams,
-    ResistanceRoleDto? Winner,
-    IReadOnlyList<Guid> VotedPlayerIds,
-    bool? YourVote,
-    IReadOnlyList<ResistanceVoteDto>? Votes,
-    bool? VoteApproved,
-    IReadOnlyList<ResistanceRevealedRoleDto>? RevealedRoles,
-    ResistanceRulesDto Rules,
-    int? RequiredFails,
-    IReadOnlyList<Guid> PlayedMissionPlayerIds,
-    bool? YourMissionCard,
-    IReadOnlyList<ResistanceMissionResultDto> MissionResults,
-    IReadOnlyList<ResistancePlotCardDto> YourPlotCards,
-    IReadOnlyList<ResistancePlotCardCountDto> PlotCardCounts,
-    IReadOnlyList<Guid> OpinionMakerPlayerIds,
-    IReadOnlyList<ResistanceVoteDto> OpinionMakerVotes,
-    IReadOnlyList<ResistancePlayedPlotCardDto> PlayedPlotCards,
-    IReadOnlyList<ResistanceCardRevealDto> YourReveals,
-    Guid? OpenMissionPlayerId,
-    bool? OpenMissionCard,
-    IReadOnlyList<Guid> LeaderWindowPassedPlayerIds,
-    IReadOnlyList<ResistanceMissionPeekDto> YourPeeks);
+public class ResistanceGameDto
+{
+    /// <summary>Tells one game from the next.</summary>
+    public DateTimeOffset CreatedAt { get; set; }
+
+    /// <summary>Whether guests may join.</summary>
+    public bool IsOpen { get; set; }
+
+    /// <summary>The players in seating order.</summary>
+    public IReadOnlyList<ResistancePlayerDto> Players { get; set; } = [];
+
+    /// <summary>The caller's own player id; null when the caller only watches.</summary>
+    public Guid? YourPlayerId { get; set; }
+
+    /// <summary>How many players may join.</summary>
+    public int MaxPlayers { get; set; }
+
+    /// <summary>When the game started; null while it is still a lobby. Once set, the players are locked.</summary>
+    public DateTimeOffset? StartedAt { get; set; }
+
+    /// <summary>The player who leads the mission and picks the team.</summary>
+    public Guid? LeaderPlayerId { get; set; }
+
+    /// <summary>The caller's secret role. Set only for a player of a started game; observers get null.</summary>
+    public ResistanceRoleDto? YourRole { get; set; }
+
+    /// <summary>The other spies' player ids. Set only for a spy; everybody else gets null.</summary>
+    public IReadOnlyList<Guid>? FellowSpies { get; set; }
+
+    /// <summary>The number of the mission being played.</summary>
+    public int MissionNumber { get; set; }
+
+    /// <summary>How many players the leader picks for the mission; null before the start.</summary>
+    public int? RequiredTeamSize { get; set; }
+
+    /// <summary>The submitted team. Public; empty until the leader submits it.</summary>
+    public IReadOnlyList<Guid> TeamPlayerIds { get; set; } = [];
+
+    /// <summary>The step of the round; null before the start.</summary>
+    public ResistancePhaseDto? Phase { get; set; }
+
+    /// <summary>How many teams were rejected in a row. The fifth ends the game with the spies as <see cref="Winner"/>.</summary>
+    public int RejectedTeams { get; set; }
+
+    /// <summary>The winning side; null while the game is on.</summary>
+    public ResistanceRoleDto? Winner { get; set; }
+
+    /// <summary>Who has voted on the team, not how.</summary>
+    public IReadOnlyList<Guid> VotedPlayerIds { get; set; } = [];
+
+    /// <summary>The caller's own vote (true = approve); null if they have not voted.</summary>
+    public bool? YourVote { get; set; }
+
+    /// <summary>Everybody's vote. Appears once all have voted and the vote is over; null before that.</summary>
+    public IReadOnlyList<ResistanceVoteDto>? Votes { get; set; }
+
+    /// <summary>Whether the team was approved. Appears together with <see cref="Votes"/>.</summary>
+    public bool? VoteApproved { get; set; }
+
+    /// <summary>Every player's role. Appears only when the game is over.</summary>
+    public IReadOnlyList<ResistanceRevealedRoleDto>? RevealedRoles { get; set; }
+
+    /// <summary>The rules this game plays by (role counts, team sizes, required fails, plot cards).</summary>
+    public required ResistanceRulesDto Rules { get; set; }
+
+    /// <summary>How many Fail cards fail the current mission; null before the start.</summary>
+    public int? RequiredFails { get; set; }
+
+    /// <summary>Who has played a mission card, not which card.</summary>
+    public IReadOnlyList<Guid> PlayedMissionPlayerIds { get; set; } = [];
+
+    /// <summary>The caller's own mission card (true = Success); null if they have not played one.</summary>
+    public bool? YourMissionCard { get; set; }
+
+    /// <summary>
+    /// The finished missions: only the number of Fail cards is public, never who played them. Three successes or
+    /// three failures win.
+    /// </summary>
+    public IReadOnlyList<ResistanceMissionResultDto> MissionResults { get; set; } = [];
+
+    /// <summary>The plot cards in the caller's hand (or still to be handed out), never anybody else's.</summary>
+    public IReadOnlyList<ResistancePlotCardDto> YourPlotCards { get; set; } = [];
+
+    /// <summary>How many plot cards each player holds; the hand sizes are public, the cards are not.</summary>
+    public IReadOnlyList<ResistancePlotCardCountDto> PlotCardCounts { get; set; } = [];
+
+    /// <summary>The players with an Opinion Maker in play. Public.</summary>
+    public IReadOnlyList<Guid> OpinionMakerPlayerIds { get; set; } = [];
+
+    /// <summary>The Opinion Makers' votes. Filled once every one of them has voted, before the others may.</summary>
+    public IReadOnlyList<ResistanceVoteDto> OpinionMakerVotes { get; set; } = [];
+
+    /// <summary>The public log of played plot cards, newest first.</summary>
+    public IReadOnlyList<ResistancePlayedPlotCardDto> PlayedPlotCards { get; set; } = [];
+
+    /// <summary>The identity cards shown to the caller that they have not confirmed yet.</summary>
+    public IReadOnlyList<ResistanceCardRevealDto> YourReveals { get; set; } = [];
+
+    /// <summary>The team member In the Spotlight forces to play their mission card openly this mission.</summary>
+    public Guid? OpenMissionPlayerId { get; set; }
+
+    /// <summary>The forced player's card (true = Success). Public once they have played it.</summary>
+    public bool? OpenMissionCard { get; set; }
+
+    /// <summary>
+    /// Who confirmed in the leader, confidence or peek window (a playable plot card is out there), never who holds a card.
+    /// </summary>
+    public IReadOnlyList<Guid> LeaderWindowPassedPlayerIds { get; set; } = [];
+
+    /// <summary>The mission cards the caller looked at with Keeping a Close Eye this mission.</summary>
+    public IReadOnlyList<ResistanceMissionPeekDto> YourPeeks { get; set; } = [];
+}

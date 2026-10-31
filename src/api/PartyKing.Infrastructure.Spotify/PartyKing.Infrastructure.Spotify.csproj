@@ -13,6 +13,7 @@
       <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.10" />
       <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.10" />
       <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.10" />
+      <PackageReference Include="Riok.Mapperly" Version="4.3.1" />
       <PackageReference Include="SpotifyAPI.Web" Version="7.2.1" />
     </ItemGroup>
 

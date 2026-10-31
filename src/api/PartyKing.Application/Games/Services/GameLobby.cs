@@ -66,9 +66,15 @@ internal class GameLobby<TGame, TPlayer>
         return _sessionAuthorizer.AuthorizeManagerAsync(sessionId, caller.ProfileId, caller.IsAdmin, cancellationToken);
     }
 
+    /// <summary>The caller's own player in the game, or null when the caller only watches.</summary>
+    public static TPlayer? PlayerOf(TGame game, GameCaller caller)
+    {
+        return caller.PlayerId is { } id ? game.Players.FirstOrDefault(x => x.PlayerId == id) : null;
+    }
+
     public static bool IsPlayer(TGame game, GameCaller caller)
     {
-        return caller.PlayerId is { } id && game.Players.Any(x => x.PlayerId == id);
+        return PlayerOf(game, caller) is not null;
     }
 
     public readonly record struct Access(bool IsManager, TGame? Game);

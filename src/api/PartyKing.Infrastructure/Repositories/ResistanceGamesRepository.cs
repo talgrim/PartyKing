@@ -611,7 +611,7 @@ internal class ResistanceGamesRepository
             return new ResistancePlayCardResult(ResistancePlayCardStatus.NotPlayer, game);
         }
 
-        if (game.Phase is not (ResistancePhase.LeaderWindow or ResistancePhase.ConfidenceWindow or ResistancePhase.PeekWindow))
+        if (!ResistanceRoles.IsConfirmationWindow(game))
         {
             return new ResistancePlayCardResult(ResistancePlayCardStatus.WrongPhase, game);
         }
