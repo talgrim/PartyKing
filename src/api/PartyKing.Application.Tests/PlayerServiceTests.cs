@@ -131,7 +131,7 @@ public class PlayerServiceTests
     public async Task ReportState_ByAnotherAccount_IsForbidden()
     {
         var result = await _service.ReportStateAsync(
-            _session.Id, "someone-else", new PlayerStateRequest(1, false), CancellationToken.None);
+            _session.Id, "someone-else", new PlayerStateRequestDto(1, false), CancellationToken.None);
 
         Assert.True(result.IsError);
         Assert.Equal(ErrorOr.ErrorType.Forbidden, result.FirstError.Type);
@@ -142,7 +142,7 @@ public class PlayerServiceTests
     public async Task ReportState_UnknownSession_IsNotFound()
     {
         var result = await _service.ReportStateAsync(
-            Guid.NewGuid(), HostId, new PlayerStateRequest(1, false), CancellationToken.None);
+            Guid.NewGuid(), HostId, new PlayerStateRequestDto(1, false), CancellationToken.None);
 
         Assert.Equal(ErrorOr.ErrorType.NotFound, result.FirstError.Type);
     }
@@ -150,11 +150,11 @@ public class PlayerServiceTests
     [Fact]
     public async Task ReportState_ByTheHost_ConnectsThePlayerAndReturnsTheAdminsCommand()
     {
-        await _service.ReportStateAsync(_session.Id, HostId, new PlayerStateRequest(1, false), CancellationToken.None);
+        await _service.ReportStateAsync(_session.Id, HostId, new PlayerStateRequestDto(1, false), CancellationToken.None);
         await _service.SendCommandAsync(_session.Id, PlayerCommand.Pause, CancellationToken.None);
 
         var result = await _service.ReportStateAsync(
-            _session.Id, HostId, new PlayerStateRequest(1, false), CancellationToken.None);
+            _session.Id, HostId, new PlayerStateRequestDto(1, false), CancellationToken.None);
 
         Assert.Equal(PlayerCommand.Pause, result.Value.Command);
         Assert.Contains(
@@ -166,7 +166,7 @@ public class PlayerServiceTests
     public async Task ReportState_BroadcastsThePositionOfAChange()
     {
         await _service.ReportStateAsync(
-            _session.Id, HostId, new PlayerStateRequest(1, true, PositionMs: 33_000), CancellationToken.None);
+            _session.Id, HostId, new PlayerStateRequestDto(1, true, PositionMs: 33_000), CancellationToken.None);
 
         Assert.Contains(_notifier.PlayerStateChanged, x => x.State is { SongId: 1, Paused: true, PositionMs: 33_000 });
     }
@@ -175,9 +175,9 @@ public class PlayerServiceTests
     public async Task ReportState_ASeek_IsBroadcastEvenThoughNothingElseChanged()
     {
         await _service.ReportStateAsync(
-            _session.Id, HostId, new PlayerStateRequest(1, false, PositionMs: 10_000), CancellationToken.None);
+            _session.Id, HostId, new PlayerStateRequestDto(1, false, PositionMs: 10_000), CancellationToken.None);
         await _service.ReportStateAsync(
-            _session.Id, HostId, new PlayerStateRequest(1, false, PositionMs: 80_000, Seeked: true), CancellationToken.None);
+            _session.Id, HostId, new PlayerStateRequestDto(1, false, PositionMs: 80_000, Seeked: true), CancellationToken.None);
 
         Assert.Equal(2, _notifier.PlayerStateChanged.Count);
         Assert.Equal(80_000, _notifier.PlayerStateChanged[1].State.PositionMs);
@@ -187,9 +187,9 @@ public class PlayerServiceTests
     public async Task ReportState_AKeepaliveWithAMovedOnPosition_DoesNotBroadcast()
     {
         await _service.ReportStateAsync(
-            _session.Id, HostId, new PlayerStateRequest(1, false, PositionMs: 10_000), CancellationToken.None);
+            _session.Id, HostId, new PlayerStateRequestDto(1, false, PositionMs: 10_000), CancellationToken.None);
         await _service.ReportStateAsync(
-            _session.Id, HostId, new PlayerStateRequest(1, false, PositionMs: 20_000), CancellationToken.None);
+            _session.Id, HostId, new PlayerStateRequestDto(1, false, PositionMs: 20_000), CancellationToken.None);
 
         Assert.Single(_notifier.PlayerStateChanged);
     }
@@ -197,13 +197,13 @@ public class PlayerServiceTests
     [Fact]
     public async Task ReportState_RepeatingTheSameState_DoesNotBroadcastAgain()
     {
-        var request = new PlayerStateRequest(1, false);
+        var request = new PlayerStateRequestDto(1, false);
         await _service.ReportStateAsync(_session.Id, HostId, request, CancellationToken.None);
         await _service.ReportStateAsync(_session.Id, HostId, request, CancellationToken.None);
 
         Assert.Single(_notifier.PlayerStateChanged);
 
-        await _service.ReportStateAsync(_session.Id, HostId, new PlayerStateRequest(1, true), CancellationToken.None);
+        await _service.ReportStateAsync(_session.Id, HostId, new PlayerStateRequestDto(1, true), CancellationToken.None);
 
         Assert.Equal(2, _notifier.PlayerStateChanged.Count);
     }
@@ -211,7 +211,7 @@ public class PlayerServiceTests
     [Fact]
     public async Task SendCommand_ToAConnectedPlayer_PushesTheCommand()
     {
-        await _service.ReportStateAsync(_session.Id, HostId, new PlayerStateRequest(1, false), CancellationToken.None);
+        await _service.ReportStateAsync(_session.Id, HostId, new PlayerStateRequestDto(1, false), CancellationToken.None);
 
         var result = await _service.SendCommandAsync(_session.Id, PlayerCommand.Pause, CancellationToken.None);
 

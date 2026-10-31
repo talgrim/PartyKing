@@ -42,7 +42,7 @@ public class ResistanceControllerTests
     {
         _service.Result = new ErrorOr<ResistanceGameDto>();
 
-        await _round.Vote(_sessionId, new ResistanceVoteRequest(false), CancellationToken.None);
+        await _round.Vote(_sessionId, new ResistanceVoteRequestDto(false), CancellationToken.None);
 
         Assert.Equal(("vote", _sessionId, false, _playerId), _service.LastCall);
     }
@@ -53,7 +53,7 @@ public class ResistanceControllerTests
         var game = Game();
         _service.Result = game;
 
-        var result = await _round.Vote(_sessionId, new ResistanceVoteRequest(true), CancellationToken.None);
+        var result = await _round.Vote(_sessionId, new ResistanceVoteRequestDto(true), CancellationToken.None);
 
         Assert.Same(game, Assert.IsType<OkObjectResult>(result).Value);
     }
@@ -64,7 +64,7 @@ public class ResistanceControllerTests
     {
         _service.Result = error;
 
-        var result = await _round.Vote(_sessionId, new ResistanceVoteRequest(true), CancellationToken.None);
+        var result = await _round.Vote(_sessionId, new ResistanceVoteRequestDto(true), CancellationToken.None);
 
         Assert.Equal(status, Assert.IsType<ObjectResult>(result).StatusCode);
     }
@@ -76,7 +76,7 @@ public class ResistanceControllerTests
         _service.Result = game;
 
         var result = await _round.PlayMissionCard(
-            _sessionId, new ResistanceMissionCardRequest(false), CancellationToken.None);
+            _sessionId, new ResistanceMissionCardRequestDto(false), CancellationToken.None);
 
         Assert.Equal(("mission", _sessionId, false, _playerId), _service.LastCall);
         Assert.Same(game, Assert.IsType<OkObjectResult>(result).Value);
@@ -89,7 +89,7 @@ public class ResistanceControllerTests
         _service.Result = error;
 
         var result = await _round.PlayMissionCard(
-            _sessionId, new ResistanceMissionCardRequest(true), CancellationToken.None);
+            _sessionId, new ResistanceMissionCardRequestDto(true), CancellationToken.None);
 
         Assert.Equal(status, Assert.IsType<ObjectResult>(result).StatusCode);
     }
@@ -146,7 +146,7 @@ public class ResistanceControllerTests
         _service.Result = game;
 
         var result = await _plotCards.Play(
-            _sessionId, 4, new ResistancePlayPlotCardRequest(target), CancellationToken.None);
+            _sessionId, 4, new ResistancePlayPlotCardRequestDto(target), CancellationToken.None);
 
         Assert.Equal(($"play-4-{target}", _sessionId, null, _playerId), _service.LastCall);
         Assert.Same(game, Assert.IsType<OkObjectResult>(result).Value);
@@ -159,7 +159,7 @@ public class ResistanceControllerTests
         _service.Result = error;
 
         var result = await _plotCards.Play(
-            _sessionId, 4, new ResistancePlayPlotCardRequest(Guid.NewGuid()), CancellationToken.None);
+            _sessionId, 4, new ResistancePlayPlotCardRequestDto(Guid.NewGuid()), CancellationToken.None);
 
         Assert.Equal(status, Assert.IsType<ObjectResult>(result).StatusCode);
     }
@@ -192,7 +192,7 @@ public class ResistanceControllerTests
         _service.Result = Game();
 
         var result = await _plotCards.Deal(
-            _sessionId, new ResistanceDealPlotCardsRequest([]), CancellationToken.None);
+            _sessionId, new ResistanceDealPlotCardsRequestDto([]), CancellationToken.None);
 
         Assert.Equal(("deal-plot-cards", _sessionId, null, _playerId), _service.LastCall);
         Assert.IsType<OkObjectResult>(result);
