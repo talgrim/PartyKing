@@ -1,5 +1,4 @@
 using System.Text.Json;
-using PartyKing.Application.Games.Services;
 using PartyKing.Application.Mappings;
 using PartyKing.Contract.V1.Games.Resistance;
 using PartyKing.Domain.Entities.Games;
@@ -72,7 +71,7 @@ public class ResistanceGameViewBuilderTests
 
     /// <summary>The view of the player in <paramref name="seat"/>, or of an observer when it is null.</summary>
     private static ResistanceGameDto View(ResistanceGame game, int? seat) =>
-        ResistanceGameViewBuilder.Build(game, new GameCaller(null, false, seat is null ? null : Ids[seat.Value]));
+        ResistanceGameViewBuilder.Build(game, seat is null ? null : Seat(game, seat.Value));
 
     // ---- roles ----
 

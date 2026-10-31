@@ -1,5 +1,3 @@
-using PartyKing.Application.Games.Services;
-using PartyKing.Application.Games.Services.Resistance;
 using PartyKing.Contract.V1.Games.Resistance;
 using PartyKing.Domain.Entities.Games;
 
@@ -11,16 +9,15 @@ namespace PartyKing.Application.Mappings;
 /// </summary>
 internal static class ResistanceGameViewBuilder
 {
-    public static ResistanceGameDto Build(ResistanceGame game, GameCaller caller)
+    /// <param name="game">The game to show.</param>
+    /// <param name="you">The viewer's own player, or null for someone who only watches.</param>
+    public static ResistanceGameDto Build(ResistanceGame game, ResistancePlayer? you)
     {
         var players = game.Players
             .OrderBy(x => x.Order)
             .Select(x => new ResistancePlayerDto(x.PlayerId, x.DisplayName))
             .ToList();
 
-        var you = ResistanceGameLobby.IsPlayer(game, caller)
-            ? game.Players.First(x => x.PlayerId == caller.PlayerId)
-            : null;
         var yourRole = game.IsStarted ? you?.Role : null;
 
         // Hidden while the vote is on; public once all voted (also while the next leader picks after a rejection)

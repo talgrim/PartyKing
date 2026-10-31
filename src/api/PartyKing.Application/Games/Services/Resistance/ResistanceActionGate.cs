@@ -79,6 +79,6 @@ internal sealed class ResistanceActionGate
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
 
-        return ResistanceGameViewBuilder.Build(result.Game!, caller);
+        return ResistanceGameViewBuilder.Build(result.Game!, ResistanceGameLobby.PlayerOf(result.Game!, caller));
     }
 }

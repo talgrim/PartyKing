@@ -106,7 +106,7 @@ internal class ResistanceLobbyService : IResistanceLobbyService
 
         return game is null || (!isManager && !game.IsOpen)
             ? ResistanceErrors.NoGame
-            : ResistanceGameViewBuilder.Build(game, caller);
+            : View(game, caller);
     }
 
     public async Task<ErrorOr<ResistanceLobbyDto>> GetLobbyAsync(
@@ -139,7 +139,7 @@ internal class ResistanceLobbyService : IResistanceLobbyService
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
 
-        return ResistanceGameViewBuilder.Build(game, caller);
+        return View(game, caller);
     }
 
     public Task<ErrorOr<ResistanceGameDto>> RefreshRulesAsync(
@@ -171,7 +171,7 @@ internal class ResistanceLobbyService : IResistanceLobbyService
     {
         var result = await _lobby.OpenAsync(sessionId, caller, cancellationToken);
 
-        return result.IsError ? result.Errors : ResistanceGameViewBuilder.Build(result.Value, caller);
+        return result.IsError ? result.Errors : View(result.Value, caller);
     }
 
     public Task<ErrorOr<Guid>> JoinAsync(
@@ -185,7 +185,7 @@ internal class ResistanceLobbyService : IResistanceLobbyService
     {
         var result = await _lobby.KickAsync(sessionId, playerId, caller, cancellationToken);
 
-        return result.IsError ? result.Errors : ResistanceGameViewBuilder.Build(result.Value, caller);
+        return result.IsError ? result.Errors : View(result.Value, caller);
     }
 
     public async Task<ErrorOr<ResistanceGameDto>> ReorderAsync(
@@ -193,7 +193,7 @@ internal class ResistanceLobbyService : IResistanceLobbyService
     {
         var result = await _lobby.ReorderAsync(sessionId, playerIds, caller, cancellationToken);
 
-        return result.IsError ? result.Errors : ResistanceGameViewBuilder.Build(result.Value, caller);
+        return result.IsError ? result.Errors : View(result.Value, caller);
     }
 
     public async Task<ErrorOr<Deleted>> EndAsync(
@@ -212,5 +212,10 @@ internal class ResistanceLobbyService : IResistanceLobbyService
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
 
         return Result.Deleted;
+    }
+
+    private static ResistanceGameDto View(ResistanceGame game, GameCaller caller)
+    {
+        return ResistanceGameViewBuilder.Build(game, ResistanceGameLobby.PlayerOf(game, caller));
     }
 }
