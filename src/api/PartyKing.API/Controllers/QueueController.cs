@@ -28,7 +28,7 @@ public class QueueController : CoreController
     [ProducesResponseType<QueueItemDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> QueueSong(
         Guid sessionId,
-        [FromBody] EnqueueSongRequest request,
+        [FromBody] EnqueueSongRequestDto request,
         CancellationToken cancellationToken)
     {
         var result = await _queueService.EnqueueAsync(sessionId, request.Input, cancellationToken);

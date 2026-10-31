@@ -1,0 +1,4 @@
+namespace PartyKing.Contract.V1.Games.Resistance;
+
+/// <summary>Every drawn card except Establish Confidence (the leader keeps it) goes to a player other than the leader.</summary>
+public record ResistanceDealPlotCardsRequestDto(IReadOnlyList<ResistancePlotCardAssignmentDto> Assignments);

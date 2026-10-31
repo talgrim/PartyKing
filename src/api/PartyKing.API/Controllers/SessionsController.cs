@@ -42,7 +42,7 @@ public class SessionsController : CoreController
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Join(
         Guid sessionId,
-        [FromBody] JoinSessionRequest request,
+        [FromBody] JoinSessionRequestDto request,
         CancellationToken cancellationToken)
     {
         var result = await _sessionService.JoinAsync(sessionId, request.Password, cancellationToken);
@@ -66,7 +66,7 @@ public class SessionsController : CoreController
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> JoinWithToken(
         Guid sessionId,
-        [FromBody] JoinWithTokenRequest request,
+        [FromBody] JoinWithTokenRequestDto request,
         CancellationToken cancellationToken)
     {
         var result = await _sessionService.JoinWithTokenAsync(sessionId, request.Token, cancellationToken);
@@ -101,7 +101,7 @@ public class SessionsController : CoreController
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> RenameSession(
         Guid sessionId,
-        [FromBody] RenameSessionRequest request,
+        [FromBody] RenameSessionRequestDto request,
         CancellationToken cancellationToken)
     {
         var (profileId, isAdmin) = await ReadCallerAsync();
@@ -120,7 +120,7 @@ public class SessionsController : CoreController
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> ChangePassword(
         Guid sessionId,
-        [FromBody] ChangeSessionPasswordRequest request,
+        [FromBody] ChangeSessionPasswordRequestDto request,
         CancellationToken cancellationToken)
     {
         var (profileId, isAdmin) = await ReadCallerAsync();

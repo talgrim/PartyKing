@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using PartyKing.API.Authorization;
-using PartyKing.Application.Games.Services;
-using PartyKing.Contract.V1.Games;
+using PartyKing.Application.Games.Services.Resistance;
+using PartyKing.Contract.V1.Games.Resistance;
 using PartyKing.Infrastructure.Authorization;
 
 namespace PartyKing.API.Controllers.Games.Resistance;
@@ -12,11 +12,18 @@ public class ResistanceRoundController : ResistanceControllerBase
 {
     public ResistanceRoundController(
         IHttpContextAccessor httpContextAccessor,
-        IResistanceService resistanceService,
+        IResistanceRoundService roundService,
+        IResistancePlotCardService plotCardService,
         ICookieAuthorizationHandler cookieAuthorizationHandler)
-        : base(httpContextAccessor, resistanceService, cookieAuthorizationHandler)
+        : base(httpContextAccessor, cookieAuthorizationHandler)
     {
+        Rounds = roundService;
+        PlotCards = plotCardService;
     }
+
+    private IResistanceRoundService Rounds { get; }
+
+    private IResistancePlotCardService PlotCards { get; }
 
     /// <summary>
     /// The mission leader submits the team (exactly the required number of distinct players), which locks it. 403 for
@@ -26,9 +33,9 @@ public class ResistanceRoundController : ResistanceControllerBase
     [RequireSessionAccess]
     [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> SelectTeam(
-        Guid sessionId, [FromBody] ResistanceTeamRequest request, CancellationToken cancellationToken)
+        Guid sessionId, [FromBody] ResistanceTeamRequestDto request, CancellationToken cancellationToken)
     {
-        var result = await ResistanceService.SelectTeamAsync(
+        var result = await Rounds.SelectTeamAsync(
             sessionId, request.PlayerIds, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
@@ -42,9 +49,9 @@ public class ResistanceRoundController : ResistanceControllerBase
     [RequireSessionAccess]
     [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Vote(
-        Guid sessionId, [FromBody] ResistanceVoteRequest request, CancellationToken cancellationToken)
+        Guid sessionId, [FromBody] ResistanceVoteRequestDto request, CancellationToken cancellationToken)
     {
-        var result = await ResistanceService.VoteAsync(
+        var result = await Rounds.VoteAsync(
             sessionId, request.Approve, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
@@ -59,9 +66,9 @@ public class ResistanceRoundController : ResistanceControllerBase
     [RequireSessionAccess]
     [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> PlayMissionCard(
-        Guid sessionId, [FromBody] ResistanceMissionCardRequest request, CancellationToken cancellationToken)
+        Guid sessionId, [FromBody] ResistanceMissionCardRequestDto request, CancellationToken cancellationToken)
     {
-        var result = await ResistanceService.PlayMissionCardAsync(
+        var result = await Rounds.PlayMissionCardAsync(
             sessionId, request.Success, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
@@ -76,7 +83,7 @@ public class ResistanceRoundController : ResistanceControllerBase
     [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Continue(Guid sessionId, CancellationToken cancellationToken)
     {
-        var result = await ResistanceService.ContinueAsync(sessionId, await Caller(sessionId), cancellationToken);
+        var result = await Rounds.ContinueAsync(sessionId, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
     }
@@ -90,7 +97,7 @@ public class ResistanceRoundController : ResistanceControllerBase
     [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> PassWindow(Guid sessionId, CancellationToken cancellationToken)
     {
-        var result = await ResistanceService.PassLeaderWindowAsync(sessionId, await Caller(sessionId), cancellationToken);
+        var result = await PlotCards.PassLeaderWindowAsync(sessionId, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
     }

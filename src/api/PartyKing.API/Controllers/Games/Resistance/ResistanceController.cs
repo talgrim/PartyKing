@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using PartyKing.API.Authorization;
-using PartyKing.Application.Games.Services;
-using PartyKing.Contract.V1.Games;
+using PartyKing.Application.Games.Services.Resistance;
+using PartyKing.Contract.V1.Games.Resistance;
 using PartyKing.Infrastructure.Authorization;
 
 namespace PartyKing.API.Controllers.Games.Resistance;
@@ -13,11 +13,18 @@ public class ResistanceController : ResistanceControllerBase
 {
     public ResistanceController(
         IHttpContextAccessor httpContextAccessor,
-        IResistanceService resistanceService,
+        IResistanceLobbyService lobbyService,
+        IResistanceRoundService roundService,
         ICookieAuthorizationHandler cookieAuthorizationHandler)
-        : base(httpContextAccessor, resistanceService, cookieAuthorizationHandler)
+        : base(httpContextAccessor, cookieAuthorizationHandler)
     {
+        Lobby = lobbyService;
+        Rounds = roundService;
     }
+
+    private IResistanceLobbyService Lobby { get; }
+
+    private IResistanceRoundService Rounds { get; }
 
     /// <summary>
     /// The session's Resistance game. Anyone who unlocked the session may watch it once it is open; until then it is
@@ -28,7 +35,7 @@ public class ResistanceController : ResistanceControllerBase
     [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Get(Guid sessionId, CancellationToken cancellationToken)
     {
-        var result = await ResistanceService.GetAsync(sessionId, await Caller(sessionId), cancellationToken);
+        var result = await Lobby.GetAsync(sessionId, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
     }
@@ -39,7 +46,7 @@ public class ResistanceController : ResistanceControllerBase
     [ProducesResponseType<ResistanceLobbyDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetLobby(Guid sessionId, CancellationToken cancellationToken)
     {
-        var result = await ResistanceService.GetLobbyAsync(sessionId, await Caller(sessionId), cancellationToken);
+        var result = await Lobby.GetLobbyAsync(sessionId, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
     }
@@ -50,7 +57,7 @@ public class ResistanceController : ResistanceControllerBase
     [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Create(Guid sessionId, CancellationToken cancellationToken)
     {
-        var result = await ResistanceService.CreateAsync(sessionId, await Caller(sessionId), cancellationToken);
+        var result = await Lobby.CreateAsync(sessionId, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
     }
@@ -64,7 +71,7 @@ public class ResistanceController : ResistanceControllerBase
     [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> RefreshRules(Guid sessionId, CancellationToken cancellationToken)
     {
-        var result = await ResistanceService.RefreshRulesAsync(sessionId, await Caller(sessionId), cancellationToken);
+        var result = await Lobby.RefreshRulesAsync(sessionId, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
     }
@@ -75,7 +82,7 @@ public class ResistanceController : ResistanceControllerBase
     [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Open(Guid sessionId, CancellationToken cancellationToken)
     {
-        var result = await ResistanceService.OpenAsync(sessionId, await Caller(sessionId), cancellationToken);
+        var result = await Lobby.OpenAsync(sessionId, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
     }
@@ -90,9 +97,9 @@ public class ResistanceController : ResistanceControllerBase
     [EnableRateLimiting(SessionsController.JoinRateLimitPolicy)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Join(
-        Guid sessionId, [FromBody] ResistanceJoinRequest request, CancellationToken cancellationToken)
+        Guid sessionId, [FromBody] ResistanceJoinRequestDto request, CancellationToken cancellationToken)
     {
-        var result = await ResistanceService.JoinAsync(
+        var result = await Lobby.JoinAsync(
             sessionId, request.Name, await Caller(sessionId), cancellationToken);
         if (!result.IsError)
         {
@@ -111,7 +118,7 @@ public class ResistanceController : ResistanceControllerBase
     [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Start(Guid sessionId, CancellationToken cancellationToken)
     {
-        var result = await ResistanceService.StartAsync(sessionId, await Caller(sessionId), cancellationToken);
+        var result = await Rounds.StartAsync(sessionId, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
     }
@@ -125,7 +132,7 @@ public class ResistanceController : ResistanceControllerBase
     [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Restart(Guid sessionId, CancellationToken cancellationToken)
     {
-        var result = await ResistanceService.RestartAsync(sessionId, await Caller(sessionId), cancellationToken);
+        var result = await Rounds.RestartAsync(sessionId, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
     }
@@ -136,7 +143,7 @@ public class ResistanceController : ResistanceControllerBase
     [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> KickPlayer(Guid sessionId, Guid playerId, CancellationToken cancellationToken)
     {
-        var result = await ResistanceService.KickAsync(sessionId, playerId, await Caller(sessionId), cancellationToken);
+        var result = await Lobby.KickAsync(sessionId, playerId, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
     }
@@ -146,9 +153,9 @@ public class ResistanceController : ResistanceControllerBase
     [RequireSessionAccess]
     [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> ReorderPlayers(
-        Guid sessionId, [FromBody] ResistancePlayersOrderRequest request, CancellationToken cancellationToken)
+        Guid sessionId, [FromBody] ResistancePlayersOrderRequestDto request, CancellationToken cancellationToken)
     {
-        var result = await ResistanceService.ReorderAsync(
+        var result = await Lobby.ReorderAsync(
             sessionId, request.PlayerIds, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
@@ -160,7 +167,7 @@ public class ResistanceController : ResistanceControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> End(Guid sessionId, CancellationToken cancellationToken)
     {
-        var result = await ResistanceService.EndAsync(sessionId, await Caller(sessionId), cancellationToken);
+        var result = await Lobby.EndAsync(sessionId, await Caller(sessionId), cancellationToken);
 
         return result.Match(_ => NoContent(), Problem);
     }

@@ -1,8 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using PartyKing.API.Authorization;
-using PartyKing.Application.Games.Services;
+using PartyKing.Application.Games.Services.Ringo;
 using PartyKing.Contract.V1.Games;
+using PartyKing.Contract.V1.Games.Ringo;
 using PartyKing.Domain.Entities.Games;
 using PartyKing.Infrastructure.Authorization;
 
@@ -80,7 +81,7 @@ public class RingoController : LobbyGameControllerBase
     [EnableRateLimiting(SessionsController.JoinRateLimitPolicy)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Join(
-        Guid sessionId, [FromBody] RingoJoinRequest request, CancellationToken cancellationToken)
+        Guid sessionId, [FromBody] RingoJoinRequestDto request, CancellationToken cancellationToken)
     {
         var result = await _ringoService.JoinAsync(sessionId, request.Name, await Caller(sessionId), cancellationToken);
         if (!result.IsError)
@@ -107,7 +108,7 @@ public class RingoController : LobbyGameControllerBase
     [RequireSessionAccess]
     [ProducesResponseType<RingoGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> ReorderPlayers(
-        Guid sessionId, [FromBody] RingoPlayersOrderRequest request, CancellationToken cancellationToken)
+        Guid sessionId, [FromBody] RingoPlayersOrderRequestDto request, CancellationToken cancellationToken)
     {
         var result = await _ringoService.ReorderAsync(
             sessionId, request.PlayerIds, await Caller(sessionId), cancellationToken);
@@ -147,7 +148,7 @@ public class RingoController : LobbyGameControllerBase
     [EnableRateLimiting(SuggestionsRateLimitPolicy)]
     [ProducesResponseType<GameSuggestionsDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> SuggestRules(
-        Guid sessionId, [FromBody] RingoRuleSuggestionsRequest request, CancellationToken cancellationToken)
+        Guid sessionId, [FromBody] RingoRuleSuggestionsRequestDto request, CancellationToken cancellationToken)
     {
         var caller = await Caller(sessionId);
 

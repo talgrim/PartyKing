@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using PartyKing.Application.Admin.Services;
+using PartyKing.Application.Games.Services.Ringo;
 using PartyKing.Application.Games.Services;
 using PartyKing.Application.Player.Services;
 using PartyKing.Application.Realtime;
@@ -34,7 +35,11 @@ public class RingoServiceTests
             new NullSessionMusicNotifier(),
             new NullPlayerConnectionWatchdog(),
             NullLogger<SessionService>.Instance);
-        _service = new RingoService(sessionService, _sessions, _games, clock, _notifier);
+        _service = new RingoService(
+            new RingoGameLobby(sessionService, _sessions, _games, clock, new RingoLobbyNotifier(_notifier)),
+            _games,
+            clock,
+            _notifier);
         _id = _sessions.AddSession(HostId, new PasswordHasher().Hash("secret")).Id;
     }
 

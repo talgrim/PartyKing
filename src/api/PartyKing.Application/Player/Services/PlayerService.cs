@@ -18,10 +18,10 @@ public interface IPlayerService
     /// Host only: forbidden unless <paramref name="hostProfileId"/> hosts the session. Returns the command an admin
     /// sent in the meantime, if any.
     /// </summary>
-    Task<ErrorOr<PlayerStateResponse>> ReportStateAsync(
+    Task<ErrorOr<PlayerStateResponseDto>> ReportStateAsync(
         Guid sessionId,
         string hostProfileId,
-        PlayerStateRequest state,
+        PlayerStateRequestDto state,
         CancellationToken cancellationToken);
 
     /// <summary>Admin: asks the host's player to pause or resume. Conflict when no player is connected.</summary>
@@ -86,10 +86,10 @@ internal class PlayerService : IPlayerService
         return new NowPlayingDto(playing?.ToDto(), paused, player.Connected, positionMs);
     }
 
-    public async Task<ErrorOr<PlayerStateResponse>> ReportStateAsync(
+    public async Task<ErrorOr<PlayerStateResponseDto>> ReportStateAsync(
         Guid sessionId,
         string hostProfileId,
-        PlayerStateRequest state,
+        PlayerStateRequestDto state,
         CancellationToken cancellationToken)
     {
         var session = await _sessionsRepository.GetAsync(sessionId, cancellationToken);
@@ -116,7 +116,7 @@ internal class PlayerService : IPlayerService
                 cancellationToken);
         }
 
-        return new PlayerStateResponse(report.Command, _fallbackStatusStore.GetError(sessionId));
+        return new PlayerStateResponseDto(report.Command, _fallbackStatusStore.GetError(sessionId));
     }
 
     public async Task<ErrorOr<Success>> SendCommandAsync(

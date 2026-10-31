@@ -32,7 +32,7 @@ public class SpotifyController : CoreController
     [HttpPost("authenticate")]
     [ProducesResponseType<UserDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Authenticate(
-        [FromBody] AuthenticateRequest request,
+        [FromBody] AuthenticateRequestDto request,
         CancellationToken cancellationToken)
     {
         var result = await _spotifyService.AuthenticateByCodeAsync(request.Code, request.State, cancellationToken);

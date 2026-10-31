@@ -28,7 +28,7 @@ public class AdminController : CoreController
     [HttpPost("admin/login")]
     [EnableRateLimiting(LoginRateLimitPolicy)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> Login([FromBody] AdminLoginRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Login([FromBody] AdminLoginRequestDto request, CancellationToken cancellationToken)
     {
         var result = await _adminService.LoginAsync(request.Username, request.Password, cancellationToken);
 
@@ -57,7 +57,7 @@ public class AdminController : CoreController
     [AuthorizeAdmin]
     [ProducesResponseType<SessionDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> CreateSession(
-        [FromBody] CreateSessionRequest request,
+        [FromBody] CreateSessionRequestDto request,
         CancellationToken cancellationToken)
     {
         var result = await _sessionService.CreateAsync(request.Name, request.Password, cancellationToken);
