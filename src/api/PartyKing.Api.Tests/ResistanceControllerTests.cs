@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using PartyKing.API.Controllers.Games;
+using PartyKing.API.Controllers.Games.Resistance;
 using PartyKing.Application.Games.Services;
 using PartyKing.Contract.V1.Games;
 using PartyKing.Domain.Entities.Games;
