@@ -23,7 +23,7 @@ public class ResistancePlotCardsController : ResistanceControllerBase
     [RequireSessionAccess]
     [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> SetEnabled(
-        Guid sessionId, [FromBody] ResistancePlotCardsRequest request, CancellationToken cancellationToken)
+        Guid sessionId, [FromBody] ResistancePlotCardsRequestDto request, CancellationToken cancellationToken)
     {
         var result = await ResistanceService.SetPlotCardsAsync(
             sessionId, request.Enabled, await Caller(sessionId), cancellationToken);
@@ -39,7 +39,7 @@ public class ResistancePlotCardsController : ResistanceControllerBase
     [RequireSessionAccess]
     [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Deal(
-        Guid sessionId, [FromBody] ResistanceDealPlotCardsRequest request, CancellationToken cancellationToken)
+        Guid sessionId, [FromBody] ResistanceDealPlotCardsRequestDto request, CancellationToken cancellationToken)
     {
         var result = await ResistanceService.DealPlotCardsAsync(
             sessionId, request.Assignments, await Caller(sessionId), cancellationToken);
@@ -55,7 +55,7 @@ public class ResistancePlotCardsController : ResistanceControllerBase
     [RequireSessionAccess]
     [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Play(
-        Guid sessionId, int cardId, [FromBody] ResistancePlayPlotCardRequest request, CancellationToken cancellationToken)
+        Guid sessionId, int cardId, [FromBody] ResistancePlayPlotCardRequestDto request, CancellationToken cancellationToken)
     {
         var result = await ResistanceService.PlayPlotCardAsync(
             sessionId, cardId, request.TargetPlayerId, await Caller(sessionId), cancellationToken);
@@ -101,7 +101,7 @@ public class ResistancePlotCardsController : ResistanceControllerBase
     [RequireSessionAccess]
     [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> PeekMissionCard(
-        Guid sessionId, int cardId, [FromBody] ResistancePlayPlotCardRequest request, CancellationToken cancellationToken)
+        Guid sessionId, int cardId, [FromBody] ResistancePlayPlotCardRequestDto request, CancellationToken cancellationToken)
     {
         var result = await ResistanceService.PeekMissionCardAsync(
             sessionId, cardId, request.TargetPlayerId, await Caller(sessionId), cancellationToken);
@@ -133,7 +133,7 @@ public class ResistancePlotCardsController : ResistanceControllerBase
     [RequireSessionAccess]
     [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> TakeResponsibility(
-        Guid sessionId, int cardId, [FromBody] ResistanceTakeResponsibilityRequest request,
+        Guid sessionId, int cardId, [FromBody] ResistanceTakeResponsibilityRequestDto request,
         CancellationToken cancellationToken)
     {
         var result = await ResistanceService.TakeResponsibilityAsync(

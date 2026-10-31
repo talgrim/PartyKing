@@ -26,7 +26,7 @@ public class ResistanceRoundController : ResistanceControllerBase
     [RequireSessionAccess]
     [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> SelectTeam(
-        Guid sessionId, [FromBody] ResistanceTeamRequest request, CancellationToken cancellationToken)
+        Guid sessionId, [FromBody] ResistanceTeamRequestDto request, CancellationToken cancellationToken)
     {
         var result = await ResistanceService.SelectTeamAsync(
             sessionId, request.PlayerIds, await Caller(sessionId), cancellationToken);
@@ -42,7 +42,7 @@ public class ResistanceRoundController : ResistanceControllerBase
     [RequireSessionAccess]
     [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Vote(
-        Guid sessionId, [FromBody] ResistanceVoteRequest request, CancellationToken cancellationToken)
+        Guid sessionId, [FromBody] ResistanceVoteRequestDto request, CancellationToken cancellationToken)
     {
         var result = await ResistanceService.VoteAsync(
             sessionId, request.Approve, await Caller(sessionId), cancellationToken);
@@ -59,7 +59,7 @@ public class ResistanceRoundController : ResistanceControllerBase
     [RequireSessionAccess]
     [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> PlayMissionCard(
-        Guid sessionId, [FromBody] ResistanceMissionCardRequest request, CancellationToken cancellationToken)
+        Guid sessionId, [FromBody] ResistanceMissionCardRequestDto request, CancellationToken cancellationToken)
     {
         var result = await ResistanceService.PlayMissionCardAsync(
             sessionId, request.Success, await Caller(sessionId), cancellationToken);

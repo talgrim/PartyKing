@@ -90,7 +90,7 @@ public class ResistanceController : ResistanceControllerBase
     [EnableRateLimiting(SessionsController.JoinRateLimitPolicy)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Join(
-        Guid sessionId, [FromBody] ResistanceJoinRequest request, CancellationToken cancellationToken)
+        Guid sessionId, [FromBody] ResistanceJoinRequestDto request, CancellationToken cancellationToken)
     {
         var result = await ResistanceService.JoinAsync(
             sessionId, request.Name, await Caller(sessionId), cancellationToken);
@@ -146,7 +146,7 @@ public class ResistanceController : ResistanceControllerBase
     [RequireSessionAccess]
     [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> ReorderPlayers(
-        Guid sessionId, [FromBody] ResistancePlayersOrderRequest request, CancellationToken cancellationToken)
+        Guid sessionId, [FromBody] ResistancePlayersOrderRequestDto request, CancellationToken cancellationToken)
     {
         var result = await ResistanceService.ReorderAsync(
             sessionId, request.PlayerIds, await Caller(sessionId), cancellationToken);

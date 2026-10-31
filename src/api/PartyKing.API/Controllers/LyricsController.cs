@@ -46,7 +46,7 @@ public class LyricsController : CoreController
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> SetOffset(
         Guid sessionId,
-        [FromBody] SetLyricsOffsetRequest request,
+        [FromBody] SetLyricsOffsetRequestDto request,
         CancellationToken cancellationToken)
     {
         var profileId = _cookieAuthorizationHandler.TryReadProfileId(Request, out var id) ? id : null;
