@@ -1,4 +1,5 @@
 using ErrorOr;
+using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.System;
 using PartyKing.Domain.Entities.Games;
@@ -63,7 +64,7 @@ internal class GameLobby<TGame, TPlayer>
     public Task<ErrorOr<Success>> AuthorizeAsync(
         Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
     {
-        return _sessionAuthorizer.AuthorizeManagerAsync(sessionId, caller.ProfileId, caller.IsAdmin, cancellationToken);
+        return _sessionAuthorizer.AuthorizeManagerAsync(sessionId, caller, cancellationToken);
     }
 
     /// <summary>The caller's own player in the game, or null when the caller only watches.</summary>
@@ -158,7 +159,7 @@ internal class GameLobby<TGame, TPlayer>
             return existing;
         }
 
-        var isHost = caller.ProfileId is not null && session.HostProfileId == caller.ProfileId;
+        var isHost = SessionRoles.IsHost(session, caller);
         var typed = name?.Trim() ?? string.Empty;
         var playerName = isHost
             ? LobbyNames.HostName(session.HostProfile?.DisplayName)

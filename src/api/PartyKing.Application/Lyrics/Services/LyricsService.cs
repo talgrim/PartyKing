@@ -1,6 +1,7 @@
 using ErrorOr;
 using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
+using PartyKing.Application.Sessions;
 using PartyKing.Contract.V1.Lyrics;
 using PartyKing.Domain.Entities.Lyrics;
 using PartyKing.Domain.Results;
@@ -19,14 +20,13 @@ public interface ILyricsService
 
     /// <summary>
     /// Saves the timing offset of the song being played for every session and pushes it to this session's viewers.
-    /// Only the host (<paramref name="profileId"/>) or an admin may; anyone else gets Forbidden. NotFound when
+    /// Only the host (<paramref name="caller"/>) or an admin may; anyone else gets Forbidden. NotFound when
     /// nothing is playing, Validation when the offset is out of range.
     /// </summary>
     Task<ErrorOr<Success>> SetOffsetAsync(
         Guid sessionId,
         int offsetMs,
-        string? profileId,
-        bool isAdmin,
+        SessionCaller caller,
         CancellationToken cancellationToken);
 }
 
@@ -94,11 +94,10 @@ internal class LyricsService : ILyricsService
     public async Task<ErrorOr<Success>> SetOffsetAsync(
         Guid sessionId,
         int offsetMs,
-        string? profileId,
-        bool isAdmin,
+        SessionCaller caller,
         CancellationToken cancellationToken)
     {
-        var authorized = await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, profileId, isAdmin, cancellationToken);
+        var authorized = await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, caller, cancellationToken);
         if (authorized.IsError)
         {
             return authorized.Errors;

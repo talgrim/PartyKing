@@ -1,5 +1,6 @@
 using ErrorOr;
 using PartyKing.Application.Sessions.Services;
+using PartyKing.Application.Sessions;
 
 namespace PartyKing.Application.Tests;
 
@@ -20,7 +21,7 @@ public class SessionAuthorizerTests
     {
         var session = _sessions.AddSession("host-profile");
 
-        var role = (await _authorizer.GetViewerRoleAsync(session.Id, "host-profile", false, CancellationToken.None)).Value;
+        var role = (await _authorizer.GetViewerRoleAsync(session.Id, new SessionCaller("host-profile", false), CancellationToken.None)).Value;
 
         Assert.True(role.IsHost);
         Assert.False(role.IsAdmin);
@@ -31,7 +32,7 @@ public class SessionAuthorizerTests
     {
         var session = _sessions.AddSession("host-profile");
 
-        var role = (await _authorizer.GetViewerRoleAsync(session.Id, "other-profile", false, CancellationToken.None)).Value;
+        var role = (await _authorizer.GetViewerRoleAsync(session.Id, new SessionCaller("other-profile", false), CancellationToken.None)).Value;
 
         Assert.False(role.IsHost);
     }
@@ -41,7 +42,7 @@ public class SessionAuthorizerTests
     {
         var session = _sessions.AddSession("host-profile");
 
-        var role = (await _authorizer.GetViewerRoleAsync(session.Id, null, false, CancellationToken.None)).Value;
+        var role = (await _authorizer.GetViewerRoleAsync(session.Id, new SessionCaller(null, false), CancellationToken.None)).Value;
 
         Assert.False(role.IsHost);
         Assert.False(role.IsAdmin);
@@ -52,7 +53,7 @@ public class SessionAuthorizerTests
     {
         var session = _sessions.AddSession();
 
-        var role = (await _authorizer.GetViewerRoleAsync(session.Id, "any-profile", false, CancellationToken.None)).Value;
+        var role = (await _authorizer.GetViewerRoleAsync(session.Id, new SessionCaller("any-profile", false), CancellationToken.None)).Value;
 
         Assert.False(role.IsHost);
     }
@@ -62,7 +63,7 @@ public class SessionAuthorizerTests
     {
         var session = _sessions.AddSession("host-profile");
 
-        var role = (await _authorizer.GetViewerRoleAsync(session.Id, null, true, CancellationToken.None)).Value;
+        var role = (await _authorizer.GetViewerRoleAsync(session.Id, new SessionCaller(null, true), CancellationToken.None)).Value;
 
         Assert.True(role.IsAdmin);
         Assert.False(role.IsHost);
@@ -71,7 +72,7 @@ public class SessionAuthorizerTests
     [Fact]
     public async Task AnUnknownSession_IsNotFound()
     {
-        var result = await _authorizer.GetViewerRoleAsync(Guid.NewGuid(), null, false, CancellationToken.None);
+        var result = await _authorizer.GetViewerRoleAsync(Guid.NewGuid(), new SessionCaller(null, false), CancellationToken.None);
 
         Assert.Equal(ErrorOr.ErrorType.NotFound, result.FirstError.Type);
     }
@@ -83,7 +84,7 @@ public class SessionAuthorizerTests
     {
         var id = _sessions.AddSession(HostId).Id;
 
-        var result = await _authorizer.AuthorizeManagerAsync(id, profileId, isAdmin, CancellationToken.None);
+        var result = await _authorizer.AuthorizeManagerAsync(id, new SessionCaller(profileId, isAdmin), CancellationToken.None);
 
         Assert.False(result.IsError);
     }
@@ -95,7 +96,7 @@ public class SessionAuthorizerTests
     {
         var id = _sessions.AddSession(HostId).Id;
 
-        var result = await _authorizer.AuthorizeManagerAsync(id, profileId, false, CancellationToken.None);
+        var result = await _authorizer.AuthorizeManagerAsync(id, new SessionCaller(profileId, false), CancellationToken.None);
 
         Assert.Equal(ErrorType.Forbidden, result.FirstError.Type);
     }
@@ -103,7 +104,7 @@ public class SessionAuthorizerTests
     [Fact]
     public async Task ManagingAnUnknownSession_IsNotFound()
     {
-        var result = await _authorizer.AuthorizeManagerAsync(Guid.NewGuid(), HostId, true, CancellationToken.None);
+        var result = await _authorizer.AuthorizeManagerAsync(Guid.NewGuid(), new SessionCaller(HostId, true), CancellationToken.None);
 
         Assert.Equal(ErrorType.NotFound, result.FirstError.Type);
     }

@@ -1,7 +1,6 @@
-using Microsoft.AspNetCore.Authentication;
+using PartyKing.API.Authentication;
 using PartyKing.Application.Games.Services;
 using PartyKing.Domain.Entities.Games;
-using PartyKing.Infrastructure.Authentication;
 using PartyKing.Infrastructure.Authorization;
 
 namespace PartyKing.API.Controllers.Games;
@@ -26,8 +25,7 @@ public abstract class GameControllerBase : CoreController
     /// <summary>The caller as host and admin; with <paramref name="game"/> also as that game's player.</summary>
     protected async Task<GameCaller> ReadCallerAsync(Guid sessionId, GameKind? game = null)
     {
-        var profileId = Cookies.TryReadProfileId(Request, out var id) ? id : null;
-        var isAdmin = (await HttpContext.AuthenticateAsync(Constants.AdminScheme)).Succeeded;
+        var session = await HttpContext.ReadSessionCallerAsync(Cookies);
 
         Guid? playerId = null;
         if (game is { } kind && Cookies.TryReadGamePlayer(kind, Request, sessionId, out var player))
@@ -35,6 +33,6 @@ public abstract class GameControllerBase : CoreController
             playerId = player;
         }
 
-        return new GameCaller(profileId, isAdmin, playerId);
+        return new GameCaller(session.ProfileId, session.IsAdmin, playerId);
     }
 }

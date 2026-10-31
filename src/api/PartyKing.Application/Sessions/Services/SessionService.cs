@@ -12,12 +12,11 @@ public interface ISessionService
     Task<IReadOnlyList<SessionDto>> GetAllAsync(CancellationToken cancellationToken);
     Task<ErrorOr<SessionDto>> GetAsync(Guid id, CancellationToken cancellationToken);
 
-    /// <summary>Renames the session. Only the host (<paramref name="profileId"/>) or an admin may; anyone else gets Forbidden.</summary>
+    /// <summary>Renames the session. Only the host (<paramref name="caller"/>) or an admin may; anyone else gets Forbidden.</summary>
     Task<ErrorOr<Success>> RenameAsync(
         Guid id,
         string? name,
-        string? profileId,
-        bool isAdmin,
+        SessionCaller caller,
         CancellationToken cancellationToken);
 }
 
@@ -54,11 +53,10 @@ internal class SessionService : ISessionService
     public async Task<ErrorOr<Success>> RenameAsync(
         Guid id,
         string? name,
-        string? profileId,
-        bool isAdmin,
+        SessionCaller caller,
         CancellationToken cancellationToken)
     {
-        if (await _authorizer.AuthorizeManagerAsync(id, profileId, isAdmin, cancellationToken) is { IsError: true } denied)
+        if (await _authorizer.AuthorizeManagerAsync(id, caller, cancellationToken) is { IsError: true } denied)
         {
             return denied.Errors;
         }

@@ -1,13 +1,12 @@
 using System.ComponentModel.DataAnnotations;
 using ErrorOr;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using PartyKing.API.Authentication;
 using PartyKing.API.Authorization;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Contract.V1.Slideshow;
-using PartyKing.Infrastructure.Authentication;
 using PartyKing.Infrastructure.Authorization;
 
 namespace PartyKing.API.Controllers;
@@ -116,9 +115,8 @@ public class SlideshowController : CoreController
         Guid sessionId,
         CancellationToken cancellationToken)
     {
-        var profileId = _cookieAuthorizationHandler.TryReadProfileId(Request, out var id) ? id : null;
-        var isAdmin = (await HttpContext.AuthenticateAsync(Constants.AdminScheme)).Succeeded;
+        var caller = await HttpContext.ReadSessionCallerAsync(_cookieAuthorizationHandler);
 
-        return await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, profileId, isAdmin, cancellationToken);
+        return await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, caller, cancellationToken);
     }
 }

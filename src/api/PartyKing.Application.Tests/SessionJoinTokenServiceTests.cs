@@ -1,9 +1,8 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using ErrorOr;
 using PartyKing.Application.Admin.Services;
-using PartyKing.Application.Player.Services;
-using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
+using PartyKing.Application.Sessions;
 
 namespace PartyKing.Application.Tests;
 
@@ -30,7 +29,7 @@ public class SessionJoinTokenServiceTests
     public async Task ATokenFromTheHost_UnlocksTheSession()
     {
         var id = await CreateSessionAsync();
-        var token = (await _service.CreateJoinTokenAsync(id, HostId, false, CancellationToken.None)).Value;
+        var token = (await _service.CreateJoinTokenAsync(id, new SessionCaller(HostId, false), CancellationToken.None)).Value;
 
         var stamp = await _service.JoinWithTokenAsync(id, token.Token, CancellationToken.None);
 
@@ -43,7 +42,7 @@ public class SessionJoinTokenServiceTests
     {
         var id = await CreateSessionAsync();
 
-        var result = await _service.CreateJoinTokenAsync(id, null, true, CancellationToken.None);
+        var result = await _service.CreateJoinTokenAsync(id, new SessionCaller(null, true), CancellationToken.None);
 
         Assert.False(result.IsError);
     }
@@ -55,7 +54,7 @@ public class SessionJoinTokenServiceTests
     {
         var id = await CreateSessionAsync();
 
-        var result = await _service.CreateJoinTokenAsync(id, profileId, false, CancellationToken.None);
+        var result = await _service.CreateJoinTokenAsync(id, new SessionCaller(profileId, false), CancellationToken.None);
 
         Assert.Equal(ErrorType.Forbidden, result.FirstError.Type);
     }
@@ -63,7 +62,7 @@ public class SessionJoinTokenServiceTests
     [Fact]
     public async Task CreatingATokenForAnUnknownSession_IsNotFound()
     {
-        var result = await _service.CreateJoinTokenAsync(Guid.NewGuid(), null, true, CancellationToken.None);
+        var result = await _service.CreateJoinTokenAsync(Guid.NewGuid(), new SessionCaller(null, true), CancellationToken.None);
 
         Assert.Equal(ErrorType.NotFound, result.FirstError.Type);
     }
@@ -72,7 +71,7 @@ public class SessionJoinTokenServiceTests
     public async Task AnExpiredToken_IsUnauthorized()
     {
         var id = await CreateSessionAsync();
-        var token = (await _service.CreateJoinTokenAsync(id, HostId, false, CancellationToken.None)).Value;
+        var token = (await _service.CreateJoinTokenAsync(id, new SessionCaller(HostId, false), CancellationToken.None)).Value;
 
         _clock.UtcNow = token.ExpiresAt;
 
@@ -85,7 +84,7 @@ public class SessionJoinTokenServiceTests
     public async Task ATokenStillWorks_JustBeforeItExpires()
     {
         var id = await CreateSessionAsync();
-        var token = (await _service.CreateJoinTokenAsync(id, HostId, false, CancellationToken.None)).Value;
+        var token = (await _service.CreateJoinTokenAsync(id, new SessionCaller(HostId, false), CancellationToken.None)).Value;
 
         _clock.UtcNow = token.ExpiresAt.AddSeconds(-1);
 
@@ -97,7 +96,7 @@ public class SessionJoinTokenServiceTests
     {
         var id = await CreateSessionAsync();
         var other = await CreateSessionAsync();
-        var token = (await _service.CreateJoinTokenAsync(id, HostId, false, CancellationToken.None)).Value;
+        var token = (await _service.CreateJoinTokenAsync(id, new SessionCaller(HostId, false), CancellationToken.None)).Value;
 
         var result = await _service.JoinWithTokenAsync(other, token.Token, CancellationToken.None);
 
@@ -108,9 +107,9 @@ public class SessionJoinTokenServiceTests
     public async Task ChangingThePassword_RevokesOutstandingTokens()
     {
         var id = await CreateSessionAsync();
-        var token = (await _service.CreateJoinTokenAsync(id, HostId, false, CancellationToken.None)).Value;
+        var token = (await _service.CreateJoinTokenAsync(id, new SessionCaller(HostId, false), CancellationToken.None)).Value;
 
-        await _access.ChangePasswordAsync(id, "new-secret", HostId, false, CancellationToken.None);
+        await _access.ChangePasswordAsync(id, "new-secret", new SessionCaller(HostId, false), CancellationToken.None);
         var result = await _service.JoinWithTokenAsync(id, token.Token, CancellationToken.None);
 
         Assert.Equal(ErrorType.Unauthorized, result.FirstError.Type);

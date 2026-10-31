@@ -1,9 +1,6 @@
-using Microsoft.Extensions.Logging.Abstractions;
-using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Lyrics.Services;
-using PartyKing.Application.Player.Services;
-using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
+using PartyKing.Application.Sessions;
 using PartyKing.Contract.V1.Lyrics;
 using PartyKing.Domain.Entities.Lyrics;
 using PartyKing.Domain.Entities.Queue;
@@ -140,7 +137,7 @@ public class LyricsServiceTests
     [InlineData(null, true)]
     public async Task TheHostAndAnAdmin_CanSaveTheOffset_AndTheSessionIsNotified(string? profileId, bool isAdmin)
     {
-        var result = await _service.SetOffsetAsync(_sessionId, 2000, profileId, isAdmin, CancellationToken.None);
+        var result = await _service.SetOffsetAsync(_sessionId, 2000, new SessionCaller(profileId, isAdmin), CancellationToken.None);
 
         Assert.False(result.IsError);
         Assert.Equal(2000, _offsets.Saved["spotify:track:7"]);
@@ -154,7 +151,7 @@ public class LyricsServiceTests
     {
         _offsets.Saved["spotify:track:7"] = 500;
 
-        await _service.SetOffsetAsync(_sessionId, 0, HostId, false, CancellationToken.None);
+        await _service.SetOffsetAsync(_sessionId, 0, new SessionCaller(HostId, false), CancellationToken.None);
 
         Assert.Equal(0, _offsets.Saved["spotify:track:7"]);
     }
@@ -164,7 +161,7 @@ public class LyricsServiceTests
     [InlineData("someone-else")]
     public async Task AnyoneElse_CannotSaveTheOffset(string? profileId)
     {
-        var result = await _service.SetOffsetAsync(_sessionId, 2000, profileId, false, CancellationToken.None);
+        var result = await _service.SetOffsetAsync(_sessionId, 2000, new SessionCaller(profileId, false), CancellationToken.None);
 
         Assert.Equal(ErrorOr.ErrorType.Forbidden, result.FirstError.Type);
         Assert.Empty(_offsets.Saved);
@@ -176,7 +173,7 @@ public class LyricsServiceTests
     {
         _queue.Playing = null;
 
-        var result = await _service.SetOffsetAsync(_sessionId, 2000, HostId, false, CancellationToken.None);
+        var result = await _service.SetOffsetAsync(_sessionId, 2000, new SessionCaller(HostId, false), CancellationToken.None);
 
         Assert.Equal(ErrorOr.ErrorType.NotFound, result.FirstError.Type);
         Assert.Empty(_offsets.Saved);
@@ -187,7 +184,7 @@ public class LyricsServiceTests
     [InlineData(-100_001)]
     public async Task AnOffsetOutOfRange_IsRejected(int offsetMs)
     {
-        var result = await _service.SetOffsetAsync(_sessionId, offsetMs, HostId, false, CancellationToken.None);
+        var result = await _service.SetOffsetAsync(_sessionId, offsetMs, new SessionCaller(HostId, false), CancellationToken.None);
 
         Assert.Equal(ErrorOr.ErrorType.Validation, result.FirstError.Type);
         Assert.Empty(_offsets.Saved);

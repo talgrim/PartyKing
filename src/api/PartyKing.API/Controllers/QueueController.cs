@@ -1,9 +1,8 @@
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
+using PartyKing.API.Authentication;
 using PartyKing.API.Authorization;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Contract.V1.Queue;
-using PartyKing.Infrastructure.Authentication;
 using PartyKing.Infrastructure.Authorization;
 
 namespace PartyKing.API.Controllers;
@@ -74,10 +73,9 @@ public class QueueController : CoreController
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> RemoveSong(Guid sessionId, int songId, CancellationToken cancellationToken)
     {
-        var profileId = _cookieAuthorizationHandler.TryReadProfileId(Request, out var id) ? id : null;
-        var isAdmin = (await HttpContext.AuthenticateAsync(Constants.AdminScheme)).Succeeded;
+        var caller = await HttpContext.ReadSessionCallerAsync(_cookieAuthorizationHandler);
 
-        var result = await _queueService.RemoveAsync(sessionId, songId, profileId, isAdmin, cancellationToken);
+        var result = await _queueService.RemoveAsync(sessionId, songId, caller, cancellationToken);
 
         return result.Match(_ => NoContent(), Problem);
     }

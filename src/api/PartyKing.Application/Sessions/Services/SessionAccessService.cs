@@ -16,14 +16,13 @@ public interface ISessionAccessService
 
     /// <summary>
     /// Replaces the password; everyone who had unlocked the session has to enter the new one. Only the host
-    /// (<paramref name="profileId"/>) or an admin may; anyone else gets Forbidden. Returns the access stamp of the
+    /// (<paramref name="caller"/>) or an admin may; anyone else gets Forbidden. Returns the access stamp of the
     /// new password, so the caller can stay unlocked.
     /// </summary>
     Task<ErrorOr<string>> ChangePasswordAsync(
         Guid id,
         string? password,
-        string? profileId,
-        bool isAdmin,
+        SessionCaller caller,
         CancellationToken cancellationToken);
 
     /// <summary>True when <paramref name="accessStamp"/> was issued for the session's current password.</summary>
@@ -75,11 +74,10 @@ internal class SessionAccessService : ISessionAccessService
     public async Task<ErrorOr<string>> ChangePasswordAsync(
         Guid id,
         string? password,
-        string? profileId,
-        bool isAdmin,
+        SessionCaller caller,
         CancellationToken cancellationToken)
     {
-        if (await _authorizer.AuthorizeManagerAsync(id, profileId, isAdmin, cancellationToken) is { IsError: true } denied)
+        if (await _authorizer.AuthorizeManagerAsync(id, caller, cancellationToken) is { IsError: true } denied)
         {
             return denied.Errors;
         }

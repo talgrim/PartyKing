@@ -11,12 +11,11 @@ public interface ISessionJoinTokenService
 {
     /// <summary>
     /// Issues a short-lived token that unlocks the session without its password, for a QR code. Only the host
-    /// (<paramref name="profileId"/>) or an admin may ask for one; anyone else gets Forbidden.
+    /// (<paramref name="caller"/>) or an admin may ask for one; anyone else gets Forbidden.
     /// </summary>
     Task<ErrorOr<JoinTokenDto>> CreateJoinTokenAsync(
         Guid id,
-        string? profileId,
-        bool isAdmin,
+        SessionCaller caller,
         CancellationToken cancellationToken);
 
     /// <summary>
@@ -50,8 +49,7 @@ internal class SessionJoinTokenService : ISessionJoinTokenService
 
     public async Task<ErrorOr<JoinTokenDto>> CreateJoinTokenAsync(
         Guid id,
-        string? profileId,
-        bool isAdmin,
+        SessionCaller caller,
         CancellationToken cancellationToken)
     {
         var session = await _sessionsRepository.GetAsync(id, cancellationToken);
@@ -61,7 +59,7 @@ internal class SessionJoinTokenService : ISessionJoinTokenService
             return SessionErrors.NotFound();
         }
 
-        if (!SessionRoles.IsManager(session, profileId, isAdmin))
+        if (!SessionRoles.IsManager(session, caller))
         {
             return Error.Forbidden(description: "Only the host or an admin can create a join code");
         }

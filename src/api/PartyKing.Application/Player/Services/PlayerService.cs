@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using PartyKing.Application.Mappings;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Realtime;
+using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Contract.V1.Enums;
 using PartyKing.Contract.V1.Player;
 using PartyKing.Contract.V1.Queue;
@@ -72,7 +73,7 @@ internal class PlayerService : IPlayerService
     {
         if (await _sessionsRepository.GetAsync(sessionId, cancellationToken) is null)
         {
-            return SessionNotFound();
+            return SessionErrors.NotFound();
         }
 
         var playing = await _queueRepository.GetPlayingAsync(sessionId, cancellationToken);
@@ -95,7 +96,7 @@ internal class PlayerService : IPlayerService
         var session = await _sessionsRepository.GetAsync(sessionId, cancellationToken);
         if (session is null)
         {
-            return SessionNotFound();
+            return SessionErrors.NotFound();
         }
 
         if (session.HostProfileId != hostProfileId)
@@ -126,7 +127,7 @@ internal class PlayerService : IPlayerService
     {
         if (await _sessionsRepository.GetAsync(sessionId, cancellationToken) is null)
         {
-            return SessionNotFound();
+            return SessionErrors.NotFound();
         }
 
         if (!_playerStateStore.TrySendCommand(sessionId, command))
@@ -149,7 +150,7 @@ internal class PlayerService : IPlayerService
     {
         if (await _sessionsRepository.GetAsync(sessionId, cancellationToken) is null)
         {
-            return SessionNotFound();
+            return SessionErrors.NotFound();
         }
 
         if (!_playerStateStore.Get(sessionId).Connected)
@@ -183,7 +184,6 @@ internal class PlayerService : IPlayerService
             : next.ToDto();
     }
 
-    private static Error SessionNotFound() => Error.NotFound(description: "The session was not found");
 
     private static Error NoPlayerConnected() =>
         Error.Conflict(description: "The host's player is not connected to this session");

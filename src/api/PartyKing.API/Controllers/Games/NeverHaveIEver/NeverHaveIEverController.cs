@@ -34,7 +34,7 @@ public class NeverHaveIEverController : GameControllerBase
         var caller = await ReadCallerAsync(sessionId);
 
         var result = await _suggestionService.SuggestAsync(
-            sessionId, caller.ProfileId, caller.IsAdmin, GetLanguage(), cancellationToken);
+            sessionId, caller, GetLanguage(), cancellationToken);
 
         return result.Match(Ok, Problem);
     }

@@ -3,9 +3,8 @@ using Microsoft.Extensions.Options;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Games.Services.Ringo;
 using PartyKing.Application.Localization;
-using PartyKing.Application.Player.Services;
-using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
+using PartyKing.Application.Sessions;
 using PartyKing.Contract.V1.Games;
 using PartyKing.Infrastructure.Llm;
 
@@ -36,12 +35,12 @@ public class RingoRuleSuggestionServiceTests
     private Task<ErrorOr.ErrorOr<GameSuggestionsDto>> SuggestAsync(
         IReadOnlyList<string>? previous = null,
         UiLanguage language = UiLanguage.Pl) =>
-        _service.SuggestAsync(_id, previous, HostId, false, language, CancellationToken.None);
+        _service.SuggestAsync(_id, previous, new SessionCaller(HostId, false), language, CancellationToken.None);
 
     [Fact]
     public async Task Guests_AreForbidden_AndTheModelIsNotAsked()
     {
-        var result = await _service.SuggestAsync(_id, null, "someone-else", false, UiLanguage.Pl, CancellationToken.None);
+        var result = await _service.SuggestAsync(_id, null, new SessionCaller("someone-else", false), UiLanguage.Pl, CancellationToken.None);
 
         Assert.Equal(ErrorOr.ErrorType.Forbidden, result.FirstError.Type);
         Assert.Equal(0, _chat.Calls);
@@ -202,6 +201,6 @@ public class RingoRuleSuggestionServiceTests
         _chat.Failure = new OperationCanceledException(cts.Token);
 
         await Assert.ThrowsAsync<OperationCanceledException>(() =>
-            _service.SuggestAsync(_id, null, HostId, false, UiLanguage.Pl, cts.Token));
+            _service.SuggestAsync(_id, null, new SessionCaller(HostId, false), UiLanguage.Pl, cts.Token));
     }
 }

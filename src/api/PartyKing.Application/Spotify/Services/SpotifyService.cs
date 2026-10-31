@@ -2,6 +2,7 @@ using ErrorOr;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using PartyKing.Application.Mappings;
+using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Contract.V1.Spotify;
 using PartyKing.Domain.Enums;
 using PartyKing.Domain.Results;
@@ -63,7 +64,7 @@ internal class SpotifyService : ISpotifyService
 
         if (session is null)
         {
-            return Error.NotFound(description: "The session was not found");
+            return SessionErrors.NotFound();
         }
 
         // Allowed even when the session has a host: the host needs it to log in again after the Spotify

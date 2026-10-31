@@ -31,7 +31,7 @@ public class GamesController : GameControllerBase
     {
         var caller = await ReadCallerAsync(sessionId);
 
-        var result = await _gameService.ListAsync(sessionId, caller.ProfileId, caller.IsAdmin, GetLanguage(), cancellationToken);
+        var result = await _gameService.ListAsync(sessionId, caller, GetLanguage(), cancellationToken);
 
         return result.Match(Ok, Problem);
     }
