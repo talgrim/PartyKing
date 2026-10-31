@@ -37,29 +37,30 @@ internal class SessionAccessService : ISessionAccessService
     private readonly ISessionAuthorizer _authorizer;
     private readonly ILogger<SessionAccessService> _logger;
 
-    // Verified against when the session is unknown, so both failures cost the same time
-    private readonly string _dummyHash;
+    private readonly SessionDummyHash _dummyHash;
 
     public SessionAccessService(
         ISessionsRepository sessionsRepository,
         IPasswordHasher passwordHasher,
         ISessionAuthorizer authorizer,
+        SessionDummyHash dummyHash,
         ILogger<SessionAccessService> logger)
     {
         _sessionsRepository = sessionsRepository;
         _passwordHasher = passwordHasher;
         _authorizer = authorizer;
+        _dummyHash = dummyHash;
         _logger = logger;
-        _dummyHash = passwordHasher.Hash(Guid.NewGuid().ToString(), PasswordHasher.SessionIterations);
     }
 
     public async Task<ErrorOr<string>> JoinAsync(Guid id, string? password, CancellationToken cancellationToken)
     {
         var session = await _sessionsRepository.GetAsync(id, cancellationToken);
 
+        // An unknown session is verified against the dummy hash, so it costs the same as a wrong password
         // An over-long password can't be right, and skipping the hash keeps it from being a cheap CPU burner
         var valid = password is { Length: <= SessionPasswordPolicy.MaxLength }
-            && _passwordHasher.Verify(password, session?.PasswordHash ?? _dummyHash);
+            && _passwordHasher.Verify(password, session?.PasswordHash ?? _dummyHash.Value);
 
         if (session is null || !valid)
         {

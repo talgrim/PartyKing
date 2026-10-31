@@ -48,6 +48,7 @@ public static class DependencyInjection
         services.AddScoped<ISessionAuthorizer, SessionAuthorizer>();
         services.AddScoped<ISessionService, SessionService>();
         services.AddScoped<ISessionAdminService, SessionAdminService>();
+        services.AddSingleton<SessionDummyHash>();
         services.AddScoped<ISessionAccessService, SessionAccessService>();
         services.AddScoped<ISessionJoinTokenService, SessionJoinTokenService>();
         services.AddScoped<IHostSessionCleanup, HostSessionCleanup>();
