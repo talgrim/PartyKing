@@ -130,7 +130,7 @@ describe('Resistance', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: 'Rules' }));
 
-    expect(await screen.findByText('Zasady gry Resistance')).toBeInTheDocument();
+    expect(await screen.findByText('Resistance rules')).toBeInTheDocument();
   });
 
   it('seats the players who joined and counts them', async () => {
@@ -140,16 +140,16 @@ describe('Resistance', () => {
     const seats = await screen.findByRole('list', { name: 'Players' });
     expect(seats).toHaveTextContent('Ala');
     expect(seats).toHaveTextContent('Ela');
-    expect(screen.getByText('3/10 graczy')).toBeInTheDocument();
-    expect(screen.getByText(/Potrzeba co najmniej 5 graczy/)).toBeInTheDocument();
+    expect(screen.getByText('3/10 players')).toBeInTheDocument();
+    expect(screen.getByText(/At least 5 players are needed/)).toBeInTheDocument();
   });
 
   it('drops the under-5 notice once five players joined', async () => {
     mocks.getResistance.mockResolvedValue(lobby(['A', 'B', 'C', 'D', 'E']));
     renderPage();
 
-    await screen.findByText('5/10 graczy');
-    expect(screen.queryByText(/Potrzeba co najmniej 5 graczy/)).not.toBeInTheDocument();
+    await screen.findByText('5/10 players');
+    expect(screen.queryByText(/At least 5 players are needed/)).not.toBeInTheDocument();
   });
 
   it('lets an admin open the game once', async () => {
@@ -191,9 +191,9 @@ describe('Resistance', () => {
     renderPage();
 
     await userEvent.click(await screen.findByRole('button', { name: 'Game settings' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Ustawienia gry' });
-    expect(within(dialog).getByRole('region', { name: 'Karty Intryg' })).toBeInTheDocument();
-    await userEvent.click(within(dialog).getByRole('checkbox', { name: 'Włącz karty Intryg' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Game settings' });
+    expect(within(dialog).getByRole('region', { name: 'Plot cards' })).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole('checkbox', { name: 'Enable Plot cards' }));
 
     expect(mocks.setResistancePlotCards).toHaveBeenCalledWith('session-1', true);
   });
@@ -203,9 +203,9 @@ describe('Resistance', () => {
     renderPage();
 
     await userEvent.click(await screen.findByRole('button', { name: 'Game settings' }));
-    await userEvent.click(await screen.findByRole('checkbox', { name: 'Włącz karty Intryg' }));
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Enable Plot cards' }));
 
-    expect(await screen.findByText('Nie udało się zmienić ustawienia kart Intryg.')).toBeInTheDocument();
+    expect(await screen.findByText('Could not change the Plot cards setting.')).toBeInTheDocument();
   });
 
   it('keeps the game settings usable in the open lobby and disables them after the start', async () => {
@@ -221,7 +221,7 @@ describe('Resistance', () => {
     await screen.findByRole('img', { name: 'Leader' });
     const gear = screen.getByRole('button', { name: 'Game settings' });
     expect(gear).toBeDisabled();
-    expect(gear).toHaveAttribute('title', 'Ustawienia są zablokowane po rozpoczęciu gry');
+    expect(gear).toHaveAttribute('title', 'Settings are locked once the game starts');
   });
 
   it('offers the game settings to a host on the phone layout without opening the controls', async () => {
@@ -305,7 +305,7 @@ describe('Resistance', () => {
     mocks.getResistance.mockResolvedValue(lobby(['A', 'B'], true));
     renderPage();
 
-    expect(await screen.findByText(/Czekamy na graczy/)).toBeInTheDocument();
+    expect(await screen.findByText(/Waiting for players/)).toBeInTheDocument();
   });
 
   describe('starting', () => {
@@ -356,14 +356,14 @@ describe('Resistance', () => {
       mocks.getResistance.mockResolvedValue(started(five, { yourPlayerId: 'p0', yourRole: 'Resistance' }));
       renderPage();
 
-      const card = await screen.findByRole('button', { name: 'Pokaż swoją rolę' });
-      expect(screen.queryByRole('img', { name: 'Ruch Oporu' })).not.toBeInTheDocument();
+      const card = await screen.findByRole('button', { name: 'Show your role' });
+      expect(screen.queryByRole('img', { name: 'Resistance' })).not.toBeInTheDocument();
 
       await userEvent.click(card);
-      expect(await screen.findByRole('img', { name: 'Ruch Oporu' })).toBeInTheDocument();
+      expect(await screen.findByRole('img', { name: 'Resistance' })).toBeInTheDocument();
 
-      await userEvent.click(screen.getByRole('button', { name: 'Ukryj swoją rolę' }));
-      expect(screen.queryByRole('img', { name: 'Ruch Oporu' })).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'Hide your role' }));
+      expect(screen.queryByRole('img', { name: 'Resistance' })).not.toBeInTheDocument();
     });
 
     it('shows a spy the other spies only while the card is face up', async () => {
@@ -373,9 +373,9 @@ describe('Resistance', () => {
       );
       renderPage();
 
-      await userEvent.click(await screen.findByRole('button', { name: 'Pokaż swoją rolę' }));
+      await userEvent.click(await screen.findByRole('button', { name: 'Show your role' }));
 
-      expect(await screen.findByRole('img', { name: 'Szpieg' })).toBeInTheDocument();
+      expect(await screen.findByRole('img', { name: 'Spy' })).toBeInTheDocument();
       expect(within(screen.getByRole('list', { name: 'Fellow spies' })).getByText('D')).toBeInTheDocument();
     });
 
@@ -386,7 +386,7 @@ describe('Resistance', () => {
 
       await userEvent.click(await screen.findByRole('button', { name: 'Board' }));
       const seats = await screen.findByRole('list', { name: 'Players' });
-      const mine = within(seats).getAllByRole('listitem').find((item) => item.textContent?.includes('Ty'));
+      const mine = within(seats).getAllByRole('listitem').find((item) => item.textContent?.includes('You'));
       expect(mine).toHaveTextContent('C');
       expect(container.textContent).not.toMatch(/^0/);
       expect(screen.queryByText('0')).not.toBeInTheDocument();
@@ -398,7 +398,7 @@ describe('Resistance', () => {
       renderPage();
 
       await screen.findByRole('img', { name: 'Leader' });
-      expect(screen.queryByRole('button', { name: 'Pokaż swoją rolę' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Show your role' })).not.toBeInTheDocument();
     });
   });
   describe('views', () => {
@@ -413,7 +413,7 @@ describe('Resistance', () => {
       mocks.getResistance.mockResolvedValue(joined());
       renderPage();
 
-      expect(await screen.findByRole('button', { name: 'Pokaż swoją rolę' })).toBeInTheDocument();
+      expect(await screen.findByRole('button', { name: 'Show your role' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Player', pressed: true })).toBeInTheDocument();
       expect(screen.queryByRole('list', { name: 'Players' })).not.toBeInTheDocument();
       expect(screen.getByRole('status')).toBeInTheDocument();
@@ -428,7 +428,7 @@ describe('Resistance', () => {
       expect(await screen.findByRole('img', { name: 'Mission board' })).toBeInTheDocument();
       expect(screen.getByRole('list', { name: 'Players' })).toBeInTheDocument();
       expect(screen.getByRole('status')).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Pokaż swoją rolę' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Show your role' })).not.toBeInTheDocument();
 
       view.unmount();
       renderPage();
@@ -448,7 +448,7 @@ describe('Resistance', () => {
       mocks.getResistance.mockResolvedValue(joined());
       renderPage();
 
-      expect(await screen.findByRole('button', { name: 'Pokaż swoją rolę' })).toBeInTheDocument();
+      expect(await screen.findByRole('button', { name: 'Show your role' })).toBeInTheDocument();
       expect(screen.getByRole('list', { name: 'Players' })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Board' })).not.toBeInTheDocument();
       vi.unstubAllGlobals();
@@ -462,14 +462,14 @@ describe('Resistance', () => {
       expect(screen.queryByRole('button', { name: 'Player' })).not.toBeInTheDocument();
     });
 
-    it('gives the TV tab no role, no "Ty" and no switch, even for a host who plays', async () => {
+    it('gives the TV tab no role, no "You" and no switch, even for a host who plays', async () => {
       mocks.role = { isHost: true, isAdmin: false };
       mocks.getResistance.mockResolvedValue(joined());
       renderPage('/s/session-1/games/resistance?tv=1');
 
       const seats = await screen.findByRole('list', { name: 'Players' });
-      expect(within(seats).queryByText('Ty')).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Pokaż swoją rolę' })).not.toBeInTheDocument();
+      expect(within(seats).queryByText('You')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Show your role' })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Board' })).not.toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'End game' })).toBeInTheDocument();
     });
@@ -504,7 +504,7 @@ describe('Resistance', () => {
       mocks.getResistance.mockResolvedValue(joined());
       renderPage();
 
-      await screen.findByRole('button', { name: 'Pokaż swoją rolę' });
+      await screen.findByRole('button', { name: 'Show your role' });
       expect(screen.queryByRole('button', { name: 'Controls' })).not.toBeInTheDocument();
     });
 
@@ -512,7 +512,7 @@ describe('Resistance', () => {
       mocks.getResistance.mockResolvedValue(joined());
       renderPage('/s/session-1/games/resistance?tv=1');
 
-      expect(await screen.findByRole('button', { name: 'Pokaż swoją rolę' })).toBeInTheDocument();
+      expect(await screen.findByRole('button', { name: 'Show your role' })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'End game' })).not.toBeInTheDocument();
     });
   });
@@ -529,7 +529,7 @@ describe('Resistance', () => {
       mocks.getResistance.mockResolvedValue(leading());
       renderPage();
 
-      const submit = await screen.findByRole('button', { name: 'Zgłoś drużynę do głosowania' });
+      const submit = await screen.findByRole('button', { name: 'Submit the team for a vote' });
       expect(submit).toBeDisabled();
 
       await userEvent.click(screen.getByRole('checkbox', { name: 'A' }));
@@ -549,7 +549,7 @@ describe('Resistance', () => {
       await userEvent.click(screen.getByRole('checkbox', { name: 'B' }));
       expect(mocks.selectResistanceTeam).not.toHaveBeenCalled();
 
-      await userEvent.click(screen.getByRole('button', { name: 'Zgłoś drużynę do głosowania' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Submit the team for a vote' }));
 
       expect(mocks.selectResistanceTeam).toHaveBeenCalledWith('session-1', ['p0', 'p1']);
       await waitFor(() => expect(screen.queryByRole('checkbox', { name: 'A' })).not.toBeInTheDocument());
@@ -558,13 +558,13 @@ describe('Resistance', () => {
     it('shows the picker to the leader only, and not once a team was submitted', async () => {
       mocks.getResistance.mockResolvedValue(started(five, { yourPlayerId: 'p2', yourRole: 'Resistance' }));
       const view = renderPage();
-      await screen.findByRole('button', { name: 'Pokaż swoją rolę' });
+      await screen.findByRole('button', { name: 'Show your role' });
       expect(screen.queryByRole('checkbox', { name: 'A' })).not.toBeInTheDocument();
       view.unmount();
 
       mocks.getResistance.mockResolvedValue(leading({ teamPlayerIds: ['p0', 'p1'], phase: 'Voting' }));
       renderPage();
-      await screen.findByRole('button', { name: 'Pokaż swoją rolę' });
+      await screen.findByRole('button', { name: 'Show your role' });
       expect(screen.queryByRole('checkbox', { name: 'A' })).not.toBeInTheDocument();
     });
 
@@ -584,7 +584,7 @@ describe('Resistance', () => {
 
       const team = await screen.findByRole('region', { name: 'Team' });
       expect(within(team).getAllByRole('listitem').map((item) => item.getAttribute('title'))).toEqual(['A', 'D']);
-      expect(within(team).getByText('Drużyna na misję 1')).toBeInTheDocument();
+      expect(within(team).getByText('Team for mission 1')).toBeInTheDocument();
     });
 
     it('shows no team cards before a team was submitted', async () => {
@@ -601,7 +601,7 @@ describe('Resistance', () => {
       renderPage();
 
       const list = await screen.findByRole('list', { name: 'Players' });
-      expect(within(list).getAllByText('W drużynie')).toHaveLength(2);
+      expect(within(list).getAllByText('On the team')).toHaveLength(2);
     });
   });
 
@@ -641,8 +641,8 @@ describe('Resistance', () => {
       mocks.getResistance.mockResolvedValue(voting({ yourVote: false, votedPlayerIds: ['p2'] }));
       renderPage();
 
-      expect(await screen.findByRole('button', { name: 'Odrzuć' })).toHaveAttribute('aria-pressed', 'true');
-      expect(screen.getByRole('button', { name: 'Zatwierdź' })).toHaveAttribute('aria-pressed', 'false');
+      expect(await screen.findByRole('button', { name: 'Reject' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('button', { name: 'Approve' })).toHaveAttribute('aria-pressed', 'false');
     });
 
     it('sends the vote and shows the answer', async () => {
@@ -650,10 +650,10 @@ describe('Resistance', () => {
       mocks.voteResistanceTeam.mockResolvedValue(voting({ yourVote: true, votedPlayerIds: ['p2'] }));
       renderPage();
 
-      await userEvent.click(await screen.findByRole('button', { name: 'Zatwierdź' }));
+      await userEvent.click(await screen.findByRole('button', { name: 'Approve' }));
 
       expect(mocks.voteResistanceTeam).toHaveBeenCalledWith('session-1', true);
-      await waitFor(() => expect(screen.getByRole('button', { name: 'Zatwierdź' })).toHaveAttribute('aria-pressed', 'true'));
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Approve' })).toHaveAttribute('aria-pressed', 'true'));
     });
 
     it('lets the vote be changed after it was cast', async () => {
@@ -661,7 +661,7 @@ describe('Resistance', () => {
       mocks.voteResistanceTeam.mockResolvedValue(voting({ yourVote: false, votedPlayerIds: ['p2'] }));
       renderPage();
 
-      await userEvent.click(await screen.findByRole('button', { name: 'Odrzuć' }));
+      await userEvent.click(await screen.findByRole('button', { name: 'Reject' }));
 
       expect(mocks.voteResistanceTeam).toHaveBeenCalledWith('session-1', false);
     });
@@ -671,13 +671,13 @@ describe('Resistance', () => {
       mocks.getResistance.mockResolvedValue(voting({ yourPlayerId: null, yourRole: null }));
       const view = renderPage();
       await screen.findByRole('img', { name: 'Mission board' });
-      expect(screen.queryByRole('button', { name: 'Zatwierdź' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Approve' })).not.toBeInTheDocument();
       view.unmount();
 
       mocks.getResistance.mockResolvedValue(voting({ yourVote: true }));
       renderPage('/s/session-1/games/resistance?tv=1');
       await screen.findByRole('img', { name: 'Mission board' });
-      expect(screen.queryByRole('button', { name: 'Zatwierdź' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Approve' })).not.toBeInTheDocument();
     });
 
     it('marks who has voted without showing how', async () => {
@@ -685,9 +685,9 @@ describe('Resistance', () => {
       renderPage();
 
       const list = await screen.findByRole('list', { name: 'Players' });
-      expect(within(list).getAllByText('Zagłosował/a')).toHaveLength(2);
-      expect(within(list).queryByText('Za')).not.toBeInTheDocument();
-      expect(within(list).queryByText('Przeciw')).not.toBeInTheDocument();
+      expect(within(list).getAllByText('Voted')).toHaveLength(2);
+      expect(within(list).queryByText('For')).not.toBeInTheDocument();
+      expect(within(list).queryByText('Against')).not.toBeInTheDocument();
     });
 
     it('shows how everybody voted once the votes are public', async () => {
@@ -695,9 +695,9 @@ describe('Resistance', () => {
       renderPage();
 
       const list = await screen.findByRole('list', { name: 'Players' });
-      expect(within(list).getAllByText('Za')).toHaveLength(2);
-      expect(within(list).getAllByText('Przeciw')).toHaveLength(3);
-      expect(screen.getByText(/została odrzucona \(za: 2, przeciw: 3\)/)).toBeInTheDocument();
+      expect(within(list).getAllByText('For')).toHaveLength(2);
+      expect(within(list).getAllByText('Against')).toHaveLength(3);
+      expect(screen.getByText(/was rejected \(for: 2, against: 3\)/)).toBeInTheDocument();
     });
 
     it('shows each voter\'s card with their name next to the team on the TV view', async () => {
@@ -706,8 +706,8 @@ describe('Resistance', () => {
       renderPage('/s/session-1/games/resistance?tv=1');
 
       const votes = await screen.findByRole('region', { name: 'Votes' });
-      expect(within(votes).getAllByRole('img', { name: 'Za' })).toHaveLength(2);
-      expect(within(votes).getAllByRole('img', { name: 'Przeciw' })).toHaveLength(3);
+      expect(within(votes).getAllByRole('img', { name: 'For' })).toHaveLength(2);
+      expect(within(votes).getAllByRole('img', { name: 'Against' })).toHaveLength(3);
       expect(within(votes).getByText('A')).toBeInTheDocument();
       expect(screen.queryByRole('region', { name: 'Team' })).not.toBeInTheDocument();
     });
@@ -734,8 +734,8 @@ describe('Resistance', () => {
       renderPage('/s/session-1/games/resistance?tv=1');
 
       const cards = await screen.findByRole('region', { name: 'Mission cards' });
-      expect(within(cards).getAllByRole('img', { name: 'Porażka' })).toHaveLength(1);
-      expect(within(cards).getAllByRole('img', { name: 'Sukces' })).toHaveLength(1);
+      expect(within(cards).getAllByRole('img', { name: 'Fail' })).toHaveLength(1);
+      expect(within(cards).getAllByRole('img', { name: 'Success' })).toHaveLength(1);
       expect(within(cards).queryByText('A')).not.toBeInTheDocument();
       expect(screen.queryByRole('region', { name: 'Votes' })).not.toBeInTheDocument();
     });
@@ -749,15 +749,15 @@ describe('Resistance', () => {
       expect(screen.queryByRole('region', { name: 'Votes' })).not.toBeInTheDocument();
     });
 
-    it('has no "Dalej" after a rejected team: the next leader just picks', async () => {
+    it('has no "Next" after a rejected team: the next leader just picks', async () => {
       mocks.getResistance.mockResolvedValue(rejected({ yourPlayerId: 'p2', leaderPlayerId: 'p2' }));
       renderPage();
 
-      expect(await screen.findByRole('button', { name: 'Zgłoś drużynę do głosowania' })).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Dalej' })).not.toBeInTheDocument();
+      expect(await screen.findByRole('button', { name: 'Submit the team for a vote' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument();
     });
 
-    it('has no "Dalej" while the approved team plays its mission', async () => {
+    it('has no "Next" while the approved team plays its mission', async () => {
       mocks.role = { isHost: true, isAdmin: false };
       mocks.getResistance.mockResolvedValue(
         rejected({ yourPlayerId: null, yourRole: null, voteApproved: true, rejectedTeams: 0, phase: 'PlayingMission' }),
@@ -765,7 +765,7 @@ describe('Resistance', () => {
       renderPage('/s/session-1/games/resistance?tv=1');
 
       await screen.findByRole('img', { name: 'Mission board' });
-      expect(screen.queryByRole('button', { name: 'Dalej' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument();
     });
 
     describe('mission', () => {
@@ -776,8 +776,8 @@ describe('Resistance', () => {
         mocks.getResistance.mockResolvedValue(playing({ yourRole: 'Resistance' }));
         renderPage();
 
-        expect(await screen.findByRole('button', { name: 'Sukces' })).toBeEnabled();
-        expect(screen.getByRole('button', { name: 'Porażka' })).toHaveAttribute('aria-disabled', 'true');
+        expect(await screen.findByRole('button', { name: 'Success' })).toBeEnabled();
+        expect(screen.getByRole('button', { name: 'Fail' })).toHaveAttribute('aria-disabled', 'true');
       });
 
       it('sends the card a spy plays', async () => {
@@ -785,10 +785,10 @@ describe('Resistance', () => {
         mocks.playResistanceMissionCard.mockResolvedValue(playing({ yourRole: 'Spy', yourMissionCard: false }));
         renderPage();
 
-        await userEvent.click(await screen.findByRole('button', { name: 'Porażka' }));
+        await userEvent.click(await screen.findByRole('button', { name: 'Fail' }));
 
         expect(mocks.playResistanceMissionCard).toHaveBeenCalledWith('session-1', false);
-        expect(await screen.findByText(/Zagrano kartę: Porażka/)).toBeInTheDocument();
+        expect(await screen.findByText(/Card played: Fail/)).toBeInTheDocument();
       });
 
       it('shows no cards to a player outside the team', async () => {
@@ -796,7 +796,7 @@ describe('Resistance', () => {
         renderPage();
 
         await screen.findByRole('img', { name: 'Mission board' });
-        expect(screen.queryByRole('button', { name: 'Sukces' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Success' })).not.toBeInTheDocument();
       });
 
       it('lets the leader continue once the mission is over', async () => {
@@ -811,7 +811,7 @@ describe('Resistance', () => {
         mocks.continueResistance.mockResolvedValue(started(five, { yourPlayerId: 'p1', missionNumber: 2 }));
         renderPage();
 
-        await userEvent.click(await screen.findByRole('button', { name: 'Dalej' }));
+        await userEvent.click(await screen.findByRole('button', { name: 'Next' }));
 
         expect(mocks.continueResistance).toHaveBeenCalledWith('session-1');
       });
@@ -823,8 +823,8 @@ describe('Resistance', () => {
       );
       renderPage();
 
-      expect(await screen.findByRole('button', { name: 'Zgłoś drużynę do głosowania' })).toBeInTheDocument();
-      expect(screen.getByText(/Odrzucone drużyny z rzędu: 1\/5/)).toBeInTheDocument();
+      expect(await screen.findByRole('button', { name: 'Submit the team for a vote' })).toBeInTheDocument();
+      expect(screen.getByText(/Rejected teams in a row: 1\/5/)).toBeInTheDocument();
     });
 
     it('announces the spies winning and reveals every role when the game is over', async () => {
@@ -847,10 +847,10 @@ describe('Resistance', () => {
       renderPage();
 
       const list = await screen.findByRole('list', { name: 'Players' });
-      expect(within(list).getAllByText('Szpieg')).toHaveLength(2);
-      expect(within(list).getAllByText('Ruch Oporu')).toHaveLength(3);
-      expect(screen.getByText(/Szpiedzy wygrali/)).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Dalej' })).not.toBeInTheDocument();
+      expect(within(list).getAllByText('Spy')).toHaveLength(2);
+      expect(within(list).getAllByText('Resistance')).toHaveLength(3);
+      expect(screen.getByText(/The spies won/)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument();
     });
 
     it('lets a manager restart the game once it is over', async () => {

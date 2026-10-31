@@ -26,7 +26,7 @@ describe('ResistanceInvite', () => {
     mocks.getLobby.mockResolvedValue(open);
     renderInvite();
 
-    expect(await screen.findByText('Nowa gra w Resistance została uruchomiona. Czy chcesz dołączyć?')).toBeInTheDocument();
+    expect(await screen.findByText('A new Resistance game has started. Do you want to join?')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'No' }));
 
     expect(screen.queryByText(/Nowa gra w Resistance/)).not.toBeInTheDocument();

@@ -55,21 +55,21 @@ const admin = { canManage: true, isAdmin: true };
 
 describe('resistancePhaseDescription', () => {
   it('tells an admin to open a closed game and the host to wait for the admin', () => {
-    expect(resistancePhaseDescription(game(0, { isOpen: false }), admin, 2)).toMatch(/Otwórz ją dla gości/);
-    expect(resistancePhaseDescription(game(0, { isOpen: false }), host, 2)).toMatch(/admin otworzy/);
+    expect(resistancePhaseDescription(game(0, { isOpen: false }), admin, 2)).toMatch(/Open it for guests/);
+    expect(resistancePhaseDescription(game(0, { isOpen: false }), host, 2)).toMatch(/Wait for the admin/);
   });
 
   it('says how many players are missing below five', () => {
     const text = resistancePhaseDescription(game(3), guest, 2);
 
-    expect(text).toMatch(/brakuje jeszcze 2/);
-    expect(text).toMatch(/dotyczą gry w 5 osób/);
+    expect(text).toMatch(/2 more to go/);
+    expect(text).toMatch(/for a 5-player game/);
   });
 
   it('asks the host or admin to start at five and the others to wait', () => {
-    expect(resistancePhaseDescription(game(5), host, 2)).toMatch(/kliknij „Start game”/);
-    expect(resistancePhaseDescription(game(5), guest, 2)).toMatch(/Czekamy, aż host lub admin rozpocznie/);
-    expect(resistancePhaseDescription(game(5), host, 2)).not.toMatch(/Potrzeba co najmniej/);
+    expect(resistancePhaseDescription(game(5), host, 2)).toMatch(/click “Start game”/);
+    expect(resistancePhaseDescription(game(5), guest, 2)).toMatch(/Waiting for the host or an admin to start/);
+    expect(resistancePhaseDescription(game(5), host, 2)).not.toMatch(/At least \d+ players are needed/);
   });
 
   it('names the leader and the team size once started', () => {
@@ -77,9 +77,9 @@ describe('resistancePhaseDescription', () => {
 
     const text = resistancePhaseDescription(started, guest, 2);
 
-    expect(text).toMatch(/Liderem jest Gracz 1/);
-    expect(text).toMatch(/wybiera 2 osób/);
-    expect(text).not.toMatch(/swojej karty/);
+    expect(text).toMatch(/Gracz 1 is the leader/);
+    expect(text).toMatch(/picking 2 players/);
+    expect(text).not.toMatch(/Tap your card/);
   });
 
   it('tells the leader they pick and a player to tap their card, without naming any role', () => {
@@ -87,16 +87,16 @@ describe('resistancePhaseDescription', () => {
 
     const text = resistancePhaseDescription(started, guest, 2);
 
-    expect(text).toMatch(/Ty jesteś liderem/);
-    expect(text).toMatch(/wybierz 2 osób/);
-    expect(text).toMatch(/Dotknij swojej karty/);
-    expect(text).not.toMatch(/szpieg|Szpieg|Ruch Oporu/);
+    expect(text).toMatch(/You are the leader/);
+    expect(text).toMatch(/pick 2 players/);
+    expect(text).toMatch(/Tap your card/);
+    expect(text).not.toMatch(/spy|Spy|Resistance/);
   });
 
   it('takes the team size from the game when it tells one', () => {
     const started = game(8, { startedAt: '2026-10-29T11:00:00Z', leaderPlayerId: 'p1', requiredTeamSize: 3 });
 
-    expect(resistancePhaseDescription(started, guest, 2)).toMatch(/wybiera 3 osób/);
+    expect(resistancePhaseDescription(started, guest, 2)).toMatch(/picking 3 players/);
   });
 
   it('names the submitted team', () => {
@@ -108,7 +108,7 @@ describe('resistancePhaseDescription', () => {
       phase: 'Voting',
     });
 
-    expect(resistancePhaseDescription(started, guest, 2)).toMatch(/zgłosił\/a drużynę na pierwszą misję: Gracz 0, Gracz 3/);
+    expect(resistancePhaseDescription(started, guest, 2)).toMatch(/submitted a team for the first mission: Gracz 0, Gracz 3/);
   });
 
   describe('voting', () => {
@@ -123,18 +123,18 @@ describe('resistancePhaseDescription', () => {
         2,
       );
 
-      expect(text).toContain('Zagłosowało 1/5.');
-      expect(text).toContain('Zagłosuj');
+      expect(text).toContain('Voted: 1/5.');
+      expect(text).toContain('Vote: approve');
     });
 
     it('tells a player who voted that the vote can still be changed', () => {
       const text = resistancePhaseDescription(voting({ yourPlayerId: 'p2', yourVote: true }), guest, 2);
 
-      expect(text).toContain('możesz zmienić');
+      expect(text).toContain('change your vote');
     });
 
     it('does not ask observers to vote', () => {
-      expect(resistancePhaseDescription(voting(), host, 2)).not.toContain('Zagłosuj');
+      expect(resistancePhaseDescription(voting(), host, 2)).not.toContain('Vote: approve');
     });
 
     it('reports an approved team with the tally while the mission is played', () => {
@@ -145,9 +145,9 @@ describe('resistancePhaseDescription', () => {
         2,
       );
 
-      expect(text).toContain('została zatwierdzona (za: 3, przeciw: 2)');
-      expect(text).toContain('Zagrano 1/');
-      expect(text).not.toContain('nie jest jeszcze gotowa');
+      expect(text).toContain('was approved (for: 3, against: 2)');
+      expect(text).toContain('Cards played: 1/');
+      expect(text).not.toContain('is not ready yet');
     });
 
     it('asks a team member to play a card and mentions a rule of several fails', () => {
@@ -157,8 +157,8 @@ describe('resistancePhaseDescription', () => {
         2,
       );
 
-      expect(text).toContain('Zagraj swoją kartę misji');
-      expect(text).toContain('od 2 kart Porażka');
+      expect(text).toContain('Play your mission card');
+      expect(text).toContain('The mission fails from 2 Fail cards');
     });
 
     it('reports the mission result with the score and who continues', () => {
@@ -168,9 +168,9 @@ describe('resistancePhaseDescription', () => {
         2,
       );
 
-      expect(text).toContain('porażką (kart Porażka: 1)');
-      expect(text).toContain('Ruch Oporu 0, Szpiedzy 1');
-      expect(text).toContain('Kliknij „Dalej”');
+      expect(text).toContain('The mission failed (Fail cards: 1)');
+      expect(text).toContain('Resistance 0, Spies 1');
+      expect(text).toContain('Click “Next”');
     });
 
     it('names the reason the game ended', () => {
@@ -181,7 +181,7 @@ describe('resistancePhaseDescription', () => {
         2,
       );
 
-      expect(text).toContain('Ruch Oporu wygrał: trzy misje zakończyły się sukcesem (Ruch Oporu 3, Szpiedzy 0)');
+      expect(text).toContain('The Resistance won: three missions succeeded (Resistance 3, Spies 0)');
     });
 
     it('reports the rejected team with the tally while the new leader picks', () => {
@@ -196,9 +196,9 @@ describe('resistancePhaseDescription', () => {
       });
 
       const text = resistancePhaseDescription(rejected, guest, 2);
-      expect(text).toContain('Poprzednia drużyna została odrzucona (za: 2, przeciw: 3)');
-      expect(text).toContain('Odrzucone drużyny z rzędu: 2/5');
-      expect(text).not.toContain('Dalej');
+      expect(text).toContain('The previous team was rejected (for: 2, against: 3)');
+      expect(text).toContain('Rejected teams in a row: 2/5');
+      expect(text).not.toContain('Next');
     });
 
     it('announces the spies winning when the game is over', () => {
@@ -208,7 +208,7 @@ describe('resistancePhaseDescription', () => {
         2,
       );
 
-      expect(text).toContain('Szpiedzy wygrali');
+      expect(text).toContain('The spies won');
     });
 
     it('mentions earlier rejections while the next team is picked', () => {
@@ -218,7 +218,7 @@ describe('resistancePhaseDescription', () => {
         2,
       );
 
-      expect(text).toContain('Odrzucone drużyny z rzędu: 3/5');
+      expect(text).toContain('Rejected teams in a row: 3/5');
     });
   });
 
@@ -230,9 +230,9 @@ describe('resistancePhaseDescription', () => {
       yourPlayerId: 'p1',
     });
 
-    expect(resistancePhaseDescription(dealing, guest, 2)).toMatch(/Ty jesteś liderem.*rozdaj dobrane karty Intryg/);
+    expect(resistancePhaseDescription(dealing, guest, 2)).toMatch(/You are the leader.*deal the drawn Plot cards/);
     expect(resistancePhaseDescription({ ...dealing, yourPlayerId: 'p2' }, guest, 2)).toMatch(
-      /Liderem jest Gracz 1.*rozdaje dobrane karty Intryg/,
+      /Gracz 1 is the leader.*dealing the drawn Plot cards/,
     );
   });
 
@@ -245,7 +245,7 @@ describe('resistancePhaseDescription', () => {
       opinionMakerPlayerIds: ['p3'],
     });
 
-    expect(resistancePhaseDescription(voting, guest, 2)).toMatch(/Najpierw głosuje kreator opinii: Gracz 3/);
-    expect(resistancePhaseDescription({ ...voting, votedPlayerIds: ['p3'] }, guest, 2)).not.toMatch(/kreator opinii/);
+    expect(resistancePhaseDescription(voting, guest, 2)).toMatch(/The Opinion Maker votes first: Gracz 3/);
+    expect(resistancePhaseDescription({ ...voting, votedPlayerIds: ['p3'] }, guest, 2)).not.toMatch(/Opinion Maker/);
   });
 });
