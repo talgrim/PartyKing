@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { gamesApi } from '@/service/endpoints/games/gamesApi';
 import { useRingoGame } from '@/service/endpoints/games/useRingoGame';
 import { GamePlayersDialog } from './lobby/GamePlayersDialog';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   sessionId: string;
@@ -11,6 +12,7 @@ type Props = {
 
 /** Host and admins: the turn order of the players (drag to change it) and a way to kick a player. */
 export const RingoSettings = ({ sessionId, open, onClose }: Props): ReactNode => {
+  const { t } = useTranslation();
   const { data: game, mutate } = useRingoGame(sessionId);
 
   return (
@@ -19,7 +21,7 @@ export const RingoSettings = ({ sessionId, open, onClose }: Props): ReactNode =>
       onClose={onClose}
       players={game?.players ?? []}
       currentPlayerId={game?.currentPlayerId}
-      orderLabel="the turn order"
+      orderLabel={t('ringo.orderLabel')}
       onReorder={(reordered) =>
         mutate(
           gamesApi.reorderRingoPlayers(

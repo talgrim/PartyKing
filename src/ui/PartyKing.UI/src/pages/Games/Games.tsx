@@ -9,6 +9,7 @@ import { PageNavigation } from '@/components/common/PageNavigation';
 import { sessionPath } from '@/router/constants';
 import { HTTP_STATUS_CODE } from '@/service/constants';
 import { useGames } from '@/service/endpoints/games/useGames';
+import { useTranslation } from 'react-i18next';
 
 const NEVER_HAVE_I_EVER_ID = 'never-have-i-ever';
 const RESISTANCE_ID = 'resistance';
@@ -19,6 +20,7 @@ const RINGO_ID = 'ringo';
  * session page. A locked session asks for its password first.
  */
 export const Games = (): ReactNode => {
+  const { t } = useTranslation();
   const { sessionId = '' } = useParams();
   const { mutate } = useSWRConfig();
   const { data: games, error } = useGames(sessionId);
@@ -32,8 +34,8 @@ export const Games = (): ReactNode => {
   return (
     <div className="w-full min-h-full bg-slate-800 text-slate-400">
       <div className="w-full max-w-xl mx-auto pt-6">
-        <PageNavigation className="px-2 pt-4" links={[{ to: sessionPath(sessionId), label: 'Back to the session' }]} />
-        <h1 className="px-2 pt-4 text-2xl text-slate-200">Games</h1>
+        <PageNavigation className="px-2 pt-4" links={[{ to: sessionPath(sessionId), label: t('common.backToSession') }]} />
+        <h1 className="px-2 pt-4 text-2xl text-slate-200">{t('games.title')}</h1>
 
         {status === HTTP_STATUS_CODE.UNAUTHORIZED && (
           <SessionPasswordForm sessionId={sessionId} onJoined={() => void mutate(() => true)} />
@@ -41,9 +43,9 @@ export const Games = (): ReactNode => {
 
         {error && status !== HTTP_STATUS_CODE.UNAUTHORIZED && (
           <p className="px-2 pt-4 text-amber-500">
-            {status === HTTP_STATUS_CODE.NOT_FOUND ? 'This session does not exist (anymore).' : 'Could not load the games.'}{' '}
+            {status === HTTP_STATUS_CODE.NOT_FOUND ? t('sessionPage.notFound') : t('games.loadFailed')}{' '}
             <Link to="/" className="underline">
-              Back to the sessions
+              {t('common.backToSessions')}
             </Link>
           </p>
         )}
@@ -59,7 +61,7 @@ export const Games = (): ReactNode => {
                 {game.id === NEVER_HAVE_I_EVER_ID && <NeverHaveIEverSuggestions sessionId={sessionId} />}
               </li>
             ))}
-            {games.length === 0 && <li>There are no games yet.</li>}
+            {games.length === 0 && <li>{t('games.none')}</li>}
           </ul>
         )}
       </div>

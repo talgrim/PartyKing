@@ -11,6 +11,7 @@ import {
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
 type Player = { id: string; name: string };
 
@@ -21,6 +22,7 @@ type RowProps = {
 };
 
 const PlayerRow = ({ player, onTurn, onKick }: RowProps): ReactNode => {
+  const { t } = useTranslation();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: player.id });
 
   return (
@@ -31,7 +33,7 @@ const PlayerRow = ({ player, onTurn, onKick }: RowProps): ReactNode => {
     >
       <button
         type="button"
-        aria-label={`Drag ${player.name}`}
+        aria-label={t('lobby.dragLabel', { name: player.name })}
         className="px-1 cursor-grab touch-none text-slate-300"
         {...attributes}
         {...listeners}
@@ -40,10 +42,10 @@ const PlayerRow = ({ player, onTurn, onKick }: RowProps): ReactNode => {
       </button>
       <span className="flex-1 truncate">
         {player.name}
-        {onTurn && <span className="text-amber-400"> (on turn)</span>}
+        {onTurn && <span className="text-amber-400"> {t('lobby.onTurn')}</span>}
       </span>
-      <Button size="small" color="error" onClick={onKick} aria-label={`Kick ${player.name}`}>
-        Kick
+      <Button size="small" color="error" onClick={onKick} aria-label={t('lobby.kickLabel', { name: player.name })}>
+        {t('lobby.kick')}
       </Button>
     </li>
   );
@@ -75,6 +77,7 @@ export const GamePlayersDialog = ({
   onKick,
   onReload,
 }: Props): ReactNode => {
+  const { t } = useTranslation();
   const [message, setMessage] = useState<string>();
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -90,7 +93,7 @@ export const GamePlayersDialog = ({
       await onReorder(arrayMove(players, from, to));
     } catch {
       // Most likely a player joined or left meanwhile
-      setMessage('The players changed, try again.');
+      setMessage(t('lobby.changed'));
       onReload();
     }
   };
@@ -100,7 +103,7 @@ export const GamePlayersDialog = ({
     try {
       await onKick(player);
     } catch {
-      setMessage('Could not kick the player.');
+      setMessage(t('lobby.kickFailed'));
       onReload();
     }
   };
@@ -114,13 +117,13 @@ export const GamePlayersDialog = ({
       aria-labelledby="game-players-title"
       slotProps={{ paper: { className: 'bg-slate-800! text-slate-200!' } }}
     >
-      <DialogTitle id="game-players-title">Players</DialogTitle>
+      <DialogTitle id="game-players-title">{t('lobby.players')}</DialogTitle>
       <DialogContent>
         {players.length === 0 ? (
-          <p>Nobody has joined yet.</p>
+          <p>{t('lobby.nobody')}</p>
         ) : (
           <>
-            <p className="pb-2 text-slate-400">Drag a name to change {orderLabel}.</p>
+            <p className="pb-2 text-slate-400">{t('lobby.dragHint', { order: orderLabel })}</p>
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
@@ -144,7 +147,7 @@ export const GamePlayersDialog = ({
         {message && <p className="pt-2 text-amber-500">{message}</p>}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Close</Button>
+        <Button onClick={onClose}>{t('common.close')}</Button>
       </DialogActions>
     </Dialog>
   );
