@@ -13,16 +13,16 @@ public class AdminController : CoreController
     public const string LoginRateLimitPolicy = "admin-login";
 
     private readonly IAdminService _adminService;
-    private readonly ISessionService _sessionService;
+    private readonly ISessionAdminService _sessionAdminService;
 
     public AdminController(
         IHttpContextAccessor httpContextAccessor,
         IAdminService adminService,
-        ISessionService sessionService)
+        ISessionAdminService sessionAdminService)
         : base(httpContextAccessor)
     {
         _adminService = adminService;
-        _sessionService = sessionService;
+        _sessionAdminService = sessionAdminService;
     }
 
     [HttpPost("admin/login")]
@@ -60,7 +60,7 @@ public class AdminController : CoreController
         [FromBody] CreateSessionRequestDto request,
         CancellationToken cancellationToken)
     {
-        var result = await _sessionService.CreateAsync(request.Name, request.Password, cancellationToken);
+        var result = await _sessionAdminService.CreateAsync(request.Name, request.Password, cancellationToken);
 
         return result.Match(Ok, Problem);
     }
@@ -71,7 +71,7 @@ public class AdminController : CoreController
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> DeleteSession(Guid sessionId, CancellationToken cancellationToken)
     {
-        var result = await _sessionService.DeleteAsync(sessionId, cancellationToken);
+        var result = await _sessionAdminService.DeleteAsync(sessionId, cancellationToken);
 
         return result.Match(_ => NoContent(), Problem);
     }
@@ -82,7 +82,7 @@ public class AdminController : CoreController
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> ReleaseSession(Guid sessionId, CancellationToken cancellationToken)
     {
-        var result = await _sessionService.ReleaseAsync(sessionId, cancellationToken);
+        var result = await _sessionAdminService.ReleaseAsync(sessionId, cancellationToken);
 
         return result.Match(_ => NoContent(), Problem);
     }

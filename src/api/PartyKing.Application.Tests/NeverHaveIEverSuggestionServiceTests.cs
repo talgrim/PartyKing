@@ -23,19 +23,9 @@ public class NeverHaveIEverSuggestionServiceTests
     public NeverHaveIEverSuggestionServiceTests()
     {
         var clock = new FakeClock();
-        var sessionService = new SessionService(
-            _sessions,
-            new PasswordHasher(),
-            new PlayerStateStore(clock),
-            new FakeHostTokenProvider(),
-            new FakeSlideshowService(),
-            JoinTokens.Create(clock),
-            clock,
-            new NullSessionMusicNotifier(),
-            new NullPlayerConnectionWatchdog(),
-            NullLogger<SessionService>.Instance);
+        var sessionAuthorizer = new SessionAuthorizer(_sessions);
         _service = new NeverHaveIEverSuggestionService(
-            sessionService,
+            sessionAuthorizer,
             _chat,
             Options.Create(_configuration),
             NullLogger<NeverHaveIEverSuggestionService>.Instance);

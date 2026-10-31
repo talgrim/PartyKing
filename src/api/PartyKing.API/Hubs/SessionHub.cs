@@ -18,16 +18,19 @@ public class SessionHub : Hub
 
     private const string SessionIdItem = "sessionId";
 
-    private readonly ISessionService _sessionService;
+    private readonly ISessionAccessService _accessService;
+    private readonly ISessionAuthorizer _sessionAuthorizer;
     private readonly ICookieAuthorizationHandler _cookieAuthorizationHandler;
     private readonly ISlideshowService _slideshowService;
 
     public SessionHub(
-        ISessionService sessionService,
+        ISessionAccessService accessService,
+        ISessionAuthorizer sessionAuthorizer,
         ICookieAuthorizationHandler cookieAuthorizationHandler,
         ISlideshowService slideshowService)
     {
-        _sessionService = sessionService;
+        _accessService = accessService;
+        _sessionAuthorizer = sessionAuthorizer;
         _cookieAuthorizationHandler = cookieAuthorizationHandler;
         _slideshowService = slideshowService;
     }
@@ -39,7 +42,7 @@ public class SessionHub : Hub
 
         if (!Guid.TryParse(http.Request.Query["sessionId"], out var sessionId)
             || !_cookieAuthorizationHandler.TryReadSessionAccess(http.Request, sessionId, out var stamp)
-            || !await _sessionService.HasAccessAsync(sessionId, stamp, Context.ConnectionAborted))
+            || !await _accessService.HasAccessAsync(sessionId, stamp, Context.ConnectionAborted))
         {
             Context.Abort();
             return;
@@ -68,7 +71,7 @@ public class SessionHub : Hub
         var profileId = _cookieAuthorizationHandler.TryReadProfileId(http.Request, out var id) ? id : null;
         var isAdmin = (await http.AuthenticateAsync(Constants.AdminScheme)).Succeeded;
 
-        if ((await _sessionService.AuthorizeManagerAsync(sessionId, profileId, isAdmin, Context.ConnectionAborted)).IsError)
+        if ((await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, profileId, isAdmin, Context.ConnectionAborted)).IsError)
         {
             throw new HubException("Only the host or an admin can watch the slideshow");
         }

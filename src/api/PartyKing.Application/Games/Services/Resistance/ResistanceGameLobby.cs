@@ -9,13 +9,13 @@ namespace PartyKing.Application.Games.Services.Resistance;
 internal sealed class ResistanceGameLobby : GameLobby<ResistanceGame, ResistancePlayer>
 {
     public ResistanceGameLobby(
-        ISessionService sessionService,
+        ISessionAuthorizer sessionAuthorizer,
         ISessionsRepository sessions,
         IResistanceGamesRepository games,
         IDateTimeProvider clock,
         ResistanceLobbyNotifier notifier)
         : base(
-            sessionService,
+            sessionAuthorizer,
             sessions,
             games,
             clock,

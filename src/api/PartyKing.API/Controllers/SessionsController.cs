@@ -14,15 +14,24 @@ public class SessionsController : CoreController
     public const string JoinRateLimitPolicy = "session-join";
 
     private readonly ISessionService _sessionService;
+    private readonly ISessionAccessService _accessService;
+    private readonly ISessionJoinTokenService _joinTokenService;
+    private readonly ISessionAuthorizer _sessionAuthorizer;
     private readonly ICookieAuthorizationHandler _cookieAuthorizationHandler;
 
     public SessionsController(
         IHttpContextAccessor httpContextAccessor,
         ISessionService sessionService,
+        ISessionAccessService accessService,
+        ISessionJoinTokenService joinTokenService,
+        ISessionAuthorizer sessionAuthorizer,
         ICookieAuthorizationHandler cookieAuthorizationHandler)
         : base(httpContextAccessor)
     {
         _sessionService = sessionService;
+        _accessService = accessService;
+        _joinTokenService = joinTokenService;
+        _sessionAuthorizer = sessionAuthorizer;
         _cookieAuthorizationHandler = cookieAuthorizationHandler;
     }
 
@@ -45,7 +54,7 @@ public class SessionsController : CoreController
         [FromBody] JoinSessionRequestDto request,
         CancellationToken cancellationToken)
     {
-        var result = await _sessionService.JoinAsync(sessionId, request.Password, cancellationToken);
+        var result = await _accessService.JoinAsync(sessionId, request.Password, cancellationToken);
 
         if (result.IsError)
         {
@@ -69,7 +78,7 @@ public class SessionsController : CoreController
         [FromBody] JoinWithTokenRequestDto request,
         CancellationToken cancellationToken)
     {
-        var result = await _sessionService.JoinWithTokenAsync(sessionId, request.Token, cancellationToken);
+        var result = await _joinTokenService.JoinWithTokenAsync(sessionId, request.Token, cancellationToken);
 
         if (result.IsError)
         {
@@ -90,7 +99,7 @@ public class SessionsController : CoreController
         var profileId = _cookieAuthorizationHandler.TryReadProfileId(Request, out var id) ? id : null;
         var isAdmin = (await HttpContext.AuthenticateAsync(Constants.AdminScheme)).Succeeded;
 
-        var result = await _sessionService.CreateJoinTokenAsync(sessionId, profileId, isAdmin, cancellationToken);
+        var result = await _joinTokenService.CreateJoinTokenAsync(sessionId, profileId, isAdmin, cancellationToken);
 
         return result.Match(Ok, Problem);
     }
@@ -125,7 +134,7 @@ public class SessionsController : CoreController
     {
         var (profileId, isAdmin) = await ReadCallerAsync();
 
-        var result = await _sessionService.ChangePasswordAsync(
+        var result = await _accessService.ChangePasswordAsync(
             sessionId,
             request.Password,
             profileId,
@@ -166,7 +175,7 @@ public class SessionsController : CoreController
         var profileId = _cookieAuthorizationHandler.TryReadProfileId(Request, out var id) ? id : null;
         var isAdmin = (await HttpContext.AuthenticateAsync(Constants.AdminScheme)).Succeeded;
 
-        var result = await _sessionService.GetViewerRoleAsync(sessionId, profileId, isAdmin, cancellationToken);
+        var result = await _sessionAuthorizer.GetViewerRoleAsync(sessionId, profileId, isAdmin, cancellationToken);
 
         return result.Match(Ok, Problem);
     }

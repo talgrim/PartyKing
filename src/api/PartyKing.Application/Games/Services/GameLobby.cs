@@ -31,7 +31,7 @@ internal class GameLobby<TGame, TPlayer>
 {
     public const string AdminName = "admin";
 
-    private readonly ISessionService _sessionService;
+    private readonly ISessionAuthorizer _sessionAuthorizer;
     private readonly ISessionsRepository _sessions;
     private readonly ILobbyGamesRepository<TGame, TPlayer> _games;
     private readonly IDateTimeProvider _clock;
@@ -39,14 +39,14 @@ internal class GameLobby<TGame, TPlayer>
     private readonly GameLobbyOptions _options;
 
     public GameLobby(
-        ISessionService sessionService,
+        ISessionAuthorizer sessionAuthorizer,
         ISessionsRepository sessions,
         ILobbyGamesRepository<TGame, TPlayer> games,
         IDateTimeProvider clock,
         IGameLobbyNotifier notifier,
         GameLobbyOptions options)
     {
-        _sessionService = sessionService;
+        _sessionAuthorizer = sessionAuthorizer;
         _sessions = sessions;
         _games = games;
         _clock = clock;
@@ -63,7 +63,7 @@ internal class GameLobby<TGame, TPlayer>
     public Task<ErrorOr<Success>> AuthorizeAsync(
         Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
     {
-        return _sessionService.AuthorizeManagerAsync(sessionId, caller.ProfileId, caller.IsAdmin, cancellationToken);
+        return _sessionAuthorizer.AuthorizeManagerAsync(sessionId, caller.ProfileId, caller.IsAdmin, cancellationToken);
     }
 
     public static bool IsPlayer(TGame game, GameCaller caller)

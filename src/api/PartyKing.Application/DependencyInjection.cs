@@ -45,7 +45,13 @@ public static class DependencyInjection
     private static void RegisterSessions(this IServiceCollection services)
     {
         services.AddSingleton<IJoinTokenProtector, JoinTokenProtector>();
+        services.AddScoped<ISessionAuthorizer, SessionAuthorizer>();
         services.AddScoped<ISessionService, SessionService>();
+        services.AddScoped<ISessionAdminService, SessionAdminService>();
+        services.AddSingleton<SessionDummyHash>();
+        services.AddScoped<ISessionAccessService, SessionAccessService>();
+        services.AddScoped<ISessionJoinTokenService, SessionJoinTokenService>();
+        services.AddScoped<IHostSessionCleanup, HostSessionCleanup>();
     }
 
     private static void RegisterAdmin(this IServiceCollection services, IConfiguration configuration)

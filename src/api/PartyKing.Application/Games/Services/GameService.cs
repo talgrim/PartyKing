@@ -36,11 +36,11 @@ internal class GameService : IGameService
         new("never-have-i-ever", "Nigdy w życiu", "Goście wyznają, czego nigdy nie zrobili."),
     ];
 
-    private readonly ISessionService _sessionService;
+    private readonly ISessionAuthorizer _sessionAuthorizer;
 
-    public GameService(ISessionService sessionService)
+    public GameService(ISessionAuthorizer sessionAuthorizer)
     {
-        _sessionService = sessionService;
+        _sessionAuthorizer = sessionAuthorizer;
     }
 
     public async Task<ErrorOr<IReadOnlyList<GameDto>>> ListAsync(
@@ -50,7 +50,7 @@ internal class GameService : IGameService
         UiLanguage language,
         CancellationToken cancellationToken)
     {
-        if (await _sessionService.AuthorizeManagerAsync(sessionId, profileId, isAdmin, cancellationToken)
+        if (await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, profileId, isAdmin, cancellationToken)
             is { IsError: true } denied)
         {
             return denied.Errors;

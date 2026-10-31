@@ -7,27 +7,20 @@ using PartyKing.Application.Sessions.Services;
 
 namespace PartyKing.Application.Tests;
 
-public class SessionJoinTokenTests
+public class SessionJoinTokenServiceTests
 {
     private const string HostId = "host-1";
 
     private readonly FakeSessionsRepository _sessions = new();
     private readonly FakeClock _clock = new();
-    private readonly SessionService _service;
+    private readonly SessionAccessService _access;
+    private readonly SessionJoinTokenService _service;
 
-    public SessionJoinTokenTests()
+    public SessionJoinTokenServiceTests()
     {
-        _service = new SessionService(
-            _sessions,
-            new PasswordHasher(),
-            new PlayerStateStore(_clock),
-            new FakeHostTokenProvider(),
-            new FakeSlideshowService(),
-            JoinTokens.Create(_clock),
-            _clock,
-            new NullSessionMusicNotifier(),
-            new NullPlayerConnectionWatchdog(),
-            NullLogger<SessionService>.Instance);
+        _access = SessionTestServices.Access(_sessions);
+        _service = new SessionJoinTokenService(
+            _sessions, JoinTokens.Create(_clock), _clock, NullLogger<SessionJoinTokenService>.Instance);
     }
 
     private Task<Guid> CreateSessionAsync() =>
@@ -42,7 +35,7 @@ public class SessionJoinTokenTests
         var stamp = await _service.JoinWithTokenAsync(id, token.Token, CancellationToken.None);
 
         Assert.False(stamp.IsError);
-        Assert.True(await _service.HasAccessAsync(id, stamp.Value, CancellationToken.None));
+        Assert.True(await _access.HasAccessAsync(id, stamp.Value, CancellationToken.None));
     }
 
     [Fact]
@@ -117,7 +110,7 @@ public class SessionJoinTokenTests
         var id = await CreateSessionAsync();
         var token = (await _service.CreateJoinTokenAsync(id, HostId, false, CancellationToken.None)).Value;
 
-        await _service.ChangePasswordAsync(id, "new-secret", HostId, false, CancellationToken.None);
+        await _access.ChangePasswordAsync(id, "new-secret", HostId, false, CancellationToken.None);
         var result = await _service.JoinWithTokenAsync(id, token.Token, CancellationToken.None);
 
         Assert.Equal(ErrorType.Unauthorized, result.FirstError.Type);

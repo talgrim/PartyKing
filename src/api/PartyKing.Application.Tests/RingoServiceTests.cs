@@ -24,19 +24,9 @@ public class RingoServiceTests
     public RingoServiceTests()
     {
         var clock = new FakeClock();
-        var sessionService = new SessionService(
-            _sessions,
-            new PasswordHasher(),
-            new PlayerStateStore(clock),
-            new FakeHostTokenProvider(),
-            new FakeSlideshowService(),
-            JoinTokens.Create(clock),
-            clock,
-            new NullSessionMusicNotifier(),
-            new NullPlayerConnectionWatchdog(),
-            NullLogger<SessionService>.Instance);
+        var sessionAuthorizer = new SessionAuthorizer(_sessions);
         _service = new RingoService(
-            new RingoGameLobby(sessionService, _sessions, _games, clock, new RingoLobbyNotifier(_notifier)),
+            new RingoGameLobby(sessionAuthorizer, _sessions, _games, clock, new RingoLobbyNotifier(_notifier)),
             _games,
             clock,
             _notifier);

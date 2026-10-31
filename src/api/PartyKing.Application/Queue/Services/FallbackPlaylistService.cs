@@ -32,7 +32,7 @@ public interface IFallbackPlaylistService
 
 internal class FallbackPlaylistService : IFallbackPlaylistService
 {
-    private readonly ISessionService _sessionService;
+    private readonly ISessionAuthorizer _sessionAuthorizer;
     private readonly ISessionsRepository _sessionsRepository;
     private readonly ISpotifyIntegrationClient _spotifyClient;
     private readonly IHostTokenProvider _hostTokenProvider;
@@ -41,7 +41,7 @@ internal class FallbackPlaylistService : IFallbackPlaylistService
     private readonly IFallbackStatusStore _statusStore;
 
     public FallbackPlaylistService(
-        ISessionService sessionService,
+        ISessionAuthorizer sessionAuthorizer,
         ISessionsRepository sessionsRepository,
         ISpotifyIntegrationClient spotifyClient,
         IHostTokenProvider hostTokenProvider,
@@ -49,7 +49,7 @@ internal class FallbackPlaylistService : IFallbackPlaylistService
         IPlaylistTrackCache trackCache,
         IFallbackStatusStore statusStore)
     {
-        _sessionService = sessionService;
+        _sessionAuthorizer = sessionAuthorizer;
         _sessionsRepository = sessionsRepository;
         _spotifyClient = spotifyClient;
         _hostTokenProvider = hostTokenProvider;
@@ -66,7 +66,7 @@ internal class FallbackPlaylistService : IFallbackPlaylistService
         bool isAdmin,
         CancellationToken cancellationToken)
     {
-        if (await _sessionService.AuthorizeManagerAsync(sessionId, profileId, isAdmin, cancellationToken)
+        if (await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, profileId, isAdmin, cancellationToken)
             is { IsError: true } denied)
         {
             return denied.Errors;

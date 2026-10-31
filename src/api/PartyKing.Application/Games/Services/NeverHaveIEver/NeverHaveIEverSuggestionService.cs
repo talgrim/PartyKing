@@ -64,18 +64,18 @@ internal class NeverHaveIEverSuggestionService : INeverHaveIEverSuggestionServic
             "Never have I ever woken up somewhere I didn't recognise.",
         ]);
 
-    private readonly ISessionService _sessionService;
+    private readonly ISessionAuthorizer _sessionAuthorizer;
     private readonly IChatClient _chatClient;
     private readonly LlmConfiguration _configuration;
     private readonly ILogger<NeverHaveIEverSuggestionService> _logger;
 
     public NeverHaveIEverSuggestionService(
-        ISessionService sessionService,
+        ISessionAuthorizer sessionAuthorizer,
         IChatClient chatClient,
         IOptions<LlmConfiguration> configuration,
         ILogger<NeverHaveIEverSuggestionService> logger)
     {
-        _sessionService = sessionService;
+        _sessionAuthorizer = sessionAuthorizer;
         _chatClient = chatClient;
         _configuration = configuration.Value;
         _logger = logger;
@@ -88,7 +88,7 @@ internal class NeverHaveIEverSuggestionService : INeverHaveIEverSuggestionServic
         UiLanguage language,
         CancellationToken cancellationToken)
     {
-        if (await _sessionService.AuthorizeManagerAsync(sessionId, profileId, isAdmin, cancellationToken)
+        if (await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, profileId, isAdmin, cancellationToken)
             is { IsError: true } denied)
         {
             return denied.Errors;
