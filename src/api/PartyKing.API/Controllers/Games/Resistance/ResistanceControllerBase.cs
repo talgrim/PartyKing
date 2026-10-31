@@ -2,7 +2,7 @@ using PartyKing.Application.Games.Services;
 using PartyKing.Domain.Entities.Games;
 using PartyKing.Infrastructure.Authorization;
 
-namespace PartyKing.API.Controllers.Games;
+namespace PartyKing.API.Controllers.Games.Resistance;
 
 /// <summary>Base of the Resistance controllers, which all share the <c>games/resistance</c> route.</summary>
 public abstract class ResistanceControllerBase : LobbyGameControllerBase

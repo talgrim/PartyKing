@@ -5,7 +5,7 @@ using PartyKing.Application.Games.Services;
 using PartyKing.Contract.V1.Games;
 using PartyKing.Infrastructure.Authorization;
 
-namespace PartyKing.API.Controllers.Games;
+namespace PartyKing.API.Controllers.Games.NeverHaveIEver;
 
 [Route(GamesRoute + "/never-have-i-ever")]
 public class NeverHaveIEverController : GameControllerBase

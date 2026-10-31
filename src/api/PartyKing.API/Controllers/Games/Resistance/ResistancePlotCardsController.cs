@@ -4,7 +4,7 @@ using PartyKing.Application.Games.Services;
 using PartyKing.Contract.V1.Games;
 using PartyKing.Infrastructure.Authorization;
 
-namespace PartyKing.API.Controllers.Games;
+namespace PartyKing.API.Controllers.Games.Resistance;
 
 /// <summary>The plot cards add-on of a Resistance game: switching it on, dealing and playing the cards.</summary>
 [Route(ResistanceRoute)]

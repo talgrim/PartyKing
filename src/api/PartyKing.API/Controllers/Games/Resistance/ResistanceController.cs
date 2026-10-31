@@ -5,7 +5,7 @@ using PartyKing.Application.Games.Services;
 using PartyKing.Contract.V1.Games;
 using PartyKing.Infrastructure.Authorization;
 
-namespace PartyKing.API.Controllers.Games;
+namespace PartyKing.API.Controllers.Games.Resistance;
 
 /// <summary>The lifecycle of a session's Resistance game: lobby, rules, start, players and end.</summary>
 [Route(ResistanceRoute)]

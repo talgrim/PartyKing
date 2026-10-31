@@ -4,7 +4,7 @@ using PartyKing.Application.Games.Services;
 using PartyKing.Contract.V1.Games;
 using PartyKing.Infrastructure.Authorization;
 
-namespace PartyKing.API.Controllers.Games;
+namespace PartyKing.API.Controllers.Games.Resistance;
 
 /// <summary>The rounds of a started Resistance game: team, vote, mission and the windows between them.</summary>
 [Route(ResistanceRoute)]

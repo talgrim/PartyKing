@@ -6,7 +6,7 @@ using PartyKing.Contract.V1.Games;
 using PartyKing.Domain.Entities.Games;
 using PartyKing.Infrastructure.Authorization;
 
-namespace PartyKing.API.Controllers.Games;
+namespace PartyKing.API.Controllers.Games.Ringo;
 
 [Route(GamesRoute + "/ringo")]
 public class RingoController : LobbyGameControllerBase
