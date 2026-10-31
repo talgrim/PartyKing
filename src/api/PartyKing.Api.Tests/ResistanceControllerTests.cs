@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using PartyKing.API.Controllers.Games;
+using PartyKing.API.Controllers.Games.Resistance;
 using PartyKing.Application.Games.Services;
 using PartyKing.Contract.V1.Games;
 using PartyKing.Domain.Entities.Games;
@@ -16,7 +16,9 @@ public class ResistanceControllerTests
     private readonly Guid _sessionId = Guid.NewGuid();
     private readonly Guid _playerId = Guid.NewGuid();
     private readonly FakeResistanceService _service = new();
-    private readonly ResistanceController _controller;
+    private readonly ResistanceController _lifecycle;
+    private readonly ResistanceRoundController _round;
+    private readonly ResistancePlotCardsController _plotCards;
 
     public ResistanceControllerTests()
     {
@@ -26,14 +28,13 @@ public class ResistanceControllerTests
             .AddSingleton<IAuthenticationService, NoAuthenticationService>()
             .BuildServiceProvider();
         var httpContext = new DefaultHttpContext { RequestServices = services };
+        var accessor = new HttpContextAccessor { HttpContext = httpContext };
+        var cookies = new FakeCookies(_playerId);
+        var context = new ControllerContext { HttpContext = httpContext };
 
-        _controller = new ResistanceController(
-            new HttpContextAccessor { HttpContext = httpContext },
-            _service,
-            new FakeCookies(_playerId))
-        {
-            ControllerContext = new ControllerContext { HttpContext = httpContext },
-        };
+        _lifecycle = new ResistanceController(accessor, _service, cookies) { ControllerContext = context };
+        _round = new ResistanceRoundController(accessor, _service, cookies) { ControllerContext = context };
+        _plotCards = new ResistancePlotCardsController(accessor, _service, cookies) { ControllerContext = context };
     }
 
     [Fact]
@@ -41,7 +42,7 @@ public class ResistanceControllerTests
     {
         _service.Result = new ErrorOr<ResistanceGameDto>();
 
-        await _controller.VoteResistanceTeam(_sessionId, new ResistanceVoteRequest(false), CancellationToken.None);
+        await _round.Vote(_sessionId, new ResistanceVoteRequest(false), CancellationToken.None);
 
         Assert.Equal(("vote", _sessionId, false, _playerId), _service.LastCall);
     }
@@ -52,7 +53,7 @@ public class ResistanceControllerTests
         var game = Game();
         _service.Result = game;
 
-        var result = await _controller.VoteResistanceTeam(_sessionId, new ResistanceVoteRequest(true), CancellationToken.None);
+        var result = await _round.Vote(_sessionId, new ResistanceVoteRequest(true), CancellationToken.None);
 
         Assert.Same(game, Assert.IsType<OkObjectResult>(result).Value);
     }
@@ -63,7 +64,7 @@ public class ResistanceControllerTests
     {
         _service.Result = error;
 
-        var result = await _controller.VoteResistanceTeam(_sessionId, new ResistanceVoteRequest(true), CancellationToken.None);
+        var result = await _round.Vote(_sessionId, new ResistanceVoteRequest(true), CancellationToken.None);
 
         Assert.Equal(status, Assert.IsType<ObjectResult>(result).StatusCode);
     }
@@ -74,7 +75,7 @@ public class ResistanceControllerTests
         var game = Game();
         _service.Result = game;
 
-        var result = await _controller.PlayResistanceMissionCard(
+        var result = await _round.PlayMissionCard(
             _sessionId, new ResistanceMissionCardRequest(false), CancellationToken.None);
 
         Assert.Equal(("mission", _sessionId, false, _playerId), _service.LastCall);
@@ -87,7 +88,7 @@ public class ResistanceControllerTests
     {
         _service.Result = error;
 
-        var result = await _controller.PlayResistanceMissionCard(
+        var result = await _round.PlayMissionCard(
             _sessionId, new ResistanceMissionCardRequest(true), CancellationToken.None);
 
         Assert.Equal(status, Assert.IsType<ObjectResult>(result).StatusCode);
@@ -98,7 +99,7 @@ public class ResistanceControllerTests
     {
         _service.Result = Game();
 
-        var result = await _controller.ContinueResistance(_sessionId, CancellationToken.None);
+        var result = await _round.Continue(_sessionId, CancellationToken.None);
 
         Assert.Equal(("continue", _sessionId, null, _playerId), _service.LastCall);
         Assert.IsType<OkObjectResult>(result);
@@ -110,7 +111,7 @@ public class ResistanceControllerTests
     {
         _service.Result = error;
 
-        var result = await _controller.ContinueResistance(_sessionId, CancellationToken.None);
+        var result = await _round.Continue(_sessionId, CancellationToken.None);
 
         Assert.Equal(status, Assert.IsType<ObjectResult>(result).StatusCode);
     }
@@ -120,7 +121,7 @@ public class ResistanceControllerTests
     {
         _service.Result = Game();
 
-        var result = await _controller.RestartResistance(_sessionId, CancellationToken.None);
+        var result = await _lifecycle.Restart(_sessionId, CancellationToken.None);
 
         Assert.Equal(("restart", _sessionId, null, _playerId), _service.LastCall);
         Assert.IsType<OkObjectResult>(result);
@@ -132,7 +133,7 @@ public class ResistanceControllerTests
     {
         _service.Result = error;
 
-        var result = await _controller.RestartResistance(_sessionId, CancellationToken.None);
+        var result = await _lifecycle.Restart(_sessionId, CancellationToken.None);
 
         Assert.Equal(status, Assert.IsType<ObjectResult>(result).StatusCode);
     }
@@ -144,7 +145,7 @@ public class ResistanceControllerTests
         var game = Game();
         _service.Result = game;
 
-        var result = await _controller.PlayResistancePlotCard(
+        var result = await _plotCards.Play(
             _sessionId, 4, new ResistancePlayPlotCardRequest(target), CancellationToken.None);
 
         Assert.Equal(($"play-4-{target}", _sessionId, null, _playerId), _service.LastCall);
@@ -157,7 +158,7 @@ public class ResistanceControllerTests
     {
         _service.Result = error;
 
-        var result = await _controller.PlayResistancePlotCard(
+        var result = await _plotCards.Play(
             _sessionId, 4, new ResistancePlayPlotCardRequest(Guid.NewGuid()), CancellationToken.None);
 
         Assert.Equal(status, Assert.IsType<ObjectResult>(result).StatusCode);
@@ -168,7 +169,7 @@ public class ResistanceControllerTests
     {
         _service.Result = Game();
 
-        var result = await _controller.ConfirmResistancePlotCard(_sessionId, 7, CancellationToken.None);
+        var result = await _plotCards.Confirm(_sessionId, 7, CancellationToken.None);
 
         Assert.Equal(("confirm-7", _sessionId, null, _playerId), _service.LastCall);
         Assert.IsType<OkObjectResult>(result);
@@ -180,7 +181,7 @@ public class ResistanceControllerTests
     {
         _service.Result = error;
 
-        var result = await _controller.ConfirmResistancePlotCard(_sessionId, 7, CancellationToken.None);
+        var result = await _plotCards.Confirm(_sessionId, 7, CancellationToken.None);
 
         Assert.Equal(status, Assert.IsType<ObjectResult>(result).StatusCode);
     }
@@ -190,7 +191,7 @@ public class ResistanceControllerTests
     {
         _service.Result = Game();
 
-        var result = await _controller.DealResistancePlotCards(
+        var result = await _plotCards.Deal(
             _sessionId, new ResistanceDealPlotCardsRequest([]), CancellationToken.None);
 
         Assert.Equal(("deal-plot-cards", _sessionId, null, _playerId), _service.LastCall);

@@ -46,7 +46,7 @@ public class AcceptLanguageTests
     {
         _httpContext.Request.Headers.AcceptLanguage = header;
 
-        await _controller.GetGames(Guid.NewGuid(), CancellationToken.None);
+        await _controller.GetAll(Guid.NewGuid(), CancellationToken.None);
 
         Assert.Equal(expected, _service.LastLanguage);
     }
@@ -54,7 +54,7 @@ public class AcceptLanguageTests
     [Fact]
     public async Task WithoutTheHeader_TheGameListIsRequestedInEnglish()
     {
-        await _controller.GetGames(Guid.NewGuid(), CancellationToken.None);
+        await _controller.GetAll(Guid.NewGuid(), CancellationToken.None);
 
         Assert.Equal(UiLanguage.En, _service.LastLanguage);
     }

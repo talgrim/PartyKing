@@ -5,6 +5,7 @@ using PartyKing.Application.System;
 using PartyKing.Contract.V1.Games;
 using PartyKing.Domain.Entities.Games;
 using PartyKing.Infrastructure.Repositories;
+using PartyKing.Infrastructure.Results;
 
 
 namespace PartyKing.Application.Games.Services;

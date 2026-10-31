@@ -14,17 +14,3 @@ public record RingoGameDto(
     IReadOnlyList<RingoPlayerDto> Players,
     Guid? CurrentPlayerId,
     Guid? YourPlayerId);
-
-/// <summary>A flipped card (0-51), when it was flipped and by whom.</summary>
-public record RingoFlipDto(int CardId, DateTimeOffset FlippedAt, string FlippedBy);
-
-/// <summary>A player of the game; <see cref="Name"/> carries the "(host)" suffix for the session host.</summary>
-public record RingoPlayerDto(Guid Id, string Name);
-
-/// <summary>What any guest may know of the game: whether it is open to join and whether the caller already did.</summary>
-public record RingoLobbyDto(int Seed, bool IsOpen, bool Joined);
-
-public record RingoJoinRequest(string? Name);
-
-/// <summary>The ids of all the players in the new turn order.</summary>
-public record RingoPlayersOrderRequest(IReadOnlyList<Guid>? PlayerIds);

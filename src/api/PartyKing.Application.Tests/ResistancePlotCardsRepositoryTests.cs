@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using PartyKing.Domain.Entities.Games;
 using PartyKing.Domain.Entities.Sessions;
 using PartyKing.Infrastructure.Repositories;
+using PartyKing.Infrastructure.Results;
 using PartyKing.Persistence.Database;
 
 namespace PartyKing.Application.Tests;

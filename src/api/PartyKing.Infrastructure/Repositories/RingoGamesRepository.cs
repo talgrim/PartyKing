@@ -1,62 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using PartyKing.Domain.Entities.Games;
+using PartyKing.Infrastructure.Results;
 using PartyKing.Persistence.Database;
 
 namespace PartyKing.Infrastructure.Repositories;
-
-public interface IRingoGamesRepository : ILobbyGamesRepository<RingoGame, RingoPlayer>
-{
-    /// <summary>
-    /// Records the flip of a card and makes it the pending one. A card that is already flipped changes nothing, and
-    /// while another card is pending nothing is flipped (see <see cref="RingoFlipStatus"/>). With players, the flip is
-    /// recorded under the name of the player whose turn it is, and <paramref name="turnOf"/> (null for a manager, who
-    /// may flip out of turn) must be that player; without players <paramref name="flippedBy"/> is recorded.
-    /// </summary>
-    Task<RingoFlipResult> FlipAsync(
-        Guid sessionId,
-        int cardId,
-        string flippedBy,
-        Guid? turnOf,
-        DateTimeOffset flippedAt,
-        CancellationToken cancellationToken);
-
-    /// <summary>
-    /// Clears the pending card (idempotent) and, when there was one, passes the turn to the next player.
-    /// <paramref name="turnOf"/> (null for a manager) must be the player whose turn it is.
-    /// </summary>
-    Task<RingoContinueResult> ContinueAsync(Guid sessionId, Guid? turnOf, CancellationToken cancellationToken);
-}
-
-public enum RingoFlipStatus
-{
-    NoGame,
-
-    /// <summary>The card was flipped and is now the pending one.</summary>
-    Flipped,
-
-    /// <summary>The card was already flipped, nothing changed.</summary>
-    AlreadyFlipped,
-
-    /// <summary>The fourth king was flipped, so the game is over and nothing changed.</summary>
-    GameOver,
-
-    /// <summary>Another card is still pending, nothing changed.</summary>
-    CardPending,
-
-    /// <summary>The caller is a player but it is another player's turn, nothing changed.</summary>
-    NotYourTurn,
-}
-
-public record RingoFlipResult(RingoFlipStatus Status, RingoGame? Game);
-
-public enum RingoContinueStatus
-{
-    NoGame,
-    Continued,
-    NotYourTurn,
-}
-
-public record RingoContinueResult(RingoContinueStatus Status, RingoGame? Game);
 
 internal class RingoGamesRepository : LobbyGamesRepository<RingoGame, RingoPlayer>, IRingoGamesRepository
 {

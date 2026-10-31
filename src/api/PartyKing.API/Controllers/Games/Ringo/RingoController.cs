@@ -1,17 +1,15 @@
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using PartyKing.API.Authorization;
 using PartyKing.Application.Games.Services;
 using PartyKing.Contract.V1.Games;
 using PartyKing.Domain.Entities.Games;
-using PartyKing.Infrastructure.Authentication;
 using PartyKing.Infrastructure.Authorization;
 
-namespace PartyKing.API.Controllers.Games;
+namespace PartyKing.API.Controllers.Games.Ringo;
 
 [Route(GamesRoute + "/ringo")]
-public class RingoController : GameControllerBase
+public class RingoController : LobbyGameControllerBase
 {
     private readonly IRingoService _ringoService;
     private readonly IRingoRuleSuggestionService _ruleSuggestionService;
@@ -27,13 +25,15 @@ public class RingoController : GameControllerBase
         _ruleSuggestionService = ruleSuggestionService;
     }
 
+    protected override GameKind Kind => GameKind.Ringo;
+
     /// <summary>The session's Ringo game, 404 when there is none. Host, admin or a player; 403 for anyone else.</summary>
     [HttpGet]
     [RequireSessionAccess]
     [ProducesResponseType<RingoGameDto>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetRingo(Guid sessionId, CancellationToken cancellationToken)
+    public async Task<IActionResult> Get(Guid sessionId, CancellationToken cancellationToken)
     {
-        var result = await _ringoService.GetAsync(sessionId, await ReadCallerAsync(GameKind.Ringo, sessionId), cancellationToken);
+        var result = await _ringoService.GetAsync(sessionId, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
     }
@@ -42,20 +42,20 @@ public class RingoController : GameControllerBase
     [HttpGet("lobby")]
     [RequireSessionAccess]
     [ProducesResponseType<RingoLobbyDto>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetRingoLobby(Guid sessionId, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetLobby(Guid sessionId, CancellationToken cancellationToken)
     {
-        var result = await _ringoService.GetLobbyAsync(sessionId, await ReadCallerAsync(GameKind.Ringo, sessionId), cancellationToken);
+        var result = await _ringoService.GetLobbyAsync(sessionId, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
     }
 
-    /// <summary>Host or admin: starts a Ringo game, 409 when the session already has one.</summary>
+    /// <summary>Host or admin: creates a Ringo game, 409 when the session already has one.</summary>
     [HttpPost]
     [RequireSessionAccess]
     [ProducesResponseType<RingoGameDto>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> StartRingo(Guid sessionId, CancellationToken cancellationToken)
+    public async Task<IActionResult> Create(Guid sessionId, CancellationToken cancellationToken)
     {
-        var result = await _ringoService.StartAsync(sessionId, await ReadCallerAsync(GameKind.Ringo, sessionId), cancellationToken);
+        var result = await _ringoService.StartAsync(sessionId, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
     }
@@ -64,9 +64,9 @@ public class RingoController : GameControllerBase
     [HttpPost("open")]
     [RequireSessionAccess]
     [ProducesResponseType<RingoGameDto>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> OpenRingo(Guid sessionId, CancellationToken cancellationToken)
+    public async Task<IActionResult> Open(Guid sessionId, CancellationToken cancellationToken)
     {
-        var result = await _ringoService.OpenAsync(sessionId, await ReadCallerAsync(GameKind.Ringo, sessionId), cancellationToken);
+        var result = await _ringoService.OpenAsync(sessionId, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
     }
@@ -79,14 +79,13 @@ public class RingoController : GameControllerBase
     [RequireSessionAccess]
     [EnableRateLimiting(SessionsController.JoinRateLimitPolicy)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> JoinRingo(
+    public async Task<IActionResult> Join(
         Guid sessionId, [FromBody] RingoJoinRequest request, CancellationToken cancellationToken)
     {
-        var result = await _ringoService.JoinAsync(
-            sessionId, request.Name, await ReadCallerAsync(GameKind.Ringo, sessionId), cancellationToken);
+        var result = await _ringoService.JoinAsync(sessionId, request.Name, await Caller(sessionId), cancellationToken);
         if (!result.IsError)
         {
-            Cookies.GrantGamePlayer(GameKind.Ringo, sessionId, result.Value, HttpContext);
+            Cookies.GrantGamePlayer(Kind, sessionId, result.Value, HttpContext);
         }
 
         return result.Match(_ => NoContent(), Problem);
@@ -96,10 +95,9 @@ public class RingoController : GameControllerBase
     [HttpDelete("players/{playerId:guid}")]
     [RequireSessionAccess]
     [ProducesResponseType<RingoGameDto>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> KickRingoPlayer(Guid sessionId, Guid playerId, CancellationToken cancellationToken)
+    public async Task<IActionResult> KickPlayer(Guid sessionId, Guid playerId, CancellationToken cancellationToken)
     {
-        var result = await _ringoService.KickAsync(
-            sessionId, playerId, await ReadCallerAsync(GameKind.Ringo, sessionId), cancellationToken);
+        var result = await _ringoService.KickAsync(sessionId, playerId, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
     }
@@ -108,11 +106,11 @@ public class RingoController : GameControllerBase
     [HttpPut("players/order")]
     [RequireSessionAccess]
     [ProducesResponseType<RingoGameDto>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> ReorderRingoPlayers(
+    public async Task<IActionResult> ReorderPlayers(
         Guid sessionId, [FromBody] RingoPlayersOrderRequest request, CancellationToken cancellationToken)
     {
         var result = await _ringoService.ReorderAsync(
-            sessionId, request.PlayerIds, await ReadCallerAsync(GameKind.Ringo, sessionId), cancellationToken);
+            sessionId, request.PlayerIds, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
     }
@@ -121,10 +119,9 @@ public class RingoController : GameControllerBase
     [HttpPost("cards/{cardId:int}/flip")]
     [RequireSessionAccess]
     [ProducesResponseType<RingoGameDto>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> FlipRingoCard(Guid sessionId, int cardId, CancellationToken cancellationToken)
+    public async Task<IActionResult> FlipCard(Guid sessionId, int cardId, CancellationToken cancellationToken)
     {
-        var result = await _ringoService.FlipAsync(
-            sessionId, cardId, await ReadCallerAsync(GameKind.Ringo, sessionId), cancellationToken);
+        var result = await _ringoService.FlipAsync(sessionId, cardId, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
     }
@@ -133,27 +130,26 @@ public class RingoController : GameControllerBase
     [HttpPost("continue")]
     [RequireSessionAccess]
     [ProducesResponseType<RingoGameDto>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> ContinueRingo(Guid sessionId, CancellationToken cancellationToken)
+    public async Task<IActionResult> Continue(Guid sessionId, CancellationToken cancellationToken)
     {
-        var result = await _ringoService.ContinueAsync(sessionId, await ReadCallerAsync(GameKind.Ringo, sessionId), cancellationToken);
+        var result = await _ringoService.ContinueAsync(sessionId, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
     }
 
     /// <summary>
-    /// Host or admin: new rules for a flipped ace from the language model, in the <c>Accept-Language</c> language,, or from a built-in list when it is
-    /// unavailable, none of them among the previous rules in the body. 400 for an oversized list, 403 for guests.
+    /// Host or admin: new rules for a flipped ace from the language model, in the <c>Accept-Language</c> language, or
+    /// from a built-in list when it is unavailable, none of them among the previous rules in the body. 400 for an
+    /// oversized list, 403 for guests.
     /// </summary>
     [HttpPost("rule-suggestions")]
     [RequireSessionAccess]
     [EnableRateLimiting(SuggestionsRateLimitPolicy)]
     [ProducesResponseType<GameSuggestionsDto>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetRingoRuleSuggestions(
-        Guid sessionId,
-        [FromBody] RingoRuleSuggestionsRequest request,
-        CancellationToken cancellationToken)
+    public async Task<IActionResult> SuggestRules(
+        Guid sessionId, [FromBody] RingoRuleSuggestionsRequest request, CancellationToken cancellationToken)
     {
-        var caller = await ReadCallerAsync(GameKind.Ringo, sessionId);
+        var caller = await Caller(sessionId);
 
         var result = await _ruleSuggestionService.SuggestAsync(
             sessionId, request.PreviousRules, caller.ProfileId, caller.IsAdmin, GetLanguage(), cancellationToken);
@@ -165,9 +161,9 @@ public class RingoController : GameControllerBase
     [HttpDelete]
     [RequireSessionAccess]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> EndRingo(Guid sessionId, CancellationToken cancellationToken)
+    public async Task<IActionResult> End(Guid sessionId, CancellationToken cancellationToken)
     {
-        var result = await _ringoService.EndAsync(sessionId, await ReadCallerAsync(GameKind.Ringo, sessionId), cancellationToken);
+        var result = await _ringoService.EndAsync(sessionId, await Caller(sessionId), cancellationToken);
 
         return result.Match(_ => NoContent(), Problem);
     }

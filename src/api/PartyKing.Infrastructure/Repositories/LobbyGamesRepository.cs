@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using PartyKing.Domain.Entities.Games;
+using PartyKing.Infrastructure.Results;
 using PartyKing.Persistence.Database;
 
 namespace PartyKing.Infrastructure.Repositories;
