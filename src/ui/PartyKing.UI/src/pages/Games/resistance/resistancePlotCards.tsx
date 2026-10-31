@@ -1,4 +1,5 @@
 import { ComponentType } from 'react';
+import { i18n } from '@/i18n';
 import { ResistancePlotCardType } from '@/service/endpoints/games/types';
 import {
   PlotCloseEyeCardIcon,
@@ -13,59 +14,34 @@ import {
 } from './ResistanceIcons';
 
 export type PlotCardInfo = {
-  /** Polish name from the physical card. */
-  name: string;
-  /** Short Polish description of the effect. */
-  effect: string;
+  /** Name of the card, in the UI language. */
+  readonly name: string;
+  /** Short description of the effect, in the UI language. */
+  readonly effect: string;
   Icon: ComponentType<{ className?: string; title?: string }>;
 };
 
+/** The texts are looked up when they are read, so a language switch shows up the next time a component renders. */
+const plotCard = (type: ResistancePlotCardType, Icon: PlotCardInfo['Icon']): PlotCardInfo => ({
+  get name() {
+    return i18n.t(`resistance.plot.${type}.name`);
+  },
+  get effect() {
+    return i18n.t(`resistance.plot.${type}.effect`);
+  },
+  Icon,
+});
+
 export const PLOT_CARDS: Record<ResistancePlotCardType, PlotCardInfo> = {
-  OverheardConversation: {
-    name: 'Jesteś naszym okiem i uchem',
-    effect: 'Zagraj natychmiast: obejrzyj kartę Tożsamości jednego z graczy siedzących obok ciebie.',
-    Icon: PlotOverheardConversationCardIcon,
-  },
-  OpinionMaker: {
-    name: 'Liczymy się z twoim zdaniem',
-    effect: 'Działa do końca gry: wybierasz i ujawniasz kartę Głosowania przed pozostałymi.',
-    Icon: PlotOpinionMakerCardIcon,
-  },
-  EstablishConfidence: {
-    name: 'To kwestia zaufania',
-    effect: 'Zagraj natychmiast: Przywódca ujawnia swoją kartę Tożsamości innemu graczowi.',
-    Icon: PlotEstablishConfidenceCardIcon,
-  },
-  OpenUp: {
-    name: 'Tylko tobie zaufam',
-    effect: 'Zagraj natychmiast: ujawnij swoją kartę Tożsamości innemu graczowi (może to być Przywódca).',
-    Icon: PlotOpenUpCardIcon,
-  },
-  NoConfidence: {
-    name: 'Nie ufajcie mu',
-    effect: 'Jednorazowa: odrzuć zatwierdzoną drużynę, głosowanie liczy się jako nieudane.',
-    Icon: PlotNoConfidenceCardIcon,
-  },
-  KeepingCloseEye: {
-    name: 'Mam cię na oku',
-    effect: 'Jednorazowa: po zagraniu kart Misji podejrzyj jedną zagraną kartę.',
-    Icon: PlotCloseEyeCardIcon,
-  },
-  StrongLeader: {
-    name: 'Charyzmatyczny Przywódca',
-    effect: 'Jednorazowa: przejmij Przywództwo, zanim Przywódca cokolwiek zrobi.',
-    Icon: PlotStrongLeaderCardIcon,
-  },
-  InTheSpotlight: {
-    name: 'Pod obserwacją',
-    effect: 'Jednorazowa: zmuś innego gracza do zagrania karty Misji jawnie.',
-    Icon: PlotSpotlightCardIcon,
-  },
-  TakeResponsibility: {
-    name: 'Przejmujesz odpowiedzialność',
-    effect: 'Jednorazowa: weź kartę Intrygi innego gracza.',
-    Icon: PlotTakeResponsibilityCardIcon,
-  },
+  OverheardConversation: plotCard('OverheardConversation', PlotOverheardConversationCardIcon),
+  OpinionMaker: plotCard('OpinionMaker', PlotOpinionMakerCardIcon),
+  EstablishConfidence: plotCard('EstablishConfidence', PlotEstablishConfidenceCardIcon),
+  OpenUp: plotCard('OpenUp', PlotOpenUpCardIcon),
+  NoConfidence: plotCard('NoConfidence', PlotNoConfidenceCardIcon),
+  KeepingCloseEye: plotCard('KeepingCloseEye', PlotCloseEyeCardIcon),
+  StrongLeader: plotCard('StrongLeader', PlotStrongLeaderCardIcon),
+  InTheSpotlight: plotCard('InTheSpotlight', PlotSpotlightCardIcon),
+  TakeResponsibility: plotCard('TakeResponsibility', PlotTakeResponsibilityCardIcon),
 };
 
 /** Played the moment they are dealt; their receiver confirms what they saw. */

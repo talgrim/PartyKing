@@ -1,4 +1,5 @@
 import { FormEvent, ReactNode, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import useSWR from 'swr';
 import { PageNavigation } from '@/components/common/PageNavigation';
@@ -10,8 +11,7 @@ import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 import { SessionDto } from '@/service/endpoints/sessions/types';
 import { usePersistedFlag } from '@/utils/usePersistedFlag';
 
-const errorMessage = (error: unknown) =>
-  (error as { message?: string })?.message || 'Something went wrong';
+const errorMessage = (error: unknown, fallback: string) => (error as { message?: string })?.message || fallback;
 
 const MIN_PASSWORD_LENGTH = 4;
 
@@ -20,6 +20,7 @@ const primaryButton = 'px-3 py-2 bg-amber-600 text-slate-200 rounded-md cursor-p
 const secondaryButton = 'px-2 py-1 bg-slate-900 rounded-md cursor-pointer disabled:opacity-50';
 
 export const Admin = (): ReactNode => {
+  const { t } = useTranslation();
   // Resolves when the admin cookie is valid, rejects with 401 when the admin has to log in
   const { data: loggedIn, error, mutate: recheck, isLoading } = useSWR('admin-me', () => adminApi.me().then(() => true), {
     shouldRetryOnError: false,
@@ -40,12 +41,12 @@ export const Admin = (): ReactNode => {
 
   return (
     <div className="w-full min-h-full bg-slate-800 text-slate-400">
-      <div className="max-w-xl mx-auto">
-        <PageNavigation className="px-2 pt-4" links={[{ to: ROUTE_PATHS.HOME, label: 'All sessions' }]} />
-        <h1 className="px-2 pt-4 text-2xl text-slate-200">Admin</h1>
+      <div className="max-w-xl mx-auto pt-6">
+        <PageNavigation className="px-2 pt-4" links={[{ to: ROUTE_PATHS.HOME, label: t('admin.allSessions') }]} />
+        <h1 className="px-2 pt-4 text-2xl text-slate-200">{t('admin.title')}</h1>
 
-        {isLoading && <p className="px-2">Checking the login…</p>}
-        {error && !unauthorized && <p className="px-2 text-amber-500">Could not reach the API</p>}
+        {isLoading && <p className="px-2">{t('admin.checkingLogin')}</p>}
+        {error && !unauthorized && <p className="px-2 text-amber-500">{t('admin.apiUnreachable')}</p>}
         {unauthorized && <LoginForm onLoggedIn={() => recheck(true, { revalidate: false })} />}
         {loggedIn && <Sessions onLoggedOut={() => recheck(undefined, { revalidate: true })} />}
       </div>
@@ -54,6 +55,7 @@ export const Admin = (): ReactNode => {
 };
 
 const LoginForm = ({ onLoggedIn }: { onLoggedIn: () => void }): ReactNode => {
+  const { t } = useTranslation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -67,7 +69,7 @@ const LoginForm = ({ onLoggedIn }: { onLoggedIn: () => void }): ReactNode => {
       setPassword('');
       onLoggedIn();
     } catch (error) {
-      setMessage(errorMessage(error));
+      setMessage(errorMessage(error, t('common.somethingWentWrong')));
     } finally {
       setBusy(false);
     }
@@ -79,21 +81,21 @@ const LoginForm = ({ onLoggedIn }: { onLoggedIn: () => void }): ReactNode => {
         className={inputClass}
         value={username}
         onChange={(e) => setUsername(e.target.value)}
-        placeholder="Username"
+        placeholder={t('admin.username')}
         autoComplete="username"
-        aria-label="Username"
+        aria-label={t('admin.username')}
       />
       <input
         className={inputClass}
         type="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        placeholder="Password"
+        placeholder={t('admin.password')}
         autoComplete="current-password"
-        aria-label="Password"
+        aria-label={t('admin.password')}
       />
       <button type="submit" disabled={busy || !username || !password} className={primaryButton}>
-        Log in
+        {t('admin.logIn')}
       </button>
       {message && <p className="text-sm text-amber-500">{message}</p>}
     </form>
@@ -101,6 +103,7 @@ const LoginForm = ({ onLoggedIn }: { onLoggedIn: () => void }): ReactNode => {
 };
 
 const Sessions = ({ onLoggedOut }: { onLoggedOut: () => void }): ReactNode => {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -120,7 +123,7 @@ const Sessions = ({ onLoggedOut }: { onLoggedOut: () => void }): ReactNode => {
         onLoggedOut();
         return;
       }
-      setMessage(errorMessage(error));
+      setMessage(errorMessage(error, t('common.somethingWentWrong')));
     } finally {
       setBusy(false);
     }
@@ -128,20 +131,20 @@ const Sessions = ({ onLoggedOut }: { onLoggedOut: () => void }): ReactNode => {
 
   const create = async (e: FormEvent) => {
     e.preventDefault();
-    await run(() => adminApi.createSession(name.trim(), password), 'Session created');
+    await run(() => adminApi.createSession(name.trim(), password), t('admin.sessionCreated'));
     setName('');
     setPassword('');
   };
 
   const remove = (session: SessionDto) => {
-    if (window.confirm(`Delete “${session.name}” (${session.code}) together with its queue and photos?`)) {
-      void run(() => adminApi.deleteSession(session.id), 'Session deleted');
+    if (window.confirm(t('admin.confirmDelete', { name: session.name, code: session.code }))) {
+      void run(() => adminApi.deleteSession(session.id), t('admin.sessionDeleted'));
     }
   };
 
   const release = (session: SessionDto) => {
-    if (window.confirm(`Remove ${session.hostName} as the host of “${session.name}”?`)) {
-      void run(() => adminApi.releaseHost(session.id), 'Host removed');
+    if (window.confirm(t('admin.confirmRemoveHost', { host: session.hostName, name: session.name }))) {
+      void run(() => adminApi.releaseHost(session.id), t('admin.hostRemoved'));
     }
   };
 
@@ -152,7 +155,7 @@ const Sessions = ({ onLoggedOut }: { onLoggedOut: () => void }): ReactNode => {
 
   const copyLink = async (session: SessionDto) => {
     await navigator.clipboard?.writeText(`${window.location.origin}${sessionPath(session.id)}`);
-    setMessage(`Link to “${session.name}” copied`);
+    setMessage(t('admin.linkCopied', { name: session.name }));
   };
 
   return (
@@ -162,8 +165,8 @@ const Sessions = ({ onLoggedOut }: { onLoggedOut: () => void }): ReactNode => {
           className={inputClass}
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="New session name (optional)"
-          aria-label="New session name"
+          placeholder={t('admin.newSessionNamePlaceholder')}
+          aria-label={t('admin.newSessionNameLabel')}
           maxLength={60}
         />
         <input
@@ -171,9 +174,9 @@ const Sessions = ({ onLoggedOut }: { onLoggedOut: () => void }): ReactNode => {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Session password"
+          placeholder={t('admin.sessionPasswordPlaceholder')}
           autoComplete="new-password"
-          aria-label="New session password"
+          aria-label={t('admin.newSessionPasswordLabel')}
           minLength={MIN_PASSWORD_LENGTH}
           maxLength={100}
           required
@@ -183,7 +186,7 @@ const Sessions = ({ onLoggedOut }: { onLoggedOut: () => void }): ReactNode => {
           disabled={busy || password.length < MIN_PASSWORD_LENGTH}
           className={`${primaryButton} shrink-0`}
         >
-          Create session
+          {t('admin.createSession')}
         </button>
       </form>
 
@@ -199,32 +202,32 @@ const Sessions = ({ onLoggedOut }: { onLoggedOut: () => void }): ReactNode => {
               <span className="font-mono text-amber-500">{session.code}</span>
             </div>
             <div className="text-sm text-slate-500">
-              {session.hasHost ? `Host: ${session.hostName}` : 'No host yet'}
+              {session.hasHost ? t('common.hostName', { name: session.hostName }) : t('common.noHost')}
             </div>
             <div className="flex flex-wrap gap-2 mt-2">
               <button className={secondaryButton} disabled={busy} onClick={() => copyLink(session)}>
-                Copy link
+                {t('admin.copyLink')}
               </button>
               <Link to={sessionGamesPath(session.id)} className={secondaryButton}>
-                Games
+                {t('admin.games')}
               </Link>
               {session.hasHost && (
                 <button className={secondaryButton} disabled={busy} onClick={() => release(session)}>
-                  Remove host
+                  {t('admin.removeHost')}
                 </button>
               )}
               <button className={`${secondaryButton} text-red-400`} disabled={busy} onClick={() => remove(session)}>
-                Delete
+                {t('admin.delete')}
               </button>
             </div>
           </li>
         ))}
-        {sessions?.length === 0 && <li>There are no sessions yet.</li>}
+        {sessions?.length === 0 && <li>{t('common.noSessionsYet')}</li>}
       </ul>
 
       <div className="px-2 pb-4">
         <button className={secondaryButton} onClick={logout}>
-          Log out
+          {t('admin.logOut')}
         </button>
       </div>
     </>

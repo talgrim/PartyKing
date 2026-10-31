@@ -1,5 +1,14 @@
 import { KeyboardEvent, ReactNode } from 'react';
+import { ParseKeys } from 'i18next';
+import { useTranslation } from 'react-i18next';
 import { ResistanceMissionTeamInfo } from './ResistanceMissionTeamInfo';
+
+/** A text inside an SVG in the UI language; its own component, so it follows a language switch by itself. */
+const T = ({ k, n }: { k: ParseKeys; n?: number }): ReactNode => {
+  const { t } = useTranslation();
+
+  return t(k, { n });
+};
 
 type IconProps = {
   className?: string;
@@ -144,7 +153,7 @@ export const SpyCardIcon = ({ className, title }: IconProps): ReactNode => (
     <path d="M16 112 C16 90 30 82 50 82 C70 82 84 90 84 112 Z" fill={COLORS.ink} />
     <path d="M50 82 L40 98 L50 112 L60 98 Z" fill={COLORS.paper} />
     <text x="50" y="128" textAnchor="middle" fontSize="11" fontWeight="700" fill={COLORS.paper} fontFamily="sans-serif">
-      SZPIEG
+      <T k="resistance.icons.spy" />
     </text>
   </Svg>
 );
@@ -159,7 +168,7 @@ export const OperativeCardIcon = ({ className, title }: IconProps): ReactNode =>
     <path d="M32 40 Q50 22 68 40 Q50 36 32 40 Z" fill={COLORS.resistance} />
     <path d="M50 30 l2 4.5 5 .5 -3.7 3.3 1.1 4.9 -4.4 -2.6 -4.4 2.6 1.1 -4.9 -3.7 -3.3 5 -.5 Z" fill={COLORS.gold} />
     <text x="50" y="128" textAnchor="middle" fontSize="9.5" fontWeight="700" fill={COLORS.paper} fontFamily="sans-serif">
-      RUCH OPORU
+      <T k="resistance.icons.resistance" />
     </text>
   </Svg>
 );
@@ -205,7 +214,7 @@ export const VoteApproveCardIcon = ({ className, title, ...button }: IconProps &
     <circle cx="50" cy="62" r="30" fill={COLORS.success} />
     <Check cx={50} cy={62} size={16} stroke={COLORS.paper} />
     <text x="50" y="118" textAnchor="middle" fontSize="12" fontWeight="700" fill={COLORS.success} fontFamily="sans-serif">
-      ZATWIERDŹ
+      <T k="resistance.icons.approve" />
     </text>
   </Svg>
 );
@@ -217,7 +226,7 @@ export const VoteRejectCardIcon = ({ className, title, ...button }: IconProps & 
     <circle cx="50" cy="62" r="30" fill={COLORS.fail} />
     <Cross cx={50} cy={62} size={14} stroke={COLORS.paper} />
     <text x="50" y="118" textAnchor="middle" fontSize="12" fontWeight="700" fill={COLORS.fail} fontFamily="sans-serif">
-      ODRZUĆ
+      <T k="resistance.icons.reject" />
     </text>
   </Svg>
 );
@@ -229,7 +238,7 @@ export const MissionSuccessCardIcon = ({ className, title, ...button }: IconProp
     <path d="M50 22 L82 34 L82 70 Q82 96 50 112 Q18 96 18 70 L18 34 Z" fill={COLORS.success} stroke={COLORS.paper} strokeWidth="3" strokeLinejoin="round" />
     <Check cx={50} cy={66} size={16} stroke={COLORS.paper} />
     <text x="50" y="130" textAnchor="middle" fontSize="11" fontWeight="700" fill={COLORS.paper} fontFamily="sans-serif">
-      SUKCES
+      <T k="resistance.icons.success" />
     </text>
   </Svg>
 );
@@ -241,7 +250,7 @@ export const MissionFailCardIcon = ({ className, title, ...button }: IconProps &
     <path d="M50 22 L82 34 L82 70 Q82 96 50 112 Q18 96 18 70 L18 34 Z" fill={COLORS.fail} stroke={COLORS.paper} strokeWidth="3" strokeLinejoin="round" />
     <path d="M50 38 L42 62 L54 62 L46 94 L64 56 L52 56 L60 38 Z" fill={COLORS.gold} />
     <text x="50" y="130" textAnchor="middle" fontSize="11" fontWeight="700" fill={COLORS.paper} fontFamily="sans-serif">
-      PORAŻKA
+      <T k="resistance.icons.fail" />
     </text>
   </Svg>
 );
@@ -257,18 +266,18 @@ export const PlotCardIcon = ({ className, title }: IconProps): ReactNode => (
       ?
     </text>
     <text x="50" y="124" textAnchor="middle" fontSize="11" fontWeight="700" fill={COLORS.gold} fontFamily="sans-serif">
-      INTRYGA
+      <T k="resistance.icons.plot" />
     </text>
   </Svg>
 );
 
-/** Shared look of the plot cards: the brown face with a gold border, a glyph in the upper part and a Polish name (one or two lines) below. */
+/** Shared look of the plot cards: the brown face with a gold border, a glyph in the upper part and a name (one or two lines) below. */
 const PlotCardFace = ({
   className,
   title,
   label,
   children,
-}: IconProps & { label: string[]; children: ReactNode }): ReactNode => (
+}: IconProps & { label: ParseKeys[]; children: ReactNode }): ReactNode => (
   <Svg viewBox="0 0 100 140" className={className} title={title}>
     <CardFrame fill="#3b2f1a" stroke={COLORS.gold} />
     <circle cx="50" cy="56" r="34" fill={COLORS.gold} fillOpacity="0.12" />
@@ -284,7 +293,7 @@ const PlotCardFace = ({
         fill={COLORS.gold}
         fontFamily="sans-serif"
       >
-        {line}
+        <T k={line} />
       </text>
     ))}
   </Svg>
@@ -292,7 +301,7 @@ const PlotCardFace = ({
 
 /** Plot card "Keeping a Close Eye on You": look at one played mission card (an eye). */
 export const PlotCloseEyeCardIcon = ({ className, title }: IconProps): ReactNode => (
-  <PlotCardFace className={className} title={title} label={['MAM CIĘ', 'NA OKU']}>
+  <PlotCardFace className={className} title={title} label={['resistance.icons.closeEye1', 'resistance.icons.closeEye2']}>
     <path d="M16 56 Q50 18 84 56 Q50 94 16 56 Z" fill={COLORS.paper} stroke={COLORS.gold} strokeWidth="3" strokeLinejoin="round" />
     <circle cx="50" cy="56" r="17" fill={COLORS.resistance} />
     <circle cx="50" cy="56" r="8" fill={COLORS.ink} />
@@ -302,7 +311,7 @@ export const PlotCloseEyeCardIcon = ({ className, title }: IconProps): ReactNode
 
 /** Plot card "Establish Confidence": the leader shows their identity card (a person on an ID card). */
 export const PlotEstablishConfidenceCardIcon = ({ className, title }: IconProps): ReactNode => (
-  <PlotCardFace className={className} title={title} label={['ZDOBĄDŹ', 'ZAUFANIE']}>
+  <PlotCardFace className={className} title={title} label={['resistance.icons.establish1', 'resistance.icons.establish2']}>
     <rect x="20" y="32" width="60" height="44" rx="5" fill={COLORS.paper} stroke={COLORS.gold} strokeWidth="2.5" />
     <Person x={40} y={58} scale={0.7} fill={COLORS.resistance} />
     <rect x="54" y="42" width="20" height="4" rx="2" fill={COLORS.muted} />
@@ -314,7 +323,7 @@ export const PlotEstablishConfidenceCardIcon = ({ className, title }: IconProps)
 
 /** Plot card "Strong Leader": become the leader (a crown with an upward arrow). */
 export const PlotStrongLeaderCardIcon = ({ className, title }: IconProps): ReactNode => (
-  <PlotCardFace className={className} title={title} label={['SILNY', 'LIDER']}>
+  <PlotCardFace className={className} title={title} label={['resistance.icons.strongLeader1', 'resistance.icons.strongLeader2']}>
     <path d="M24 74 L20 44 L38 58 L50 36 L62 58 L80 44 L76 74 Z" fill={COLORS.gold} stroke={COLORS.gold} strokeLinejoin="round" strokeWidth="3" />
     <rect x="24" y="74" width="52" height="8" rx="2" fill={COLORS.gold} />
     <circle cx="20" cy="44" r="4" fill={COLORS.gold} />
@@ -326,7 +335,7 @@ export const PlotStrongLeaderCardIcon = ({ className, title }: IconProps): React
 
 /** Plot card "Overheard Conversation": peek at a neighbour's identity card (an ear with sound waves). */
 export const PlotOverheardConversationCardIcon = ({ className, title }: IconProps): ReactNode => (
-  <PlotCardFace className={className} title={title} label={['PODSŁUCHANA', 'ROZMOWA']}>
+  <PlotCardFace className={className} title={title} label={['resistance.icons.overheard1', 'resistance.icons.overheard2']}>
     <path
       d="M56 24 C38 24 30 38 32 52 C33 62 38 66 40 74 C42 82 50 86 58 82 C68 78 68 68 62 64 C70 58 74 50 74 42 C74 30 66 24 56 24 Z"
       fill={COLORS.paper}
@@ -341,7 +350,7 @@ export const PlotOverheardConversationCardIcon = ({ className, title }: IconProp
 
 /** Plot card "No Confidence": nullifies an approved vote (the approve check struck out). */
 export const PlotNoConfidenceCardIcon = ({ className, title }: IconProps): ReactNode => (
-  <PlotCardFace className={className} title={title} label={['WOTUM', 'NIEUFNOŚCI']}>
+  <PlotCardFace className={className} title={title} label={['resistance.icons.noConfidence1', 'resistance.icons.noConfidence2']}>
     <circle cx="50" cy="56" r="30" fill={COLORS.success} />
     <Check cx={50} cy={56} size={15} stroke={COLORS.paper} />
     <circle cx="50" cy="56" r="34" fill="none" stroke={COLORS.fail} strokeWidth="6" />
@@ -351,7 +360,7 @@ export const PlotNoConfidenceCardIcon = ({ className, title }: IconProps): React
 
 /** Plot card "In the Spotlight": a team member plays their mission card face up (a spotlight on a person). */
 export const PlotSpotlightCardIcon = ({ className, title }: IconProps): ReactNode => (
-  <PlotCardFace className={className} title={title} label={['W ŚWIETLE', 'REFLEKTORÓW']}>
+  <PlotCardFace className={className} title={title} label={['resistance.icons.spotlight1', 'resistance.icons.spotlight2']}>
     <path d="M42 14 L58 14 L84 92 L16 92 Z" fill={COLORS.gold} fillOpacity="0.35" />
     <rect x="38" y="8" width="24" height="10" rx="3" fill={COLORS.muted} stroke={COLORS.gold} strokeWidth="2" />
     <Person x={50} y={76} scale={1.1} fill={COLORS.paper} />
@@ -360,7 +369,7 @@ export const PlotSpotlightCardIcon = ({ className, title }: IconProps): ReactNod
 
 /** Plot card "Opinion Maker": votes first and in public (a megaphone). */
 export const PlotOpinionMakerCardIcon = ({ className, title }: IconProps): ReactNode => (
-  <PlotCardFace className={className} title={title} label={['KREATOR', 'OPINII']}>
+  <PlotCardFace className={className} title={title} label={['resistance.icons.opinionMaker1', 'resistance.icons.opinionMaker2']}>
     <path d="M22 46 L22 66 L36 66 L62 84 L62 28 L36 46 Z" fill={COLORS.gold} stroke={COLORS.paper} strokeWidth="2.5" strokeLinejoin="round" />
     <rect x="30" y="64" width="10" height="16" rx="3" fill={COLORS.paper} stroke={COLORS.gold} strokeWidth="2" />
     <path d="M70 40 Q78 56 70 72 M78 32 Q92 56 78 80" fill="none" stroke={COLORS.paper} strokeWidth="3.5" strokeLinecap="round" />
@@ -369,7 +378,7 @@ export const PlotOpinionMakerCardIcon = ({ className, title }: IconProps): React
 
 /** Plot card "Open Up": the holder shows their identity card to another player (an open card with an arrow). */
 export const PlotOpenUpCardIcon = ({ className, title }: IconProps): ReactNode => (
-  <PlotCardFace className={className} title={title} label={['OTWÓRZ SIĘ']}>
+  <PlotCardFace className={className} title={title} label={['resistance.icons.openUp1']}>
     <rect x="22" y="34" width="46" height="34" rx="5" fill={COLORS.paper} stroke={COLORS.gold} strokeWidth="2.5" />
     <Person x={37} y={56} scale={0.6} fill={COLORS.resistance} />
     <rect x="48" y="44" width="14" height="4" rx="2" fill={COLORS.muted} />
@@ -380,7 +389,7 @@ export const PlotOpenUpCardIcon = ({ className, title }: IconProps): ReactNode =
 
 /** Plot card "Take Responsibility": take a plot card from another player (a hand grabbing a card). */
 export const PlotTakeResponsibilityCardIcon = ({ className, title }: IconProps): ReactNode => (
-  <PlotCardFace className={className} title={title} label={['PRZEJMUJESZ', 'ODPOWIEDZIALNOŚĆ']}>
+  <PlotCardFace className={className} title={title} label={['resistance.icons.takeResponsibility1', 'resistance.icons.takeResponsibility2']}>
     <rect x="34" y="24" width="32" height="44" rx="4" fill="#e7d9b0" stroke={COLORS.gold} strokeWidth="2.5" />
     <text x="50" y="54" textAnchor="middle" fontSize="22" fontWeight="700" fill="#3b2f1a" fontFamily="serif">
       ?
@@ -460,11 +469,11 @@ export const MissionBoardIcon = ({
             </text>
           )}
           <text x={cx} y={132} textAnchor="middle" fontSize="13" fontWeight="700" letterSpacing="1.5" fill={COLORS.paper} fontFamily="sans-serif">
-            {`MISJA ${i + 1}`}
+            <T k="resistance.icons.mission" n={i + 1} />
           </text>
           {i === 3 && fourthMissionNeedsTwoFails && (
             <text x={cx} y={150} textAnchor="middle" fontSize="12" fontWeight="700" fill={COLORS.gold} fontFamily="sans-serif">
-              2 PORAŻKI
+              <T k="resistance.icons.twoFails" />
             </text>
           )}
           {result !== null && (teams[i]?.length ?? 0) > 0 && (
@@ -501,7 +510,7 @@ export const MissionBoardIcon = ({
       fill={COLORS.paper}
       fontFamily="sans-serif"
     >
-      ODRZUCONE DRUŻYNY
+      <T k="resistance.icons.rejectedTeams" />
     </text>
   </Svg>
 );

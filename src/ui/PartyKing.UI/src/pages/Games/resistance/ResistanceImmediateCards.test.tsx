@@ -54,11 +54,11 @@ describe('ResistancePlotPlayer', () => {
     );
 
     const options = screen.getAllByRole('option').map((option) => option.textContent);
-    expect(options).toEqual(['Wybierz gracza', 'Ewa', 'Bartek']);
+    expect(options).toEqual(['Pick a player', 'Ewa', 'Bartek']);
 
-    const button = screen.getByRole('button', { name: 'Zagraj kartę' });
+    const button = screen.getByRole('button', { name: 'Play the card' });
     expect(button).toBeDisabled();
-    await user.selectOptions(screen.getByLabelText(/Na kogo zagrywasz kartę/), 'p4');
+    await user.selectOptions(screen.getByLabelText(/Who do you play the/), 'p4');
     await user.click(button);
 
     expect(onPlay).toHaveBeenCalledWith(3, 'p4');
@@ -74,7 +74,7 @@ describe('ResistancePlotPlayer', () => {
     );
 
     expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
-      'Wybierz gracza',
+      'Pick a player',
       'Bartek',
       'Celina',
       'Darek',
@@ -94,8 +94,8 @@ describe('ResistancePlotPlayer', () => {
     );
 
     expect(screen.getByText('Celina')).toBeInTheDocument();
-    expect(screen.getByText('Szpieg')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Widziałem/am' }));
+    expect(screen.getByText('Spy')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: "I've seen it" }));
 
     expect(onConfirm).toHaveBeenCalledWith(7);
   });
@@ -126,11 +126,11 @@ describe('ResistancePlotLog', () => {
     );
 
     const items = screen.getAllByRole('listitem').map((item) => item.textContent);
-    expect(items[0]).toContain('Celina zagrał/a „Tylko tobie zaufam”');
-    expect(items[0]).toContain('czeka na potwierdzenie');
-    expect(items[1]).toContain('Ala zagrał/a „Jesteś naszym okiem i uchem”');
-    expect(items[1]).not.toContain('czeka na potwierdzenie');
-    expect(items[1]).not.toMatch(/Szpieg|Ruch Oporu/);
+    expect(items[0]).toContain('Celina played “Open Up”');
+    expect(items[0]).toContain('awaiting confirmation');
+    expect(items[1]).toContain('Ala played “Overheard Conversation”');
+    expect(items[1]).not.toContain('awaiting confirmation');
+    expect(items[1]).not.toMatch(/Spy|Resistance/);
   });
 
   it('logs a card without a target by its holder alone', () => {
@@ -141,7 +141,7 @@ describe('ResistancePlotLog', () => {
       />,
     );
 
-    expect(screen.getByRole('listitem').textContent).toContain('Bartek zagrał/a „Nie ufajcie mu”');
+    expect(screen.getByRole('listitem').textContent).toContain('Bartek played “No Confidence”');
   });
 
   it('renders nothing before any card is played', () => {
@@ -164,8 +164,8 @@ describe('resistancePhaseDescription while the immediate cards are played', () =
       2,
     );
 
-    expect(text).toContain('karty natychmiastowe');
-    expect(text).toContain('Czekamy na potwierdzenie: Darek, Ala.');
+    expect(text).toContain('the immediate cards');
+    expect(text).toContain('Waiting for confirmation: Darek, Ala.');
   });
 
   it('does not wait for a played card that shows no identity card', () => {
@@ -198,10 +198,10 @@ describe('In the Spotlight', () => {
     render(<ResistanceSpotlightPlayer game={mission()} onPlay={onPlay} />);
 
     const options = screen.getAllByRole('option').map((option) => option.textContent);
-    expect(options).toEqual(['Wybierz gracza z drużyny', 'Bartek']);
+    expect(options).toEqual(['Pick a team member', 'Bartek']);
 
-    await user.selectOptions(screen.getByLabelText('Kogo zmuszasz do jawnej karty misji'), 'p1');
-    await user.click(screen.getByRole('button', { name: 'Zagraj kartę' }));
+    await user.selectOptions(screen.getByLabelText('Who do you force to play an open mission card'), 'p1');
+    await user.click(screen.getByRole('button', { name: 'Play the card' }));
     expect(onPlay).toHaveBeenCalledWith(7, 'p1');
   });
 
@@ -218,8 +218,8 @@ describe('In the Spotlight', () => {
     const before = resistancePhaseDescription(mission({ openMissionPlayerId: 'p1' }), viewer, 2);
     const after = resistancePhaseDescription(mission({ openMissionPlayerId: 'p1', openMissionCard: false }), viewer, 2);
 
-    expect(before).toContain('Bartek musi zagrać kartę misji jawnie');
-    expect(after).toContain('Bartek zagrał/a kartę jawnie: Porażka');
+    expect(before).toContain('Bartek must play their mission card openly');
+    expect(after).toContain('Bartek played their card openly: Fail');
   });
 });
 
@@ -233,8 +233,8 @@ describe('Take Responsibility', () => {
     const onTake = vi.fn().mockResolvedValue(undefined);
     render(<ResistanceTakeResponsibility game={selecting()} onTake={onTake} />);
 
-    await user.selectOptions(screen.getByLabelText('Któremu graczowi zabierasz kartę'), 'p3');
-    await user.click(screen.getByRole('button', { name: 'Zabierz kartę' }));
+    await user.selectOptions(screen.getByLabelText('Which player do you take a card from'), 'p3');
+    await user.click(screen.getByRole('button', { name: 'Take the card' }));
 
     expect(onTake).toHaveBeenCalledWith(9, 'p3', null);
   });
@@ -249,10 +249,10 @@ describe('Take Responsibility', () => {
       />,
     );
 
-    await user.selectOptions(screen.getByLabelText('Któremu graczowi zabierasz kartę'), 'p3');
-    expect(screen.getByRole('button', { name: 'Zabierz kartę' })).toBeDisabled();
-    await user.click(screen.getByLabelText('Losowa karta z ręki'));
-    await user.click(screen.getByRole('button', { name: 'Zabierz kartę' }));
+    await user.selectOptions(screen.getByLabelText('Which player do you take a card from'), 'p3');
+    expect(screen.getByRole('button', { name: 'Take the card' })).toBeDisabled();
+    await user.click(screen.getByLabelText('A random card from the hand'));
+    await user.click(screen.getByRole('button', { name: 'Take the card' }));
 
     expect(onTake).toHaveBeenCalledWith(9, 'p3', false);
   });
@@ -267,9 +267,9 @@ describe('Take Responsibility', () => {
       />,
     );
 
-    await user.selectOptions(screen.getByLabelText('Któremu graczowi zabierasz kartę'), 'p3');
-    await user.click(screen.getByLabelText(/Kreator opinii/));
-    await user.click(screen.getByRole('button', { name: 'Zabierz kartę' }));
+    await user.selectOptions(screen.getByLabelText('Which player do you take a card from'), 'p3');
+    await user.click(screen.getByLabelText(/Opinion Maker/));
+    await user.click(screen.getByRole('button', { name: 'Take the card' }));
 
     expect(onTake).toHaveBeenCalledWith(9, 'p3', true);
   });
@@ -284,9 +284,9 @@ describe('Take Responsibility', () => {
       />,
     );
 
-    await user.selectOptions(screen.getByLabelText('Któremu graczowi zabierasz kartę'), 'p3');
-    expect(screen.queryByLabelText('Losowa karta z ręki')).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Zabierz kartę' }));
+    await user.selectOptions(screen.getByLabelText('Which player do you take a card from'), 'p3');
+    expect(screen.queryByLabelText('A random card from the hand')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Take the card' }));
     expect(onTake).toHaveBeenCalledWith(9, 'p3', null);
 
     // After the push the Opinion Maker is held by the taker, so the old target has nothing to choose between
@@ -296,8 +296,8 @@ describe('Take Responsibility', () => {
         onTake={onTake}
       />,
     );
-    await user.selectOptions(screen.getByLabelText('Któremu graczowi zabierasz kartę'), 'p3');
-    expect(screen.queryByLabelText('Losowa karta z ręki')).not.toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText('Which player do you take a card from'), 'p3');
+    expect(screen.queryByLabelText('A random card from the hand')).not.toBeInTheDocument();
   });
 
   it('is hidden while a team is voted on and without the card', () => {
@@ -319,7 +319,7 @@ describe('Strong Leader leader window', () => {
     const onTakeLead = vi.fn().mockResolvedValue(undefined);
     render(<ResistanceLeaderWindow game={windowGame()} onTakeLead={onTakeLead} onNoConfidence={vi.fn()} onPass={vi.fn()} />);
 
-    await user.click(screen.getByRole('button', { name: 'Przejmij przywództwo' }));
+    await user.click(screen.getByRole('button', { name: 'Take the lead' }));
 
     expect(onTakeLead).toHaveBeenCalledWith(5);
   });
@@ -329,8 +329,8 @@ describe('Strong Leader leader window', () => {
     const onPass = vi.fn().mockResolvedValue(undefined);
     render(<ResistanceLeaderWindow game={windowGame({ yourPlotCards: [] })} onTakeLead={vi.fn()} onNoConfidence={vi.fn()} onPass={onPass} />);
 
-    expect(screen.queryByRole('button', { name: 'Przejmij przywództwo' })).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Nie zagrywam karty' }));
+    expect(screen.queryByRole('button', { name: 'Take the lead' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: "I'm not playing a card" }));
 
     expect(onPass).toHaveBeenCalled();
   });
@@ -339,8 +339,8 @@ describe('Strong Leader leader window', () => {
     const passed = windowGame({ leaderWindowPassedPlayerIds: ['p0', 'p2'] });
     render(<ResistanceLeaderWindow game={passed} onTakeLead={vi.fn()} onNoConfidence={vi.fn()} onPass={vi.fn()} />);
 
-    expect(screen.getByRole('button', { name: 'Potwierdzono' })).toBeDisabled();
-    expect(resistancePhaseDescription(passed, { canManage: false, isAdmin: false }, 2)).toContain('Potwierdzili: 2/5');
+    expect(screen.getByRole('button', { name: 'Confirmed' })).toBeDisabled();
+    expect(resistancePhaseDescription(passed, { canManage: false, isAdmin: false }, 2)).toContain('Confirmed: 2/5');
   });
 
   it('lets the holder of No Confidence cancel the approval in the confidence window', async () => {
@@ -350,10 +350,10 @@ describe('Strong Leader leader window', () => {
     const approved = windowGame({ phase: 'ConfidenceWindow', yourPlotCards: [noConfidence], teamPlayerIds: ['p0', 'p1'] });
     render(<ResistanceLeaderWindow game={approved} onTakeLead={vi.fn()} onNoConfidence={onNoConfidence} onPass={vi.fn()} />);
 
-    await user.click(screen.getByRole('button', { name: 'Odrzuć zatwierdzoną drużynę' }));
+    await user.click(screen.getByRole('button', { name: 'Reject the approved team' }));
 
     expect(onNoConfidence).toHaveBeenCalledWith(7);
-    expect(resistancePhaseDescription(approved, { canManage: false, isAdmin: false }, 2)).toContain('decydują, czy zagrywają karty');
+    expect(resistancePhaseDescription(approved, { canManage: false, isAdmin: false }, 2)).toContain('the players decide whether to play Plot cards');
   });
 });
 
@@ -369,15 +369,15 @@ describe('Keeping a Close Eye', () => {
     render(<ResistanceCloseEye game={afterMission({ playedPlotCards: [looked] })} onPeek={onPeek} />);
 
     expect(screen.queryByRole('option', { name: 'Bartek' })).toBeNull();
-    await user.selectOptions(screen.getByLabelText('Której karcie Misji się przyglądasz'), 'p2');
-    await user.click(screen.getByRole('button', { name: 'Podejrzyj kartę' }));
+    await user.selectOptions(screen.getByLabelText('Whose mission card are you looking at'), 'p2');
+    await user.click(screen.getByRole('button', { name: 'Look at the card' }));
 
     expect(onPeek).toHaveBeenCalledWith(4, 'p2');
   });
 
   it('shows the card that was seen and hides the picker outside the mission result', () => {
     const seen = render(<ResistanceCloseEye game={afterMission({ yourPlotCards: [], yourPeeks: [{ playerId: 'p2', success: false }] })} onPeek={vi.fn()} />);
-    expect(seen.getByText('Celina zagrał/a: Porażka')).toBeInTheDocument();
+    expect(seen.getByText('Celina played: Fail')).toBeInTheDocument();
     seen.unmount();
 
     const early = render(<ResistanceCloseEye game={afterMission({ phase: 'PlayingMission' })} onPeek={vi.fn()} />);
@@ -386,6 +386,6 @@ describe('Keeping a Close Eye', () => {
 
   it('no longer offers the picker once the window is over', () => {
     render(<ResistanceCloseEye game={afterMission({ phase: 'MissionResult' })} onPeek={vi.fn()} />);
-    expect(screen.queryByRole('button', { name: 'Podejrzyj kartę' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Look at the card' })).toBeNull();
   });
 });

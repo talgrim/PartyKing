@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { SWRConfig } from 'swr';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { setLanguage } from '@/i18n';
 import { Games } from './Games';
 
 const mocks = vi.hoisted(() => ({ getGames: vi.fn(), getSuggestions: vi.fn(), getResistance: vi.fn(), getRingo: vi.fn() }));
@@ -55,6 +56,16 @@ describe('Games', () => {
     renderPage();
 
     expect(await screen.findByRole('button', { name: 'Create' })).toBeInTheDocument();
+  });
+
+  it('labels the page in Polish', async () => {
+    await setLanguage('pl');
+    mocks.getGames.mockResolvedValue([{ id: 'resistance', name: 'Resistance', description: 'Gra dedukcji społecznej.' }]);
+    mocks.getResistance.mockResolvedValue({ isOpen: false, players: [], yourPlayerId: null, maxPlayers: 10 });
+    renderPage();
+
+    expect(await screen.findByRole('link', { name: 'Wznów' })).toHaveAttribute('href', '/s/session-1/games/resistance');
+    expect(screen.getByRole('link', { name: 'Wróć do sesji' })).toHaveAttribute('href', '/s/session-1');
   });
 
   it('links to the Resistance board when the lobby exists', async () => {

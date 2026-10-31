@@ -1,6 +1,7 @@
 import { ReactNode, useState } from 'react';
 import { ResistanceGameDto } from '@/service/endpoints/games/types';
 import { PLOT_CARDS } from './resistancePlotCards';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   game: ResistanceGameDto;
@@ -12,6 +13,7 @@ type Props = {
  * Not your own, and a card nobody has looked at yet. The play is public; the card seen stays with the peeker.
  */
 export const ResistanceCloseEye = ({ game, onPeek }: Props): ReactNode => {
+  const { t } = useTranslation();
   const [target, setTarget] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const card = game.yourPlotCards.find((x) => x.type === 'KeepingCloseEye' && !x.toDeal);
@@ -47,14 +49,14 @@ export const ResistanceCloseEye = ({ game, onPeek }: Props): ReactNode => {
         <p className="font-medium text-slate-100">{name}</p>
         {peeks.map((seen) => (
           <p key={seen.playerId} className="text-sm text-slate-100">
-            {nameOf(seen.playerId)} zagrał/a: {seen.success ? 'Sukces' : 'Porażka'}
+            {t('resistance.closeEye.seen', { name: nameOf(seen.playerId), card: seen.success ? t('resistance.missionCard.success') : t('resistance.missionCard.fail') })}
           </p>
         ))}
         {inWindow && card != null && options.length > 0 && (
           <>
             <p className="mb-1 text-sm text-slate-400">{effect}</p>
             <label htmlFor="close-eye-target" className="sr-only">
-              Której karcie Misji się przyglądasz
+              {t('resistance.closeEye.target')}
             </label>
             <select
               id="close-eye-target"
@@ -64,7 +66,7 @@ export const ResistanceCloseEye = ({ game, onPeek }: Props): ReactNode => {
               className="w-full rounded-lg bg-slate-800 px-3 py-2 text-slate-100 ring-1 ring-slate-700"
             >
               <option value="" disabled>
-                Wybierz gracza z drużyny
+                {t('resistance.closeEye.pick')}
               </option>
               {options.map((player) => (
                 <option key={player.id} value={player.id}>
@@ -78,7 +80,7 @@ export const ResistanceCloseEye = ({ game, onPeek }: Props): ReactNode => {
               onClick={() => void peek()}
               className="mt-2 w-full rounded-lg bg-emerald-500 px-4 py-2 font-semibold text-slate-900 transition-colors hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
             >
-              Podejrzyj kartę
+              {t('resistance.closeEye.peek')}
             </button>
           </>
         )}

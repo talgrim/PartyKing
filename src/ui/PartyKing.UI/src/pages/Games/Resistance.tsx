@@ -18,7 +18,7 @@ import { ResistancePlayerView } from '@/pages/Games/resistance/ResistancePlayerV
 import { ResistanceTvBoard } from '@/pages/Games/resistance/ResistanceTvBoard';
 import { ResistanceViewSwitch } from '@/pages/Games/resistance/ResistanceViewSwitch';
 import { resistancePhaseDescription } from '@/pages/Games/resistance/resistancePhase';
-import { RESISTANCE_RULES } from '@/pages/Games/resistance/resistanceRules';
+import { resistanceRules } from '@/pages/Games/resistance/resistanceRules';
 import { missionBoardFor } from '@/pages/Games/resistance/resistanceTeams';
 import {
   sessionGamesPath,
@@ -36,6 +36,7 @@ import { useSessionMusicHub } from '@/service/realtime/useSessionMusicHub';
 import { usePersistedFlag } from '@/utils/usePersistedFlag';
 import { ResistanceGameSettings } from './ResistanceGameSettings';
 import { ResistanceSettings } from './ResistanceSettings';
+import { useTranslation } from 'react-i18next';
 
 /** From this width a player has room for their own view and the board side by side, so there is no switch. */
 const WIDE_QUERY = '(min-width: 1024px)';
@@ -47,10 +48,10 @@ const WIDE_QUERY = '(min-width: 1024px)';
  * open. The host or an admin starts the game with at least five players: that locks the players, shows the first
  * leader's crown and gives every player a face-down card with their secret role (a spy also sees the other spies).
  * Anyone else only watches. The leader picks the team, every player votes on it (a vote can be changed until the
- * last player has voted; the votes become public then), and a rejected team passes the lead on after "Dalej" (the
+ * last player has voted; the votes become public then), and a rejected team passes the lead on after "Next" (the
  * leader, host or an admin). Five rejected teams in a row end the game with a spy win. An approved team plays the mission: every
  * member secretly plays Success or Fail (a Resistance member only Success), only the number of Fail cards becomes
- * public, and "Dalej" starts the next mission. Three successes or failures end the game.
+ * public, and "Next" starts the next mission. Three successes or failures end the game.
  *
  * Two layouts share the page. The TV layout (`?tv=1` for the host and admins, and for a host or admin who is not
  * playing) has the manager controls, the board in the middle and the players around the edge, and never shows the
@@ -59,6 +60,7 @@ const WIDE_QUERY = '(min-width: 1024px)';
  * `localStorage`; from 1024 px wide a player sees both at once, without the switch. Observers only get the board.
  */
 export const Resistance = (): ReactNode => {
+  const { t } = useTranslation();
   const { sessionId = '' } = useParams();
   const navigate = useNavigate();
   const { data: game, error, mutate } = useResistanceGame(sessionId);
@@ -98,8 +100,8 @@ export const Resistance = (): ReactNode => {
   const board = missionBoardFor(players.length, game?.rules);
 
   const back = canManage
-    ? { to: sessionGamesPath(sessionId), label: 'Back to the games' }
-    : { to: sessionPath(sessionId), label: 'Back to the session' };
+    ? { to: sessionGamesPath(sessionId), label: t('resistance.page.backToGames') }
+    : { to: sessionPath(sessionId), label: t('common.backToSession') };
 
   const openGame = async () => {
     setMessage(undefined);
@@ -107,7 +109,7 @@ export const Resistance = (): ReactNode => {
       await mutate(gamesApi.openResistance(sessionId), { revalidate: false });
       void mutateGlobal(resistanceLobbyKey(sessionId));
     } catch {
-      setMessage('Could not open the game.');
+      setMessage(t('resistance.errors.open'));
     }
   };
 
@@ -116,7 +118,7 @@ export const Resistance = (): ReactNode => {
     try {
       await mutate(gamesApi.refreshResistanceRules(sessionId), { revalidate: false });
     } catch {
-      setMessage('Could not refresh the rules.');
+      setMessage(t('resistance.errors.refreshRules'));
     }
   };
 
@@ -126,7 +128,7 @@ export const Resistance = (): ReactNode => {
       await mutate(gamesApi.startResistance(sessionId), { revalidate: false });
       void mutateGlobal(resistanceLobbyKey(sessionId));
     } catch {
-      setMessage('Could not start the game.');
+      setMessage(t('resistance.errors.start'));
     }
   };
 
@@ -135,7 +137,7 @@ export const Resistance = (): ReactNode => {
     try {
       await mutate(gamesApi.selectResistanceTeam(sessionId, playerIds), { revalidate: false });
     } catch {
-      setMessage('Could not submit the team.');
+      setMessage(t('resistance.errors.submitTeam'));
     }
   };
 
@@ -144,7 +146,7 @@ export const Resistance = (): ReactNode => {
     try {
       await mutate(gamesApi.dealResistancePlotCards(sessionId, assignments), { revalidate: false });
     } catch {
-      setMessage('Could not deal the cards.');
+      setMessage(t('resistance.errors.deal'));
     }
   };
 
@@ -153,7 +155,7 @@ export const Resistance = (): ReactNode => {
     try {
       await mutate(gamesApi.playResistancePlotCard(sessionId, cardId, targetPlayerId), { revalidate: false });
     } catch {
-      setMessage('Could not play the card.');
+      setMessage(t('resistance.errors.play'));
     }
   };
 
@@ -162,7 +164,7 @@ export const Resistance = (): ReactNode => {
     try {
       await mutate(gamesApi.takeResistanceResponsibility(sessionId, cardId, targetPlayerId, takeOpinionMaker), { revalidate: false });
     } catch {
-      setMessage('Could not take the card.');
+      setMessage(t('resistance.errors.take'));
     }
   };
 
@@ -171,7 +173,7 @@ export const Resistance = (): ReactNode => {
     try {
       await mutate(gamesApi.takeResistanceLead(sessionId, cardId), { revalidate: false });
     } catch {
-      setMessage('Could not take the lead.');
+      setMessage(t('resistance.errors.takeLead'));
     }
   };
 
@@ -180,7 +182,7 @@ export const Resistance = (): ReactNode => {
     try {
       await mutate(gamesApi.peekResistanceMissionCard(sessionId, cardId, targetPlayerId), { revalidate: false });
     } catch {
-      setMessage('Could not look at the card.');
+      setMessage(t('resistance.errors.peek'));
     }
   };
 
@@ -189,7 +191,7 @@ export const Resistance = (): ReactNode => {
     try {
       await mutate(gamesApi.playResistanceNoConfidence(sessionId, cardId), { revalidate: false });
     } catch {
-      setMessage('Could not play the card.');
+      setMessage(t('resistance.errors.play'));
     }
   };
 
@@ -198,7 +200,7 @@ export const Resistance = (): ReactNode => {
     try {
       await mutate(gamesApi.passResistanceLeaderWindow(sessionId), { revalidate: false });
     } catch {
-      setMessage('Could not confirm.');
+      setMessage(t('resistance.errors.confirmWindow'));
     }
   };
 
@@ -207,7 +209,7 @@ export const Resistance = (): ReactNode => {
     try {
       await mutate(gamesApi.confirmResistancePlotCard(sessionId, cardId), { revalidate: false });
     } catch {
-      setMessage('Could not confirm the card.');
+      setMessage(t('resistance.errors.confirmCard'));
     }
   };
 
@@ -216,7 +218,7 @@ export const Resistance = (): ReactNode => {
     try {
       await mutate(gamesApi.voteResistanceTeam(sessionId, approve), { revalidate: false });
     } catch {
-      setMessage('Could not send the vote.');
+      setMessage(t('resistance.errors.vote'));
     }
   };
 
@@ -225,7 +227,7 @@ export const Resistance = (): ReactNode => {
     try {
       await mutate(gamesApi.playResistanceMissionCard(sessionId, success), { revalidate: false });
     } catch {
-      setMessage('Could not play the mission card.');
+      setMessage(t('resistance.errors.missionCard'));
     }
   };
 
@@ -234,7 +236,7 @@ export const Resistance = (): ReactNode => {
     try {
       await mutate(gamesApi.continueResistance(sessionId), { revalidate: false });
     } catch {
-      setMessage('Could not move on.');
+      setMessage(t('resistance.errors.next'));
     }
   };
 
@@ -243,7 +245,7 @@ export const Resistance = (): ReactNode => {
     try {
       await mutate(gamesApi.restartResistance(sessionId), { revalidate: false });
     } catch {
-      setMessage('Could not restart the game.');
+      setMessage(t('resistance.errors.restart'));
     }
   };
 
@@ -255,7 +257,7 @@ export const Resistance = (): ReactNode => {
       navigate(sessionGamesPath(sessionId), { replace: true });
     } catch {
       setConfirmingEnd(false);
-      setMessage('Could not end the game.');
+      setMessage(t('resistance.errors.end'));
     }
   };
 
@@ -270,8 +272,8 @@ export const Resistance = (): ReactNode => {
     <button
       type="button"
       onClick={() => setRulesOpen(true)}
-      aria-label="Rules"
-      title="Rules"
+      aria-label={t('resistance.page.rules')}
+      title={t('resistance.page.rules')}
       className="p-1 text-slate-400 hover:text-slate-200 cursor-pointer"
     >
       <InfoOutlinedIcon />
@@ -283,8 +285,8 @@ export const Resistance = (): ReactNode => {
       type="button"
       onClick={() => setSettingsOpen(true)}
       disabled={started}
-      aria-label="Game settings"
-      title={started ? 'Ustawienia są zablokowane po rozpoczęciu gry' : 'Game settings'}
+      aria-label={t('resistance.settings.title')}
+      title={started ? t('resistance.settings.locked') : t('resistance.settings.title')}
       className="p-1 text-slate-400 hover:text-slate-200 cursor-pointer disabled:opacity-50 disabled:cursor-default disabled:hover:text-slate-400"
     >
       <SettingsIcon />
@@ -314,7 +316,7 @@ export const Resistance = (): ReactNode => {
 
   const playerCount = game && (
     <span className="text-slate-400">
-      {players.length}/{game.maxPlayers} graczy
+      {t('resistance.page.playerCount', { current: players.length, max: game.maxPlayers })}
     </span>
   );
 
@@ -323,17 +325,17 @@ export const Resistance = (): ReactNode => {
       className={
         tvLayout
           ? 'relative w-full h-screen bg-slate-800 text-slate-400'
-          : 'flex flex-col gap-3 w-full min-h-screen p-3 bg-slate-800 text-slate-400'
+          : 'flex flex-col gap-3 w-full min-h-screen p-3 pt-10 bg-slate-800 text-slate-400'
       }
     >
       {tvLayout ? (
-        <nav className="absolute inset-x-0 top-0 h-[10%] px-[10%] flex items-center">
+        <nav className="absolute inset-x-0 top-0 h-[10%] pl-[max(10%,5rem)] pr-[10%] flex items-center">
           <div className="flex items-center gap-2 w-full">
             <PageNavigation
               links={[
                 back,
                 ...(game && canManage && game.isOpen && !started && game.yourPlayerId == null
-                  ? [{ to: sessionResistanceJoinPath(sessionId), label: 'Join as a player' }]
+                  ? [{ to: sessionResistanceJoinPath(sessionId), label: t('resistance.page.joinAsPlayer') }]
                   : []),
               ]}
             />
@@ -357,7 +359,7 @@ export const Resistance = (): ReactNode => {
               aria-controls="resistance-manager-controls"
               className="px-3 py-2 text-slate-200 bg-slate-900 rounded-md hover:bg-slate-700 cursor-pointer"
             >
-              Controls
+              {t('resistance.controls.show')}
             </button>
           )}
           {trailingButtons}
@@ -365,14 +367,14 @@ export const Resistance = (): ReactNode => {
       )}
 
       {!tvLayout && canManage && controlsOpen && (
-        <div id="resistance-manager-controls" role="group" aria-label="Game controls" className="flex flex-wrap gap-2">
+        <div id="resistance-manager-controls" role="group" aria-label={t('resistance.controls.label')} className="flex flex-wrap gap-2">
           <a
             href={withDevPersona(`${sessionResistancePath(sessionId)}?tv=1`)}
             target="_blank"
             rel="noopener noreferrer"
             className="px-3 py-2 text-slate-200 bg-slate-900 rounded-md hover:bg-slate-700"
           >
-            Open TV view
+            {t('resistance.controls.openTv')}
           </a>
           {managerControls}
         </div>
@@ -424,12 +426,12 @@ export const Resistance = (): ReactNode => {
         aria-labelledby="end-resistance-title"
         slotProps={{ paper: { className: 'bg-slate-800! text-slate-200!' } }}
       >
-        <DialogTitle id="end-resistance-title">End the game?</DialogTitle>
-        <DialogContent>The players are sent away and the game can't be resumed. A new one can be created afterwards.</DialogContent>
+        <DialogTitle id="end-resistance-title">{t('resistance.page.endTitle')}</DialogTitle>
+        <DialogContent>{t('resistance.page.endBody')}</DialogContent>
         <DialogActions>
-          <Button onClick={() => setConfirmingEnd(false)}>Cancel</Button>
+          <Button onClick={() => setConfirmingEnd(false)}>{t('common.cancel')}</Button>
           <Button color="error" onClick={() => void endGame()}>
-            End game
+            {t('resistance.controls.end')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -440,9 +442,9 @@ export const Resistance = (): ReactNode => {
         aria-labelledby="resistance-rules-title"
         slotProps={{ paper: { className: 'bg-slate-800! text-slate-200!' } }}
       >
-        <DialogTitle id="resistance-rules-title">Zasady gry Resistance</DialogTitle>
+        <DialogTitle id="resistance-rules-title">{t('resistance.page.rulesTitle')}</DialogTitle>
         <DialogContent className="space-y-3">
-          {RESISTANCE_RULES.map((rule) => (
+          {resistanceRules().map((rule) => (
             <section key={rule.title}>
               <h2 className="text-slate-200">{rule.title}</h2>
               <p className="text-sm text-slate-400">{rule.text}</p>
@@ -460,7 +462,7 @@ export const Resistance = (): ReactNode => {
           ))}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setRulesOpen(false)}>Close</Button>
+          <Button onClick={() => setRulesOpen(false)}>{t('common.close')}</Button>
         </DialogActions>
       </Dialog>
     </div>

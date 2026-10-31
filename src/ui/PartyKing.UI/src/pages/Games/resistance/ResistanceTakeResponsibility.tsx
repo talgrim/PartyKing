@@ -1,6 +1,7 @@
 import { ReactNode, useState } from 'react';
 import { ResistanceGameDto } from '@/service/endpoints/games/types';
 import { PLOT_CARDS } from './resistancePlotCards';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   game: ResistanceGameDto;
@@ -16,6 +17,7 @@ const PLAYABLE_PHASES = ['SelectingTeam', 'PlayingMission', 'PeekWindow', 'Missi
  * chooses which; otherwise the server takes what there is (or nothing).
  */
 export const ResistanceTakeResponsibility = ({ game, onTake }: Props): ReactNode => {
+  const { t } = useTranslation();
   const [target, setTarget] = useState('');
   const [choice, setChoice] = useState<boolean | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -48,7 +50,7 @@ export const ResistanceTakeResponsibility = ({ game, onTake }: Props): ReactNode
         <p className="font-medium text-slate-100">{name}</p>
         <p className="mb-1 text-sm text-slate-400">{effect}</p>
         <label htmlFor="take-target" className="sr-only">
-          Któremu graczowi zabierasz kartę
+          {t('resistance.take.target')}
         </label>
         <select
           id="take-target"
@@ -61,7 +63,7 @@ export const ResistanceTakeResponsibility = ({ game, onTake }: Props): ReactNode
           className="w-full rounded-lg bg-slate-800 px-3 py-2 text-slate-100 ring-1 ring-slate-700"
         >
           <option value="" disabled>
-            Wybierz gracza
+            {t('resistance.take.pick')}
           </option>
           {others.map((player) => (
             <option key={player.id} value={player.id}>
@@ -71,14 +73,14 @@ export const ResistanceTakeResponsibility = ({ game, onTake }: Props): ReactNode
         </select>
         {mustChoose && (
           <fieldset className="mt-2 flex flex-col gap-1 text-sm text-slate-200">
-            <legend className="sr-only">Którą kartę zabierasz</legend>
+            <legend className="sr-only">{t('resistance.take.which')}</legend>
             <label className="flex items-center gap-2">
               <input type="radio" name="take-choice" checked={choice === true} onChange={() => setChoice(true)} />
-              Kreator opinii (widoczna karta)
+              {t('resistance.take.opinionMaker')}
             </label>
             <label className="flex items-center gap-2">
               <input type="radio" name="take-choice" checked={choice === false} onChange={() => setChoice(false)} />
-              Losowa karta z ręki
+              {t('resistance.take.random')}
             </label>
           </fieldset>
         )}
@@ -88,7 +90,7 @@ export const ResistanceTakeResponsibility = ({ game, onTake }: Props): ReactNode
           onClick={() => void take()}
           className="mt-2 w-full rounded-lg bg-emerald-500 px-4 py-2 font-semibold text-slate-900 transition-colors hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
         >
-          Zabierz kartę
+          {t('resistance.take.submit')}
         </button>
       </div>
     </section>

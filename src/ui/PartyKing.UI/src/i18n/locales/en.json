@@ -1,0 +1,759 @@
+{
+  "language": {
+    "label": "Language"
+  },
+  "common": {
+    "somethingWentWrong": "Something went wrong",
+    "noSessionsYet": "There are no sessions yet.",
+    "hostName": "Host: {{name}}",
+    "noHost": "No host yet",
+    "errorOccurred": "Error occurred: {{message}}",
+    "close": "Close",
+    "remove": "Remove",
+    "save": "Save",
+    "backToSessions": "Back to the sessions",
+    "cancel": "Cancel",
+    "backToSession": "Back to the session",
+    "tooManyRequests": "Too many requests, try again in a minute",
+    "suggestionsFailed": "Could not get suggestions"
+  },
+  "home": {
+    "adminPanel": "Admin panel",
+    "title": "Join a party",
+    "subtitle": "Pick a session below or search by its code",
+    "findSession": "Find a session",
+    "searchPlaceholder": "Search by session code",
+    "searchLabel": "Search sessions by code",
+    "loadError": "Could not load the sessions",
+    "loading": "Loading sessions…",
+    "noMatch": "No session matches “{{search}}”.",
+    "sessions": "Sessions",
+    "passwordProtected": "Password protected"
+  },
+  "admin": {
+    "allSessions": "All sessions",
+    "title": "Admin",
+    "checkingLogin": "Checking the login…",
+    "apiUnreachable": "Could not reach the API",
+    "username": "Username",
+    "password": "Password",
+    "logIn": "Log in",
+    "logOut": "Log out",
+    "newSessionNamePlaceholder": "New session name (optional)",
+    "newSessionNameLabel": "New session name",
+    "sessionPasswordPlaceholder": "Session password",
+    "newSessionPasswordLabel": "New session password",
+    "createSession": "Create session",
+    "sessionCreated": "Session created",
+    "sessionDeleted": "Session deleted",
+    "hostRemoved": "Host removed",
+    "linkCopied": "Link to “{{name}}” copied",
+    "confirmDelete": "Delete “{{name}}” ({{code}}) together with its queue and photos?",
+    "confirmRemoveHost": "Remove {{host}} as the host of “{{name}}”?",
+    "copyLink": "Copy link",
+    "games": "Games",
+    "removeHost": "Remove host",
+    "delete": "Delete"
+  },
+  "imagePreview": {
+    "name": "Name:",
+    "size": "Size:"
+  },
+  "player": {
+    "play": "Play",
+    "pause": "Pause",
+    "nextSong": "Next song",
+    "volume": "Volume",
+    "volumeDown": "Volume down",
+    "volumeUp": "Volume up"
+  },
+  "nowPlaying": {
+    "title": "Now playing",
+    "nothing": "Nothing is playing. Add a song to the queue.",
+    "paused": "Paused",
+    "playerNotConnected": "The host's player is not connected."
+  },
+  "errorLog": {
+    "title": "Error log",
+    "none": "No errors"
+  },
+  "autoLyrics": {
+    "label": "Switch between the slideshow and the lyrics by itself"
+  },
+  "views": {
+    "lyrics": "Lyrics",
+    "slideshow": "Slideshow"
+  },
+  "openGames": {
+    "label": "Open games"
+  },
+  "photoUpload": {
+    "title": "Upload photos"
+  },
+  "sessionSettings": {
+    "title": "Session settings",
+    "name": "Name",
+    "password": "Password",
+    "fallbackPlaylist": "Fallback playlist"
+  },
+  "joinQr": {
+    "createFailed": "Could not create the QR code",
+    "show": "Show QR code",
+    "title": "Scan to join without the password",
+    "qrTitle": "QR code to join the session",
+    "refreshNote": "The code refreshes by itself. Close this window when everyone has joined.",
+    "creating": "Creating the QR code…"
+  },
+  "maximized": {
+    "exit": "Exit full view",
+    "hideQueue": "Hide queue",
+    "showQueue": "Show queue",
+    "queue": "Queue"
+  },
+  "sessionHeader": {
+    "loginFailed": "Could not start the login",
+    "code": "Code",
+    "currentHost": "Current Host: {{name}}",
+    "imTheHost": "I'm the host",
+    "loginAsHost": "Log in as host with Spotify"
+  },
+  "nameForm": {
+    "saved": "Name saved",
+    "label": "Session name",
+    "save": "Save name"
+  },
+  "passwordChange": {
+    "changed": "Password changed. Guests have to enter the new one.",
+    "label": "New password",
+    "change": "Change password",
+    "hint_one": "At least {{count}} character. Guests have to enter the new password again.",
+    "hint_other": "At least {{count}} characters. Guests have to enter the new password again."
+  },
+  "sessionPassword": {
+    "wrong": "Wrong password",
+    "tooMany": "Too many attempts, try again in a minute",
+    "title": "This session is password protected",
+    "label": "Session password",
+    "join": "Join"
+  },
+  "slideshowSettings": {
+    "loading": "Loading the settings…",
+    "saved": "Slideshow settings saved",
+    "secondsPerPhoto": "Seconds per photo",
+    "repeat": "Start over after the last photo",
+    "showAgain": "Show photos that were already presented again"
+  },
+  "adminPlayer": {
+    "commandFailed": "The command failed"
+  },
+  "slideshowControls": {
+    "hideSlideshow": "Hide slideshow",
+    "showSlideshow": "Show slideshow",
+    "hideLyrics": "Hide lyrics",
+    "showLyrics": "Show lyrics",
+    "showLyricsNone": "Show lyrics (none found for this song)",
+    "maximize": "Maximize"
+  },
+  "fallback": {
+    "loadFailed": "Could not load your playlists",
+    "saved": "Fallback playlist saved",
+    "removed": "Fallback playlist removed",
+    "playsWhenEmpty": "Plays when the queue is empty",
+    "hint": "Plays a song from one of the host’s playlists whenever the queue is empty.",
+    "yourPlaylists": "Your playlists",
+    "tracks_one": "{{count}} track",
+    "tracks_other": "{{count}} tracks",
+    "orPaste": "Or paste a playlist link",
+    "link": "Playlist link",
+    "shuffle": "Shuffle"
+  },
+  "youtubeErrors": {
+    "e2": "The video link is invalid",
+    "e5": "The video cannot be played in an HTML5 player",
+    "e100": "The video was not found or is private",
+    "e101": "The owner of the video does not allow it to be played outside YouTube",
+    "unknown": "The video could not be played"
+  },
+  "hostPlayer": {
+    "loginDidNotStick": "Host login did not stick. Check that cookies are enabled and the page and API use the same host.",
+    "loginStartFailed": "Could not start the host login",
+    "forbidden": "Only the host of this session can play its music",
+    "nextSongFailed": "Could not load the next song",
+    "logYoutubeError": "YouTube error {{code}} on \"{{name}}\" ({{url}}): {{reason}}",
+    "unknownCode": "unknown",
+    "youtubeStopped": "YouTube refused {{count}} videos in a row ({{reason}}). Not skipping any more songs; press \"{{button}}\" to continue.",
+    "skipped": "Skipped \"{{name}}\": {{reason}}",
+    "playHere": "Play here",
+    "start": "Start the music",
+    "takeoverHint": "This song is playing on another of your devices. Continue it here, from the same spot.",
+    "startHint": "The music plays in this tab, so keep the page open."
+  },
+  "uploader": {
+    "tooMany": "Too many attempts. Try again in a minute.",
+    "tooBig": "The files are too big (20 MB per photo, 100 MB at once).",
+    "failed": "Could not upload the files. Try again.",
+    "done": "Photos uploaded",
+    "choose": "Choose photos",
+    "deleteAfter": "Delete each photo after it has been shown",
+    "progress": "Upload progress",
+    "uploading": "Uploading…",
+    "upload_one": "Upload {{count}} photo",
+    "upload_other": "Upload {{count}} photos"
+  },
+  "queue": {
+    "addedToQueue": "Added to the queue",
+    "noSongs": "No songs found",
+    "addSong": "Add a song",
+    "addTitle": "Add a song to the queue",
+    "placeholder": "Search Spotify, or paste a Spotify / YouTube link",
+    "clearSearch": "Clear search",
+    "add": "Add",
+    "search": "Search",
+    "searchResults": "Search results",
+    "inQueue": "In queue",
+    "adding": "Adding...",
+    "upNext": "Up next",
+    "empty": "The queue is empty",
+    "fromPlaylist": "from playlist",
+    "removeFromQueue": "Remove {{name}} from the queue"
+  },
+  "lyrics": {
+    "loading": "Looking for the lyrics…",
+    "none": "No synchronized lyrics for this song",
+    "nothing": "Nothing is playing",
+    "size": "Lyrics size",
+    "smallerTitle": "Smaller text",
+    "smaller": "Smaller lyrics",
+    "largerTitle": "Larger text",
+    "larger": "Larger lyrics",
+    "timing": "Lyrics timing",
+    "resyncTitle": "Match the lyrics to the current position of the song",
+    "resync": "Resync lyrics",
+    "laterTitle": "Lyrics later",
+    "later": "Show lyrics later",
+    "resetTitle": "Reset the timing",
+    "resetLabel": "Lyrics timing {{offset}}, press to reset",
+    "earlierTitle": "Lyrics earlier",
+    "earlier": "Show lyrics earlier",
+    "saveTitle": "Save this timing for everyone",
+    "save": "Save lyrics timing"
+  },
+  "spotifyPlayer": {
+    "tokenFailed": "Could not get a Spotify token. Log in again.",
+    "premium": "Spotify Premium is required to play music in the browser.",
+    "refused": "Spotify refused to play the track ({{status}})",
+    "startFailed": "Could not start Spotify playback"
+  },
+  "callback": {
+    "missingCode": "Missing code",
+    "missingState": "Missing state",
+    "loginFailed": "Could not log in",
+    "success": "Authorization successful. Redirecting to the session"
+  },
+  "sessionPage": {
+    "qrExpired": "This QR code has expired. Enter the password instead.",
+    "notFound": "This session does not exist (anymore).",
+    "loadFailed": "Could not load the session."
+  },
+  "slideshowView": {
+    "loadFailed": "Could not load the slideshow.",
+    "noPhotos": "No photos yet",
+    "uploadSome": "Upload some photos and they will show up here."
+  },
+  "apiErrors": {
+    "badRequest": "Bad Request",
+    "badRequestMessage": "The request was invalid",
+    "unauthorized": "Unauthorized",
+    "unauthorizedMessage": "You are not authorized to access this resource",
+    "forbidden": "Forbidden",
+    "forbiddenMessage": "You do not have permission to access this resource",
+    "notFound": "Not Found",
+    "notFoundMessage": "The requested resource was not found",
+    "internal": "Internal Server Error",
+    "badGateway": "Bad Gateway",
+    "unavailable": "Service Unavailable",
+    "gatewayTimeout": "Gateway Timeout",
+    "unknown": "Unknown Error",
+    "unknownMessage": "Please check the logs",
+    "requestFailed": "Request failed"
+  },
+  "games": {
+    "title": "Games",
+    "loadFailed": "Could not load the games.",
+    "none": "There are no games yet.",
+    "neverSuggest": "Suggest statements",
+    "neverFallback": "The AI is unavailable, here are statements from the built-in list."
+  },
+  "ringo": {
+    "resume": "Resume",
+    "startNew": "Start new",
+    "openForGuests": "Open for guests",
+    "startFailed": "Could not start the game.",
+    "inviteMessage": "A new game of Ringo has started. Do you want to join?",
+    "joinTitle": "Join the Ringo game",
+    "orderLabel": "the turn order",
+    "kingsPile": "Kings {{found}}/{{max}}",
+    "acesPile": "Aces {{found}}",
+    "gameOverLabel": "Game over",
+    "gameOverTitle": "Game over!",
+    "flippedFourthKing": "flipped the fourth king: {{card}}",
+    "endGame": "End game",
+    "historyShow": "History",
+    "historyHide": "Hide history",
+    "historyEmpty": "No cards flipped yet.",
+    "historyEntry": "{{time}}: {{name}} flipped the card: {{card}}",
+    "continue": "Continue",
+    "suggestRules": "Suggest rules",
+    "suggestFallback": "The AI is unavailable, here are rules from the built-in list.",
+    "backToGames": "Back to the games",
+    "openGame": "Open the game",
+    "joinAsPlayer": "Join as a player",
+    "turn": "Turn:",
+    "flipFailed": "Could not flip the card.",
+    "continueFailed": "Could not continue the game.",
+    "openFailed": "Could not open the game.",
+    "endFailed": "Could not end the game.",
+    "loadFailed": "Could not load the game.",
+    "endTitle": "End the game?",
+    "endBody": "The cards are put away and the game can't be resumed. A new one can be started afterwards.",
+    "faceDown": "Face down card",
+    "cardName": "{{rank}} of {{suit}}",
+    "suit": {
+      "spades": "Spades",
+      "hearts": "Hearts",
+      "diamonds": "Diamonds",
+      "clubs": "Clubs"
+    },
+    "rank": {
+      "2": "Two",
+      "3": "Three",
+      "4": "Four",
+      "5": "Five",
+      "6": "Six",
+      "7": "Seven",
+      "8": "Eight",
+      "9": "Nine",
+      "10": "Ten",
+      "J": "Jack",
+      "Q": "Queen",
+      "K": "King",
+      "A": "Ace"
+    },
+    "effect": {
+      "2": "Hand out two sips: one each to two people, or both to one person. You can pick yourself.",
+      "3": "Hand out three sips: one each to three people, or several to one. You can pick yourself.",
+      "4": "Hand out four sips among anyone you like. You can pick yourself too.",
+      "5": "All men take a sip.",
+      "6": "All women take a sip.",
+      "7": "Put the card in front of you. At any moment do the “Batman”: put your hands together like glasses and hold them to your eyes. The last person to notice and copy the move drinks.",
+      "8": "Everyone takes a sip.",
+      "9": "Rhymes. Say a word, and each next person says a rhyme to it. Whoever repeats a word or says nothing drinks.",
+      "10": "The people to your left and right take a sip.",
+      "J": "Put the card in front of you. At any moment rest your fist on a surface. The last person to make the gesture, or the last to notice it, takes a sip.",
+      "Q": "Put the card in front of you. The first person who answers any question you ask drinks.",
+      "A": "A new rule of the game. Anything goes: penalties x2, guys drink double, talking only in questions, no swearing, the sky is the limit.",
+      "king": "That is king {{number}} of {{total}}. Nothing happens, but the fourth king ends the game.",
+      "lastKing": "The fourth king! The game is over. Down all the alcohol you have left in one go."
+    }
+  },
+  "lobby": {
+    "yes": "Yes",
+    "no": "No",
+    "you": "(you)",
+    "players": "Players",
+    "onTurn": "(on turn)",
+    "nameLabel": "Your name",
+    "nameOptional": "Your name (optional)",
+    "adminHint": "Without a name you join as “admin”.",
+    "join": "Join",
+    "kicked": "You were removed from the game.",
+    "started": "This game has already started.",
+    "notOpen": "This game is not open yet.",
+    "joinConflict": "Somebody already uses that name (or the game is closed, full or has already started).",
+    "joinBadName": "That name is not valid.",
+    "joinFailed": "Could not join the game.",
+    "dragLabel": "Drag {{name}}",
+    "kick": "Kick",
+    "kickLabel": "Kick {{name}}",
+    "changed": "The players changed, try again.",
+    "kickFailed": "Could not kick the player.",
+    "nobody": "Nobody has joined yet.",
+    "dragHint": "Drag a name to change {{order}}."
+  },
+  "resistance": {
+    "youBadge": "You",
+    "leader": "Leader",
+    "playerFallback": "player",
+    "next": "Next",
+    "entry": {
+      "create": "Create",
+      "resume": "Resume",
+      "openForGuests": "Open for guests",
+      "createFailed": "Could not create the game."
+    },
+    "inviteMessage": "A new Resistance game has started. Do you want to join?",
+    "joinTitle": "Join the Resistance game",
+    "orderLabel": "the seat order",
+    "roles": {
+      "spy": "Spy",
+      "resistance": "Resistance"
+    },
+    "roleCard": {
+      "hide": "Hide your role",
+      "show": "Show your role",
+      "fellowSpies": "Your fellow spies",
+      "fellowSpiesList": "Fellow spies"
+    },
+    "missionCard": {
+      "success": "Success",
+      "fail": "Fail"
+    },
+    "vote": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "for": "For",
+      "against": "Against"
+    },
+    "settings": {
+      "title": "Game settings",
+      "locked": "Settings are locked once the game starts",
+      "started": "The game has already started, so the settings can't be changed.",
+      "plotCardsFailed": "Could not change the Plot cards setting.",
+      "plotCards": {
+        "title": "Plot cards",
+        "description": "An add-on in which the leader draws Plot cards at the start of every mission and deals them to the other players. The cards reveal information about roles or change the course of the round: taking over the lead, cancelling a vote, peeking at a mission card.",
+        "toggle": "Enable Plot cards"
+      }
+    },
+    "controls": {
+      "label": "Game controls",
+      "show": "Controls",
+      "openTv": "Open TV view",
+      "restart": "Restart game",
+      "end": "End game",
+      "start": "Start game",
+      "startNeeds": "At least {{min}} players are needed",
+      "refreshRules": "Refresh rules",
+      "refreshRulesOpen": "The rules can only be refreshed before the game is opened",
+      "refreshRulesHint": "Fetch the current rules configuration from the server",
+      "open": "Open the game"
+    },
+    "page": {
+      "backToGames": "Back to the games",
+      "joinAsPlayer": "Join as a player",
+      "playerCount": "{{current}}/{{max}} players",
+      "rules": "Rules",
+      "rulesTitle": "Resistance rules",
+      "endTitle": "End the game?",
+      "endBody": "The players are sent away and the game can't be resumed. A new one can be created afterwards."
+    },
+    "errors": {
+      "open": "Could not open the game.",
+      "refreshRules": "Could not refresh the rules.",
+      "start": "Could not start the game.",
+      "submitTeam": "Could not submit the team.",
+      "deal": "Could not deal the cards.",
+      "play": "Could not play the card.",
+      "take": "Could not take the card.",
+      "takeLead": "Could not take the lead.",
+      "peek": "Could not look at the card.",
+      "confirmWindow": "Could not confirm.",
+      "confirmCard": "Could not confirm the card.",
+      "vote": "Could not send the vote.",
+      "missionCard": "Could not play the mission card.",
+      "next": "Could not move on.",
+      "restart": "Could not restart the game.",
+      "end": "Could not end the game."
+    },
+    "viewSwitch": {
+      "label": "View",
+      "player": "Player",
+      "board": "Board"
+    },
+    "board": {
+      "title": "Mission board",
+      "onTeam": "On the team"
+    },
+    "teamInfo": {
+      "mission": "Mission {{n}} · ",
+      "succeeded": "succeeded",
+      "failed": "failed",
+      "team": "Team",
+      "aria": "Team of mission {{n}}: {{names}}"
+    },
+    "marks": {
+      "opinionMaker": "Opinion Maker",
+      "plotCards": "Plot cards: {{count}}",
+      "playedCard": "Played a card",
+      "voted": "Voted"
+    },
+    "missionCards": {
+      "title": "Mission cards"
+    },
+    "teamCards": {
+      "label": "Team",
+      "title": "Team for mission {{n}}"
+    },
+    "voteCards": {
+      "title": "Votes"
+    },
+    "teamPicker": {
+      "title": "Pick the team",
+      "picked": "Picked players",
+      "submit": "Submit the team for a vote"
+    },
+    "votePanel": {
+      "label": "Voting",
+      "title": "Vote on the team",
+      "makerFirst": "The Opinion Maker votes first: {{names}}.",
+      "makerLocked": "Your vote as an Opinion Maker is public and can't be changed.",
+      "saved": "Your vote is saved. You can change it until everyone has voted.",
+      "makerYou": "As an Opinion Maker you vote first, and your vote is public and final.",
+      "hidden": "The votes become public only once everyone has voted."
+    },
+    "missionPanel": {
+      "label": "Mission",
+      "title": "Play a mission card",
+      "played": "Card played: {{card}}. Waiting for the other team members.",
+      "hint": "The card is secret, everyone only sees the number of Fail cards. A played card can't be changed."
+    },
+    "plotWindow": {
+      "label": "Playing cards",
+      "question": "Do you want to play a Plot card?",
+      "confirmHint": "Confirm that you are not playing a card. Nobody can see who holds which cards.",
+      "reject": "Reject the approved team",
+      "takeLead": "Take the lead",
+      "confirmed": "Confirmed",
+      "pass": "I'm not playing a card"
+    },
+    "closeEye": {
+      "seen": "{{name}} played: {{card}}",
+      "target": "Whose mission card are you looking at",
+      "pick": "Pick a team member",
+      "peek": "Look at the card"
+    },
+    "dealer": {
+      "title": "Deal the Plot cards",
+      "to": "Who gets the “{{name}}” card",
+      "pick": "Pick a player",
+      "submit": "Deal the cards"
+    },
+    "hand": {
+      "title": "Your Plot cards",
+      "inPlay": "In play, visible to everyone."
+    },
+    "immediate": {
+      "title": "Immediate cards",
+      "identityOf": "Identity card of",
+      "seen": "I've seen it",
+      "target": "Who do you play the “{{name}}” card on",
+      "pick": "Pick a player",
+      "play": "Play the card"
+    },
+    "spotlight": {
+      "target": "Who do you force to play an open mission card",
+      "pick": "Pick a team member",
+      "play": "Play the card"
+    },
+    "take": {
+      "target": "Which player do you take a card from",
+      "pick": "Pick a player",
+      "which": "Which card do you take",
+      "opinionMaker": "Opinion Maker (the visible card)",
+      "random": "A random card from the hand",
+      "submit": "Take the card"
+    },
+    "log": {
+      "title": "Plot cards played",
+      "mission": "Mission {{n}}: ",
+      "pending": " (awaiting confirmation)",
+      "OverheardConversation": "{{holder}} played “{{name}}” and looks at the identity card of {{target}}",
+      "EstablishConfidence": "{{holder}} (the leader) played “{{name}}” and shows their identity card to {{target}}",
+      "OpenUp": "{{holder}} played “{{name}}” and shows their identity card to {{target}}",
+      "TakeResponsibility": "{{holder}} played “{{name}}” and takes a Plot card from {{target}}",
+      "KeepingCloseEye": "{{holder}} played “{{name}}” and looks at the mission card of {{target}}",
+      "StrongLeader": "{{holder}} played “{{name}}” and takes the lead from {{target}}",
+      "NoConfidence": "{{holder}} played “{{name}}”: the team picked by {{target}} is rejected",
+      "default": "{{holder}} played “{{name}}”"
+    },
+    "plot": {
+      "OverheardConversation": {
+        "name": "Overheard Conversation",
+        "effect": "Play immediately: look at the identity card of one of the players sitting next to you."
+      },
+      "OpinionMaker": {
+        "name": "Opinion Maker",
+        "effect": "Stays until the end of the game: you choose and reveal your Vote card before the others."
+      },
+      "EstablishConfidence": {
+        "name": "Establish Confidence",
+        "effect": "Play immediately: the leader shows their identity card to another player."
+      },
+      "OpenUp": {
+        "name": "Open Up",
+        "effect": "Play immediately: show your identity card to another player (it may be the leader)."
+      },
+      "NoConfidence": {
+        "name": "No Confidence",
+        "effect": "One-time: reject an approved team, the vote counts as failed."
+      },
+      "KeepingCloseEye": {
+        "name": "Keeping a Close Eye on You",
+        "effect": "One-time: after the mission cards are played, look at one of the cards played."
+      },
+      "StrongLeader": {
+        "name": "Strong Leader",
+        "effect": "One-time: take over the lead before the leader does anything."
+      },
+      "InTheSpotlight": {
+        "name": "In the Spotlight",
+        "effect": "One-time: force another player to play their mission card openly."
+      },
+      "TakeResponsibility": {
+        "name": "Take Responsibility",
+        "effect": "One-time: take another player's Plot card."
+      }
+    },
+    "icons": {
+      "spy": "SPY",
+      "resistance": "RESISTANCE",
+      "approve": "APPROVE",
+      "reject": "REJECT",
+      "success": "SUCCESS",
+      "fail": "FAIL",
+      "plot": "PLOT",
+      "mission": "MISSION {{n}}",
+      "twoFails": "2 FAILS",
+      "rejectedTeams": "REJECTED TEAMS",
+      "closeEye1": "KEEPING A",
+      "closeEye2": "CLOSE EYE",
+      "establish1": "ESTABLISH",
+      "establish2": "CONFIDENCE",
+      "strongLeader1": "STRONG",
+      "strongLeader2": "LEADER",
+      "overheard1": "OVERHEARD",
+      "overheard2": "CONVERSATION",
+      "noConfidence1": "NO",
+      "noConfidence2": "CONFIDENCE",
+      "spotlight1": "IN THE",
+      "spotlight2": "SPOTLIGHT",
+      "opinionMaker1": "OPINION",
+      "opinionMaker2": "MAKER",
+      "openUp1": "OPEN UP",
+      "takeResponsibility1": "TAKE",
+      "takeResponsibility2": "RESPONSIBILITY"
+    },
+    "rules": {
+      "goal": {
+        "title": "Goal",
+        "text": "The players are secretly split into the Resistance and the Spies. At most 5 missions are played, and the team that scores 3 points first wins. The spies know each other, the Resistance does not know who the spies are."
+      },
+      "round": {
+        "title": "A round",
+        "text": "The leader picks a team of the required size (they may pick themselves). Everyone discusses, then votes simultaneously and openly: Approve or Reject. A tie rejects the team, and the lead passes on."
+      },
+      "mission": {
+        "title": "The mission",
+        "text": "Each member of the approved team secretly plays a Success or a Fail card. The Resistance must play Success, a spy may play either. The mission fails if at least one Fail card was played (in mission 4 with 7 or more players two are needed)."
+      },
+      "plot": {
+        "title": "Plot cards (add-on)",
+        "text": "If the host enables the add-on before the game is opened, the leader draws Plot cards at the start of every mission (not after a rejected team): 1 with 5-6 players, 2 with 7-8, 3 with 9-10, and deals them to the other players (the “Establish Confidence” card stays with the leader). The number of cards in every player's hand is public, the cards themselves are secret, and everyone sees every card played.",
+        "items": {
+          "makers": {
+            "name": "Opinion Maker",
+            "text": "goes on the table at once. Its owner votes on the team first, openly and without changing it; two Opinion Makers vote at the same time."
+          },
+          "immediate": {
+            "name": "Overheard Conversation, Establish Confidence, Open Up",
+            "text": "are played at once. The chosen player (or neighbour) sees an identity card and confirms it with a button."
+          },
+          "strongLeader": {
+            "name": "Strong Leader",
+            "text": "takes over the lead before the leader does anything."
+          },
+          "noConfidence": {
+            "name": "No Confidence",
+            "text": "rejects an approved team; it counts as a rejected team."
+          },
+          "spotlight": {
+            "name": "In the Spotlight",
+            "text": "forces a team member to play their mission card openly."
+          },
+          "take": {
+            "name": "Take Responsibility",
+            "text": "takes a Plot card from another player (the visible Opinion Maker or a random card from the hand)."
+          },
+          "closeEye": {
+            "name": "Keeping a Close Eye on You",
+            "text": "after the mission (before “Next”) lets you look at another player's mission card; each card can be looked at by one player only."
+          }
+        },
+        "footer": "When anyone holds a card (other than the Opinion Maker), everyone confirms before the team is picked or after it is approved that they are not playing a card, so nobody can tell who holds one."
+      },
+      "end": {
+        "title": "End of the game",
+        "text": "The Resistance wins after 3 successful missions. The Spies win after 3 failed missions or when 5 teams in a row are rejected in one mission."
+      }
+    },
+    "phase": {
+      "youLead": "You are the leader",
+      "leaderIs": "{{name}} is the leader",
+      "aPlayer": "one of the players",
+      "firstMission": "the first mission",
+      "missionN": "mission {{n}}",
+      "tapCard": "Tap your card to see your role.",
+      "rejected": "Rejected teams in a row: {{count}}/{{max}}.",
+      "tally": "for: {{approve}}, against: {{reject}}",
+      "score": "Resistance {{resistance}}, Spies {{spies}}",
+      "spiesWon": "The spies won",
+      "resistanceWon": "The Resistance won",
+      "whyRejected": "{{max}} teams in a row were rejected",
+      "whyFailed": "three missions failed",
+      "whySucceeded": "three missions succeeded",
+      "gameOver": "Game over! {{winner}}: {{why}} ({{score}}). All roles have been revealed.",
+      "dealYou": "deal the drawn Plot cards to the other players",
+      "dealLeader": "dealing the drawn Plot cards to the other players",
+      "dealing": "{{who}} (crown): {{task}}. Then the team for {{mission}} is picked.",
+      "confirmedMine": "Your confirmation is saved.",
+      "confirmPrompt": "Confirm that you are not playing a card (or play it).",
+      "leaderWindow": "{{who}} (crown), but before they do anything, the players decide whether to play Plot cards. Confirmed: {{passed}}/{{count}}.{{mine}}",
+      "mustPlayOpen": "{{name}} must play their mission card openly (“In the Spotlight”).",
+      "confidenceWindow": "The team ({{names}}) was approved ({{tally}}), but before it leaves, the players decide whether to play Plot cards. Confirmed: {{passed}}/{{count}}.{{open}}{{mine}}",
+      "waitingConfirm": "Waiting for confirmation: {{names}}.",
+      "resolving": "{{who}} (crown) dealt the Plot cards. The players play the immediate cards and confirm they have seen the identity card; then the leader picks the team.{{confirm}}",
+      "cardsPlayed": "Cards played: {{played}}/{{total}}.",
+      "failRule": "The mission fails from {{count}} Fail cards.",
+      "playYourCard": "Play your mission card.",
+      "yourCardPlayed": "Your card is played.",
+      "playedOpen": "{{name}} played their card openly: {{card}}.",
+      "playingMission": "The team ({{names}}) was approved ({{tally}}) and is on {{mission}}. {{progress}}{{rule}}{{mine}}{{open}}",
+      "missionSucceeded": "The mission succeeded",
+      "missionFailed": "The mission failed (Fail cards: {{count}})",
+      "peekWindow": "{{outcome}}. Score: {{score}}. Before the leader moves on, the players decide whether to play Plot cards. Confirmed: {{passed}}/{{count}}.{{mine}}",
+      "nextClick": "Click “Next”",
+      "nextWait": "The leader or the host will click “Next”",
+      "failCardsNote": "(Fail cards: {{count}})",
+      "missionResult": "{{outcome}}{{fails}}. Score: {{score}}. {{next}} to start the next mission.",
+      "voted": "Voted: {{voted}}/{{count}}.",
+      "voteNow": "Vote: approve or reject the team.",
+      "voteChange": "You can change your vote until everyone has voted.",
+      "makerFirst": "The Opinion Maker votes first: {{names}}.",
+      "voting": "{{who}} (crown) submitted a team for {{mission}}: {{names}}. The team now goes to a vote. {{progress}}{{order}}{{mine}}{{card}}",
+      "pickYou_one": "pick {{count}} player for {{mission}} and submit them for a vote",
+      "pickYou_other": "pick {{count}} players for {{mission}} and submit them for a vote",
+      "pickLeader_one": "picking {{count}} player for {{mission}}",
+      "pickLeader_other": "picking {{count}} players for {{mission}}",
+      "rejectedPrev": "The previous team was rejected ({{tally}}). {{rejected}}{{who}} (crown): {{task}}. Discuss it in person.{{card}}",
+      "started": "The game has started, new players can no longer join. {{who}} (crown): {{task}}. Discuss it in person.{{rejected}}{{card}}",
+      "needPlayers": "At least {{min}} players are needed.",
+      "closedAdmin": "The game is closed. Open it for guests so the players can join.{{need}}",
+      "closedGuest": "The game is closed. Wait for the admin to open it for guests.{{need}}",
+      "waitingHost": "Waiting for players",
+      "waitingGuest": "Waiting for the other players",
+      "notEnough": "{{waiting}}. At least {{min}} players are needed, {{missing}} more to go. The team sizes shown are for a {{min}}-player game.",
+      "readyManager": "There are enough players. When everyone has joined, click “Start game” (nobody can join after the start). Roles are dealt at random.",
+      "readyGuest": "There are enough players. Waiting for the host or an admin to start the game."
+    }
+  }
+}

@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogTitle } from '@mui/material';
 import { QRCodeSVG } from 'qrcode.react';
 import { sessionPath } from '@/router/constants';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
+import { useTranslation } from 'react-i18next';
 
 // The QR is swapped for a fresh one this long before its token expires
 const REFRESH_MARGIN_MS = 30_000;
@@ -18,6 +19,7 @@ type Props = {
  * token is short-lived, so it is replaced before it expires for as long as the dialog stays open.
  */
 export const JoinQrCode = ({ sessionId }: Props): ReactNode => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [joinUrl, setJoinUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +42,7 @@ export const JoinQrCode = ({ sessionId }: Props): ReactNode => {
         timer = setTimeout(() => void load(), refreshIn);
       } catch (e) {
         if (cancelled) return;
-        setError((e as { message?: string })?.message ?? 'Could not create the QR code');
+        setError((e as { message?: string })?.message ?? t('joinQr.createFailed'));
       }
     };
 
@@ -51,34 +53,34 @@ export const JoinQrCode = ({ sessionId }: Props): ReactNode => {
       clearTimeout(timer);
       setJoinUrl(null);
     };
-  }, [open, sessionId]);
+  }, [open, sessionId, t]);
 
   return (
     <>
       <button
         onClick={() => setOpen(true)}
-        aria-label="Show QR code"
-        title="Show QR code"
+        aria-label={t('joinQr.show')}
+        title={t('joinQr.show')}
         className="p-1 text-slate-400 hover:text-slate-200 cursor-pointer"
       >
         <QrCode2Icon />
       </button>
 
       <Dialog open={open} onClose={() => setOpen(false)} aria-labelledby="join-qr-title">
-        <DialogTitle id="join-qr-title">Scan to join without the password</DialogTitle>
+        <DialogTitle id="join-qr-title">{t('joinQr.title')}</DialogTitle>
         <DialogContent>
           {error && <p role="alert">{error}</p>}
           {joinUrl && (
             <div className="flex flex-col items-center gap-3">
               <div className="bg-white p-4">
-                <QRCodeSVG value={joinUrl} size={288} title="QR code to join the session" />
+                <QRCodeSVG value={joinUrl} size={288} title={t('joinQr.qrTitle')} />
               </div>
-              <p className="text-sm">The code refreshes by itself. Close this window when everyone has joined.</p>
+              <p className="text-sm">{t('joinQr.refreshNote')}</p>
             </div>
           )}
-          {!joinUrl && !error && <p>Creating the QR code…</p>}
+          {!joinUrl && !error && <p>{t('joinQr.creating')}</p>}
           <button onClick={() => setOpen(false)} className="mt-3 text-sm underline cursor-pointer">
-            Close
+            {t('common.close')}
           </button>
         </DialogContent>
       </Dialog>

@@ -1,3 +1,4 @@
+import { i18n } from '@/i18n';
 import { LyricsLineDto } from '@/service/endpoints/lyrics/types';
 
 /** The host nudges the lyrics by this much per press, to line them up with the sound they hear. */
@@ -30,6 +31,10 @@ export const activeLineIndex = (lines: LyricsLineDto[], positionMs: number): num
 };
 
 export const formatOffset = (offsetMs: number): string => {
+  const seconds = (Math.abs(offsetMs) / 1000).toLocaleString(i18n.language, {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
   const sign = offsetMs > 0 ? '+' : offsetMs < 0 ? '−' : '';
-  return `${sign}${(Math.abs(offsetMs) / 1000).toFixed(1)} s`;
+  return `${sign}${seconds} s`;
 };

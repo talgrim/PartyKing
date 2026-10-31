@@ -1,6 +1,7 @@
 import { ReactNode, useState } from 'react';
-import { ResistanceGameDto, ResistancePlotCardDto, ResistanceRole } from '@/service/endpoints/games/types';
+import { ResistanceGameDto, ResistancePlotCardDto } from '@/service/endpoints/games/types';
 import { IMMEDIATE_PLOT_CARDS, PLOT_CARDS } from './resistancePlotCards';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   game: ResistanceGameDto;
@@ -8,21 +9,20 @@ type Props = {
   onConfirm: (cardId: number) => Promise<void>;
 };
 
-const ROLE_NAMES: Record<ResistanceRole, string> = { Resistance: 'Ruch Oporu', Spy: 'Szpieg' };
-
 /**
  * The player's part of the immediate plot cards: each of their unplayed cards needs a target, and every identity card
  * shown to them has to be confirmed. Nothing can be skipped: the game waits for all of it.
  */
 export const ResistancePlotPlayer = ({ game, onPlay, onConfirm }: Props): ReactNode => {
+  const { t } = useTranslation();
   const toPlay = game.yourPlotCards.filter((card) => IMMEDIATE_PLOT_CARDS.includes(card.type) && !card.toDeal);
-  const nameOf = (id: string) => game.players.find((player) => player.id === id)?.name ?? 'gracz';
+  const nameOf = (id: string) => game.players.find((player) => player.id === id)?.name ?? t('resistance.playerFallback');
 
   if (toPlay.length === 0 && game.yourReveals.length === 0) return null;
 
   return (
-    <section aria-label="Karty natychmiastowe" className="w-full flex flex-col gap-3 rounded-xl bg-slate-900 p-4 ring-1 ring-slate-700 shadow-lg">
-      <h2 className="text-lg font-semibold text-slate-100">Karty natychmiastowe</h2>
+    <section aria-label={t('resistance.immediate.title')} className="w-full flex flex-col gap-3 rounded-xl bg-slate-900 p-4 ring-1 ring-slate-700 shadow-lg">
+      <h2 className="text-lg font-semibold text-slate-100">{t('resistance.immediate.title')}</h2>
 
       {toPlay.map((card) => (
         <PlayCard key={card.id} card={card} game={game} onPlay={onPlay} />
@@ -31,15 +31,15 @@ export const ResistancePlotPlayer = ({ game, onPlay, onConfirm }: Props): ReactN
       {game.yourReveals.map((reveal) => (
         <div key={reveal.cardId} className="flex flex-col gap-2 rounded-lg bg-slate-800 p-3">
           <p className="text-slate-100">
-            Karta Tożsamości gracza <strong>{nameOf(reveal.playerId)}</strong>:{' '}
-            <strong className={reveal.role === 'Spy' ? 'text-red-400' : 'text-sky-300'}>{ROLE_NAMES[reveal.role]}</strong>.
+            {t('resistance.immediate.identityOf')} <strong>{nameOf(reveal.playerId)}</strong>:{' '}
+            <strong className={reveal.role === 'Spy' ? 'text-red-400' : 'text-sky-300'}>{reveal.role === 'Spy' ? t('resistance.roles.spy') : t('resistance.roles.resistance')}</strong>.
           </p>
           <button
             type="button"
             onClick={() => void onConfirm(reveal.cardId)}
             className="rounded-lg bg-emerald-500 px-4 py-2 font-semibold text-slate-900 transition-colors hover:bg-emerald-400"
           >
-            Widziałem/am
+            {t('resistance.immediate.seen')}
           </button>
         </div>
       ))}
@@ -54,6 +54,7 @@ type PlayCardProps = {
 };
 
 const PlayCard = ({ card, game, onPlay }: PlayCardProps): ReactNode => {
+  const { t } = useTranslation();
   const [target, setTarget] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const { name, effect, Icon } = PLOT_CARDS[card.type];
@@ -82,7 +83,7 @@ const PlayCard = ({ card, game, onPlay }: PlayCardProps): ReactNode => {
         <p className="font-medium text-slate-100">{name}</p>
         <p className="mb-1 text-sm text-slate-400">{effect}</p>
         <label htmlFor={selectId} className="sr-only">
-          Na kogo zagrywasz kartę „{name}”
+          {t('resistance.immediate.target', { name })}
         </label>
         <select
           id={selectId}
@@ -92,7 +93,7 @@ const PlayCard = ({ card, game, onPlay }: PlayCardProps): ReactNode => {
           className="w-full rounded-lg bg-slate-800 px-3 py-2 text-slate-100 ring-1 ring-slate-700"
         >
           <option value="" disabled>
-            Wybierz gracza
+            {t('resistance.immediate.pick')}
           </option>
           {options.map((player) => (
             <option key={player.id} value={player.id}>
@@ -106,7 +107,7 @@ const PlayCard = ({ card, game, onPlay }: PlayCardProps): ReactNode => {
           onClick={() => void play()}
           className="mt-2 w-full rounded-lg bg-emerald-500 px-4 py-2 font-semibold text-slate-900 transition-colors hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
         >
-          Zagraj kartę
+          {t('resistance.immediate.play')}
         </button>
       </div>
     </div>

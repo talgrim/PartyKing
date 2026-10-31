@@ -1,0 +1,769 @@
+{
+  "language": {
+    "label": "Język"
+  },
+  "common": {
+    "somethingWentWrong": "Coś poszło nie tak",
+    "noSessionsYet": "Nie ma jeszcze żadnych sesji.",
+    "hostName": "Gospodarz: {{name}}",
+    "noHost": "Brak gospodarza",
+    "errorOccurred": "Wystąpił błąd: {{message}}",
+    "close": "Zamknij",
+    "remove": "Usuń",
+    "save": "Zapisz",
+    "backToSessions": "Wróć do sesji",
+    "cancel": "Anuluj",
+    "backToSession": "Wróć do sesji",
+    "tooManyRequests": "Za dużo zapytań, spróbuj za minutę",
+    "suggestionsFailed": "Nie udało się pobrać propozycji"
+  },
+  "home": {
+    "adminPanel": "Panel administratora",
+    "title": "Dołącz do imprezy",
+    "subtitle": "Wybierz sesję poniżej albo wyszukaj ją po kodzie",
+    "findSession": "Znajdź sesję",
+    "searchPlaceholder": "Szukaj po kodzie sesji",
+    "searchLabel": "Szukaj sesji po kodzie",
+    "loadError": "Nie udało się wczytać sesji",
+    "loading": "Wczytywanie sesji…",
+    "noMatch": "Żadna sesja nie pasuje do „{{search}}”.",
+    "sessions": "Sesje",
+    "passwordProtected": "Chroniona hasłem"
+  },
+  "admin": {
+    "allSessions": "Wszystkie sesje",
+    "title": "Administrator",
+    "checkingLogin": "Sprawdzanie logowania…",
+    "apiUnreachable": "Nie można połączyć się z API",
+    "username": "Nazwa użytkownika",
+    "password": "Hasło",
+    "logIn": "Zaloguj się",
+    "logOut": "Wyloguj się",
+    "newSessionNamePlaceholder": "Nazwa nowej sesji (opcjonalnie)",
+    "newSessionNameLabel": "Nazwa nowej sesji",
+    "sessionPasswordPlaceholder": "Hasło sesji",
+    "newSessionPasswordLabel": "Hasło nowej sesji",
+    "createSession": "Utwórz sesję",
+    "sessionCreated": "Sesja utworzona",
+    "sessionDeleted": "Sesja usunięta",
+    "hostRemoved": "Gospodarz usunięty",
+    "linkCopied": "Skopiowano link do „{{name}}”",
+    "confirmDelete": "Usunąć „{{name}}” ({{code}}) razem z kolejką i zdjęciami?",
+    "confirmRemoveHost": "Odebrać {{host}} rolę gospodarza sesji „{{name}}”?",
+    "copyLink": "Kopiuj link",
+    "games": "Gry",
+    "removeHost": "Usuń gospodarza",
+    "delete": "Usuń"
+  },
+  "imagePreview": {
+    "name": "Nazwa:",
+    "size": "Rozmiar:"
+  },
+  "player": {
+    "play": "Odtwórz",
+    "pause": "Pauza",
+    "nextSong": "Następna piosenka",
+    "volume": "Głośność",
+    "volumeDown": "Ciszej",
+    "volumeUp": "Głośniej"
+  },
+  "nowPlaying": {
+    "title": "Teraz gra",
+    "nothing": "Nic nie gra. Dodaj piosenkę do kolejki.",
+    "paused": "Wstrzymano",
+    "playerNotConnected": "Odtwarzacz gospodarza nie jest połączony."
+  },
+  "errorLog": {
+    "title": "Dziennik błędów",
+    "none": "Brak błędów"
+  },
+  "autoLyrics": {
+    "label": "Automatycznie przełączaj między pokazem slajdów a tekstem piosenki"
+  },
+  "views": {
+    "lyrics": "Tekst piosenki",
+    "slideshow": "Pokaz slajdów"
+  },
+  "openGames": {
+    "label": "Otwarte gry"
+  },
+  "photoUpload": {
+    "title": "Prześlij zdjęcia"
+  },
+  "sessionSettings": {
+    "title": "Ustawienia sesji",
+    "name": "Nazwa",
+    "password": "Hasło",
+    "fallbackPlaylist": "Playlista zapasowa"
+  },
+  "joinQr": {
+    "createFailed": "Nie udało się utworzyć kodu QR",
+    "show": "Pokaż kod QR",
+    "title": "Zeskanuj, aby dołączyć bez hasła",
+    "qrTitle": "Kod QR do dołączenia do sesji",
+    "refreshNote": "Kod odświeża się sam. Zamknij to okno, gdy wszyscy dołączą.",
+    "creating": "Tworzenie kodu QR…"
+  },
+  "maximized": {
+    "exit": "Wyjdź z pełnego widoku",
+    "hideQueue": "Ukryj kolejkę",
+    "showQueue": "Pokaż kolejkę",
+    "queue": "Kolejka"
+  },
+  "sessionHeader": {
+    "loginFailed": "Nie udało się rozpocząć logowania",
+    "code": "Kod",
+    "currentHost": "Obecny gospodarz: {{name}}",
+    "imTheHost": "Jestem gospodarzem",
+    "loginAsHost": "Zaloguj się jako gospodarz przez Spotify"
+  },
+  "nameForm": {
+    "saved": "Nazwa zapisana",
+    "label": "Nazwa sesji",
+    "save": "Zapisz nazwę"
+  },
+  "passwordChange": {
+    "changed": "Hasło zmienione. Goście muszą wpisać nowe.",
+    "label": "Nowe hasło",
+    "change": "Zmień hasło",
+    "hint_one": "Co najmniej {{count}} znak. Goście muszą ponownie wpisać nowe hasło.",
+    "hint_few": "Co najmniej {{count}} znaki. Goście muszą ponownie wpisać nowe hasło.",
+    "hint_many": "Co najmniej {{count}} znaków. Goście muszą ponownie wpisać nowe hasło.",
+    "hint_other": "Co najmniej {{count}} znaku. Goście muszą ponownie wpisać nowe hasło."
+  },
+  "sessionPassword": {
+    "wrong": "Nieprawidłowe hasło",
+    "tooMany": "Zbyt wiele prób, spróbuj ponownie za minutę",
+    "title": "Ta sesja jest chroniona hasłem",
+    "label": "Hasło sesji",
+    "join": "Dołącz"
+  },
+  "slideshowSettings": {
+    "loading": "Wczytywanie ustawień…",
+    "saved": "Ustawienia pokazu slajdów zapisane",
+    "secondsPerPhoto": "Sekundy na zdjęcie",
+    "repeat": "Zacznij od nowa po ostatnim zdjęciu",
+    "showAgain": "Pokazuj ponownie zdjęcia, które już były wyświetlone"
+  },
+  "adminPlayer": {
+    "commandFailed": "Polecenie nie powiodło się"
+  },
+  "slideshowControls": {
+    "hideSlideshow": "Ukryj slajdy",
+    "showSlideshow": "Pokaż slajdy",
+    "hideLyrics": "Ukryj tekst piosenki",
+    "showLyrics": "Pokaż tekst piosenki",
+    "showLyricsNone": "Pokaż tekst piosenki (nie znaleziono dla tej piosenki)",
+    "maximize": "Powiększ"
+  },
+  "fallback": {
+    "loadFailed": "Nie udało się wczytać Twoich playlist",
+    "saved": "Playlista zapasowa zapisana",
+    "removed": "Playlista zapasowa usunięta",
+    "playsWhenEmpty": "Gra, gdy kolejka jest pusta",
+    "hint": "Odtwarza piosenkę z jednej z playlist hosta, gdy kolejka jest pusta.",
+    "yourPlaylists": "Twoje playlisty",
+    "tracks_one": "{{count}} utwór",
+    "tracks_few": "{{count}} utwory",
+    "tracks_many": "{{count}} utworów",
+    "tracks_other": "{{count}} utworu",
+    "orPaste": "Lub wklej link do playlisty",
+    "link": "Link do playlisty",
+    "shuffle": "Losowa kolejność"
+  },
+  "youtubeErrors": {
+    "e2": "Link do filmu jest nieprawidłowy",
+    "e5": "Filmu nie można odtworzyć w odtwarzaczu HTML5",
+    "e100": "Nie znaleziono filmu lub jest prywatny",
+    "e101": "Właściciel filmu nie pozwala na odtwarzanie go poza YouTube",
+    "unknown": "Nie udało się odtworzyć filmu"
+  },
+  "hostPlayer": {
+    "loginDidNotStick": "Logowanie hosta nie zostało zapamiętane. Sprawdź, czy ciasteczka są włączone, a strona i API używają tego samego hosta.",
+    "loginStartFailed": "Nie udało się rozpocząć logowania hosta",
+    "forbidden": "Tylko host tej sesji może odtwarzać jej muzykę",
+    "nextSongFailed": "Nie udało się wczytać następnej piosenki",
+    "logYoutubeError": "Błąd YouTube {{code}} przy \"{{name}}\" ({{url}}): {{reason}}",
+    "unknownCode": "nieznany",
+    "youtubeStopped": "YouTube odrzucił {{count}} filmy z rzędu ({{reason}}). Nie pomijam już kolejnych piosenek; naciśnij „{{button}}”, aby kontynuować.",
+    "skipped": "Pominięto „{{name}}”: {{reason}}",
+    "playHere": "Graj tutaj",
+    "start": "Uruchom muzykę",
+    "takeoverHint": "Ta piosenka gra na innym Twoim urządzeniu. Kontynuuj ją tutaj, od tego samego miejsca.",
+    "startHint": "Muzyka gra w tej karcie, więc zostaw stronę otwartą."
+  },
+  "uploader": {
+    "tooMany": "Zbyt wiele prób. Spróbuj ponownie za minutę.",
+    "tooBig": "Pliki są za duże (20 MB na zdjęcie, 100 MB naraz).",
+    "failed": "Nie udało się wysłać plików. Spróbuj ponownie.",
+    "done": "Zdjęcia wysłane",
+    "choose": "Wybierz zdjęcia",
+    "deleteAfter": "Usuń każde zdjęcie po wyświetleniu",
+    "progress": "Postęp wysyłania",
+    "uploading": "Wysyłanie…",
+    "upload_one": "Wyślij {{count}} zdjęcie",
+    "upload_few": "Wyślij {{count}} zdjęcia",
+    "upload_many": "Wyślij {{count}} zdjęć",
+    "upload_other": "Wyślij {{count}} zdjęcia"
+  },
+  "queue": {
+    "addedToQueue": "Dodano do kolejki",
+    "noSongs": "Nie znaleziono piosenek",
+    "addSong": "Dodaj piosenkę",
+    "addTitle": "Dodaj piosenkę do kolejki",
+    "placeholder": "Szukaj w Spotify lub wklej link do Spotify / YouTube",
+    "clearSearch": "Wyczyść wyszukiwanie",
+    "add": "Dodaj",
+    "search": "Szukaj",
+    "searchResults": "Wyniki wyszukiwania",
+    "inQueue": "W kolejce",
+    "adding": "Dodawanie...",
+    "upNext": "Następne w kolejce",
+    "empty": "Kolejka jest pusta",
+    "fromPlaylist": "z playlisty",
+    "removeFromQueue": "Usuń {{name}} z kolejki"
+  },
+  "lyrics": {
+    "loading": "Szukanie tekstu piosenki…",
+    "none": "Brak zsynchronizowanego tekstu tej piosenki",
+    "nothing": "Nic nie gra",
+    "size": "Rozmiar tekstu",
+    "smallerTitle": "Mniejszy tekst",
+    "smaller": "Mniejszy tekst piosenki",
+    "largerTitle": "Większy tekst",
+    "larger": "Większy tekst piosenki",
+    "timing": "Synchronizacja tekstu",
+    "resyncTitle": "Dopasuj tekst do bieżącej pozycji piosenki",
+    "resync": "Zsynchronizuj tekst ponownie",
+    "laterTitle": "Tekst później",
+    "later": "Pokaż tekst później",
+    "resetTitle": "Zresetuj synchronizację",
+    "resetLabel": "Synchronizacja tekstu {{offset}}, naciśnij, aby zresetować",
+    "earlierTitle": "Tekst wcześniej",
+    "earlier": "Pokaż tekst wcześniej",
+    "saveTitle": "Zapisz tę synchronizację dla wszystkich",
+    "save": "Zapisz synchronizację tekstu"
+  },
+  "spotifyPlayer": {
+    "tokenFailed": "Nie udało się pobrać tokenu Spotify. Zaloguj się ponownie.",
+    "premium": "Aby odtwarzać muzykę w przeglądarce, potrzebny jest Spotify Premium.",
+    "refused": "Spotify odmówiło odtworzenia utworu ({{status}})",
+    "startFailed": "Nie udało się uruchomić odtwarzania w Spotify"
+  },
+  "callback": {
+    "missingCode": "Brak kodu",
+    "missingState": "Brak parametru state",
+    "loginFailed": "Nie udało się zalogować",
+    "success": "Autoryzacja zakończona sukcesem. Przekierowanie do sesji"
+  },
+  "sessionPage": {
+    "qrExpired": "Ten kod QR wygasł. Wpisz zamiast niego hasło.",
+    "notFound": "Ta sesja nie istnieje (już).",
+    "loadFailed": "Nie udało się wczytać sesji."
+  },
+  "slideshowView": {
+    "loadFailed": "Nie udało się wczytać pokazu slajdów.",
+    "noPhotos": "Brak zdjęć",
+    "uploadSome": "Wyślij kilka zdjęć, a pojawią się tutaj."
+  },
+  "apiErrors": {
+    "badRequest": "Nieprawidłowe żądanie",
+    "badRequestMessage": "Żądanie było nieprawidłowe",
+    "unauthorized": "Brak autoryzacji",
+    "unauthorizedMessage": "Nie masz autoryzacji do tego zasobu",
+    "forbidden": "Brak dostępu",
+    "forbiddenMessage": "Nie masz uprawnień do tego zasobu",
+    "notFound": "Nie znaleziono",
+    "notFoundMessage": "Nie znaleziono żądanego zasobu",
+    "internal": "Wewnętrzny błąd serwera",
+    "badGateway": "Błąd bramy",
+    "unavailable": "Usługa niedostępna",
+    "gatewayTimeout": "Przekroczono czas bramy",
+    "unknown": "Nieznany błąd",
+    "unknownMessage": "Sprawdź logi",
+    "requestFailed": "Żądanie nie powiodło się"
+  },
+  "games": {
+    "title": "Gry",
+    "loadFailed": "Nie udało się wczytać gier.",
+    "none": "Nie ma jeszcze żadnych gier.",
+    "neverSuggest": "Zaproponuj stwierdzenia",
+    "neverFallback": "AI jest niedostępne, oto stwierdzenia z wbudowanej listy."
+  },
+  "ringo": {
+    "resume": "Wznów",
+    "startNew": "Rozpocznij nową",
+    "openForGuests": "Otwarta dla gości",
+    "startFailed": "Nie udało się rozpocząć gry.",
+    "inviteMessage": "Nowa gra w ringo została uruchomiona. Czy chcesz dołączyć?",
+    "joinTitle": "Dołącz do gry w ringo",
+    "orderLabel": "kolejność tur",
+    "kingsPile": "Króle {{found}}/{{max}}",
+    "acesPile": "Asy {{found}}",
+    "gameOverLabel": "Koniec gry",
+    "gameOverTitle": "Koniec gry!",
+    "flippedFourthKing": "odwrócił/a czwartego króla: {{card}}",
+    "endGame": "Zakończ grę",
+    "historyShow": "Historia",
+    "historyHide": "Ukryj historię",
+    "historyEmpty": "Nie odwrócono jeszcze żadnej karty.",
+    "historyEntry": "{{time}}: {{name}} odwrócił/a kartę: {{card}}",
+    "continue": "Kontynuuj",
+    "suggestRules": "Zaproponuj zasady",
+    "suggestFallback": "AI jest niedostępne, oto zasady z wbudowanej listy.",
+    "backToGames": "Wróć do gier",
+    "openGame": "Otwórz grę",
+    "joinAsPlayer": "Dołącz jako gracz",
+    "turn": "Tura:",
+    "flipFailed": "Nie udało się odwrócić karty.",
+    "continueFailed": "Nie udało się kontynuować gry.",
+    "openFailed": "Nie udało się otworzyć gry.",
+    "endFailed": "Nie udało się zakończyć gry.",
+    "loadFailed": "Nie udało się wczytać gry.",
+    "endTitle": "Zakończyć grę?",
+    "endBody": "Karty zostaną odłożone, a gry nie będzie można wznowić. Potem można rozpocząć nową.",
+    "faceDown": "Karta zakryta",
+    "cardName": "{{rank}} {{suit}}",
+    "suit": {
+      "spades": "Pik",
+      "hearts": "Kier",
+      "diamonds": "Karo",
+      "clubs": "Trefl"
+    },
+    "rank": {
+      "2": "Dwójka",
+      "3": "Trójka",
+      "4": "Czwórka",
+      "5": "Piątka",
+      "6": "Szóstka",
+      "7": "Siódemka",
+      "8": "Ósemka",
+      "9": "Dziewiątka",
+      "10": "Dziesiątka",
+      "J": "Walet",
+      "Q": "Dama",
+      "K": "Król",
+      "A": "As"
+    },
+    "effect": {
+      "2": "Rozdaj dwa łyki: po jednym dwóm osobom albo dwa jednej. Możesz wybrać siebie.",
+      "3": "Rozdaj trzy łyki: po jednym trzem osobom albo kilka jednej. Możesz wybrać siebie.",
+      "4": "Rozdaj cztery łyki: między dowolne osoby, siebie też możesz wybrać.",
+      "5": "Wszyscy mężczyźni piją po łyku.",
+      "6": "Wszystkie kobiety piją po łyku.",
+      "7": "Połóż kartę przed sobą. W dowolnej chwili zrób „batmana”: złóż dłonie w okulary i przyłóż do oczu. Ostatnia osoba, która zauważy i powtórzy ruch, pije.",
+      "8": "Wszyscy piją po łyku.",
+      "9": "Rymy. Powiedz słowo, a każda kolejna osoba mówi rym do niego. Kto powtórzy słowo albo nic nie powie, pije.",
+      "10": "Osoby po lewej i po prawej stronie od ciebie piją po łyku.",
+      "J": "Połóż kartę przed sobą. W dowolnej chwili oprzyj pięść o jakąś powierzchnię. Ostatnia osoba, która zrobi ten gest albo go nie zauważy, pije łyk.",
+      "Q": "Połóż kartę przed sobą. Pierwsza osoba, która odpowie na jakiekolwiek twoje pytanie, pije.",
+      "A": "Nowa zasada gry. Pełna dowolność: kary x2, faceci piją podwójnie, rozmowa tylko pytaniami, zakaz przeklinania, sky is the limit.",
+      "king": "To {{number}}. król z {{total}}. Nic się nie dzieje, ale czwarty król kończy grę.",
+      "lastKing": "Czwarty król! Koniec gry. Wypij duszkiem cały pozostały alkohol."
+    }
+  },
+  "lobby": {
+    "yes": "Tak",
+    "no": "Nie",
+    "you": "(ty)",
+    "players": "Gracze",
+    "onTurn": "(w turze)",
+    "nameLabel": "Twoje imię",
+    "nameOptional": "Twoje imię (opcjonalnie)",
+    "adminHint": "Bez imienia dołączysz jako „admin”.",
+    "join": "Dołącz",
+    "kicked": "Usunięto cię z gry.",
+    "started": "Ta gra już się rozpoczęła.",
+    "notOpen": "Ta gra nie jest jeszcze otwarta.",
+    "joinConflict": "Ktoś już używa tego imienia (albo gra jest zamknięta, pełna lub już się rozpoczęła).",
+    "joinBadName": "To imię jest niepoprawne.",
+    "joinFailed": "Nie udało się dołączyć do gry.",
+    "dragLabel": "Przeciągnij: {{name}}",
+    "kick": "Wyrzuć",
+    "kickLabel": "Wyrzuć: {{name}}",
+    "changed": "Gracze się zmienili, spróbuj ponownie.",
+    "kickFailed": "Nie udało się wyrzucić gracza.",
+    "nobody": "Nikt jeszcze nie dołączył.",
+    "dragHint": "Przeciągnij imię, aby zmienić {{order}}."
+  },
+  "resistance": {
+    "youBadge": "Ty",
+    "leader": "Lider",
+    "playerFallback": "gracz",
+    "next": "Dalej",
+    "entry": {
+      "create": "Utwórz",
+      "resume": "Wznów",
+      "openForGuests": "Otwarta dla gości",
+      "createFailed": "Nie udało się utworzyć gry."
+    },
+    "inviteMessage": "Nowa gra w Resistance została uruchomiona. Czy chcesz dołączyć?",
+    "joinTitle": "Dołącz do gry w Resistance",
+    "orderLabel": "kolejność miejsc",
+    "roles": {
+      "spy": "Szpieg",
+      "resistance": "Ruch Oporu"
+    },
+    "roleCard": {
+      "hide": "Ukryj swoją rolę",
+      "show": "Pokaż swoją rolę",
+      "fellowSpies": "Twoi współszpiedzy",
+      "fellowSpiesList": "Współszpiedzy"
+    },
+    "missionCard": {
+      "success": "Sukces",
+      "fail": "Porażka"
+    },
+    "vote": {
+      "approve": "Zatwierdź",
+      "reject": "Odrzuć",
+      "for": "Za",
+      "against": "Przeciw"
+    },
+    "settings": {
+      "title": "Ustawienia gry",
+      "locked": "Ustawienia są zablokowane po rozpoczęciu gry",
+      "started": "Gra już się rozpoczęła, więc ustawień nie można zmienić.",
+      "plotCardsFailed": "Nie udało się zmienić ustawienia kart Intryg.",
+      "plotCards": {
+        "title": "Karty Intryg",
+        "description": "Dodatek, w którym Lider na początku każdej misji dobiera karty Intryg i rozdaje je innym graczom. Karty dają informacje o rolach albo zmieniają przebieg rundy: przejęcie przywództwa, unieważnienie głosowania, podgląd karty Misji.",
+        "toggle": "Włącz karty Intryg"
+      }
+    },
+    "controls": {
+      "label": "Sterowanie grą",
+      "show": "Sterowanie",
+      "openTv": "Otwórz widok na telewizor",
+      "restart": "Zagraj ponownie",
+      "end": "Zakończ grę",
+      "start": "Rozpocznij grę",
+      "startNeeds": "Potrzeba co najmniej {{min}} graczy",
+      "refreshRules": "Odśwież zasady",
+      "refreshRulesOpen": "Zasady można odświeżyć tylko przed otwarciem gry",
+      "refreshRulesHint": "Pobierz aktualną konfigurację zasad z serwera",
+      "open": "Otwórz grę"
+    },
+    "page": {
+      "backToGames": "Wróć do gier",
+      "joinAsPlayer": "Dołącz jako gracz",
+      "playerCount": "{{current}}/{{max}} graczy",
+      "rules": "Zasady",
+      "rulesTitle": "Zasady gry Resistance",
+      "endTitle": "Zakończyć grę?",
+      "endBody": "Gracze zostaną odesłani, a gry nie będzie można wznowić. Potem można utworzyć nową."
+    },
+    "errors": {
+      "open": "Nie udało się otworzyć gry.",
+      "refreshRules": "Nie udało się odświeżyć zasad.",
+      "start": "Nie udało się rozpocząć gry.",
+      "submitTeam": "Nie udało się zgłosić drużyny.",
+      "deal": "Nie udało się rozdać kart.",
+      "play": "Nie udało się zagrać karty.",
+      "take": "Nie udało się zabrać karty.",
+      "takeLead": "Nie udało się przejąć przywództwa.",
+      "peek": "Nie udało się podejrzeć karty.",
+      "confirmWindow": "Nie udało się potwierdzić.",
+      "confirmCard": "Nie udało się potwierdzić karty.",
+      "vote": "Nie udało się wysłać głosu.",
+      "missionCard": "Nie udało się zagrać karty misji.",
+      "next": "Nie udało się przejść dalej.",
+      "restart": "Nie udało się zagrać ponownie.",
+      "end": "Nie udało się zakończyć gry."
+    },
+    "viewSwitch": {
+      "label": "Widok",
+      "player": "Gracz",
+      "board": "Plansza"
+    },
+    "board": {
+      "title": "Plansza misji",
+      "onTeam": "W drużynie"
+    },
+    "teamInfo": {
+      "mission": "Misja {{n}} · ",
+      "succeeded": "udana",
+      "failed": "nieudana",
+      "team": "Drużyna",
+      "aria": "Drużyna misji {{n}}: {{names}}"
+    },
+    "marks": {
+      "opinionMaker": "Kreator opinii",
+      "plotCards": "Karty Intryg: {{count}}",
+      "playedCard": "Zagrał/a kartę",
+      "voted": "Zagłosował/a"
+    },
+    "missionCards": {
+      "title": "Karty misji"
+    },
+    "teamCards": {
+      "label": "Drużyna",
+      "title": "Drużyna na misję {{n}}"
+    },
+    "voteCards": {
+      "title": "Głosy"
+    },
+    "teamPicker": {
+      "title": "Wybierz drużynę",
+      "picked": "Wybrani gracze",
+      "submit": "Zgłoś drużynę do głosowania"
+    },
+    "votePanel": {
+      "label": "Głosowanie",
+      "title": "Głosowanie nad drużyną",
+      "makerFirst": "Najpierw głosuje kreator opinii: {{names}}.",
+      "makerLocked": "Twój głos jako kreatora opinii jest jawny i nie można go zmienić.",
+      "saved": "Twój głos jest zapisany. Możesz go zmienić, dopóki nie zagłosują wszyscy.",
+      "makerYou": "Jako kreator opinii głosujesz pierwszy, a twój głos jest jawny i ostateczny.",
+      "hidden": "Głosy są jawne dopiero wtedy, gdy zagłosują wszyscy."
+    },
+    "missionPanel": {
+      "label": "Misja",
+      "title": "Zagraj kartę misji",
+      "played": "Zagrano kartę: {{card}}. Czekamy na pozostałych członków drużyny.",
+      "hint": "Karta jest tajna, wszyscy zobaczą tylko liczbę kart Porażka. Zagranej karty nie można zmienić."
+    },
+    "plotWindow": {
+      "label": "Zagrywanie kart",
+      "question": "Czy zagrywasz kartę Intrygi?",
+      "confirmHint": "Potwierdź, że nie zagrywasz karty. Nie widać, kto ma jakie karty.",
+      "reject": "Odrzuć zatwierdzoną drużynę",
+      "takeLead": "Przejmij przywództwo",
+      "confirmed": "Potwierdzono",
+      "pass": "Nie zagrywam karty"
+    },
+    "closeEye": {
+      "seen": "{{name}} zagrał/a: {{card}}",
+      "target": "Której karcie Misji się przyglądasz",
+      "pick": "Wybierz gracza z drużyny",
+      "peek": "Podejrzyj kartę"
+    },
+    "dealer": {
+      "title": "Rozdaj karty Intryg",
+      "to": "Komu dajesz kartę „{{name}}”",
+      "pick": "Wybierz gracza",
+      "submit": "Rozdaj karty"
+    },
+    "hand": {
+      "title": "Twoje karty Intryg",
+      "inPlay": "W grze, widoczna dla wszystkich."
+    },
+    "immediate": {
+      "title": "Karty natychmiastowe",
+      "identityOf": "Karta Tożsamości gracza",
+      "seen": "Widziałem/am",
+      "target": "Na kogo zagrywasz kartę „{{name}}”",
+      "pick": "Wybierz gracza",
+      "play": "Zagraj kartę"
+    },
+    "spotlight": {
+      "target": "Kogo zmuszasz do jawnej karty misji",
+      "pick": "Wybierz gracza z drużyny",
+      "play": "Zagraj kartę"
+    },
+    "take": {
+      "target": "Któremu graczowi zabierasz kartę",
+      "pick": "Wybierz gracza",
+      "which": "Którą kartę zabierasz",
+      "opinionMaker": "Kreator opinii (widoczna karta)",
+      "random": "Losowa karta z ręki",
+      "submit": "Zabierz kartę"
+    },
+    "log": {
+      "title": "Zagrane karty Intryg",
+      "mission": "Misja {{n}}: ",
+      "pending": " (czeka na potwierdzenie)",
+      "OverheardConversation": "{{holder}} zagrał/a „{{name}}” i ogląda kartę Tożsamości gracza {{target}}",
+      "EstablishConfidence": "{{holder}} (przywódca) zagrał/a „{{name}}” i ujawnia swoją kartę Tożsamości graczowi {{target}}",
+      "OpenUp": "{{holder}} zagrał/a „{{name}}” i ujawnia swoją kartę Tożsamości graczowi {{target}}",
+      "TakeResponsibility": "{{holder}} zagrał/a „{{name}}” i zabiera kartę Intrygi graczowi {{target}}",
+      "KeepingCloseEye": "{{holder}} zagrał/a „{{name}}” i podgląda kartę Misji gracza {{target}}",
+      "StrongLeader": "{{holder}} zagrał/a „{{name}}” i przejmuje przywództwo od gracza {{target}}",
+      "NoConfidence": "{{holder}} zagrał/a „{{name}}”: drużyna wybrana przez gracza {{target}} zostaje odrzucona",
+      "default": "{{holder}} zagrał/a „{{name}}”"
+    },
+    "plot": {
+      "OverheardConversation": {
+        "name": "Jesteś naszym okiem i uchem",
+        "effect": "Zagraj natychmiast: obejrzyj kartę Tożsamości jednego z graczy siedzących obok ciebie."
+      },
+      "OpinionMaker": {
+        "name": "Liczymy się z twoim zdaniem",
+        "effect": "Działa do końca gry: wybierasz i ujawniasz kartę Głosowania przed pozostałymi."
+      },
+      "EstablishConfidence": {
+        "name": "To kwestia zaufania",
+        "effect": "Zagraj natychmiast: Przywódca ujawnia swoją kartę Tożsamości innemu graczowi."
+      },
+      "OpenUp": {
+        "name": "Tylko tobie zaufam",
+        "effect": "Zagraj natychmiast: ujawnij swoją kartę Tożsamości innemu graczowi (może to być Przywódca)."
+      },
+      "NoConfidence": {
+        "name": "Nie ufajcie mu",
+        "effect": "Jednorazowa: odrzuć zatwierdzoną drużynę, głosowanie liczy się jako nieudane."
+      },
+      "KeepingCloseEye": {
+        "name": "Mam cię na oku",
+        "effect": "Jednorazowa: po zagraniu kart Misji podejrzyj jedną zagraną kartę."
+      },
+      "StrongLeader": {
+        "name": "Charyzmatyczny Przywódca",
+        "effect": "Jednorazowa: przejmij Przywództwo, zanim Przywódca cokolwiek zrobi."
+      },
+      "InTheSpotlight": {
+        "name": "Pod obserwacją",
+        "effect": "Jednorazowa: zmuś innego gracza do zagrania karty Misji jawnie."
+      },
+      "TakeResponsibility": {
+        "name": "Przejmujesz odpowiedzialność",
+        "effect": "Jednorazowa: weź kartę Intrygi innego gracza."
+      }
+    },
+    "icons": {
+      "spy": "SZPIEG",
+      "resistance": "RUCH OPORU",
+      "approve": "ZATWIERDŹ",
+      "reject": "ODRZUĆ",
+      "success": "SUKCES",
+      "fail": "PORAŻKA",
+      "plot": "INTRYGA",
+      "mission": "MISJA {{n}}",
+      "twoFails": "2 PORAŻKI",
+      "rejectedTeams": "ODRZUCONE DRUŻYNY",
+      "closeEye1": "MAM CIĘ",
+      "closeEye2": "NA OKU",
+      "establish1": "ZDOBĄDŹ",
+      "establish2": "ZAUFANIE",
+      "strongLeader1": "SILNY",
+      "strongLeader2": "LIDER",
+      "overheard1": "PODSŁUCHANA",
+      "overheard2": "ROZMOWA",
+      "noConfidence1": "WOTUM",
+      "noConfidence2": "NIEUFNOŚCI",
+      "spotlight1": "W ŚWIETLE",
+      "spotlight2": "REFLEKTORÓW",
+      "opinionMaker1": "KREATOR",
+      "opinionMaker2": "OPINII",
+      "openUp1": "OTWÓRZ SIĘ",
+      "takeResponsibility1": "PRZEJMUJESZ",
+      "takeResponsibility2": "ODPOWIEDZIALNOŚĆ"
+    },
+    "rules": {
+      "goal": {
+        "title": "Cel gry",
+        "text": "Gracze są potajemnie podzieleni na Ruch Oporu i Szpiegów. Rozgrywa się maksymalnie 5 misji, a drużyna, która pierwsza zdobędzie 3 punkty, wygrywa. Szpiedzy znają się nawzajem, Ruch Oporu nie wie, kto jest szpiegiem."
+      },
+      "round": {
+        "title": "Przebieg misji",
+        "text": "Lider wskazuje drużynę o wymaganym rozmiarze (może wybrać siebie). Wszyscy dyskutują, a potem jednocześnie i jawnie głosują: Zatwierdź albo Odrzuć. Remis odrzuca drużynę, a przywództwo przechodzi dalej."
+      },
+      "mission": {
+        "title": "Wykonanie misji",
+        "text": "Każdy członek zatwierdzonej drużyny potajemnie gra kartę Sukces albo Porażka. Ruch Oporu musi zagrać Sukces, szpieg może zagrać obie. Misja kończy się porażką, jeśli padła choć jedna karta Porażka (w misji 4 przy 7 lub więcej graczach potrzebne są dwie)."
+      },
+      "plot": {
+        "title": "Karty Intryg (dodatek)",
+        "text": "Gdy host włączy dodatek przed otwarciem gry, Lider na początku każdej misji (nie po odrzuceniu drużyny) dobiera karty Intryg: 1 przy 5-6 graczach, 2 przy 7-8, 3 przy 9-10, i rozdaje je innym graczom (karta „To kwestia zaufania” zostaje u Lidera). Liczba kart w ręku każdego gracza jest jawna, same karty są tajne, a każde zagranie karty widzą wszyscy.",
+        "items": {
+          "makers": {
+            "name": "Kreator opinii",
+            "text": "trafia od razu na stół. Jego właściciel głosuje nad drużyną pierwszy, jawnie i bez zmiany; dwóch kreatorów głosuje jednocześnie."
+          },
+          "immediate": {
+            "name": "Jesteś naszym okiem i uchem, To kwestia zaufania, Tylko tobie zaufam",
+            "text": "zagrywa się od razu. Wskazany gracz (albo sąsiad) widzi kartę Tożsamości i potwierdza to przyciskiem."
+          },
+          "strongLeader": {
+            "name": "Charyzmatyczny Przywódca",
+            "text": "przejmuje przywództwo, zanim Lider cokolwiek zrobi."
+          },
+          "noConfidence": {
+            "name": "Nie ufajcie mu",
+            "text": "odrzuca zatwierdzoną drużynę; liczy się jak odrzucona drużyna."
+          },
+          "spotlight": {
+            "name": "Pod obserwacją",
+            "text": "zmusza członka drużyny do zagrania karty Misji jawnie."
+          },
+          "take": {
+            "name": "Przejmujesz odpowiedzialność",
+            "text": "zabiera kartę Intrygi innemu graczowi (widocznego kreatora opinii albo losową kartę z ręki)."
+          },
+          "closeEye": {
+            "name": "Mam cię na oku",
+            "text": "po misji (przed „Dalej”) pozwala podejrzeć kartę Misji innego gracza; każdą kartę może podejrzeć tylko jeden gracz."
+          }
+        },
+        "footer": "Gdy ktoś ma w ręku jakąkolwiek kartę (poza Kreatorem opinii), przed wyborem drużyny albo po zatwierdzeniu wszyscy potwierdzają, że nie zagrywają karty, więc nie widać, kto ją ma."
+      },
+      "end": {
+        "title": "Koniec gry",
+        "text": "Ruch Oporu wygrywa po 3 udanych misjach. Szpiedzy wygrywają po 3 nieudanych misjach albo gdy 5 drużyn z rzędu zostanie odrzuconych w jednej misji."
+      }
+    },
+    "phase": {
+      "youLead": "Ty jesteś liderem",
+      "leaderIs": "Liderem jest {{name}}",
+      "aPlayer": "jeden z graczy",
+      "firstMission": "pierwszą misję",
+      "missionN": "{{n}}. misję",
+      "tapCard": "Dotknij swojej karty, żeby poznać swoją rolę.",
+      "rejected": "Odrzucone drużyny z rzędu: {{count}}/{{max}}.",
+      "tally": "za: {{approve}}, przeciw: {{reject}}",
+      "score": "Ruch Oporu {{resistance}}, Szpiedzy {{spies}}",
+      "spiesWon": "Szpiedzy wygrali",
+      "resistanceWon": "Ruch Oporu wygrał",
+      "whyRejected": "{{max}} drużyn z rzędu zostało odrzuconych",
+      "whyFailed": "trzy misje się nie powiodły",
+      "whySucceeded": "trzy misje zakończyły się sukcesem",
+      "gameOver": "Koniec gry! {{winner}}: {{why}} ({{score}}). Wszystkie role zostały ujawnione.",
+      "dealYou": "rozdaj dobrane karty Intryg innym graczom",
+      "dealLeader": "rozdaje dobrane karty Intryg innym graczom",
+      "dealing": "{{who}} (korona): {{task}}. Potem wybierze drużynę na {{mission}}.",
+      "confirmedMine": "Twoje potwierdzenie jest zapisane.",
+      "confirmPrompt": "Potwierdź, że nie zagrywasz karty (albo zagraj ją).",
+      "leaderWindow": "{{who}} (korona), ale zanim cokolwiek zrobi, gracze decydują, czy zagrywają karty Intrygi. Potwierdzili: {{passed}}/{{count}}.{{mine}}",
+      "mustPlayOpen": "{{name}} musi zagrać kartę misji jawnie („Pod obserwacją”).",
+      "confidenceWindow": "Drużyna ({{names}}) została zatwierdzona ({{tally}}), ale zanim wyruszy, gracze decydują, czy zagrywają karty Intrygi. Potwierdzili: {{passed}}/{{count}}.{{open}}{{mine}}",
+      "waitingConfirm": "Czekamy na potwierdzenie: {{names}}.",
+      "resolving": "{{who}} (korona) rozdał/a karty Intryg. Gracze zagrywają karty natychmiastowe i potwierdzają, że zobaczyli kartę Tożsamości; potem drużynę wybierze lider.{{confirm}}",
+      "cardsPlayed": "Zagrano {{played}}/{{total}} kart.",
+      "failRule": "Misja kończy się porażką od {{count}} kart Porażka.",
+      "playYourCard": "Zagraj swoją kartę misji.",
+      "yourCardPlayed": "Twoja karta jest zagrana.",
+      "playedOpen": "{{name}} zagrał/a kartę jawnie: {{card}}.",
+      "playingMission": "Drużyna ({{names}}) została zatwierdzona ({{tally}}) i wykonuje {{mission}}. {{progress}}{{rule}}{{mine}}{{open}}",
+      "missionSucceeded": "Misja zakończyła się sukcesem",
+      "missionFailed": "Misja zakończyła się porażką (kart Porażka: {{count}})",
+      "peekWindow": "{{outcome}}. Wynik: {{score}}. Zanim lider przejdzie dalej, gracze decydują, czy zagrywają karty Intrygi. Potwierdzili: {{passed}}/{{count}}.{{mine}}",
+      "nextClick": "Kliknij „Dalej”",
+      "nextWait": "Lider lub host kliknie „Dalej”",
+      "failCardsNote": "(kart Porażka: {{count}})",
+      "missionResult": "{{outcome}}{{fails}}. Wynik: {{score}}. {{next}}, żeby zaczęła się kolejna misja.",
+      "voted": "Zagłosowało {{voted}}/{{count}}.",
+      "voteNow": "Zagłosuj: zatwierdź albo odrzuć drużynę.",
+      "voteChange": "Twój głos możesz zmienić, dopóki nie zagłosują wszyscy.",
+      "makerFirst": "Najpierw głosuje kreator opinii: {{names}}.",
+      "voting": "{{who}} (korona) zgłosił/a drużynę na {{mission}}: {{names}}. Teraz drużyna idzie pod głosowanie. {{progress}}{{order}}{{mine}}{{card}}",
+      "pickYou_one": "wybierz {{count}} osobę na {{mission}} i zgłoś ją do głosowania",
+      "pickYou_few": "wybierz {{count}} osoby na {{mission}} i zgłoś je do głosowania",
+      "pickYou_many": "wybierz {{count}} osób na {{mission}} i zgłoś je do głosowania",
+      "pickYou_other": "wybierz {{count}} osoby na {{mission}} i zgłoś je do głosowania",
+      "pickLeader_one": "wybiera {{count}} osobę na {{mission}}",
+      "pickLeader_few": "wybiera {{count}} osoby na {{mission}}",
+      "pickLeader_many": "wybiera {{count}} osób na {{mission}}",
+      "pickLeader_other": "wybiera {{count}} osoby na {{mission}}",
+      "rejectedPrev": "Poprzednia drużyna została odrzucona ({{tally}}). {{rejected}}{{who}} (korona): {{task}}. Omówcie to na żywo.{{card}}",
+      "started": "Gra się rozpoczęła, nowi gracze nie mogą już dołączyć. {{who}} (korona): {{task}}. Omówcie to na żywo.{{rejected}}{{card}}",
+      "needPlayers": "Potrzeba co najmniej {{min}} graczy.",
+      "closedAdmin": "Gra jest zamknięta. Otwórz ją dla gości, żeby gracze mogli dołączyć.{{need}}",
+      "closedGuest": "Gra jest zamknięta. Poczekaj, aż admin otworzy ją dla gości.{{need}}",
+      "waitingHost": "Czekamy na graczy",
+      "waitingGuest": "Czekamy na pozostałych graczy",
+      "notEnough": "{{waiting}}. Potrzeba co najmniej {{min}} graczy, brakuje jeszcze {{missing}}. Pokazane rozmiary drużyn dotyczą gry w {{min}} osób.",
+      "readyManager": "Jest wystarczająco graczy. Gdy wszyscy dołączą, kliknij „Rozpocznij grę” (po starcie nikt nie dołączy). Role zostaną rozdane losowo.",
+      "readyGuest": "Jest wystarczająco graczy. Czekamy, aż host lub admin rozpocznie grę."
+    }
+  }
+}

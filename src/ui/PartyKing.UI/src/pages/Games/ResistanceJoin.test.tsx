@@ -40,8 +40,8 @@ describe('ResistanceJoin', () => {
     mocks.join.mockResolvedValue(undefined);
     renderPage();
 
-    await userEvent.type(await screen.findByLabelText(/Twoje imię/), ' Ola ');
-    await userEvent.click(screen.getByRole('button', { name: 'Dołącz' }));
+    await userEvent.type(await screen.findByLabelText(/Your name/), ' Ola ');
+    await userEvent.click(screen.getByRole('button', { name: 'Join' }));
 
     expect(mocks.join).toHaveBeenCalledWith('session-1', 'Ola');
     expect(await screen.findByText('Board')).toBeInTheDocument();
@@ -52,25 +52,25 @@ describe('ResistanceJoin', () => {
     mocks.join.mockRejectedValue({ status: 409 });
     renderPage();
 
-    await userEvent.type(await screen.findByLabelText(/Twoje imię/), 'Ola');
-    await userEvent.click(screen.getByRole('button', { name: 'Dołącz' }));
+    await userEvent.type(await screen.findByLabelText(/Your name/), 'Ola');
+    await userEvent.click(screen.getByRole('button', { name: 'Join' }));
 
-    expect(await screen.findByText(/pełna/)).toBeInTheDocument();
+    expect(await screen.findByText(/full/)).toBeInTheDocument();
   });
 
   it('says the game is not open yet', async () => {
     mocks.getLobby.mockResolvedValue({ ...open, isOpen: false });
     renderPage();
 
-    expect(await screen.findByText(/nie jest jeszcze otwarta/)).toBeInTheDocument();
+    expect(await screen.findByText(/not open yet/)).toBeInTheDocument();
   });
 
   it('says the game already started instead of showing the form', async () => {
     mocks.getLobby.mockResolvedValue({ ...open, isStarted: true });
     renderPage();
 
-    expect(await screen.findByText(/już się rozpoczęła/)).toBeInTheDocument();
-    expect(screen.queryByLabelText(/Twoje imię/)).not.toBeInTheDocument();
+    expect(await screen.findByText(/has already started/)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Your name/)).not.toBeInTheDocument();
   });
 
   it('goes back to the session when there is no game', async () => {

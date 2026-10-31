@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Games.Services;
+using PartyKing.Application.Localization;
 using PartyKing.Application.Player.Services;
 using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
@@ -36,7 +37,7 @@ public class GameServiceTests
     [Fact]
     public async Task Guests_AreForbidden()
     {
-        var result = await _service.ListAsync(_id, "someone-else", false, CancellationToken.None);
+        var result = await _service.ListAsync(_id, "someone-else", false, UiLanguage.En, CancellationToken.None);
 
         Assert.Equal(ErrorOr.ErrorType.Forbidden, result.FirstError.Type);
     }
@@ -44,7 +45,7 @@ public class GameServiceTests
     [Fact]
     public async Task AnUnknownSession_IsNotFound()
     {
-        var result = await _service.ListAsync(Guid.NewGuid(), HostId, false, CancellationToken.None);
+        var result = await _service.ListAsync(Guid.NewGuid(), HostId, false, UiLanguage.En, CancellationToken.None);
 
         Assert.Equal(ErrorOr.ErrorType.NotFound, result.FirstError.Type);
     }
@@ -54,8 +55,40 @@ public class GameServiceTests
     [InlineData(null, true)]
     public async Task TheHostAndAdmins_GetThePlaceholderGames(string? profileId, bool isAdmin)
     {
-        var result = await _service.ListAsync(_id, profileId, isAdmin, CancellationToken.None);
+        var result = await _service.ListAsync(_id, profileId, isAdmin, UiLanguage.En, CancellationToken.None);
 
         Assert.Equal(["resistance", "ringo", "never-have-i-ever"], result.Value.Select(game => game.Id));
+    }
+
+    [Theory]
+    [InlineData(UiLanguage.En, "Never have I ever")]
+    [InlineData(UiLanguage.Pl, "Nigdy w życiu")]
+    public async Task TheNeverHaveIEverGame_IsNamedInTheLanguage(UiLanguage language, string name)
+    {
+        var result = await _service.ListAsync(_id, HostId, false, language, CancellationToken.None);
+
+        Assert.Equal(name, result.Value.Single(game => game.Id == "never-have-i-ever").Name);
+    }
+
+    [Theory]
+    [InlineData(UiLanguage.En)]
+    [InlineData(UiLanguage.Pl)]
+    public async Task RingoAndResistance_KeepTheirNamesInEveryLanguage(UiLanguage language)
+    {
+        var result = await _service.ListAsync(_id, HostId, false, language, CancellationToken.None);
+
+        Assert.Equal("Ringo", result.Value.Single(game => game.Id == "ringo").Name);
+        Assert.Equal("Resistance", result.Value.Single(game => game.Id == "resistance").Name);
+    }
+
+    [Fact]
+    public async Task TheDescriptions_DifferBetweenLanguages()
+    {
+        var english = await _service.ListAsync(_id, HostId, false, UiLanguage.En, CancellationToken.None);
+        var polish = await _service.ListAsync(_id, HostId, false, UiLanguage.Pl, CancellationToken.None);
+
+        Assert.All(
+            english.Value.Zip(polish.Value),
+            pair => Assert.NotEqual(pair.First.Description, pair.Second.Description));
     }
 }

@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { gamesApi } from '@/service/endpoints/games/gamesApi';
 import { useResistanceGame } from '@/service/endpoints/games/useResistanceGame';
 import { GamePlayersDialog } from './lobby/GamePlayersDialog';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   sessionId: string;
@@ -11,6 +12,7 @@ type Props = {
 
 /** Host and admins: the seat order of the players (drag to change it) and a way to kick a player. */
 export const ResistanceSettings = ({ sessionId, open, onClose }: Props): ReactNode => {
+  const { t } = useTranslation();
   const { data: game, mutate } = useResistanceGame(sessionId);
 
   return (
@@ -18,7 +20,7 @@ export const ResistanceSettings = ({ sessionId, open, onClose }: Props): ReactNo
       open={open}
       onClose={onClose}
       players={game?.players ?? []}
-      orderLabel="the seat order"
+      orderLabel={t('resistance.orderLabel')}
       onReorder={(reordered) =>
         mutate(
           gamesApi.reorderResistancePlayers(

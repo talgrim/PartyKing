@@ -10,6 +10,8 @@ import {
   settingsLabelClass,
   settingsMessageClass,
 } from './settingsStyles';
+import { useTranslation } from 'react-i18next';
+import { i18n } from '@/i18n';
 
 type Props = {
   session: SessionDto;
@@ -19,6 +21,7 @@ type Props = {
 
 /** The host's playlist that plays whenever the queue is empty. Only playlists the host owns are accepted. */
 export const FallbackPlaylistForm = ({ session, onChanged }: Props): ReactNode => {
+  const { t } = useTranslation();
   const inputId = useId();
   const [playlist, setPlaylist] = useState('');
   const [shuffle, setShuffle] = useState(session.fallbackShuffle ?? false);
@@ -36,7 +39,7 @@ export const FallbackPlaylistForm = ({ session, onChanged }: Props): ReactNode =
       .then((owned) => !cancelled && setPlaylists(owned))
       .catch((error) => {
         if (cancelled || error?.status === HTTP_STATUS_CODE.FORBIDDEN) return;
-        setPickerMessage(error?.message || 'Could not load your playlists');
+        setPickerMessage(error?.message || i18n.t('fallback.loadFailed'));
       });
 
     return () => {
@@ -53,7 +56,7 @@ export const FallbackPlaylistForm = ({ session, onChanged }: Props): ReactNode =
       setMessage(doneMessage);
       onChanged();
     } catch (error) {
-      setMessage((error as { message?: string })?.message || 'Something went wrong');
+      setMessage((error as { message?: string })?.message || t('common.somethingWentWrong'));
     } finally {
       setBusy(false);
     }
@@ -61,7 +64,7 @@ export const FallbackPlaylistForm = ({ session, onChanged }: Props): ReactNode =
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    void save(playlist.trim(), 'Fallback playlist saved');
+    void save(playlist.trim(), t('fallback.saved'));
   };
 
   const selected = playlists.find((p) => p.uri === playlist.trim());
@@ -74,7 +77,7 @@ export const FallbackPlaylistForm = ({ session, onChanged }: Props): ReactNode =
         <div className="flex items-center gap-3 p-3 bg-slate-800 rounded-lg">
           <CoverImage imageUrl={current?.imageUrl ?? null} size="lg" />
           <div className="min-w-0 flex-1">
-            <p className="text-xs tracking-wider text-slate-400 uppercase">Plays when the queue is empty</p>
+            <p className="text-xs tracking-wider text-slate-400 uppercase">{t('fallback.playsWhenEmpty')}</p>
             <p className="truncate font-semibold text-slate-100" title={session.fallbackPlaylistName}>
               {session.fallbackPlaylistName}
             </p>
@@ -82,22 +85,22 @@ export const FallbackPlaylistForm = ({ session, onChanged }: Props): ReactNode =
           <button
             type="button"
             disabled={busy}
-            onClick={() => void save(null, 'Fallback playlist removed')}
+            onClick={() => void save(null, t('fallback.removed'))}
             className="shrink-0 px-3 py-1.5 text-sm text-slate-200 border border-slate-600 rounded-md cursor-pointer hover:bg-slate-700 disabled:opacity-50 disabled:cursor-default"
           >
-            Remove
+            {t('common.remove')}
           </button>
         </div>
       ) : (
         <p className="text-sm text-slate-400">
-          Plays a song from one of the host’s playlists whenever the queue is empty.
+          {t('fallback.hint')}
         </p>
       )}
 
       {playlists.length > 0 && (
         <div>
-          <p className={settingsLabelClass}>Your playlists</p>
-          <ul aria-label="Your playlists" className="max-h-56 overflow-y-auto space-y-1 pr-1">
+          <p className={settingsLabelClass}>{t('fallback.yourPlaylists')}</p>
+          <ul aria-label={t('fallback.yourPlaylists')} className="max-h-56 overflow-y-auto space-y-1 pr-1">
             {playlists.map((p) => {
               const isSelected = selected?.uri === p.uri;
               return (
@@ -116,7 +119,7 @@ export const FallbackPlaylistForm = ({ session, onChanged }: Props): ReactNode =
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-slate-100">{p.name}</span>
                       <span className="block text-xs text-slate-400">
-                        {p.trackCount} {p.trackCount === 1 ? 'track' : 'tracks'}
+                        {t('fallback.tracks', { count: p.trackCount })}
                       </span>
                     </span>
                     {isSelected && <CheckIcon fontSize="small" className="shrink-0 text-amber-500" />}
@@ -131,7 +134,7 @@ export const FallbackPlaylistForm = ({ session, onChanged }: Props): ReactNode =
 
       <div>
         <label htmlFor={inputId} className={settingsLabelClass}>
-          {playlists.length > 0 ? 'Or paste a playlist link' : 'Playlist link'}
+          {playlists.length > 0 ? t('fallback.orPaste') : t('fallback.link')}
         </label>
         <input
           id={inputId}
@@ -149,12 +152,12 @@ export const FallbackPlaylistForm = ({ session, onChanged }: Props): ReactNode =
           checked={shuffle}
           onChange={(e) => setShuffle(e.target.checked)}
         />
-        Shuffle
+        {t('fallback.shuffle')}
       </label>
 
       <div className="flex items-center gap-3">
         <button type="submit" disabled={busy || !playlist.trim()} className={settingsButtonClass}>
-          Save
+          {t('common.save')}
         </button>
         {message && <p className={settingsMessageClass}>{message}</p>}
       </div>

@@ -2,6 +2,8 @@ import { FormEvent, ReactNode, useEffect, useRef, useState } from 'react';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 import { secondsToTimeSpan, timeSpanToSeconds } from '@/service/endpoints/sessions/slideTime';
 import { settingsButtonClass, settingsInputClass, settingsMessageClass } from './settingsStyles';
+import { useTranslation } from 'react-i18next';
+import { i18n } from '@/i18n';
 
 type Props = {
   sessionId: string;
@@ -10,8 +12,12 @@ type Props = {
 const MIN_SLIDE_SECONDS = 1;
 const MAX_SLIDE_SECONDS = 3600;
 
+const errorText = (error: unknown): string =>
+  (error as { message?: string })?.message || i18n.t('common.somethingWentWrong');
+
 /** Slide time and repeat options of one session's slideshow. */
 export const SlideshowSettingsForm = ({ sessionId }: Props): ReactNode => {
+  const { t } = useTranslation();
   const [slideSeconds, setSlideSeconds] = useState<number | null>(null);
   const [autoRepeat, setAutoRepeat] = useState(false);
   const [startFromBeginning, setStartFromBeginning] = useState(false);
@@ -19,9 +25,7 @@ export const SlideshowSettingsForm = ({ sessionId }: Props): ReactNode => {
   const [message, setMessage] = useState<string | null>(null);
   const secondsInput = useRef<HTMLInputElement>(null);
 
-  const fail = (error: unknown) => {
-    setMessage((error as { message?: string })?.message || 'Something went wrong');
-  };
+  const fail = (error: unknown) => setMessage(errorText(error));
 
   useEffect(() => {
     let cancelled = false;
@@ -34,12 +38,11 @@ export const SlideshowSettingsForm = ({ sessionId }: Props): ReactNode => {
         setAutoRepeat(settings.autoRepeat);
         setStartFromBeginning(settings.startFromBeginning);
       })
-      .catch((error) => !cancelled && fail(error));
+      .catch((error) => !cancelled && setMessage(errorText(error)));
 
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
   // The wheel changes the seconds while the pointer is over the field, focused or not. React registers wheel
@@ -62,7 +65,7 @@ export const SlideshowSettingsForm = ({ sessionId }: Props): ReactNode => {
   }, [loaded]);
 
   if (slideSeconds === null) {
-    return <p className="text-sm text-slate-400">{message ?? 'Loading the settings…'}</p>;
+    return <p className="text-sm text-slate-400">{message ?? t('slideshowSettings.loading')}</p>;
   }
 
   const valid = slideSeconds >= MIN_SLIDE_SECONDS && slideSeconds <= MAX_SLIDE_SECONDS;
@@ -77,7 +80,7 @@ export const SlideshowSettingsForm = ({ sessionId }: Props): ReactNode => {
         startFromBeginning,
         slideTime: secondsToTimeSpan(slideSeconds),
       });
-      setMessage('Slideshow settings saved');
+      setMessage(t('slideshowSettings.saved'));
     } catch (error) {
       fail(error);
     } finally {
@@ -88,7 +91,7 @@ export const SlideshowSettingsForm = ({ sessionId }: Props): ReactNode => {
   return (
     <form className="space-y-3" onSubmit={submit}>
       <label className="flex items-center justify-between gap-3 text-sm text-slate-300">
-        Seconds per photo
+        {t('slideshowSettings.secondsPerPhoto')}
         <input
           ref={secondsInput}
           className={`${settingsInputClass} w-24!`}
@@ -106,7 +109,7 @@ export const SlideshowSettingsForm = ({ sessionId }: Props): ReactNode => {
           checked={autoRepeat}
           onChange={(e) => setAutoRepeat(e.target.checked)}
         />
-        Start over after the last photo
+        {t('slideshowSettings.repeat')}
       </label>
       <label className="flex items-center gap-3 text-sm text-slate-300">
         <input
@@ -115,11 +118,11 @@ export const SlideshowSettingsForm = ({ sessionId }: Props): ReactNode => {
           checked={startFromBeginning}
           onChange={(e) => setStartFromBeginning(e.target.checked)}
         />
-        Show photos that were already presented again
+        {t('slideshowSettings.showAgain')}
       </label>
       <div className="flex items-center gap-3">
         <button type="submit" disabled={busy || !valid} className={settingsButtonClass}>
-          Save
+          {t('common.save')}
         </button>
         {message && <p className={settingsMessageClass}>{message}</p>}
       </div>

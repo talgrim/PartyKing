@@ -20,6 +20,7 @@ import { RingoHistory } from './RingoHistory';
 import { RingoPiles } from './RingoPiles';
 import { RingoPlayers } from './RingoPlayers';
 import { RingoSettings } from './RingoSettings';
+import { useTranslation } from 'react-i18next';
 
 const navClass = 'px-3 py-2 text-slate-200 bg-slate-900 rounded-md hover:bg-slate-700';
 
@@ -29,6 +30,7 @@ const navClass = 'px-3 py-2 text-slate-200 bg-slate-900 rounded-md hover:bg-slat
  * host and admins go back to the games list, where a game is started, and players to the session page.
  */
 export const Ringo = (): ReactNode => {
+  const { t } = useTranslation();
   const { sessionId = '' } = useParams();
   const navigate = useNavigate();
   const { data: game, error, mutate } = useRingoGame(sessionId);
@@ -75,7 +77,7 @@ export const Ringo = (): ReactNode => {
         revalidate: false,
       });
     } catch {
-      setMessage('Could not flip the card.');
+      setMessage(t('ringo.flipFailed'));
     }
   };
 
@@ -89,7 +91,7 @@ export const Ringo = (): ReactNode => {
         revalidate: false,
       });
     } catch {
-      setMessage('Could not continue the game.');
+      setMessage(t('ringo.continueFailed'));
     }
   };
 
@@ -99,7 +101,7 @@ export const Ringo = (): ReactNode => {
       await mutate(gamesApi.openRingo(sessionId), { revalidate: false });
       void mutateGlobal(ringoLobbyKey(sessionId));
     } catch {
-      setMessage('Could not open the game.');
+      setMessage(t('ringo.openFailed'));
     }
   };
 
@@ -110,30 +112,30 @@ export const Ringo = (): ReactNode => {
       navigate(sessionGamesPath(sessionId), { replace: true });
     } catch {
       setConfirmingEnd(false);
-      setMessage('Could not end the game.');
+      setMessage(t('ringo.endFailed'));
     }
   };
 
   return (
     <div className="relative w-full h-screen bg-slate-800 text-slate-400">
-      <nav className="absolute inset-x-0 top-0 h-[10%] px-[10%] flex items-center gap-2">
+      <nav className="absolute inset-x-0 top-0 h-[10%] pl-[max(10%,5rem)] pr-[10%] flex items-center gap-2">
         {canManage ? (
           <Link to={sessionGamesPath(sessionId)} className={navClass}>
-            Back to the games
+            {t('ringo.backToGames')}
           </Link>
         ) : (
           <Link to={sessionPath(sessionId)} className={navClass}>
-            Back to the session
+            {t('common.backToSession')}
           </Link>
         )}
         {game && canManage && (
           <button type="button" onClick={() => setConfirmingEnd(true)} className={`${navClass} cursor-pointer`}>
-            End game
+            {t('ringo.endGame')}
           </button>
         )}
         {game && canManage && (
           <button type="button" onClick={() => setManagingPlayers(true)} className={`${navClass} cursor-pointer`}>
-            Players
+            {t('lobby.players')}
           </button>
         )}
         {game && isAdmin && (
@@ -143,17 +145,17 @@ export const Ringo = (): ReactNode => {
             disabled={game.isOpen}
             className={`${navClass} cursor-pointer disabled:opacity-50 disabled:cursor-default`}
           >
-            Open the game
+            {t('ringo.openGame')}
           </button>
         )}
         {game && canManage && game.isOpen && game.yourPlayerId == null && (
           <Link to={sessionRingoJoinPath(sessionId)} className={navClass}>
-            Join as a player
+            {t('ringo.joinAsPlayer')}
           </Link>
         )}
         {onTurn && (
           <span className="text-amber-400">
-            Tura: <strong>{onTurn.name}</strong>
+            {t('ringo.turn')} <strong>{onTurn.name}</strong>
           </span>
         )}
         {message && <span className="text-amber-500">{message}</span>}
@@ -165,7 +167,7 @@ export const Ringo = (): ReactNode => {
       )}
 
       {error && status !== HTTP_STATUS_CODE.UNAUTHORIZED && (
-        <p className="absolute top-[12%] px-[10%] text-amber-500">Could not load the game.</p>
+        <p className="absolute top-[12%] px-[10%] text-amber-500">{t('ringo.loadFailed')}</p>
       )}
 
       {game && (
@@ -210,12 +212,12 @@ export const Ringo = (): ReactNode => {
         aria-labelledby="end-ringo-title"
         slotProps={{ paper: { className: 'bg-slate-800! text-slate-200!' } }}
       >
-        <DialogTitle id="end-ringo-title">End the game?</DialogTitle>
-        <DialogContent>The cards are put away and the game can't be resumed. A new one can be started afterwards.</DialogContent>
+        <DialogTitle id="end-ringo-title">{t('ringo.endTitle')}</DialogTitle>
+        <DialogContent>{t('ringo.endBody')}</DialogContent>
         <DialogActions>
-          <Button onClick={() => setConfirmingEnd(false)}>Cancel</Button>
+          <Button onClick={() => setConfirmingEnd(false)}>{t('common.cancel')}</Button>
           <Button color="error" onClick={() => void endGame()}>
-            End game
+            {t('ringo.endGame')}
           </Button>
         </DialogActions>
       </Dialog>

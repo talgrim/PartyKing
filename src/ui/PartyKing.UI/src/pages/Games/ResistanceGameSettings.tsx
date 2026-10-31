@@ -3,6 +3,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { Dialog, DialogContent, DialogTitle } from '@mui/material';
 import { gamesApi } from '@/service/endpoints/games/gamesApi';
 import { useResistanceGame } from '@/service/endpoints/games/useResistanceGame';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   sessionId: string;
@@ -33,6 +34,7 @@ const SettingsSection = ({ title, description, children }: SectionProps): ReactN
  * Only the plot cards add-on exists for now. The modules can be changed until the game starts.
  */
 export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): ReactNode => {
+  const { t } = useTranslation();
   const { data: game, mutate } = useResistanceGame(sessionId);
   const [message, setMessage] = useState<string>();
 
@@ -43,7 +45,7 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
     try {
       await mutate(gamesApi.setResistancePlotCards(sessionId, enabled), { revalidate: false });
     } catch {
-      setMessage('Nie udało się zmienić ustawienia kart Intryg.');
+      setMessage(t('resistance.settings.plotCardsFailed'));
     }
   };
 
@@ -58,22 +60,22 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
       slotProps={{ paper: { className: 'bg-slate-800! text-slate-200! rounded-xl!' } }}
     >
       <DialogTitle id="resistance-settings-title" className="flex! items-center justify-between text-xl! font-semibold!">
-        Ustawienia gry
+        {t('resistance.settings.title')}
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close"
-          title="Close"
+          aria-label={t('common.close')}
+          title={t('common.close')}
           className="p-1 text-slate-400 hover:text-slate-200 cursor-pointer"
         >
           <CloseIcon />
         </button>
       </DialogTitle>
       <DialogContent className="space-y-4">
-        {started && <p className="text-sm text-amber-500">Gra już się rozpoczęła, więc ustawień nie można zmienić.</p>}
+        {started && <p className="text-sm text-amber-500">{t('resistance.settings.started')}</p>}
         <SettingsSection
-          title="Karty Intryg"
-          description="Dodatek, w którym Lider na początku każdej misji dobiera karty Intryg i rozdaje je innym graczom. Karty dają informacje o rolach albo zmieniają przebieg rundy: przejęcie przywództwa, unieważnienie głosowania, podgląd karty Misji."
+          title={t('resistance.settings.plotCards.title')}
+          description={t('resistance.settings.plotCards.description')}
         >
           <label className="flex items-center gap-2 text-slate-200">
             <input
@@ -82,7 +84,7 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
               disabled={game === undefined || started}
               onChange={(event) => void setPlotCards(event.target.checked)}
             />
-            Włącz karty Intryg
+            {t('resistance.settings.plotCards.toggle')}
           </label>
         </SettingsSection>
         {message && <p className="text-amber-500">{message}</p>}

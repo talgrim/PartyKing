@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { LeaderTokenIcon } from './ResistanceIcons';
 import { ResistancePlayerDto } from '@/service/endpoints/games/types';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   /** Only the players on the team, in seating order. */
@@ -10,9 +11,12 @@ type Props = {
 };
 
 /** The team the leader submitted, as a row of player cards under the mission board of the TV view. */
-export const ResistanceTeamCards = ({ members, missionNumber, leaderId }: Props): ReactNode => (
-  <section aria-label="Team" className="flex flex-col items-center gap-2 shrink-0">
-    <h2 className="text-[clamp(1.1rem,2.6vh,2rem)] font-semibold uppercase tracking-wide text-emerald-300">Drużyna na misję {missionNumber}</h2>
+export const ResistanceTeamCards = ({ members, missionNumber, leaderId }: Props): ReactNode => {
+  const { t } = useTranslation();
+
+  return (
+  <section aria-label={t('resistance.teamCards.label')} className="flex flex-col items-center gap-2 shrink-0">
+    <h2 className="text-[clamp(1.1rem,2.6vh,2rem)] font-semibold uppercase tracking-wide text-emerald-300">{t('resistance.teamCards.title', { n: missionNumber })}</h2>
     <ul className="flex flex-wrap justify-center gap-3">
       {members.map((player) => (
         <li
@@ -22,7 +26,7 @@ export const ResistanceTeamCards = ({ members, missionNumber, leaderId }: Props)
         >
           {player.id === leaderId && (
             <span className="absolute right-2 top-2">
-              <LeaderTokenIcon title="Leader" />
+              <LeaderTokenIcon title={t('resistance.leader')} />
             </span>
           )}
           <span
@@ -36,4 +40,5 @@ export const ResistanceTeamCards = ({ members, missionNumber, leaderId }: Props)
       ))}
     </ul>
   </section>
-);
+  );
+};

@@ -25,7 +25,7 @@ public class NeverHaveIEverController : GameControllerBase
     }
 
     /// <summary>
-    /// Host or admin: spicy "Never have I ever" statements in Polish from the language model, or from a built-in list
+    /// Host or admin: spicy "Never have I ever" statements from the language model, in the <c>Accept-Language</c> language,, or from a built-in list
     /// when it is unavailable. 403 for guests.
     /// </summary>
     [HttpGet("suggestions")]
@@ -37,7 +37,7 @@ public class NeverHaveIEverController : GameControllerBase
         var profileId = Cookies.TryReadProfileId(Request, out var id) ? id : null;
         var isAdmin = (await HttpContext.AuthenticateAsync(Constants.AdminScheme)).Succeeded;
 
-        var result = await _suggestionService.SuggestAsync(sessionId, profileId, isAdmin, cancellationToken);
+        var result = await _suggestionService.SuggestAsync(sessionId, profileId, isAdmin, GetLanguage(), cancellationToken);
 
         return result.Match(Ok, Problem);
     }

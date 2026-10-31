@@ -1,51 +1,55 @@
+import { i18n } from '@/i18n';
 import { RingoFlipDto } from '@/service/endpoints/games/types';
 import { getCard } from './ringoLayout';
 
 /** The fourth king ends the game. */
 export const KINGS_TO_END = 4;
 
-const SUIT_NAMES: Record<string, string> = { '♠': 'Pik', '♥': 'Kier', '♦': 'Karo', '♣': 'Trefl' };
+// The names are looked up when asked for, so they follow the UI language
+const SUIT_KEYS = {
+  '♠': 'ringo.suit.spades',
+  '♥': 'ringo.suit.hearts',
+  '♦': 'ringo.suit.diamonds',
+  '♣': 'ringo.suit.clubs',
+} as const;
 
-const RANK_NAMES: Record<string, string> = {
-  '2': 'Dwójka',
-  '3': 'Trójka',
-  '4': 'Czwórka',
-  '5': 'Piątka',
-  '6': 'Szóstka',
-  '7': 'Siódemka',
-  '8': 'Ósemka',
-  '9': 'Dziewiątka',
-  '10': 'Dziesiątka',
-  J: 'Walet',
-  Q: 'Dama',
-  K: 'Król',
-  A: 'As',
-};
+const RANK_KEYS = {
+  '2': 'ringo.rank.2',
+  '3': 'ringo.rank.3',
+  '4': 'ringo.rank.4',
+  '5': 'ringo.rank.5',
+  '6': 'ringo.rank.6',
+  '7': 'ringo.rank.7',
+  '8': 'ringo.rank.8',
+  '9': 'ringo.rank.9',
+  '10': 'ringo.rank.10',
+  J: 'ringo.rank.J',
+  Q: 'ringo.rank.Q',
+  K: 'ringo.rank.K',
+  A: 'ringo.rank.A',
+} as const;
 
-const EFFECTS: Record<string, string> = {
-  '2': 'Rozdaj dwa łyki: po jednym dwóm osobom albo dwa jednej. Możesz wybrać siebie.',
-  '3': 'Rozdaj trzy łyki: po jednym trzem osobom albo kilka jednej. Możesz wybrać siebie.',
-  '4': 'Rozdaj cztery łyki: między dowolne osoby, siebie też możesz wybrać.',
-  '5': 'Wszyscy mężczyźni piją po łyku.',
-  '6': 'Wszystkie kobiety piją po łyku.',
-  '7':
-    'Połóż kartę przed sobą. W dowolnej chwili zrób „batmana”: złóż dłonie w okulary i przyłóż do oczu. ' +
-    'Ostatnia osoba, która zauważy i powtórzy ruch, pije.',
-  '8': 'Wszyscy piją po łyku.',
-  '9': 'Rymy. Powiedz słowo, a każda kolejna osoba mówi rym do niego. Kto powtórzy słowo albo nic nie powie, pije.',
-  '10': 'Osoby po lewej i po prawej stronie od ciebie piją po łyku.',
-  J:
-    'Połóż kartę przed sobą. W dowolnej chwili oprzyj pięść o jakąś powierzchnię. ' +
-    'Ostatnia osoba, która zrobi ten gest albo go nie zauważy, pije łyk.',
-  Q: 'Połóż kartę przed sobą. Pierwsza osoba, która odpowie na jakiekolwiek twoje pytanie, pije.',
-  A:
-    'Nowa zasada gry. Pełna dowolność: kary x2, faceci piją podwójnie, rozmowa tylko pytaniami, ' +
-    'zakaz przeklinania, sky is the limit.',
-};
+const EFFECT_KEYS = {
+  '2': 'ringo.effect.2',
+  '3': 'ringo.effect.3',
+  '4': 'ringo.effect.4',
+  '5': 'ringo.effect.5',
+  '6': 'ringo.effect.6',
+  '7': 'ringo.effect.7',
+  '8': 'ringo.effect.8',
+  '9': 'ringo.effect.9',
+  '10': 'ringo.effect.10',
+  J: 'ringo.effect.J',
+  Q: 'ringo.effect.Q',
+  A: 'ringo.effect.A',
+} as const;
 
 export const cardName = (cardId: number): string => {
   const { rank, suit } = getCard(cardId);
-  return `${RANK_NAMES[rank]} ${SUIT_NAMES[suit]}`;
+  return i18n.t('ringo.cardName', {
+    rank: i18n.t(RANK_KEYS[rank as keyof typeof RANK_KEYS]),
+    suit: i18n.t(SUIT_KEYS[suit as keyof typeof SUIT_KEYS]),
+  });
 };
 
 /** Which king (1-4) of the game the card is, counted in flip order; 0 for a card that isn't a king. */
@@ -60,12 +64,12 @@ export const endingFlip = (flips: RingoFlipDto[]): RingoFlipDto | undefined =>
 
 export const cardEffect = (cardId: number, flips: RingoFlipDto[]): string => {
   const { rank } = getCard(cardId);
-  if (rank !== 'K') return EFFECTS[rank];
+  if (rank !== 'K') return i18n.t(EFFECT_KEYS[rank as keyof typeof EFFECT_KEYS]);
 
   const number = kingNumber(flips, cardId);
   return number >= KINGS_TO_END
-    ? 'Czwarty król! Koniec gry. Wypij duszkiem cały pozostały alkohol.'
-    : `To ${number}. król z ${KINGS_TO_END}. Nic się nie dzieje, ale czwarty król kończy grę.`;
+    ? i18n.t('ringo.effect.lastKing')
+    : i18n.t('ringo.effect.king', { number, total: KINGS_TO_END });
 };
 
 /** The cards that already left the table into the kings or aces pile (every flipped card but the pending one). */

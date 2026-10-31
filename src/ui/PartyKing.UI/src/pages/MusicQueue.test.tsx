@@ -96,8 +96,8 @@ describe('MusicQueue', () => {
     await renderPage();
 
     await vi.waitFor(() => expect(mocks.getResistanceLobby).toHaveBeenCalled());
-    const invite = screen.queryByText('Nowa gra w Resistance została uruchomiona. Czy chcesz dołączyć?');
-    if (invited) expect(await screen.findByText(/Nowa gra w Resistance/)).toBeInTheDocument();
+    const invite = screen.queryByText('A new Resistance game has started. Do you want to join?');
+    if (invited) expect(await screen.findByText(/A new Resistance game/)).toBeInTheDocument();
     else expect(invite).not.toBeInTheDocument();
   });
 

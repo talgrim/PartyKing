@@ -3,6 +3,7 @@ using ErrorOr;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using PartyKing.API.Metrics;
+using PartyKing.Application.Localization;
 
 namespace PartyKing.API.Controllers;
 
@@ -37,6 +38,12 @@ public abstract class CoreController : ControllerBase
     protected string GetProfileId()
     {
         return User.Claims.First(x => x.Type == ClaimTypes.NameIdentifier).Value;
+    }
+
+    /// <summary>The UI language from the <c>Accept-Language</c> header; English when it is missing or unsupported.</summary>
+    protected UiLanguage GetLanguage()
+    {
+        return UiLanguageParser.Parse(Request.Headers.AcceptLanguage.ToString());
     }
 
     protected IActionResult Problem(List<Error> errors)

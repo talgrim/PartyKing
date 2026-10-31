@@ -1,7 +1,9 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { SWRConfig } from 'swr';
 import { MemoryRouter } from 'react-router-dom';
 import { Admin } from './Admin';
+import { setLanguage } from '@/i18n';
 
 const mocks = vi.hoisted(() => ({ me: vi.fn(), getSessions: vi.fn() }));
 
@@ -43,5 +45,29 @@ describe('Admin', () => {
 
     await screen.findByLabelText(/password/i);
     expect(screen.queryByRole('link', { name: 'Games' })).not.toBeInTheDocument();
+  });
+
+  it('shows the session list in Polish', async () => {
+    await setLanguage('pl');
+    mocks.me.mockResolvedValue(undefined);
+
+    renderPage();
+
+    expect(await screen.findAllByRole('link', { name: 'Gry' })).toHaveLength(2);
+    expect(screen.getByText('Brak gospodarza')).toBeInTheDocument();
+    expect(screen.getByText('Gospodarz: H')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Wyloguj się' })).toBeInTheDocument();
+  });
+
+  it('asks for the delete confirmation in the selected language', async () => {
+    await setLanguage('pl');
+    mocks.me.mockResolvedValue(undefined);
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+    renderPage();
+    await userEvent.click((await screen.findAllByRole('button', { name: 'Usuń' }))[0]);
+
+    expect(confirm).toHaveBeenCalledWith('Usunąć „Party” (ABC123) razem z kolejką i zdjęciami?');
+    confirm.mockRestore();
   });
 });

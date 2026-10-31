@@ -18,16 +18,16 @@ describe('ResistanceMissionCards', () => {
     const items = screen.getAllByRole('listitem');
     expect(items).toHaveLength(3);
     expect(items[0]).toHaveTextContent('Ala');
-    expect(cardOf(items[0])).toBe('Porażka');
+    expect(cardOf(items[0])).toBe('Fail');
     // the one Fail was the open card, so the two hidden cards are Successes
-    expect(items.slice(1).map((item) => cardOf(item))).toEqual(['Sukces', 'Sukces']);
+    expect(items.slice(1).map((item) => cardOf(item))).toEqual(['Success', 'Success']);
   });
 
   it('keeps the hidden Fail cards when the open card is a Success', () => {
     render(<ResistanceMissionCards cardCount={2} failCount={1} open={{ name: 'Bartek', success: true }} />);
 
     const items = screen.getAllByRole('listitem');
-    expect(cardOf(items[0])).toBe('Sukces');
-    expect(cardOf(items[1])).toBe('Porażka');
+    expect(cardOf(items[0])).toBe('Success');
+    expect(cardOf(items[1])).toBe('Fail');
   });
 });

@@ -1,7 +1,9 @@
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { ReactNode, useState } from 'react';
+import { i18n } from '@/i18n';
 import { queueApi } from '@/service/endpoints/queue/queueApi';
 import { useQueueSongs } from '@/service/endpoints/queue/useQueueSongs';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   sessionId: string;
@@ -12,10 +14,11 @@ type Props = {
 };
 
 const errorMessage = (error: unknown) =>
-  (error as { message?: string })?.message || 'Something went wrong';
+  (error as { message?: string })?.message || i18n.t('common.somethingWentWrong');
 
 /** The "Up next" list of a session's queue. */
 export const QueueList = ({ sessionId, canRemove = false, large = false }: Props): ReactNode => {
+  const { t } = useTranslation();
   const [message, setMessage] = useState<string | null>(null);
   const { data: queue, mutate } = useQueueSongs(sessionId);
 
@@ -39,11 +42,11 @@ export const QueueList = ({ sessionId, canRemove = false, large = false }: Props
 
   return (
     // The big screen shows the list on a plain background; on the session page it is a card like the rest
-    <section aria-label="Up next" className={large ? '' : 'mx-2 mt-4 mb-4 p-3 bg-slate-900 rounded-lg'}>
-      <h2 className={headingClass}>Up next</h2>
+    <section aria-label={t('queue.upNext')} className={large ? '' : 'mx-2 mt-4 mb-4 p-3 bg-slate-900 rounded-lg'}>
+      <h2 className={headingClass}>{t('queue.upNext')}</h2>
       {message && <p className="pt-2 text-sm text-amber-500">{message}</p>}
       {upNext.length === 0 ? (
-        <p className={`text-sm text-slate-500 ${large ? 'px-2 pb-4' : 'pt-2'}`}>The queue is empty</p>
+        <p className={`text-sm text-slate-500 ${large ? 'px-2 pb-4' : 'pt-2'}`}>{t('queue.empty')}</p>
       ) : (
         <ol className={large ? 'px-2 pb-4 text-lg' : 'pt-1'}>
           {upNext.map((song, index) => {
@@ -59,13 +62,13 @@ export const QueueList = ({ sessionId, canRemove = false, large = false }: Props
                 </span>
                 {song.isFallback && (
                   <span className="shrink-0 rounded-full bg-slate-700 px-2 py-0.5 text-xs text-slate-300">
-                    from playlist
+                    {t('queue.fromPlaylist')}
                   </span>
                 )}
                 {canRemove && (
                   <button
                     type="button"
-                    aria-label={`Remove ${song.name} from the queue`}
+                    aria-label={t('queue.removeFromQueue', { name: song.name })}
                     onClick={() => void removeSong(song.id)}
                     className="shrink-0 rounded-md p-1 text-red-500 hover:bg-red-500/10 hover:text-red-400 cursor-pointer"
                   >

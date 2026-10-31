@@ -8,6 +8,7 @@ import { ResistancePlayerMarks } from './ResistancePlayerMarks';
 import { ResistanceTeamCards } from './ResistanceTeamCards';
 import { ResistanceVoteCards } from './ResistanceVoteCards';
 import { MissionBoardLayout } from './resistanceTeams';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   game: ResistanceGameDto | undefined;
@@ -19,6 +20,7 @@ type Props = {
 
 /** The board for a big screen: the board and the phase line keep to the middle 80%, the players sit in the margins. */
 export const ResistanceTvBoard = ({ game, board, banner, yourPlayerId }: Props): ReactNode => {
+  const { t } = useTranslation();
   const team = game?.players.filter((player) => game.teamPlayerIds.includes(player.id)) ?? [];
 
   // The votes show from the moment all voted until the next leader submits a team (after a rejection) or the mission
@@ -29,7 +31,7 @@ export const ResistanceTvBoard = ({ game, board, banner, yourPlayerId }: Props):
   const earlyVotes = game?.phase === 'Voting' && game.opinionMakerVotes.length > 0 ? game.opinionMakerVotes : null;
   const votes = allVotes ?? earlyVotes;
 
-  // The cards of the mission that just finished, until "Dalej" starts the next one (also when it ended the game).
+  // The cards of the mission that just finished, until "Next" starts the next one (also when it ended the game).
   const finished = game?.phase === 'PeekWindow' || game?.phase === 'MissionResult' || game?.phase === 'GameOver'
     ? game.missionResults.find((result) => result.missionNumber === game.missionNumber)
     : undefined;
@@ -72,7 +74,7 @@ export const ResistanceTvBoard = ({ game, board, banner, yourPlayerId }: Props):
           marks={(playerId) => <ResistancePlayerMarks game={game} playerId={playerId} />}
           beside={(playerId) =>
             game.opinionMakerPlayerIds.includes(playerId) ? (
-              <PlotOpinionMakerCardIcon className="w-full" title="Kreator opinii" />
+              <PlotOpinionMakerCardIcon className="w-full" title={t('resistance.marks.opinionMaker')} />
             ) : null
           }
         />

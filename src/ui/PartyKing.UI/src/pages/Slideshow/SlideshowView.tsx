@@ -1,4 +1,5 @@
 import useSWR from 'swr';
+import { useTranslation } from 'react-i18next';
 import { Splide, Options } from '@splidejs/react-splide';
 import {fetchFromApi} from "@/service/fetcher/apiService";
 import {ApiError} from "@/service/ApiError";
@@ -44,6 +45,7 @@ type Props = {
  * box its parent gives it, so the parent decides how big the slideshow is.
  */
 export const SlideshowView = ({ sessionId }: Props) => {
+  const { t } = useTranslation();
   const live = useSlideshowWatch();
   const {data, isLoading, error, mutate} = useSWR<ApiImage, ApiError>(
     slideshowKey(sessionId),
@@ -70,8 +72,8 @@ export const SlideshowView = ({ sessionId }: Props) => {
   if (error) {
     return (
       <p className="p-4 text-center">
-        Could not load the slideshow.{' '}
-        <Link to={ROUTE_PATHS.HOME} className="underline">Back to the sessions</Link>
+        {t('slideshowView.loadFailed')}{' '}
+        <Link to={ROUTE_PATHS.HOME} className="underline">{t('common.backToSessions')}</Link>
       </p>
     );
   }
@@ -79,8 +81,8 @@ export const SlideshowView = ({ sessionId }: Props) => {
   // 204 No Content (nothing uploaded yet) arrives as an empty string
   if (!data) return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-2 p-4 text-center">
-      <h1 className="text-2xl font-semibold">No photos yet</h1>
-      <p>Upload some photos and they will show up here.</p>
+      <h1 className="text-2xl font-semibold">{t('slideshowView.noPhotos')}</h1>
+      <p>{t('slideshowView.uploadSome')}</p>
     </div>
   )
 

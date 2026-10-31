@@ -8,6 +8,7 @@ import { SlideshowView } from '@/pages/Slideshow/SlideshowView';
 import { LyricsState } from '@/service/endpoints/lyrics/useLyrics';
 import { NowPlayingDto } from '@/service/endpoints/player/types';
 import { usePersistedFlag } from '@/utils/usePersistedFlag';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   sessionId: string;
@@ -27,6 +28,7 @@ type Props = {
  * playing.
  */
 export const MaximizedView = ({ sessionId, nowPlaying, showLyrics, lyrics, onResyncLyrics, onSaveLyricsOffset, onExit }: Props): ReactNode => {
+  const { t } = useTranslation();
   const [queueOpen, setQueueOpen] = usePersistedFlag('partyking.maximizedQueueOpen', true);
 
   useEffect(() => {
@@ -38,7 +40,7 @@ export const MaximizedView = ({ sessionId, nowPlaying, showLyrics, lyrics, onRes
   }, [onExit]);
 
   return (
-    <div role="dialog" aria-label={showLyrics ? 'Lyrics' : 'Slideshow'} className="fixed inset-0 z-50 flex flex-col bg-black text-slate-400 landscape:flex-row md:flex-row">
+    <div role="dialog" aria-label={showLyrics ? t('views.lyrics') : t('views.slideshow')} className="fixed inset-0 z-50 flex flex-col bg-black text-slate-400 landscape:flex-row md:flex-row">
       <div
         className={`relative flex min-w-0 flex-col landscape:h-auto landscape:flex-1 landscape:shrink md:h-auto md:flex-1 md:shrink ${
           queueOpen ? 'h-[45dvh] shrink-0' : 'min-h-0 flex-1'
@@ -51,7 +53,7 @@ export const MaximizedView = ({ sessionId, nowPlaying, showLyrics, lyrics, onRes
         <button
           type="button"
           onClick={onExit}
-          aria-label="Exit full view"
+          aria-label={t('maximized.exit')}
           className="absolute top-2 left-2 rounded-full bg-black/50 p-2 text-white opacity-40 hover:opacity-100 cursor-pointer"
         >
           <CloseIcon />
@@ -59,7 +61,7 @@ export const MaximizedView = ({ sessionId, nowPlaying, showLyrics, lyrics, onRes
         <button
           type="button"
           onClick={() => setQueueOpen(!queueOpen)}
-          aria-label={queueOpen ? 'Hide queue' : 'Show queue'}
+          aria-label={queueOpen ? t('maximized.hideQueue') : t('maximized.showQueue')}
           aria-pressed={queueOpen}
           className="absolute top-2 left-14 rounded-full bg-black/50 p-2 text-white opacity-40 hover:opacity-100 cursor-pointer"
         >
@@ -68,7 +70,7 @@ export const MaximizedView = ({ sessionId, nowPlaying, showLyrics, lyrics, onRes
       </div>
       {queueOpen && (
         <aside
-          aria-label="Queue"
+          aria-label={t('maximized.queue')}
           className="min-h-0 w-full flex-1 overflow-y-auto bg-slate-800 pt-4 landscape:w-72 landscape:flex-none landscape:shrink-0 md:w-80 md:flex-none md:shrink-0 lg:w-96"
         >
           <QueueList sessionId={sessionId} large />

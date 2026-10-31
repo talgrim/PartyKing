@@ -1,11 +1,16 @@
-// https://developers.google.com/youtube/iframe_api_reference#onError
-const YOUTUBE_ERRORS: Record<number, string> = {
-  2: 'The video link is invalid',
-  5: 'The video cannot be played in an HTML5 player',
-  100: 'The video was not found or is private',
-  101: 'The owner of the video does not allow it to be played outside YouTube',
-  150: 'The owner of the video does not allow it to be played outside YouTube',
-};
+import { i18n } from '@/i18n';
 
-export const describeYoutubeError = (code: number | undefined): string =>
-  (code !== undefined && YOUTUBE_ERRORS[code]) || 'The video could not be played';
+// https://developers.google.com/youtube/iframe_api_reference#onError
+// 101 and 150 are the same refusal. The text is looked up when asked for, so it follows the UI language.
+const YOUTUBE_ERROR_KEYS = {
+  2: 'youtubeErrors.e2',
+  5: 'youtubeErrors.e5',
+  100: 'youtubeErrors.e100',
+  101: 'youtubeErrors.e101',
+  150: 'youtubeErrors.e101',
+} as const;
+
+export const describeYoutubeError = (code: number | undefined): string => {
+  const key = code !== undefined ? YOUTUBE_ERROR_KEYS[code as keyof typeof YOUTUBE_ERROR_KEYS] : undefined;
+  return i18n.t(key ?? 'youtubeErrors.unknown');
+};

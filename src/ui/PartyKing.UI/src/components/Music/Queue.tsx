@@ -1,10 +1,12 @@
 import CloseIcon from '@mui/icons-material/Close';
 import { ChangeEvent, FormEvent, ReactNode, useEffect, useRef, useState } from 'react';
+import { i18n } from '@/i18n';
 import { CoverImage } from '@/components/Music/CoverImage';
 import { QueueList } from '@/components/Music/QueueList';
 import { looksLikeSongLink, queueApi } from '@/service/endpoints/queue/queueApi';
 import { useQueueSongs } from '@/service/endpoints/queue/useQueueSongs';
 import { SpotifyTrackDto } from '@/service/endpoints/queue/types';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   sessionId: string;
@@ -15,9 +17,10 @@ type Props = {
 type RowState = { status: 'adding' } | { status: 'failed'; error: string };
 
 const errorMessage = (error: unknown) =>
-  (error as { message?: string })?.message || 'Something went wrong';
+  (error as { message?: string })?.message || i18n.t('common.somethingWentWrong');
 
 export const Queue = ({ sessionId, canRemove = false }: Props): ReactNode => {
+  const { t } = useTranslation();
   const [input, setInput] = useState('');
   const [results, setResults] = useState<SpotifyTrackDto[]>([]);
   const [busy, setBusy] = useState(false);
@@ -71,7 +74,7 @@ export const Queue = ({ sessionId, canRemove = false }: Props): ReactNode => {
     setBusy(true);
     try {
       await queueApi.enqueue(sessionId, value);
-      setMessage('Added to the queue');
+      setMessage(t('queue.addedToQueue'));
       setInput('');
       setResults([]);
       void mutate();
@@ -111,7 +114,7 @@ export const Queue = ({ sessionId, canRemove = false }: Props): ReactNode => {
       setResults(tracks);
       setRows({});
       setOpen(tracks.length > 0);
-      setMessage(tracks.length === 0 ? 'No songs found' : null);
+      setMessage(tracks.length === 0 ? t('queue.noSongs') : null);
     } catch (error) {
       setMessage(errorMessage(error));
     } finally {
@@ -121,9 +124,9 @@ export const Queue = ({ sessionId, canRemove = false }: Props): ReactNode => {
 
   return (
     <>
-      <section ref={searchRef} aria-label="Add a song" className="relative mx-2 mt-4 p-3 bg-slate-900 rounded-lg">
+      <section ref={searchRef} aria-label={t('queue.addSong')} className="relative mx-2 mt-4 p-3 bg-slate-900 rounded-lg">
         <h2 className="pb-3 text-xs font-semibold tracking-wider text-slate-400 uppercase">
-          Add a song to the queue
+          {t('queue.addTitle')}
         </h2>
         <form className="flex" onSubmit={handleSubmit}>
           <div className="relative grow">
@@ -135,13 +138,13 @@ export const Queue = ({ sessionId, canRemove = false }: Props): ReactNode => {
               onFocus={() => setOpen(results.length > 0)}
               onClick={() => setOpen(results.length > 0)}
               className="w-full pl-3 pr-10 py-2 bg-slate-800 border border-slate-700 rounded-l-md placeholder:text-slate-500 focus:outline-none focus:border-amber-600"
-              placeholder="Search Spotify, or paste a Spotify / YouTube link"
+              placeholder={t('queue.placeholder')}
             />
             {input && (
               <button
                 type="button"
                 onClick={clearSearch}
-                aria-label="Clear search"
+                aria-label={t('queue.clearSearch')}
                 className="absolute inset-y-0 right-0 w-10 flex items-center justify-center text-slate-500 hover:text-slate-200 cursor-pointer"
               >
                 <CloseIcon fontSize="small" />
@@ -153,7 +156,7 @@ export const Queue = ({ sessionId, canRemove = false }: Props): ReactNode => {
             disabled={busy}
             className="w-20 font-semibold text-slate-100 bg-amber-600 rounded-r-md cursor-pointer hover:bg-amber-500 disabled:opacity-50"
           >
-            {looksLikeSongLink(input) ? 'Add' : 'Search'}
+            {looksLikeSongLink(input) ? t('queue.add') : t('queue.search')}
           </button>
         </form>
 
@@ -161,7 +164,7 @@ export const Queue = ({ sessionId, canRemove = false }: Props): ReactNode => {
 
         {open && results.length > 0 && (
           <ul
-            aria-label="Search results"
+            aria-label={t('queue.searchResults')}
             className="absolute left-0 right-0 top-full z-10 mt-1 max-h-[60vh] overflow-y-auto p-2 space-y-1 rounded-md border border-slate-700 bg-slate-900 shadow-lg"
           >
             {results.map((track) => {
@@ -181,7 +184,7 @@ export const Queue = ({ sessionId, canRemove = false }: Props): ReactNode => {
                       onClick={() => enqueueResult(track.uri)}
                       className="w-24 shrink-0 px-2 py-1.5 text-sm font-semibold text-slate-100 bg-amber-600 rounded-md cursor-pointer hover:bg-amber-500 disabled:cursor-default disabled:bg-slate-700 disabled:text-slate-400 disabled:hover:bg-slate-700"
                     >
-                      {inQueue ? 'In queue' : adding ? 'Adding...' : 'Add'}
+                      {inQueue ? t('queue.inQueue') : adding ? t('queue.adding') : t('queue.add')}
                     </button>
                   </div>
                   {row?.status === 'failed' && <p className="pt-1 text-sm text-amber-500">{row.error}</p>}

@@ -31,27 +31,27 @@ describe('ResistanceVotePanel with an Opinion Maker', () => {
   it('keeps the others waiting until the Opinion Maker has voted', () => {
     render(<ResistanceVotePanel game={game({})} onVote={vi.fn()} />);
 
-    expect(screen.getByText('Najpierw głosuje kreator opinii: Ala.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Zatwierdź' })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByText('The Opinion Maker votes first: Ala.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Approve' })).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('lets the others vote once the Opinion Maker has', async () => {
     const onVote = vi.fn().mockResolvedValue(undefined);
     render(<ResistanceVotePanel game={game({ votedPlayerIds: ['p0'] })} onVote={onVote} />);
 
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Zatwierdź' }));
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Approve' }));
 
     expect(onVote).toHaveBeenCalledWith(true);
   });
 
   it('lets the Opinion Maker vote first and locks the vote afterwards', () => {
     const { rerender } = render(<ResistanceVotePanel game={game({ yourPlayerId: 'p0' })} onVote={vi.fn()} />);
-    expect(screen.getByRole('button', { name: 'Odrzuć' })).not.toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('button', { name: 'Reject' })).not.toHaveAttribute('aria-disabled', 'true');
 
     rerender(
       <ResistanceVotePanel game={game({ yourPlayerId: 'p0', yourVote: true, votedPlayerIds: ['p0'] })} onVote={vi.fn()} />,
     );
-    expect(screen.getByRole('button', { name: 'Odrzuć' })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('button', { name: 'Reject' })).toHaveAttribute('aria-disabled', 'true');
   });
 });
 
@@ -60,20 +60,20 @@ describe('ResistanceVotePanel when the Opinion Maker changes hands', () => {
     const before = game({ yourPlayerId: 'p0', opinionMakerPlayerIds: ['p0'] });
     const after = game({ yourPlayerId: 'p0', opinionMakerPlayerIds: ['p1'] });
     const { rerender } = render(<ResistanceVotePanel game={before} onVote={vi.fn()} />);
-    expect(screen.getByRole('button', { name: 'Odrzuć' })).not.toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('button', { name: 'Reject' })).not.toHaveAttribute('aria-disabled', 'true');
 
     rerender(<ResistanceVotePanel game={after} onVote={vi.fn()} />);
-    expect(screen.getByText('Najpierw głosuje kreator opinii: Bartek.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Odrzuć' })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByText('The Opinion Maker votes first: Bartek.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reject' })).toHaveAttribute('aria-disabled', 'true');
 
     rerender(<ResistanceVotePanel game={game({ ...after, yourPlayerId: 'p1' })} onVote={vi.fn()} />);
-    expect(screen.queryByText(/Najpierw głosuje/)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Odrzuć' })).not.toHaveAttribute('aria-disabled', 'true');
+    expect(screen.queryByText(/votes first/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reject' })).not.toHaveAttribute('aria-disabled', 'true');
 
     rerender(
       <ResistanceVotePanel game={game({ ...after, yourPlayerId: 'p1', yourVote: false, votedPlayerIds: ['p1'] })} onVote={vi.fn()} />,
     );
-    expect(screen.getByRole('button', { name: 'Zatwierdź' })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('button', { name: 'Approve' })).toHaveAttribute('aria-disabled', 'true');
   });
 });
 
@@ -86,15 +86,15 @@ describe('ResistancePlayerMarks with an Opinion Maker', () => {
       />,
     );
 
-    expect(screen.getByText('Kreator opinii')).toBeInTheDocument();
-    expect(screen.getByText('Przeciw')).toBeInTheDocument();
+    expect(screen.getByText('Opinion Maker')).toBeInTheDocument();
+    expect(screen.getByText('Against')).toBeInTheDocument();
   });
 
   it('shows nothing about the vote of a player who is not an Opinion Maker', () => {
     render(<ResistancePlayerMarks game={game({ votedPlayerIds: ['p2'] })} playerId="p2" />);
 
-    expect(screen.queryByText('Kreator opinii')).not.toBeInTheDocument();
-    expect(screen.queryByText('Za')).not.toBeInTheDocument();
+    expect(screen.queryByText('Opinion Maker')).not.toBeInTheDocument();
+    expect(screen.queryByText('For')).not.toBeInTheDocument();
   });
 });
 
@@ -103,7 +103,7 @@ describe('ResistanceTvBoard with an Opinion Maker', () => {
     const tvGame = game({ phase: 'SelectingTeam', teamPlayerIds: [], missionResults: [], missionNumber: 1, rules: undefined });
     render(<ResistanceTvBoard game={tvGame} board={missionBoardFor(3, undefined)} banner={null} yourPlayerId={null} />);
 
-    const cards = screen.getAllByTitle('Kreator opinii');
+    const cards = screen.getAllByTitle('Opinion Maker');
     expect(cards.length).toBeGreaterThan(0);
     expect(screen.getByText('Ala').closest('li')).toContainElement(cards[0]);
     expect(screen.getByText('Bartek').closest('li')?.querySelector('title')).toBeNull();

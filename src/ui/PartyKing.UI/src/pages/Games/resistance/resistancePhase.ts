@@ -1,3 +1,4 @@
+import { i18n } from '@/i18n';
 import { ResistanceGameDto } from '@/service/endpoints/games/types';
 import { IMMEDIATE_PLOT_CARDS } from './resistancePlotCards';
 import { MIN_PLAYERS } from './resistanceTeams';
@@ -10,9 +11,19 @@ type Viewer = {
   isAdmin: boolean;
 };
 
+const t = i18n.t.bind(i18n);
+
+/** The confirmation line of a window in which everybody decides whether to play a plot card. */
+const confirmation = (game: ResistanceGameDto): string => {
+  if (game.yourPlayerId == null) return '';
+
+  return ` ${t(game.leaderWindowPassedPlayerIds.includes(game.yourPlayerId) ? 'resistance.phase.confirmedMine' : 'resistance.phase.confirmPrompt')}`;
+};
+
 /**
  * What is going on in the game and what has to happen next, for the line above the mission board. It never mentions
- * the viewer's role, because it stays on the screen while the role card is face up.
+ * the viewer's role, because it stays on the screen while the role card is face up. The text follows the UI language
+ * at the time of the call.
  */
 export const resistancePhaseDescription = (
   game: ResistanceGameDto,
@@ -25,63 +36,64 @@ export const resistancePhaseDescription = (
   if (game.startedAt != null) {
     const leader = game.players.find((player) => player.id === game.leaderPlayerId);
     const youLead = leader != null && leader.id === game.yourPlayerId;
-    const who = youLead ? 'Ty jesteś liderem' : `Liderem jest ${leader?.name ?? 'jeden z graczy'}`;
+    const who = youLead
+      ? t('resistance.phase.youLead')
+      : t('resistance.phase.leaderIs', { name: leader?.name ?? t('resistance.phase.aPlayer') });
     const size = game.requiredTeamSize ?? firstTeamSize;
-    const mission = game.missionNumber === 1 ? 'pierwszą' : `${game.missionNumber}.`;
-    const card = game.yourPlayerId != null ? ' Dotknij swojej karty, żeby poznać swoją rolę.' : '';
+    const mission =
+      game.missionNumber === 1
+        ? t('resistance.phase.firstMission')
+        : t('resistance.phase.missionN', { n: game.missionNumber });
+    const card = game.yourPlayerId != null ? ` ${t('resistance.phase.tapCard')}` : '';
 
     const names = game.players.filter((player) => game.teamPlayerIds.includes(player.id)).map((player) => player.name);
-    const rejected = game.rejectedTeams > 0 ? ` Odrzucone drużyny z rzędu: ${game.rejectedTeams}/${MAX_REJECTED_TEAMS}.` : '';
+    const rejected =
+      game.rejectedTeams > 0
+        ? t('resistance.phase.rejected', { count: game.rejectedTeams, max: MAX_REJECTED_TEAMS })
+        : '';
     const votes = game.votes ?? [];
     const approvals = votes.filter((vote) => vote.approve).length;
-    const tally = `za: ${approvals}, przeciw: ${votes.length - approvals}`;
+    const tally = t('resistance.phase.tally', { approve: approvals, reject: votes.length - approvals });
 
     const results = game.missionResults ?? [];
     const succeeded = results.filter((result) => result.succeeded).length;
-    const score = `Ruch Oporu ${succeeded}, Szpiedzy ${results.length - succeeded}`;
+    const score = t('resistance.phase.score', { resistance: succeeded, spies: results.length - succeeded });
+    const passed = game.leaderWindowPassedPlayerIds.length;
 
     if (game.phase === 'GameOver') {
       const why =
         game.winner === 'Spy'
           ? game.rejectedTeams >= MAX_REJECTED_TEAMS
-            ? `${MAX_REJECTED_TEAMS} drużyn z rzędu zostało odrzuconych`
-            : 'trzy misje się nie powiodły'
-          : 'trzy misje zakończyły się sukcesem';
+            ? t('resistance.phase.whyRejected', { max: MAX_REJECTED_TEAMS })
+            : t('resistance.phase.whyFailed')
+          : t('resistance.phase.whySucceeded');
+      const winner = t(game.winner === 'Spy' ? 'resistance.phase.spiesWon' : 'resistance.phase.resistanceWon');
 
-      return `Koniec gry! ${game.winner === 'Spy' ? 'Szpiedzy wygrali' : 'Ruch Oporu wygrał'}: ${why} (${score}). Wszystkie role zostały ujawnione.`;
+      return t('resistance.phase.gameOver', { winner, why, score });
     }
 
     if (game.phase === 'DealingCards') {
-      const task = youLead
-        ? 'rozdaj dobrane karty Intryg innym graczom'
-        : 'rozdaje dobrane karty Intryg innym graczom';
+      const task = t(youLead ? 'resistance.phase.dealYou' : 'resistance.phase.dealLeader');
 
-      return `${who} (korona): ${task}. Potem wybierze drużynę na ${mission} misję.`;
+      return t('resistance.phase.dealing', { who, task, mission });
     }
 
     if (game.phase === 'LeaderWindow') {
-      const passed = game.leaderWindowPassedPlayerIds.length;
-      const mine = game.yourPlayerId == null
-        ? ''
-        : game.leaderWindowPassedPlayerIds.includes(game.yourPlayerId)
-          ? ' Twoje potwierdzenie jest zapisane.'
-          : ' Potwierdź, że nie zagrywasz karty (albo zagraj ją).';
-
-      return `${who} (korona), ale zanim cokolwiek zrobi, gracze decydują, czy zagrywają karty Intrygi. Potwierdzili: ${passed}/${count}.${mine}`;
+      return t('resistance.phase.leaderWindow', { who, passed, count, mine: confirmation(game) });
     }
 
     if (game.phase === 'ConfidenceWindow') {
-      const passed = game.leaderWindowPassedPlayerIds.length;
-      const mine = game.yourPlayerId == null
-        ? ''
-        : game.leaderWindowPassedPlayerIds.includes(game.yourPlayerId)
-          ? ' Twoje potwierdzenie jest zapisane.'
-          : ' Potwierdź, że nie zagrywasz karty (albo zagraj ją).';
-
       const openName = game.players.find((player) => player.id === game.openMissionPlayerId)?.name;
-      const open = openName == null ? '' : ` ${openName} musi zagrać kartę misji jawnie („Pod obserwacją”).`;
+      const open = openName == null ? '' : ` ${t('resistance.phase.mustPlayOpen', { name: openName })}`;
 
-      return `Drużyna (${names.join(', ')}) została zatwierdzona (${tally}), ale zanim wyruszy, gracze decydują, czy zagrywają karty Intrygi. Potwierdzili: ${passed}/${count}.${open}${mine}`;
+      return t('resistance.phase.confidenceWindow', {
+        names: names.join(', '),
+        tally,
+        passed,
+        count,
+        open,
+        mine: confirmation(game),
+      });
     }
 
     if (game.phase === 'ResolvingCards') {
@@ -89,103 +101,98 @@ export const resistancePhaseDescription = (
         .filter((card) => IMMEDIATE_PLOT_CARDS.includes(card.type) && !card.isConfirmed)
         .map((card) => game.players.find((player) => player.id === (card.type === 'OverheardConversation' ? card.holderPlayerId : card.targetPlayerId))?.name)
         .filter((name) => name != null);
-      const confirm = waiting.length > 0 ? ` Czekamy na potwierdzenie: ${waiting.join(', ')}.` : '';
+      const confirm = waiting.length > 0 ? ` ${t('resistance.phase.waitingConfirm', { names: waiting.join(', ') })}` : '';
 
-      return `${who} (korona) rozdał/a karty Intryg. Gracze zagrywają karty natychmiastowe i potwierdzają, że zobaczyli kartę Tożsamości; potem drużynę wybierze lider.${confirm}`;
+      return t('resistance.phase.resolving', { who, confirm });
     }
 
     if (game.phase === 'PlayingMission') {
-      const progress = `Zagrano ${game.playedMissionPlayerIds.length}/${game.teamPlayerIds.length} kart.`;
+      const progress = t('resistance.phase.cardsPlayed', {
+        played: game.playedMissionPlayerIds.length,
+        total: game.teamPlayerIds.length,
+      });
       const fails = game.requiredFails ?? 1;
-      const rule = fails > 1 ? ` Misja kończy się porażką od ${fails} kart Porażka.` : '';
+      const rule = fails > 1 ? ` ${t('resistance.phase.failRule', { count: fails })}` : '';
       const onTeam = game.yourPlayerId != null && game.teamPlayerIds.includes(game.yourPlayerId);
       const mine = !onTeam
         ? ''
-        : game.yourMissionCard == null
-          ? ' Zagraj swoją kartę misji.'
-          : ' Twoja karta jest zagrana.';
+        : ` ${t(game.yourMissionCard == null ? 'resistance.phase.playYourCard' : 'resistance.phase.yourCardPlayed')}`;
 
       const openName = game.players.find((player) => player.id === game.openMissionPlayerId)?.name;
       const open = openName == null
         ? ''
         : game.openMissionCard == null
-          ? ` ${openName} musi zagrać kartę misji jawnie („Pod obserwacją”).`
-          : ` ${openName} zagrał/a kartę jawnie: ${game.openMissionCard ? 'Sukces' : 'Porażka'}.`;
+          ? ` ${t('resistance.phase.mustPlayOpen', { name: openName })}`
+          : ` ${t('resistance.phase.playedOpen', {
+              name: openName,
+              card: t(game.openMissionCard ? 'resistance.missionCard.success' : 'resistance.missionCard.fail'),
+            })}`;
 
-      return `Drużyna (${names.join(', ')}) została zatwierdzona (${tally}) i wykonuje ${mission} misję. ${progress}${rule}${mine}${open}`;
+      return t('resistance.phase.playingMission', { names: names.join(', '), tally, mission, progress, rule, mine, open });
     }
 
-    if (game.phase === 'PeekWindow') {
-      const last = results.find((result) => result.missionNumber === game.missionNumber);
-      const outcome = last?.succeeded
-        ? 'Misja zakończyła się sukcesem'
-        : `Misja zakończyła się porażką (kart Porażka: ${last?.failCount ?? 0})`;
-      const passed = game.leaderWindowPassedPlayerIds.length;
-      const mine = game.yourPlayerId == null
-        ? ''
-        : game.leaderWindowPassedPlayerIds.includes(game.yourPlayerId)
-          ? ' Twoje potwierdzenie jest zapisane.'
-          : ' Potwierdź, że nie zagrywasz karty (albo zagraj ją).';
+    const last = results.find((result) => result.missionNumber === game.missionNumber);
+    const outcome = last?.succeeded
+      ? t('resistance.phase.missionSucceeded')
+      : t('resistance.phase.missionFailed', { count: last?.failCount ?? 0 });
 
-      return `${outcome}. Wynik: ${score}. Zanim lider przejdzie dalej, gracze decydują, czy zagrywają karty Intrygi. Potwierdzili: ${passed}/${count}.${mine}`;
+    if (game.phase === 'PeekWindow') {
+      return t('resistance.phase.peekWindow', { outcome, score, passed, count, mine: confirmation(game) });
     }
 
     if (game.phase === 'MissionResult') {
-      const last = results.find((result) => result.missionNumber === game.missionNumber);
-      const next = youLead || viewer.canManage ? 'Kliknij „Dalej”' : 'Lider lub host kliknie „Dalej”';
-      const outcome = last?.succeeded
-        ? 'Misja zakończyła się sukcesem'
-        : `Misja zakończyła się porażką (kart Porażka: ${last?.failCount ?? 0})`;
-      const fails = last?.succeeded && last.failCount > 0 ? ` (kart Porażka: ${last.failCount})` : '';
+      const next = t(youLead || viewer.canManage ? 'resistance.phase.nextClick' : 'resistance.phase.nextWait');
+      const fails =
+        last?.succeeded && last.failCount > 0 ? ` ${t('resistance.phase.failCardsNote', { count: last.failCount })}` : '';
 
-      return `${outcome}${fails}. Wynik: ${score}. ${next}, żeby zaczęła się kolejna misja.`;
+      return t('resistance.phase.missionResult', { outcome, fails, score, next });
     }
 
     if (game.phase === 'Voting') {
-      const progress = `Zagłosowało ${game.votedPlayerIds.length}/${count}.`;
+      const progress = t('resistance.phase.voted', { voted: game.votedPlayerIds.length, count });
       const mine =
         game.yourPlayerId == null
           ? ''
-          : game.yourVote == null
-            ? ' Zagłosuj: zatwierdź albo odrzuć drużynę.'
-            : ' Twój głos możesz zmienić, dopóki nie zagłosują wszyscy.';
+          : ` ${t(game.yourVote == null ? 'resistance.phase.voteNow' : 'resistance.phase.voteChange')}`;
 
       const makers = game.players.filter((player) => game.opinionMakerPlayerIds.includes(player.id));
       const pendingMakers = makers.filter((player) => !game.votedPlayerIds.includes(player.id));
       const order =
         pendingMakers.length > 0
-          ? ` Najpierw głosuje kreator opinii: ${pendingMakers.map((player) => player.name).join(', ')}.`
+          ? ` ${t('resistance.phase.makerFirst', { names: pendingMakers.map((player) => player.name).join(', ') })}`
           : '';
 
-      return `${who} (korona) zgłosił/a drużynę na ${mission} misję: ${names.join(', ')}. Teraz drużyna idzie pod głosowanie. ${progress}${order}${mine}${card}`;
+      return t('resistance.phase.voting', { who, mission, names: names.join(', '), progress, order, mine, card });
     }
 
     const task = youLead
-      ? `wybierz ${size} osób na ${mission} misję i zgłoś je do głosowania`
-      : `wybiera ${size} osób na ${mission} misję`;
+      ? t('resistance.phase.pickYou', { count: size, mission })
+      : t('resistance.phase.pickLeader', { count: size, mission });
 
     if (votes.length > 0) {
-      return `Poprzednia drużyna została odrzucona (${tally}).${rejected} ${who} (korona): ${task}. Omówcie to na żywo.${card}`;
+      return t('resistance.phase.rejectedPrev', {
+        tally,
+        rejected: rejected ? `${rejected} ` : '',
+        who,
+        task,
+        card,
+      });
     }
 
-    return `Gra się rozpoczęła, nowi gracze nie mogą już dołączyć. ${who} (korona): ${task}. Omówcie to na żywo.${rejected}${card}`;
+    return t('resistance.phase.started', { who, task, rejected: rejected ? ` ${rejected}` : '', card });
   }
 
   if (!game.isOpen) {
-    const need = missing > 0 ? ` Potrzeba co najmniej ${MIN_PLAYERS} graczy.` : '';
+    const need = missing > 0 ? ` ${t('resistance.phase.needPlayers', { min: MIN_PLAYERS })}` : '';
 
-    return viewer.isAdmin
-      ? `Gra jest zamknięta. Otwórz ją dla gości, żeby gracze mogli dołączyć.${need}`
-      : `Gra jest zamknięta. Poczekaj, aż admin otworzy ją dla gości.${need}`;
+    return t(viewer.isAdmin ? 'resistance.phase.closedAdmin' : 'resistance.phase.closedGuest', { need });
   }
 
   if (missing > 0) {
-    const waiting = viewer.canManage ? 'Czekamy na graczy' : 'Czekamy na pozostałych graczy';
+    const waiting = t(viewer.canManage ? 'resistance.phase.waitingHost' : 'resistance.phase.waitingGuest');
 
-    return `${waiting}. Potrzeba co najmniej ${MIN_PLAYERS} graczy, brakuje jeszcze ${missing}. Pokazane rozmiary drużyn dotyczą gry w ${MIN_PLAYERS} osób.`;
+    return t('resistance.phase.notEnough', { waiting, min: MIN_PLAYERS, missing });
   }
 
-  return viewer.canManage
-    ? 'Jest wystarczająco graczy. Gdy wszyscy dołączą, kliknij „Start game” (po starcie nikt nie dołączy). Role zostaną rozdane losowo.'
-    : 'Jest wystarczająco graczy. Czekamy, aż host lub admin rozpocznie grę.';
+  return t(viewer.canManage ? 'resistance.phase.readyManager' : 'resistance.phase.readyGuest');
 };
