@@ -323,7 +323,7 @@ export const Resistance = (): ReactNode => {
       className={
         tvLayout
           ? 'relative w-full h-screen bg-slate-800 text-slate-400'
-          : 'flex flex-col gap-3 w-full min-h-screen p-3 bg-slate-800 text-slate-400'
+          : 'flex flex-col gap-3 w-full min-h-screen p-3 pt-10 bg-slate-800 text-slate-400'
       }
     >
       {tvLayout ? (

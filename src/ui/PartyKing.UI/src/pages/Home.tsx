@@ -22,7 +22,7 @@ export const Home = (): ReactNode => {
 
   return (
     <div className="w-full min-h-full bg-slate-800 text-slate-400">
-      <div className="w-full max-w-xl mx-auto">
+      <div className="w-full max-w-xl mx-auto pt-6">
         {isAdmin && <PageNavigation className="px-2 pt-4" links={[{ to: ROUTE_PATHS.ADMIN, label: 'Admin panel' }]} />}
 
         <div className="mx-2 mt-4 p-4 bg-slate-900 rounded-lg">

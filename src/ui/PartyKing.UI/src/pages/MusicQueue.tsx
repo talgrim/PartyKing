@@ -139,7 +139,7 @@ export const MusicQueue = (): ReactNode => {
       {session && !locked && slideshowOpen && !maximized && (
         <aside
           aria-label={lyricsShown ? 'Lyrics' : 'Slideshow'}
-          className="relative m-2 rounded-md border-2 border-slate-400 md:w-[calc(50%-1rem)] md:shrink-0"
+          className="relative mx-2 mb-2 mt-9 rounded-md border-2 border-slate-400 md:w-[calc(50%-1rem)] md:shrink-0"
         >
           <div className="aspect-video w-full overflow-hidden rounded-sm bg-black">
             {lyricsShown ? (
@@ -171,7 +171,7 @@ export const MusicQueue = (): ReactNode => {
           className="fixed top-1/2 left-1 z-10 -translate-y-1/2"
         />
       )}
-      <div className="w-full max-w-xl mx-auto">
+      <div className="w-full max-w-xl mx-auto pt-6">
         <PageNavigation
           className="px-2 pt-4"
           links={[

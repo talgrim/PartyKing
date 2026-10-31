@@ -40,7 +40,7 @@ export const Admin = (): ReactNode => {
 
   return (
     <div className="w-full min-h-full bg-slate-800 text-slate-400">
-      <div className="max-w-xl mx-auto">
+      <div className="max-w-xl mx-auto pt-6">
         <PageNavigation className="px-2 pt-4" links={[{ to: ROUTE_PATHS.HOME, label: 'All sessions' }]} />
         <h1 className="px-2 pt-4 text-2xl text-slate-200">Admin</h1>
 

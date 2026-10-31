@@ -31,7 +31,7 @@ export const Games = (): ReactNode => {
 
   return (
     <div className="w-full min-h-full bg-slate-800 text-slate-400">
-      <div className="w-full max-w-xl mx-auto">
+      <div className="w-full max-w-xl mx-auto pt-6">
         <PageNavigation className="px-2 pt-4" links={[{ to: sessionPath(sessionId), label: 'Back to the session' }]} />
         <h1 className="px-2 pt-4 text-2xl text-slate-200">Games</h1>
 
