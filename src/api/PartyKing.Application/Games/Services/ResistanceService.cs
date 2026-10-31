@@ -1,4 +1,5 @@
 using ErrorOr;
+using PartyKing.Application.Mappings;
 using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.System;
@@ -191,7 +192,7 @@ internal class ResistanceService : IResistanceService
 
         var game = await _games.GetAsync(sessionId, cancellationToken);
 
-        return game is null || (!isManager && !game.IsOpen) ? _lobby.NoGame : ToDto(game, caller);
+        return game is null || (!isManager && !game.IsOpen) ? _lobby.NoGame : ResistanceGameViewBuilder.Build(game, caller);
     }
 
     public async Task<ErrorOr<ResistanceLobbyDto>> GetLobbyAsync(
@@ -224,7 +225,7 @@ internal class ResistanceService : IResistanceService
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
 
-        return ToDto(game, caller);
+        return ResistanceGameViewBuilder.Build(game, caller);
     }
 
     public async Task<ErrorOr<ResistanceGameDto>> RefreshRulesAsync(
@@ -247,7 +248,7 @@ internal class ResistanceService : IResistanceService
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
 
-        return ToDto(result.Game!, caller);
+        return ResistanceGameViewBuilder.Build(result.Game!, caller);
     }
 
     public async Task<ErrorOr<ResistanceGameDto>> SetPlotCardsAsync(
@@ -270,7 +271,7 @@ internal class ResistanceService : IResistanceService
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
 
-        return ToDto(result.Game!, caller);
+        return ResistanceGameViewBuilder.Build(result.Game!, caller);
     }
 
     public async Task<ErrorOr<ResistanceGameDto>> OpenAsync(
@@ -278,7 +279,7 @@ internal class ResistanceService : IResistanceService
     {
         var result = await _lobby.OpenAsync(sessionId, caller, cancellationToken);
 
-        return result.IsError ? result.Errors : ToDto(result.Value, caller);
+        return result.IsError ? result.Errors : ResistanceGameViewBuilder.Build(result.Value, caller);
     }
 
     public async Task<ErrorOr<ResistanceGameDto>> StartAsync(
@@ -306,7 +307,7 @@ internal class ResistanceService : IResistanceService
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
 
-        return ToDto(result.Game!, caller);
+        return ResistanceGameViewBuilder.Build(result.Game!, caller);
     }
 
     public async Task<ErrorOr<ResistanceGameDto>> RestartAsync(
@@ -330,7 +331,7 @@ internal class ResistanceService : IResistanceService
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
 
-        return ToDto(result.Game!, caller);
+        return ResistanceGameViewBuilder.Build(result.Game!, caller);
     }
 
     public async Task<ErrorOr<ResistanceGameDto>> SelectTeamAsync(
@@ -372,7 +373,7 @@ internal class ResistanceService : IResistanceService
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
 
-        return ToDto(result.Game!, caller);
+        return ResistanceGameViewBuilder.Build(result.Game!, caller);
     }
 
     public async Task<ErrorOr<ResistanceGameDto>> DealPlotCardsAsync(
@@ -417,7 +418,7 @@ internal class ResistanceService : IResistanceService
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
 
-        return ToDto(result.Game!, caller);
+        return ResistanceGameViewBuilder.Build(result.Game!, caller);
     }
 
     public async Task<ErrorOr<ResistanceGameDto>> PlayPlotCardAsync(
@@ -588,7 +589,7 @@ internal class ResistanceService : IResistanceService
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
 
-        return ToDto(result.Game!, caller);
+        return ResistanceGameViewBuilder.Build(result.Game!, caller);
     }
 
     public async Task<ErrorOr<ResistanceGameDto>> VoteAsync(
@@ -626,7 +627,7 @@ internal class ResistanceService : IResistanceService
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
 
-        return ToDto(result.Game!, caller);
+        return ResistanceGameViewBuilder.Build(result.Game!, caller);
     }
 
     public async Task<ErrorOr<ResistanceGameDto>> PlayMissionCardAsync(
@@ -666,7 +667,7 @@ internal class ResistanceService : IResistanceService
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
 
-        return ToDto(result.Game!, caller);
+        return ResistanceGameViewBuilder.Build(result.Game!, caller);
     }
 
     public async Task<ErrorOr<ResistanceGameDto>> ContinueAsync(
@@ -700,7 +701,7 @@ internal class ResistanceService : IResistanceService
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
 
-        return ToDto(result.Game!, caller);
+        return ResistanceGameViewBuilder.Build(result.Game!, caller);
     }
 
     private static Error GameOverError => Error.Conflict("Resistance.GameOver", "The game is over.");
@@ -716,7 +717,7 @@ internal class ResistanceService : IResistanceService
     {
         var result = await _lobby.KickAsync(sessionId, playerId, caller, cancellationToken);
 
-        return result.IsError ? result.Errors : ToDto(result.Value, caller);
+        return result.IsError ? result.Errors : ResistanceGameViewBuilder.Build(result.Value, caller);
     }
 
     public async Task<ErrorOr<ResistanceGameDto>> ReorderAsync(
@@ -724,7 +725,7 @@ internal class ResistanceService : IResistanceService
     {
         var result = await _lobby.ReorderAsync(sessionId, playerIds, caller, cancellationToken);
 
-        return result.IsError ? result.Errors : ToDto(result.Value, caller);
+        return result.IsError ? result.Errors : ResistanceGameViewBuilder.Build(result.Value, caller);
     }
 
     public async Task<ErrorOr<Deleted>> EndAsync(
@@ -743,131 +744,6 @@ internal class ResistanceService : IResistanceService
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
 
         return Result.Deleted;
-    }
-
-    private static ResistanceGameDto ToDto(ResistanceGame game, GameCaller caller)
-    {
-        var players = game.Players
-            .OrderBy(x => x.Order)
-            .Select(x => new ResistancePlayerDto(x.PlayerId, x.DisplayName))
-            .ToList();
-
-        var you = GameLobby<ResistanceGame, ResistancePlayer>.IsPlayer(game, caller)
-            ? game.Players.First(x => x.PlayerId == caller.PlayerId)
-            : null;
-        var yourRole = game.IsStarted ? you?.Role : null;
-        var fellowSpies = yourRole == ResistanceRole.Spy
-            ? game.Players
-                .Where(x => x.Role == ResistanceRole.Spy && x.PlayerId != you!.PlayerId)
-                .OrderBy(x => x.Order)
-                .Select(x => x.PlayerId)
-                .ToList()
-            : null;
-
-        // Hidden while the vote is on; public once all voted (also while the next leader picks after a rejection)
-        var revealed = game.Phase != ResistancePhase.Voting && game.Players.All(x => x.Vote is not null);
-        var voted = game.Players.Where(x => x.Vote is not null).OrderBy(x => x.Order).ToList();
-
-        // Opinion Makers are public; their votes are too once every one of them has voted (before the others may)
-        var opinionMakers = ResistanceRoles.OpinionMakerIds(game);
-        var opinionMakersRevealed = opinionMakers.Count > 0
-            && game.Players.Where(x => opinionMakers.Contains(x.PlayerId)).All(x => x.Vote is not null);
-
-        return new ResistanceGameDto(
-            game.CreatedAt,
-            game.IsOpen,
-            players,
-            you?.PlayerId,
-            ResistanceGame.MaxPlayers,
-            game.StartedAt,
-            game.LeaderPlayerId,
-            yourRole is { } role ? (ResistanceRoleDto)role : null,
-            fellowSpies,
-            game.MissionNumber,
-            game.IsStarted ? game.Rules.TeamSize(game.Players.Count, game.MissionNumber) : null,
-            game.Players.Where(x => x.IsOnTeam).OrderBy(x => x.Order).Select(x => x.PlayerId).ToList(),
-            game.IsStarted ? (ResistancePhaseDto)game.Phase : null,
-            game.RejectedTeams,
-            game.Winner is { } winner ? (ResistanceRoleDto)winner : null,
-            voted.Select(x => x.PlayerId).ToList(),
-            you?.Vote,
-            revealed ? voted.Select(x => new ResistanceVoteDto(x.PlayerId, x.Vote!.Value)).ToList() : null,
-            revealed ? ResistanceRoles.IsApproved(game) : null,
-            game.Phase == ResistancePhase.GameOver
-                ? game.Players
-                    .OrderBy(x => x.Order)
-                    .Select(x => new ResistanceRevealedRoleDto(x.PlayerId, (ResistanceRoleDto)x.Role!.Value))
-                    .ToList()
-                : null,
-            new ResistanceRulesDto(
-                game.Rules.PlayerCounts
-                    .OrderBy(x => x.Key)
-                    .Select(x => new ResistanceCountRulesDto(x.Key, x.Value.Spies, x.Value.TeamSizes, x.Value.RequiredFails))
-                    .ToList(),
-                game.Rules.PlotCardsEnabled,
-                game.Rules.PlotCardsPerRound(game.Players.Count)),
-            game.IsStarted ? game.Rules.RequiredFails(game.Players.Count, game.MissionNumber) : null,
-            game.Players.Where(x => x.MissionCard is not null).OrderBy(x => x.Order).Select(x => x.PlayerId).ToList(),
-            you?.MissionCard,
-            game.MissionResults
-                .OrderBy(x => x.MissionNumber)
-                .Select(x => new ResistanceMissionResultDto(x.MissionNumber, x.Succeeded, x.FailCount, x.TeamPlayerIds))
-                .ToList(),
-            you is null
-                ? []
-                : game.PlotCards
-                    .Where(x => x.HolderPlayerId == you.PlayerId && x.Location != ResistancePlotCardLocation.Played)
-                    .OrderBy(x => x.CardId)
-                    .Select(x => new ResistancePlotCardDto(
-                        x.CardId,
-                        (ResistancePlotCardTypeDto)x.Type,
-                        x.Location == ResistancePlotCardLocation.Drawn && x.Type != ResistancePlotCardType.EstablishConfidence,
-                        x.Location == ResistancePlotCardLocation.InPlay))
-                    .ToList(),
-            game.Rules.PlotCardsEnabled
-                ? game.Players
-                    .OrderBy(x => x.Order)
-                    .Select(x => new ResistancePlotCardCountDto(
-                        x.PlayerId,
-                        game.PlotCards.Count(c => c.HolderPlayerId == x.PlayerId && c.Location == ResistancePlotCardLocation.Hand)))
-                    .ToList()
-                : [],
-            game.Players.Where(x => opinionMakers.Contains(x.PlayerId)).OrderBy(x => x.Order).Select(x => x.PlayerId).ToList(),
-            opinionMakersRevealed
-                ? game.Players
-                    .Where(x => opinionMakers.Contains(x.PlayerId))
-                    .OrderBy(x => x.Order)
-                    .Select(x => new ResistanceVoteDto(x.PlayerId, x.Vote!.Value))
-                    .ToList()
-                : [],
-            game.PlotCards
-                .Where(x => x.Location == ResistancePlotCardLocation.Played)
-                .OrderByDescending(x => x.PlayedAt)
-                .Select(x => new ResistancePlayedPlotCardDto(
-                    x.CardId, (ResistancePlotCardTypeDto)x.Type, x.HolderPlayerId!.Value, x.TargetPlayerId,
-                    x.PlayedInMission, x.IsConfirmed))
-                .ToList(),
-            // Only the player an identity card is shown to sees it, and only until they confirm
-            you is null
-                ? []
-                : ResistanceRoles.UnconfirmedCards(game)
-                    .Where(x => ResistanceRoles.Viewer(x) == you.PlayerId)
-                    .Select(x => new ResistanceCardRevealDto(
-                        x.CardId,
-                        ResistanceRoles.Revealed(x)!.Value,
-                        (ResistanceRoleDto)game.Players.First(p => p.PlayerId == ResistanceRoles.Revealed(x)).Role!.Value))
-                    .ToList(),
-            ResistanceRoles.OpenMissionPlayerId(game),
-            game.Players.FirstOrDefault(x => x.PlayerId == ResistanceRoles.OpenMissionPlayerId(game))?.MissionCard,
-            game.Phase is ResistancePhase.LeaderWindow or ResistancePhase.ConfidenceWindow or ResistancePhase.PeekWindow
-                ? game.Players.Where(x => x.PassedLeaderWindow).OrderBy(x => x.Order).Select(x => x.PlayerId).ToList()
-                : [],
-            // Only the peeker sees the card they looked at, until the next mission starts
-            you is null
-                ? []
-                : ResistanceRoles.PeekedCards(game, you.PlayerId)
-                    .Select(x => new ResistanceMissionPeekDto(x.PlayerId, x.Success))
-                    .ToList());
     }
 
     private sealed class ResistanceLobbyNotifier : IGameLobbyNotifier
