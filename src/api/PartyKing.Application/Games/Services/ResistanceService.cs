@@ -152,6 +152,7 @@ internal class ResistanceService : IResistanceService
     private readonly ISessionMusicNotifier _notifier;
     private readonly IResistanceRulesProvider _rulesProvider;
     private readonly GameLobby<ResistanceGame, ResistancePlayer> _lobby;
+    private readonly ResistanceActionGate _gate;
 
     public ResistanceService(
         ISessionService sessionService,
@@ -172,6 +173,7 @@ internal class ResistanceService : IResistanceService
             clock,
             new ResistanceLobbyNotifier(notifier),
             new GameLobbyOptions(ResistanceErrors.GameName, ResistanceGame.MaxPlayers));
+        _gate = new ResistanceActionGate(_lobby, notifier);
     }
 
     public async Task<ErrorOr<ResistanceGameDto>> GetAsync(
@@ -192,7 +194,9 @@ internal class ResistanceService : IResistanceService
 
         var game = await _games.GetAsync(sessionId, cancellationToken);
 
-        return game is null || (!isManager && !game.IsOpen) ? _lobby.NoGame : ResistanceGameViewBuilder.Build(game, caller);
+        return game is null || (!isManager && !game.IsOpen)
+            ? ResistanceErrors.NoGame
+            : ResistanceGameViewBuilder.Build(game, caller);
     }
 
     public async Task<ErrorOr<ResistanceLobbyDto>> GetLobbyAsync(
@@ -201,7 +205,7 @@ internal class ResistanceService : IResistanceService
         var game = await _games.GetAsync(sessionId, cancellationToken);
 
         return game is null
-            ? _lobby.NoGame
+            ? ResistanceErrors.NoGame
             : new ResistanceLobbyDto(
                 game.CreatedAt,
                 game.IsOpen,
@@ -228,43 +232,25 @@ internal class ResistanceService : IResistanceService
         return ResistanceGameViewBuilder.Build(game, caller);
     }
 
-    public async Task<ErrorOr<ResistanceGameDto>> RefreshRulesAsync(
-        Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
-    {
-        if (await _lobby.AuthorizeAsync(sessionId, caller, cancellationToken) is { IsError: true } denied)
-        {
-            return denied.Errors;
-        }
+    public Task<ErrorOr<ResistanceGameDto>> RefreshRulesAsync(
+        Guid sessionId, GameCaller caller, CancellationToken cancellationToken) =>
+        _gate.RunAsManagerAsync(
+            sessionId,
+            caller,
+            () => _games.RefreshRulesAsync(sessionId, _rulesProvider.Current(), cancellationToken),
+            result => ResistanceErrors.From(
+                result.Status, "The rules can only be refreshed before the game is opened."),
+            cancellationToken);
 
-        var result = await _games.RefreshRulesAsync(sessionId, _rulesProvider.Current(), cancellationToken);
-        if (ResistanceErrors.From(result.Status, "The rules can only be refreshed before the game is opened.") is { } error)
-        {
-            return error;
-        }
-
-        await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
-
-        return ResistanceGameViewBuilder.Build(result.Game!, caller);
-    }
-
-    public async Task<ErrorOr<ResistanceGameDto>> SetPlotCardsAsync(
-        Guid sessionId, bool enabled, GameCaller caller, CancellationToken cancellationToken)
-    {
-        if (await _lobby.AuthorizeAsync(sessionId, caller, cancellationToken) is { IsError: true } denied)
-        {
-            return denied.Errors;
-        }
-
-        var result = await _games.SetPlotCardsAsync(sessionId, enabled, cancellationToken);
-        if (ResistanceErrors.From(result.Status, "The plot cards can only be switched before the game starts.") is { } error)
-        {
-            return error;
-        }
-
-        await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
-
-        return ResistanceGameViewBuilder.Build(result.Game!, caller);
-    }
+    public Task<ErrorOr<ResistanceGameDto>> SetPlotCardsAsync(
+        Guid sessionId, bool enabled, GameCaller caller, CancellationToken cancellationToken) =>
+        _gate.RunAsManagerAsync(
+            sessionId,
+            caller,
+            () => _games.SetPlotCardsAsync(sessionId, enabled, cancellationToken),
+            result => ResistanceErrors.From(
+                result.Status, "The plot cards can only be switched before the game starts."),
+            cancellationToken);
 
     public async Task<ErrorOr<ResistanceGameDto>> OpenAsync(
         Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
@@ -274,321 +260,139 @@ internal class ResistanceService : IResistanceService
         return result.IsError ? result.Errors : ResistanceGameViewBuilder.Build(result.Value, caller);
     }
 
-    public async Task<ErrorOr<ResistanceGameDto>> StartAsync(
-        Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
-    {
-        if (await _lobby.AuthorizeAsync(sessionId, caller, cancellationToken) is { IsError: true } denied)
-        {
-            return denied.Errors;
-        }
-
-        var result = await _games.StartAsync(sessionId, _clock.UtcNow, cancellationToken);
-        if (ResistanceErrors.From(result.Status) is { } error)
-        {
-            return error;
-        }
-
-        await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
-
-        return ResistanceGameViewBuilder.Build(result.Game!, caller);
-    }
-
-    public async Task<ErrorOr<ResistanceGameDto>> RestartAsync(
-        Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
-    {
-        if (await _lobby.AuthorizeAsync(sessionId, caller, cancellationToken) is { IsError: true } denied)
-        {
-            return denied.Errors;
-        }
-
-        var result = await _games.RestartAsync(sessionId, cancellationToken);
-        if (ResistanceErrors.From(result.Status) is { } error)
-        {
-            return error;
-        }
-
-        await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
-
-        return ResistanceGameViewBuilder.Build(result.Game!, caller);
-    }
-
-    public async Task<ErrorOr<ResistanceGameDto>> SelectTeamAsync(
-        Guid sessionId, IReadOnlyList<Guid>? playerIds, GameCaller caller, CancellationToken cancellationToken)
-    {
-        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
-        if (access.IsError)
-        {
-            return access.Errors;
-        }
-
-        if (access.Value.Game is null)
-        {
-            return _lobby.NoGame;
-        }
-
-        var result = await _games.SelectTeamAsync(sessionId, caller.PlayerId, playerIds ?? [], cancellationToken);
-        if (ResistanceErrors.From(result.Status, result.Game) is { } error)
-        {
-            return error;
-        }
-
-        await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
-
-        return ResistanceGameViewBuilder.Build(result.Game!, caller);
-    }
-
-    public async Task<ErrorOr<ResistanceGameDto>> DealPlotCardsAsync(
-        Guid sessionId, IReadOnlyList<ResistancePlotCardAssignmentDto>? assignments, GameCaller caller,
-        CancellationToken cancellationToken)
-    {
-        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
-        if (access.IsError)
-        {
-            return access.Errors;
-        }
-
-        if (access.Value.Game is null)
-        {
-            return _lobby.NoGame;
-        }
-
-        var result = await _games.DealPlotCardsAsync(
+    public Task<ErrorOr<ResistanceGameDto>> StartAsync(
+        Guid sessionId, GameCaller caller, CancellationToken cancellationToken) =>
+        _gate.RunAsManagerAsync(
             sessionId,
-            caller.PlayerId,
-            (assignments ?? []).Select(x => new PlotCardAssignment(x.CardId, x.PlayerId)).ToList(),
+            caller,
+            () => _games.StartAsync(sessionId, _clock.UtcNow, cancellationToken),
+            result => ResistanceErrors.From(result.Status),
             cancellationToken);
-        if (ResistanceErrors.From(result.Status) is { } error)
-        {
-            return error;
-        }
 
-        await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
+    public Task<ErrorOr<ResistanceGameDto>> RestartAsync(
+        Guid sessionId, GameCaller caller, CancellationToken cancellationToken) =>
+        _gate.RunAsManagerAsync(
+            sessionId,
+            caller,
+            () => _games.RestartAsync(sessionId, cancellationToken),
+            result => ResistanceErrors.From(result.Status),
+            cancellationToken);
 
-        return ResistanceGameViewBuilder.Build(result.Game!, caller);
-    }
+    public Task<ErrorOr<ResistanceGameDto>> SelectTeamAsync(
+        Guid sessionId, IReadOnlyList<Guid>? playerIds, GameCaller caller, CancellationToken cancellationToken) =>
+        _gate.RunAsPlayerAsync(
+            sessionId,
+            caller,
+            _ => _games.SelectTeamAsync(sessionId, caller.PlayerId, playerIds ?? [], cancellationToken),
+            result => ResistanceErrors.From(result.Status, result.Game),
+            cancellationToken);
 
-    public async Task<ErrorOr<ResistanceGameDto>> PlayPlotCardAsync(
-        Guid sessionId, int cardId, Guid targetPlayerId, GameCaller caller, CancellationToken cancellationToken)
-    {
-        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
-        if (access.IsError)
-        {
-            return access.Errors;
-        }
+    public Task<ErrorOr<ResistanceGameDto>> DealPlotCardsAsync(
+        Guid sessionId, IReadOnlyList<ResistancePlotCardAssignmentDto>? assignments, GameCaller caller,
+        CancellationToken cancellationToken) =>
+        _gate.RunAsPlayerAsync(
+            sessionId,
+            caller,
+            _ => _games.DealPlotCardsAsync(
+                sessionId,
+                caller.PlayerId,
+                (assignments ?? []).Select(x => new PlotCardAssignment(x.CardId, x.PlayerId)).ToList(),
+                cancellationToken),
+            result => ResistanceErrors.From(result.Status),
+            cancellationToken);
 
-        if (access.Value.Game is null)
-        {
-            return _lobby.NoGame;
-        }
+    public Task<ErrorOr<ResistanceGameDto>> PlayPlotCardAsync(
+        Guid sessionId, int cardId, Guid targetPlayerId, GameCaller caller, CancellationToken cancellationToken) =>
+        RunPlotCardAsync(
+            sessionId,
+            caller,
+            () => _games.PlayPlotCardAsync(sessionId, caller.PlayerId, cardId, targetPlayerId, cancellationToken),
+            cancellationToken);
 
-        var result = await _games.PlayPlotCardAsync(sessionId, caller.PlayerId, cardId, targetPlayerId, cancellationToken);
+    public Task<ErrorOr<ResistanceGameDto>> ConfirmPlotCardAsync(
+        Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken) =>
+        RunPlotCardAsync(
+            sessionId,
+            caller,
+            () => _games.ConfirmPlotCardAsync(sessionId, caller.PlayerId, cardId, cancellationToken),
+            cancellationToken);
 
-        return await FinishPlotCardAsync(sessionId, result, caller, cancellationToken);
-    }
-
-    public async Task<ErrorOr<ResistanceGameDto>> ConfirmPlotCardAsync(
-        Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken)
-    {
-        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
-        if (access.IsError)
-        {
-            return access.Errors;
-        }
-
-        if (access.Value.Game is null)
-        {
-            return _lobby.NoGame;
-        }
-
-        var result = await _games.ConfirmPlotCardAsync(sessionId, caller.PlayerId, cardId, cancellationToken);
-
-        return await FinishPlotCardAsync(sessionId, result, caller, cancellationToken);
-    }
-
-    public async Task<ErrorOr<ResistanceGameDto>> TakeResponsibilityAsync(
+    public Task<ErrorOr<ResistanceGameDto>> TakeResponsibilityAsync(
         Guid sessionId, int cardId, Guid targetPlayerId, bool? takeOpinionMaker, GameCaller caller,
-        CancellationToken cancellationToken)
-    {
-        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
-        if (access.IsError)
-        {
-            return access.Errors;
-        }
+        CancellationToken cancellationToken) =>
+        RunPlotCardAsync(
+            sessionId,
+            caller,
+            () => _games.TakeResponsibilityAsync(
+                sessionId, caller.PlayerId, cardId, targetPlayerId, takeOpinionMaker, cancellationToken),
+            cancellationToken);
 
-        if (access.Value.Game is null)
-        {
-            return _lobby.NoGame;
-        }
+    public Task<ErrorOr<ResistanceGameDto>> TakeLeadAsync(
+        Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken) =>
+        RunPlotCardAsync(
+            sessionId,
+            caller,
+            () => _games.TakeLeadAsync(sessionId, caller.PlayerId, cardId, cancellationToken),
+            cancellationToken);
 
-        var result = await _games.TakeResponsibilityAsync(
-            sessionId, caller.PlayerId, cardId, targetPlayerId, takeOpinionMaker, cancellationToken);
+    public Task<ErrorOr<ResistanceGameDto>> PeekMissionCardAsync(
+        Guid sessionId, int cardId, Guid targetPlayerId, GameCaller caller, CancellationToken cancellationToken) =>
+        RunPlotCardAsync(
+            sessionId,
+            caller,
+            () => _games.PeekMissionCardAsync(sessionId, caller.PlayerId, cardId, targetPlayerId, cancellationToken),
+            cancellationToken);
 
-        return await FinishPlotCardAsync(sessionId, result, caller, cancellationToken);
-    }
+    public Task<ErrorOr<ResistanceGameDto>> PlayNoConfidenceAsync(
+        Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken) =>
+        RunPlotCardAsync(
+            sessionId,
+            caller,
+            () => _games.PlayNoConfidenceAsync(sessionId, caller.PlayerId, cardId, cancellationToken),
+            cancellationToken);
 
-    public async Task<ErrorOr<ResistanceGameDto>> TakeLeadAsync(
-        Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken)
-    {
-        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
-        if (access.IsError)
-        {
-            return access.Errors;
-        }
+    public Task<ErrorOr<ResistanceGameDto>> PassLeaderWindowAsync(
+        Guid sessionId, GameCaller caller, CancellationToken cancellationToken) =>
+        RunPlotCardAsync(
+            sessionId,
+            caller,
+            () => _games.PassLeaderWindowAsync(sessionId, caller.PlayerId, cancellationToken),
+            cancellationToken);
 
-        if (access.Value.Game is null)
-        {
-            return _lobby.NoGame;
-        }
+    private Task<ErrorOr<ResistanceGameDto>> RunPlotCardAsync(
+        Guid sessionId,
+        GameCaller caller,
+        Func<Task<ResistancePlayCardResult>> call,
+        CancellationToken cancellationToken) =>
+        _gate.RunAsPlayerAsync(
+            sessionId, caller, _ => call(), result => ResistanceErrors.From(result.Status), cancellationToken);
 
-        var result = await _games.TakeLeadAsync(sessionId, caller.PlayerId, cardId, cancellationToken);
+    public Task<ErrorOr<ResistanceGameDto>> VoteAsync(
+        Guid sessionId, bool approve, GameCaller caller, CancellationToken cancellationToken) =>
+        _gate.RunAsPlayerAsync(
+            sessionId,
+            caller,
+            _ => _games.VoteAsync(sessionId, caller.PlayerId, approve, cancellationToken),
+            result => ResistanceErrors.From(result.Status),
+            cancellationToken);
 
-        return await FinishPlotCardAsync(sessionId, result, caller, cancellationToken);
-    }
+    public Task<ErrorOr<ResistanceGameDto>> PlayMissionCardAsync(
+        Guid sessionId, bool success, GameCaller caller, CancellationToken cancellationToken) =>
+        _gate.RunAsPlayerAsync(
+            sessionId,
+            caller,
+            _ => _games.PlayMissionCardAsync(sessionId, caller.PlayerId, success, cancellationToken),
+            result => ResistanceErrors.From(result.Status),
+            cancellationToken);
 
-    public async Task<ErrorOr<ResistanceGameDto>> PeekMissionCardAsync(
-        Guid sessionId, int cardId, Guid targetPlayerId, GameCaller caller, CancellationToken cancellationToken)
-    {
-        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
-        if (access.IsError)
-        {
-            return access.Errors;
-        }
-
-        if (access.Value.Game is null)
-        {
-            return _lobby.NoGame;
-        }
-
-        var result = await _games.PeekMissionCardAsync(sessionId, caller.PlayerId, cardId, targetPlayerId, cancellationToken);
-
-        return await FinishPlotCardAsync(sessionId, result, caller, cancellationToken);
-    }
-
-    public async Task<ErrorOr<ResistanceGameDto>> PlayNoConfidenceAsync(
-        Guid sessionId, int cardId, GameCaller caller, CancellationToken cancellationToken)
-    {
-        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
-        if (access.IsError)
-        {
-            return access.Errors;
-        }
-
-        if (access.Value.Game is null)
-        {
-            return _lobby.NoGame;
-        }
-
-        var result = await _games.PlayNoConfidenceAsync(sessionId, caller.PlayerId, cardId, cancellationToken);
-
-        return await FinishPlotCardAsync(sessionId, result, caller, cancellationToken);
-    }
-
-    public async Task<ErrorOr<ResistanceGameDto>> PassLeaderWindowAsync(
-        Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
-    {
-        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
-        if (access.IsError)
-        {
-            return access.Errors;
-        }
-
-        if (access.Value.Game is null)
-        {
-            return _lobby.NoGame;
-        }
-
-        var result = await _games.PassLeaderWindowAsync(sessionId, caller.PlayerId, cancellationToken);
-
-        return await FinishPlotCardAsync(sessionId, result, caller, cancellationToken);
-    }
-
-    private async Task<ErrorOr<ResistanceGameDto>> FinishPlotCardAsync(
-        Guid sessionId, ResistancePlayCardResult result, GameCaller caller, CancellationToken cancellationToken)
-    {
-        if (ResistanceErrors.From(result.Status) is { } error)
-        {
-            return error;
-        }
-
-        await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
-
-        return ResistanceGameViewBuilder.Build(result.Game!, caller);
-    }
-
-    public async Task<ErrorOr<ResistanceGameDto>> VoteAsync(
-        Guid sessionId, bool approve, GameCaller caller, CancellationToken cancellationToken)
-    {
-        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
-        if (access.IsError)
-        {
-            return access.Errors;
-        }
-
-        if (access.Value.Game is null)
-        {
-            return _lobby.NoGame;
-        }
-
-        var result = await _games.VoteAsync(sessionId, caller.PlayerId, approve, cancellationToken);
-        if (ResistanceErrors.From(result.Status) is { } error)
-        {
-            return error;
-        }
-
-        await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
-
-        return ResistanceGameViewBuilder.Build(result.Game!, caller);
-    }
-
-    public async Task<ErrorOr<ResistanceGameDto>> PlayMissionCardAsync(
-        Guid sessionId, bool success, GameCaller caller, CancellationToken cancellationToken)
-    {
-        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
-        if (access.IsError)
-        {
-            return access.Errors;
-        }
-
-        if (access.Value.Game is null)
-        {
-            return _lobby.NoGame;
-        }
-
-        var result = await _games.PlayMissionCardAsync(sessionId, caller.PlayerId, success, cancellationToken);
-        if (ResistanceErrors.From(result.Status) is { } error)
-        {
-            return error;
-        }
-
-        await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
-
-        return ResistanceGameViewBuilder.Build(result.Game!, caller);
-    }
-
-    public async Task<ErrorOr<ResistanceGameDto>> ContinueAsync(
-        Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
-    {
-        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
-        if (access.IsError)
-        {
-            return access.Errors;
-        }
-
-        if (access.Value.Game is null)
-        {
-            return _lobby.NoGame;
-        }
-
-        var result = await _games.ContinueAsync(sessionId, caller.PlayerId, access.Value.IsManager, cancellationToken);
-        if (ResistanceErrors.From(result.Status) is { } error)
-        {
-            return error;
-        }
-
-        await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
-
-        return ResistanceGameViewBuilder.Build(result.Game!, caller);
-    }
+    public Task<ErrorOr<ResistanceGameDto>> ContinueAsync(
+        Guid sessionId, GameCaller caller, CancellationToken cancellationToken) =>
+        _gate.RunAsPlayerAsync(
+            sessionId,
+            caller,
+            access => _games.ContinueAsync(sessionId, caller.PlayerId, access.IsManager, cancellationToken),
+            result => ResistanceErrors.From(result.Status),
+            cancellationToken);
 
     public Task<ErrorOr<Guid>> JoinAsync(
         Guid sessionId, string? name, GameCaller caller, CancellationToken cancellationToken)
@@ -622,7 +426,7 @@ internal class ResistanceService : IResistanceService
 
         if (!await _games.DeleteAsync(sessionId, cancellationToken))
         {
-            return _lobby.NoGame;
+            return ResistanceErrors.NoGame;
         }
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
