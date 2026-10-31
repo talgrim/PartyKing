@@ -5,6 +5,7 @@ import LyricsIcon from '@mui/icons-material/Lyrics';
 import SlideshowIcon from '@mui/icons-material/Slideshow';
 import SubtitlesOffIcon from '@mui/icons-material/SubtitlesOff';
 import { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   open: boolean;
@@ -37,15 +38,18 @@ export const SlideshowControls = ({
   onToggleLyrics,
   className = '',
 }: Props): ReactNode => {
-  const drawerName = lyricsOnly ? 'lyrics' : 'slideshow';
+  const { t } = useTranslation();
+  const drawerLabel = lyricsOnly
+    ? open ? t('slideshowControls.hideLyrics') : t('slideshowControls.showLyrics')
+    : open ? t('slideshowControls.hideSlideshow') : t('slideshowControls.showSlideshow');
 
   return (
   <div className={`flex flex-col gap-1 ${className}`}>
     <button
       type="button"
       onClick={onToggle}
-      aria-label={`${open ? 'Hide' : 'Show'} ${drawerName}`}
-      title={`${open ? 'Hide' : 'Show'} ${drawerName}`}
+      aria-label={drawerLabel}
+      title={drawerLabel}
       className={`${buttonClass} rounded-md`}
     >
       {open ? <ChevronLeftIcon /> : <ChevronRightIcon />}
@@ -55,13 +59,13 @@ export const SlideshowControls = ({
       type="button"
       onClick={onToggleLyrics}
       aria-pressed={lyricsActive}
-      aria-label={lyricsActive ? 'Show slideshow' : 'Show lyrics'}
+      aria-label={lyricsActive ? t('slideshowControls.showSlideshow') : t('slideshowControls.showLyrics')}
       title={
         lyricsActive
-          ? 'Show slideshow'
+          ? t('slideshowControls.showSlideshow')
           : lyricsAvailable
-            ? 'Show lyrics'
-            : 'Show lyrics (none found for this song)'
+            ? t('slideshowControls.showLyrics')
+            : t('slideshowControls.showLyricsNone')
       }
       className={`${buttonClass} rounded-md ${lyricsActive ? 'bg-slate-600' : ''} ${lyricsAvailable || lyricsActive ? '' : 'text-slate-500'}`}
     >
@@ -71,8 +75,8 @@ export const SlideshowControls = ({
     <button
       type="button"
       onClick={onMaximize}
-      aria-label="Maximize"
-      title="Maximize"
+      aria-label={t('slideshowControls.maximize')}
+      title={t('slideshowControls.maximize')}
       className={`${buttonClass} rounded-md`}
     >
       <FullscreenIcon />

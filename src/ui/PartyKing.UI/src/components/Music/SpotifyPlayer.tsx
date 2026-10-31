@@ -1,5 +1,6 @@
 import { Ref, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { queueApi } from '@/service/endpoints/queue/queueApi';
+import { i18n } from '@/i18n';
 
 export type SpotifyPlayerHandle = {
   /** Must be called from a user gesture (click) so the browser allows audio playback. */
@@ -118,7 +119,7 @@ export const SpotifyPlayer = ({
           queueApi
             .getSpotifyToken()
             .then(callback)
-            .catch(() => onErrorRef.current('Could not get a Spotify token. Log in again.'));
+            .catch(() => onErrorRef.current(i18n.t('spotifyPlayer.tokenFailed')));
         },
       });
 
@@ -133,7 +134,7 @@ export const SpotifyPlayer = ({
       player.addListener('initialization_error', ({ message }) => onErrorRef.current(message));
       player.addListener('authentication_error', ({ message }) => onErrorRef.current(message));
       player.addListener('account_error', () =>
-        onErrorRef.current('Spotify Premium is required to play music in the browser.'),
+        onErrorRef.current(i18n.t('spotifyPlayer.premium')),
       );
       player.addListener('playback_error', ({ message }) => onErrorRef.current(message));
 
@@ -212,10 +213,10 @@ export const SpotifyPlayer = ({
         );
 
         if (!cancelled && !response.ok) {
-          onErrorRef.current(`Spotify refused to play the track (${response.status})`);
+          onErrorRef.current(i18n.t('spotifyPlayer.refused', { status: response.status }));
         }
       } catch {
-        if (!cancelled) onErrorRef.current('Could not start Spotify playback');
+        if (!cancelled) onErrorRef.current(i18n.t('spotifyPlayer.startFailed'));
       }
     };
 

@@ -1,3 +1,4 @@
+import { i18n } from '@/i18n';
 import { HTTP_STATUS_CODE } from './constants';
 
 export interface ApiErrorOptions {
@@ -42,50 +43,58 @@ export class ApiError extends Error {
         case HTTP_STATUS_CODE.BAD_REQUEST:
           return createError(
             response,
-            'Bad Request',
-            'The request was invalid'
+            i18n.t('apiErrors.badRequest'),
+            i18n.t('apiErrors.badRequestMessage')
           );
         case HTTP_STATUS_CODE.UNAUTHORIZED:
           return createError(
             response,
-            'Unauthorized',
-            'You are not authorized to access this resource'
+            i18n.t('apiErrors.unauthorized'),
+            i18n.t('apiErrors.unauthorizedMessage')
           );
         case HTTP_STATUS_CODE.FORBIDDEN:
           return createError(
             response,
-            'Forbidden',
-            'You do not have permission to access this resource'
+            i18n.t('apiErrors.forbidden'),
+            i18n.t('apiErrors.forbiddenMessage')
           );
         case HTTP_STATUS_CODE.NOT_FOUND:
           return createError(
             response,
-            'Not Found',
-            'The requested resource was not found'
+            i18n.t('apiErrors.notFound'),
+            i18n.t('apiErrors.notFoundMessage')
           );
         case HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR:
           return createError(
             response,
-            'Internal Server Error',
-            'Something went wrong'
+            i18n.t('apiErrors.internal'),
+            i18n.t('common.somethingWentWrong')
           );
         case HTTP_STATUS_CODE.BAD_GATEWAY:
-          return createError(response, 'Bad Gateway', 'Something went wrong');
+          return createError(
+            response,
+            i18n.t('apiErrors.badGateway'),
+            i18n.t('common.somethingWentWrong')
+          );
         case HTTP_STATUS_CODE.SERVICE_UNAVAILABLE:
           return createError(
             response,
-            'Service Unavailable',
-            'Something went wrong'
+            i18n.t('apiErrors.unavailable'),
+            i18n.t('common.somethingWentWrong')
           );
         case HTTP_STATUS_CODE.GATEWAY_TIMEOUT:
           return createError(
             response,
-            'Gateway Timeout',
-            'Something went wrong'
+            i18n.t('apiErrors.gatewayTimeout'),
+            i18n.t('common.somethingWentWrong')
           );
       }
 
-      return createError(response, 'Unknown Error', 'Please check the logs');
+      return createError(
+        response,
+        i18n.t('apiErrors.unknown'),
+        i18n.t('apiErrors.unknownMessage')
+      );
     }
   };
 

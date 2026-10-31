@@ -18,6 +18,7 @@ import { describeYoutubeError } from './youtubeErrors';
 import { usePersistedNumber } from '@/utils/usePersistedNumber';
 import { PlayerCommand } from '@/service/endpoints/player/types';
 import { HostPlayerPushHandlers } from '@/service/realtime/sessionMusicEvents';
+import { useTranslation } from 'react-i18next';
 
 const MAX_LOGGED_ERRORS = 50;
 // After this many YouTube failures in a row something is wrong beyond a single video, so stop skipping.
@@ -49,6 +50,7 @@ type Props = {
  * there, and the player reports its pause state back so everyone can see it.
  */
 export const HostPlayer = ({ sessionId, isAdmin, pushHandlers }: Props): ReactNode => {
+  const { t } = useTranslation();
   const spotifyPlayer = useRef<SpotifyPlayerHandle>(null);
   const youtubePlayer = useRef<YoutubePlayerHandle>(null);
   const positionTracker = useRef(createPositionTracker());
@@ -98,16 +100,16 @@ export const HostPlayer = ({ sessionId, isAdmin, pushHandlers }: Props): ReactNo
     if (Date.now() - lastAttempt < LOGIN_LOOP_WINDOW_MS) {
       // We just came back from Spotify and are still not logged in (e.g. the cookie was not stored).
       // Redirecting again would loop forever.
-      reportError('Host login did not stick. Check that cookies are enabled and the page and API use the same host.');
+      reportError(t('hostPlayer.loginDidNotStick'));
       return;
     }
     try {
       sessionStorage.setItem(loginAttemptKey(sessionId), String(Date.now()));
       window.location.href = await sessionsApi.createHostLoginUrl(sessionId);
     } catch {
-      reportError('Could not start the host login');
+      reportError(t('hostPlayer.loginStartFailed'));
     }
-  }, [sessionId, reportError]);
+  }, [sessionId, reportError, t]);
 
   // Only the logged-in host plays the music. This also tells us whether we need to log in.
   const { data: token } = useSWR('spotify-token', queueApi.getSpotifyToken, {
@@ -147,14 +149,14 @@ export const HostPlayer = ({ sessionId, isAdmin, pushHandlers }: Props): ReactNo
       } else if (status === HTTP_STATUS_CODE.UNAUTHORIZED) {
         void loginAsHost();
       } else if (status === HTTP_STATUS_CODE.FORBIDDEN) {
-        reportError('Only the host of this session can play its music');
+        reportError(t('hostPlayer.forbidden'));
       } else {
-        reportError('Could not load the next song');
+        reportError(t('hostPlayer.nextSongFailed'));
       }
     } finally {
       advancing.current = false;
     }
-  }, [sessionId, loginAsHost, reportError, refreshNowPlaying]);
+  }, [sessionId, loginAsHost, reportError, refreshNowPlaying, t]);
 
   // YouTube refuses some videos (e.g. embedding disabled by the owner): say why and move on.
   const skipFailedYoutubeSong = async (failed: SongDto, code: number | undefined) => {
@@ -162,19 +164,29 @@ export const HostPlayer = ({ sessionId, isAdmin, pushHandlers }: Props): ReactNo
     failedSongId.current = failed.id;
 
     const reason = describeYoutubeError(code);
-    logError(`YouTube error ${code ?? 'unknown'} on "${failed.name}" (${failed.url}): ${reason}`);
+    logError(
+      t('hostPlayer.logYoutubeError', {
+        code: code ?? t('hostPlayer.unknownCode'),
+        name: failed.name,
+        url: failed.url,
+        reason,
+      }),
+    );
 
     consecutiveYoutubeFailures.current += 1;
     if (consecutiveYoutubeFailures.current >= MAX_CONSECUTIVE_YOUTUBE_FAILURES) {
       setError(
-        `YouTube refused ${consecutiveYoutubeFailures.current} videos in a row (${reason}). ` +
-          'Not skipping any more songs; press "Next song" to continue.',
+        t('hostPlayer.youtubeStopped', {
+          count: consecutiveYoutubeFailures.current,
+          reason,
+          button: t('player.nextSong'),
+        }),
       );
       return;
     }
 
     await playNext();
-    setError(`Skipped "${failed.name}": ${reason}`);
+    setError(t('hostPlayer.skipped', { name: failed.name, reason }));
   };
 
   // Playback that really starts ends a run of failures.
@@ -360,12 +372,12 @@ export const HostPlayer = ({ sessionId, isAdmin, pushHandlers }: Props): ReactNo
               disabled={!token}
               className="px-5 py-3 font-semibold text-slate-100 bg-amber-600 rounded-md cursor-pointer hover:bg-amber-500 disabled:opacity-50 disabled:hover:bg-amber-600"
             >
-              {takeoverAvailable ? 'Play here' : 'Start the music'}
+              {takeoverAvailable ? t('hostPlayer.playHere') : t('hostPlayer.start')}
             </button>
             <p className="pt-2 text-sm text-slate-500">
               {takeoverAvailable
-                ? 'This song is playing on another of your devices. Continue it here, from the same spot.'
-                : 'The music plays in this tab, so keep the page open.'}
+                ? t('hostPlayer.takeoverHint')
+                : t('hostPlayer.startHint')}
             </p>
           </div>
         )}

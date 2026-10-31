@@ -6,7 +6,12 @@
     "somethingWentWrong": "Something went wrong",
     "noSessionsYet": "There are no sessions yet.",
     "hostName": "Host: {{name}}",
-    "noHost": "No host yet"
+    "noHost": "No host yet",
+    "errorOccurred": "Error occurred: {{message}}",
+    "close": "Close",
+    "remove": "Remove",
+    "save": "Save",
+    "backToSessions": "Back to the sessions"
   },
   "home": {
     "adminPanel": "Admin panel",
@@ -45,5 +50,227 @@
     "games": "Games",
     "removeHost": "Remove host",
     "delete": "Delete"
+  },
+  "imagePreview": {
+    "name": "Name:",
+    "size": "Size:"
+  },
+  "player": {
+    "play": "Play",
+    "pause": "Pause",
+    "nextSong": "Next song",
+    "volume": "Volume",
+    "volumeDown": "Volume down",
+    "volumeUp": "Volume up"
+  },
+  "nowPlaying": {
+    "title": "Now playing",
+    "nothing": "Nothing is playing. Add a song to the queue.",
+    "paused": "Paused",
+    "playerNotConnected": "The host's player is not connected."
+  },
+  "errorLog": {
+    "title": "Error log",
+    "none": "No errors"
+  },
+  "autoLyrics": {
+    "label": "Switch between the slideshow and the lyrics by itself"
+  },
+  "views": {
+    "lyrics": "Lyrics",
+    "slideshow": "Slideshow"
+  },
+  "openGames": {
+    "label": "Open games"
+  },
+  "photoUpload": {
+    "title": "Upload photos"
+  },
+  "sessionSettings": {
+    "title": "Session settings",
+    "name": "Name",
+    "password": "Password",
+    "fallbackPlaylist": "Fallback playlist"
+  },
+  "joinQr": {
+    "createFailed": "Could not create the QR code",
+    "show": "Show QR code",
+    "title": "Scan to join without the password",
+    "qrTitle": "QR code to join the session",
+    "refreshNote": "The code refreshes by itself. Close this window when everyone has joined.",
+    "creating": "Creating the QR code…"
+  },
+  "maximized": {
+    "exit": "Exit full view",
+    "hideQueue": "Hide queue",
+    "showQueue": "Show queue",
+    "queue": "Queue"
+  },
+  "sessionHeader": {
+    "loginFailed": "Could not start the login",
+    "code": "Code",
+    "currentHost": "Current Host: {{name}}",
+    "imTheHost": "I'm the host",
+    "loginAsHost": "Log in as host with Spotify"
+  },
+  "nameForm": {
+    "saved": "Name saved",
+    "label": "Session name",
+    "save": "Save name"
+  },
+  "passwordChange": {
+    "changed": "Password changed. Guests have to enter the new one.",
+    "label": "New password",
+    "change": "Change password",
+    "hint_one": "At least {{count}} character. Guests have to enter the new password again.",
+    "hint_other": "At least {{count}} characters. Guests have to enter the new password again."
+  },
+  "sessionPassword": {
+    "wrong": "Wrong password",
+    "tooMany": "Too many attempts, try again in a minute",
+    "title": "This session is password protected",
+    "label": "Session password",
+    "join": "Join"
+  },
+  "slideshowSettings": {
+    "loading": "Loading the settings…",
+    "saved": "Slideshow settings saved",
+    "secondsPerPhoto": "Seconds per photo",
+    "repeat": "Start over after the last photo",
+    "showAgain": "Show photos that were already presented again"
+  },
+  "adminPlayer": {
+    "commandFailed": "The command failed"
+  },
+  "slideshowControls": {
+    "hideSlideshow": "Hide slideshow",
+    "showSlideshow": "Show slideshow",
+    "hideLyrics": "Hide lyrics",
+    "showLyrics": "Show lyrics",
+    "showLyricsNone": "Show lyrics (none found for this song)",
+    "maximize": "Maximize"
+  },
+  "fallback": {
+    "loadFailed": "Could not load your playlists",
+    "saved": "Fallback playlist saved",
+    "removed": "Fallback playlist removed",
+    "playsWhenEmpty": "Plays when the queue is empty",
+    "hint": "Plays a song from one of the host’s playlists whenever the queue is empty.",
+    "yourPlaylists": "Your playlists",
+    "tracks_one": "{{count}} track",
+    "tracks_other": "{{count}} tracks",
+    "orPaste": "Or paste a playlist link",
+    "link": "Playlist link",
+    "shuffle": "Shuffle"
+  },
+  "youtubeErrors": {
+    "e2": "The video link is invalid",
+    "e5": "The video cannot be played in an HTML5 player",
+    "e100": "The video was not found or is private",
+    "e101": "The owner of the video does not allow it to be played outside YouTube",
+    "unknown": "The video could not be played"
+  },
+  "hostPlayer": {
+    "loginDidNotStick": "Host login did not stick. Check that cookies are enabled and the page and API use the same host.",
+    "loginStartFailed": "Could not start the host login",
+    "forbidden": "Only the host of this session can play its music",
+    "nextSongFailed": "Could not load the next song",
+    "logYoutubeError": "YouTube error {{code}} on \"{{name}}\" ({{url}}): {{reason}}",
+    "unknownCode": "unknown",
+    "youtubeStopped": "YouTube refused {{count}} videos in a row ({{reason}}). Not skipping any more songs; press \"{{button}}\" to continue.",
+    "skipped": "Skipped \"{{name}}\": {{reason}}",
+    "playHere": "Play here",
+    "start": "Start the music",
+    "takeoverHint": "This song is playing on another of your devices. Continue it here, from the same spot.",
+    "startHint": "The music plays in this tab, so keep the page open."
+  },
+  "uploader": {
+    "tooMany": "Too many attempts. Try again in a minute.",
+    "tooBig": "The files are too big (20 MB per photo, 100 MB at once).",
+    "failed": "Could not upload the files. Try again.",
+    "done": "Photos uploaded",
+    "choose": "Choose photos",
+    "deleteAfter": "Delete each photo after it has been shown",
+    "progress": "Upload progress",
+    "uploading": "Uploading…",
+    "upload_one": "Upload {{count}} photo",
+    "upload_other": "Upload {{count}} photos"
+  },
+  "queue": {
+    "addedToQueue": "Added to the queue",
+    "noSongs": "No songs found",
+    "addSong": "Add a song",
+    "addTitle": "Add a song to the queue",
+    "placeholder": "Search Spotify, or paste a Spotify / YouTube link",
+    "clearSearch": "Clear search",
+    "add": "Add",
+    "search": "Search",
+    "searchResults": "Search results",
+    "inQueue": "In queue",
+    "adding": "Adding...",
+    "upNext": "Up next",
+    "empty": "The queue is empty",
+    "fromPlaylist": "from playlist",
+    "removeFromQueue": "Remove {{name}} from the queue"
+  },
+  "lyrics": {
+    "loading": "Looking for the lyrics…",
+    "none": "No synchronized lyrics for this song",
+    "nothing": "Nothing is playing",
+    "size": "Lyrics size",
+    "smallerTitle": "Smaller text",
+    "smaller": "Smaller lyrics",
+    "largerTitle": "Larger text",
+    "larger": "Larger lyrics",
+    "timing": "Lyrics timing",
+    "resyncTitle": "Match the lyrics to the current position of the song",
+    "resync": "Resync lyrics",
+    "laterTitle": "Lyrics later",
+    "later": "Show lyrics later",
+    "resetTitle": "Reset the timing",
+    "resetLabel": "Lyrics timing {{offset}}, press to reset",
+    "earlierTitle": "Lyrics earlier",
+    "earlier": "Show lyrics earlier",
+    "saveTitle": "Save this timing for everyone",
+    "save": "Save lyrics timing"
+  },
+  "spotifyPlayer": {
+    "tokenFailed": "Could not get a Spotify token. Log in again.",
+    "premium": "Spotify Premium is required to play music in the browser.",
+    "refused": "Spotify refused to play the track ({{status}})",
+    "startFailed": "Could not start Spotify playback"
+  },
+  "callback": {
+    "missingCode": "Missing code",
+    "missingState": "Missing state",
+    "loginFailed": "Could not log in",
+    "success": "Authorization successful. Redirecting to the session"
+  },
+  "sessionPage": {
+    "qrExpired": "This QR code has expired. Enter the password instead.",
+    "notFound": "This session does not exist (anymore).",
+    "loadFailed": "Could not load the session."
+  },
+  "slideshowView": {
+    "loadFailed": "Could not load the slideshow.",
+    "noPhotos": "No photos yet",
+    "uploadSome": "Upload some photos and they will show up here."
+  },
+  "apiErrors": {
+    "badRequest": "Bad Request",
+    "badRequestMessage": "The request was invalid",
+    "unauthorized": "Unauthorized",
+    "unauthorizedMessage": "You are not authorized to access this resource",
+    "forbidden": "Forbidden",
+    "forbiddenMessage": "You do not have permission to access this resource",
+    "notFound": "Not Found",
+    "notFoundMessage": "The requested resource was not found",
+    "internal": "Internal Server Error",
+    "badGateway": "Bad Gateway",
+    "unavailable": "Service Unavailable",
+    "gatewayTimeout": "Gateway Timeout",
+    "unknown": "Unknown Error",
+    "unknownMessage": "Please check the logs",
+    "requestFailed": "Request failed"
   }
 }

@@ -6,7 +6,12 @@
     "somethingWentWrong": "Coś poszło nie tak",
     "noSessionsYet": "Nie ma jeszcze żadnych sesji.",
     "hostName": "Gospodarz: {{name}}",
-    "noHost": "Brak gospodarza"
+    "noHost": "Brak gospodarza",
+    "errorOccurred": "Wystąpił błąd: {{message}}",
+    "close": "Zamknij",
+    "remove": "Usuń",
+    "save": "Zapisz",
+    "backToSessions": "Wróć do sesji"
   },
   "home": {
     "adminPanel": "Panel administratora",
@@ -45,5 +50,233 @@
     "games": "Gry",
     "removeHost": "Usuń gospodarza",
     "delete": "Usuń"
+  },
+  "imagePreview": {
+    "name": "Nazwa:",
+    "size": "Rozmiar:"
+  },
+  "player": {
+    "play": "Odtwórz",
+    "pause": "Pauza",
+    "nextSong": "Następna piosenka",
+    "volume": "Głośność",
+    "volumeDown": "Ciszej",
+    "volumeUp": "Głośniej"
+  },
+  "nowPlaying": {
+    "title": "Teraz gra",
+    "nothing": "Nic nie gra. Dodaj piosenkę do kolejki.",
+    "paused": "Wstrzymano",
+    "playerNotConnected": "Odtwarzacz gospodarza nie jest połączony."
+  },
+  "errorLog": {
+    "title": "Dziennik błędów",
+    "none": "Brak błędów"
+  },
+  "autoLyrics": {
+    "label": "Automatycznie przełączaj między pokazem slajdów a tekstem piosenki"
+  },
+  "views": {
+    "lyrics": "Tekst piosenki",
+    "slideshow": "Pokaz slajdów"
+  },
+  "openGames": {
+    "label": "Otwarte gry"
+  },
+  "photoUpload": {
+    "title": "Prześlij zdjęcia"
+  },
+  "sessionSettings": {
+    "title": "Ustawienia sesji",
+    "name": "Nazwa",
+    "password": "Hasło",
+    "fallbackPlaylist": "Playlista zapasowa"
+  },
+  "joinQr": {
+    "createFailed": "Nie udało się utworzyć kodu QR",
+    "show": "Pokaż kod QR",
+    "title": "Zeskanuj, aby dołączyć bez hasła",
+    "qrTitle": "Kod QR do dołączenia do sesji",
+    "refreshNote": "Kod odświeża się sam. Zamknij to okno, gdy wszyscy dołączą.",
+    "creating": "Tworzenie kodu QR…"
+  },
+  "maximized": {
+    "exit": "Wyjdź z pełnego widoku",
+    "hideQueue": "Ukryj kolejkę",
+    "showQueue": "Pokaż kolejkę",
+    "queue": "Kolejka"
+  },
+  "sessionHeader": {
+    "loginFailed": "Nie udało się rozpocząć logowania",
+    "code": "Kod",
+    "currentHost": "Obecny gospodarz: {{name}}",
+    "imTheHost": "Jestem gospodarzem",
+    "loginAsHost": "Zaloguj się jako gospodarz przez Spotify"
+  },
+  "nameForm": {
+    "saved": "Nazwa zapisana",
+    "label": "Nazwa sesji",
+    "save": "Zapisz nazwę"
+  },
+  "passwordChange": {
+    "changed": "Hasło zmienione. Goście muszą wpisać nowe.",
+    "label": "Nowe hasło",
+    "change": "Zmień hasło",
+    "hint_one": "Co najmniej {{count}} znak. Goście muszą ponownie wpisać nowe hasło.",
+    "hint_few": "Co najmniej {{count}} znaki. Goście muszą ponownie wpisać nowe hasło.",
+    "hint_many": "Co najmniej {{count}} znaków. Goście muszą ponownie wpisać nowe hasło.",
+    "hint_other": "Co najmniej {{count}} znaku. Goście muszą ponownie wpisać nowe hasło."
+  },
+  "sessionPassword": {
+    "wrong": "Nieprawidłowe hasło",
+    "tooMany": "Zbyt wiele prób, spróbuj ponownie za minutę",
+    "title": "Ta sesja jest chroniona hasłem",
+    "label": "Hasło sesji",
+    "join": "Dołącz"
+  },
+  "slideshowSettings": {
+    "loading": "Wczytywanie ustawień…",
+    "saved": "Ustawienia pokazu slajdów zapisane",
+    "secondsPerPhoto": "Sekundy na zdjęcie",
+    "repeat": "Zacznij od nowa po ostatnim zdjęciu",
+    "showAgain": "Pokazuj ponownie zdjęcia, które już były wyświetlone"
+  },
+  "adminPlayer": {
+    "commandFailed": "Polecenie nie powiodło się"
+  },
+  "slideshowControls": {
+    "hideSlideshow": "Ukryj slajdy",
+    "showSlideshow": "Pokaż slajdy",
+    "hideLyrics": "Ukryj tekst piosenki",
+    "showLyrics": "Pokaż tekst piosenki",
+    "showLyricsNone": "Pokaż tekst piosenki (nie znaleziono dla tej piosenki)",
+    "maximize": "Powiększ"
+  },
+  "fallback": {
+    "loadFailed": "Nie udało się wczytać Twoich playlist",
+    "saved": "Playlista zapasowa zapisana",
+    "removed": "Playlista zapasowa usunięta",
+    "playsWhenEmpty": "Gra, gdy kolejka jest pusta",
+    "hint": "Odtwarza piosenkę z jednej z playlist hosta, gdy kolejka jest pusta.",
+    "yourPlaylists": "Twoje playlisty",
+    "tracks_one": "{{count}} utwór",
+    "tracks_few": "{{count}} utwory",
+    "tracks_many": "{{count}} utworów",
+    "tracks_other": "{{count}} utworu",
+    "orPaste": "Lub wklej link do playlisty",
+    "link": "Link do playlisty",
+    "shuffle": "Losowa kolejność"
+  },
+  "youtubeErrors": {
+    "e2": "Link do filmu jest nieprawidłowy",
+    "e5": "Filmu nie można odtworzyć w odtwarzaczu HTML5",
+    "e100": "Nie znaleziono filmu lub jest prywatny",
+    "e101": "Właściciel filmu nie pozwala na odtwarzanie go poza YouTube",
+    "unknown": "Nie udało się odtworzyć filmu"
+  },
+  "hostPlayer": {
+    "loginDidNotStick": "Logowanie hosta nie zostało zapamiętane. Sprawdź, czy ciasteczka są włączone, a strona i API używają tego samego hosta.",
+    "loginStartFailed": "Nie udało się rozpocząć logowania hosta",
+    "forbidden": "Tylko host tej sesji może odtwarzać jej muzykę",
+    "nextSongFailed": "Nie udało się wczytać następnej piosenki",
+    "logYoutubeError": "Błąd YouTube {{code}} przy \"{{name}}\" ({{url}}): {{reason}}",
+    "unknownCode": "nieznany",
+    "youtubeStopped": "YouTube odrzucił {{count}} filmy z rzędu ({{reason}}). Nie pomijam już kolejnych piosenek; naciśnij „{{button}}”, aby kontynuować.",
+    "skipped": "Pominięto „{{name}}”: {{reason}}",
+    "playHere": "Graj tutaj",
+    "start": "Uruchom muzykę",
+    "takeoverHint": "Ta piosenka gra na innym Twoim urządzeniu. Kontynuuj ją tutaj, od tego samego miejsca.",
+    "startHint": "Muzyka gra w tej karcie, więc zostaw stronę otwartą."
+  },
+  "uploader": {
+    "tooMany": "Zbyt wiele prób. Spróbuj ponownie za minutę.",
+    "tooBig": "Pliki są za duże (20 MB na zdjęcie, 100 MB naraz).",
+    "failed": "Nie udało się wysłać plików. Spróbuj ponownie.",
+    "done": "Zdjęcia wysłane",
+    "choose": "Wybierz zdjęcia",
+    "deleteAfter": "Usuń każde zdjęcie po wyświetleniu",
+    "progress": "Postęp wysyłania",
+    "uploading": "Wysyłanie…",
+    "upload_one": "Wyślij {{count}} zdjęcie",
+    "upload_few": "Wyślij {{count}} zdjęcia",
+    "upload_many": "Wyślij {{count}} zdjęć",
+    "upload_other": "Wyślij {{count}} zdjęcia"
+  },
+  "queue": {
+    "addedToQueue": "Dodano do kolejki",
+    "noSongs": "Nie znaleziono piosenek",
+    "addSong": "Dodaj piosenkę",
+    "addTitle": "Dodaj piosenkę do kolejki",
+    "placeholder": "Szukaj w Spotify lub wklej link do Spotify / YouTube",
+    "clearSearch": "Wyczyść wyszukiwanie",
+    "add": "Dodaj",
+    "search": "Szukaj",
+    "searchResults": "Wyniki wyszukiwania",
+    "inQueue": "W kolejce",
+    "adding": "Dodawanie...",
+    "upNext": "Następne w kolejce",
+    "empty": "Kolejka jest pusta",
+    "fromPlaylist": "z playlisty",
+    "removeFromQueue": "Usuń {{name}} z kolejki"
+  },
+  "lyrics": {
+    "loading": "Szukanie tekstu piosenki…",
+    "none": "Brak zsynchronizowanego tekstu tej piosenki",
+    "nothing": "Nic nie gra",
+    "size": "Rozmiar tekstu",
+    "smallerTitle": "Mniejszy tekst",
+    "smaller": "Mniejszy tekst piosenki",
+    "largerTitle": "Większy tekst",
+    "larger": "Większy tekst piosenki",
+    "timing": "Synchronizacja tekstu",
+    "resyncTitle": "Dopasuj tekst do bieżącej pozycji piosenki",
+    "resync": "Zsynchronizuj tekst ponownie",
+    "laterTitle": "Tekst później",
+    "later": "Pokaż tekst później",
+    "resetTitle": "Zresetuj synchronizację",
+    "resetLabel": "Synchronizacja tekstu {{offset}}, naciśnij, aby zresetować",
+    "earlierTitle": "Tekst wcześniej",
+    "earlier": "Pokaż tekst wcześniej",
+    "saveTitle": "Zapisz tę synchronizację dla wszystkich",
+    "save": "Zapisz synchronizację tekstu"
+  },
+  "spotifyPlayer": {
+    "tokenFailed": "Nie udało się pobrać tokenu Spotify. Zaloguj się ponownie.",
+    "premium": "Aby odtwarzać muzykę w przeglądarce, potrzebny jest Spotify Premium.",
+    "refused": "Spotify odmówiło odtworzenia utworu ({{status}})",
+    "startFailed": "Nie udało się uruchomić odtwarzania w Spotify"
+  },
+  "callback": {
+    "missingCode": "Brak kodu",
+    "missingState": "Brak parametru state",
+    "loginFailed": "Nie udało się zalogować",
+    "success": "Autoryzacja zakończona sukcesem. Przekierowanie do sesji"
+  },
+  "sessionPage": {
+    "qrExpired": "Ten kod QR wygasł. Wpisz zamiast niego hasło.",
+    "notFound": "Ta sesja nie istnieje (już).",
+    "loadFailed": "Nie udało się wczytać sesji."
+  },
+  "slideshowView": {
+    "loadFailed": "Nie udało się wczytać pokazu slajdów.",
+    "noPhotos": "Brak zdjęć",
+    "uploadSome": "Wyślij kilka zdjęć, a pojawią się tutaj."
+  },
+  "apiErrors": {
+    "badRequest": "Nieprawidłowe żądanie",
+    "badRequestMessage": "Żądanie było nieprawidłowe",
+    "unauthorized": "Brak autoryzacji",
+    "unauthorizedMessage": "Nie masz autoryzacji do tego zasobu",
+    "forbidden": "Brak dostępu",
+    "forbiddenMessage": "Nie masz uprawnień do tego zasobu",
+    "notFound": "Nie znaleziono",
+    "notFoundMessage": "Nie znaleziono żądanego zasobu",
+    "internal": "Wewnętrzny błąd serwera",
+    "badGateway": "Błąd bramy",
+    "unavailable": "Usługa niedostępna",
+    "gatewayTimeout": "Przekroczono czas bramy",
+    "unknown": "Nieznany błąd",
+    "unknownMessage": "Sprawdź logi",
+    "requestFailed": "Żądanie nie powiodło się"
   }
 }

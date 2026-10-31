@@ -2,6 +2,7 @@ import CheckIcon from '@mui/icons-material/Check';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import SyncIcon from '@mui/icons-material/Sync';
+import { TFunction } from 'i18next';
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { NowPlayingDto } from '@/service/endpoints/player/types';
 import { LyricsState } from '@/service/endpoints/lyrics/useLyrics';
@@ -16,6 +17,7 @@ import {
   activeLineIndex,
   formatOffset,
 } from './lyricsTiming';
+import { useTranslation } from 'react-i18next';
 
 const FONT_SCALE_STORAGE_KEY = 'partyking.lyricsFontScale';
 // Lines change every few seconds, so a few checks a second are plenty
@@ -42,6 +44,7 @@ const offsetButtonClass =
  * song, which is then the starting point of every viewer, now and the next time the song plays.
  */
 export const LyricsView = ({ lyrics, nowPlaying, onResync, onSaveOffset }: Props): ReactNode => {
+  const { t } = useTranslation();
   // The saved offset of the song on display; 0 while there are no lyrics
   const savedOffsetMs = lyrics.status === 'found' ? lyrics.offsetMs : 0;
   const foundSongId = lyrics.status === 'found' ? lyrics.songId : undefined;
@@ -65,20 +68,20 @@ export const LyricsView = ({ lyrics, nowPlaying, onResync, onSaveOffset }: Props
           onSaveOffset={onSaveOffset}
         />
       ) : (
-        <p className="m-auto px-6 text-center text-xl text-slate-400">{emptyMessage(lyrics.status)}</p>
+        <p className="m-auto px-6 text-center text-xl text-slate-400">{emptyMessage(lyrics.status, t)}</p>
       )}
     </div>
   );
 };
 
-const emptyMessage = (status: LyricsState['status']) => {
+const emptyMessage = (status: LyricsState['status'], t: TFunction) => {
   switch (status) {
     case 'loading':
-      return 'Looking for the lyrics…';
+      return t('lyrics.loading');
     case 'none':
-      return 'No synchronized lyrics for this song';
+      return t('lyrics.none');
     default:
-      return 'Nothing is playing';
+      return t('lyrics.nothing');
   }
 };
 
@@ -99,6 +102,7 @@ const SyncedLyrics = ({
   savedOffsetMs: number;
   onSaveOffset?: (offsetMs: number) => Promise<void>;
 }): ReactNode => {
+  const { t } = useTranslation();
   const [saving, setSaving] = useState(false);
   const saveOffset = async () => {
     if (!onSaveOffset) return;
@@ -205,14 +209,14 @@ const SyncedLyrics = ({
       </div>
       <div
         role="group"
-        aria-label="Lyrics size"
+        aria-label={t('lyrics.size')}
         className="absolute top-2 right-2 flex items-center gap-1 rounded-md bg-black/70 p-1"
       >
         <button
           type="button"
           className={offsetButtonClass}
-          title="Smaller text"
-          aria-label="Smaller lyrics"
+          title={t('lyrics.smallerTitle')}
+          aria-label={t('lyrics.smaller')}
           disabled={fontScale <= FONT_SCALE_MIN}
           onClick={() => setFontScale(fontScale - FONT_SCALE_STEP)}
         >
@@ -221,8 +225,8 @@ const SyncedLyrics = ({
         <button
           type="button"
           className={offsetButtonClass}
-          title="Larger text"
-          aria-label="Larger lyrics"
+          title={t('lyrics.largerTitle')}
+          aria-label={t('lyrics.larger')}
           disabled={fontScale >= FONT_SCALE_MAX}
           onClick={() => setFontScale(fontScale + FONT_SCALE_STEP)}
         >
@@ -231,14 +235,14 @@ const SyncedLyrics = ({
       </div>
       <div
         role="group"
-        aria-label="Lyrics timing"
+        aria-label={t('lyrics.timing')}
         className="absolute right-2 bottom-2 flex items-center gap-1 rounded-md bg-black/70 p-1"
       >
         <button
           type="button"
           className={offsetButtonClass}
-          title="Match the lyrics to the current position of the song"
-          aria-label="Resync lyrics"
+          title={t('lyrics.resyncTitle')}
+          aria-label={t('lyrics.resync')}
           onClick={resyncNow}
         >
           <SyncIcon fontSize="small" />
@@ -246,8 +250,8 @@ const SyncedLyrics = ({
         <button
           type="button"
           className={offsetButtonClass}
-          title="Lyrics later"
-          aria-label="Show lyrics later"
+          title={t('lyrics.laterTitle')}
+          aria-label={t('lyrics.later')}
           onClick={() => setOffsetMs(offsetMs - OFFSET_STEP_MS)}
         >
           −
@@ -255,8 +259,8 @@ const SyncedLyrics = ({
         <button
           type="button"
           className={`${offsetButtonClass} min-w-16`}
-          title="Reset the timing"
-          aria-label={`Lyrics timing ${formatOffset(offsetMs)}, press to reset`}
+          title={t('lyrics.resetTitle')}
+          aria-label={t('lyrics.resetLabel', { offset: formatOffset(offsetMs) })}
           onClick={() => setOffsetMs(0)}
         >
           {formatOffset(offsetMs)}
@@ -264,8 +268,8 @@ const SyncedLyrics = ({
         <button
           type="button"
           className={offsetButtonClass}
-          title="Lyrics earlier"
-          aria-label="Show lyrics earlier"
+          title={t('lyrics.earlierTitle')}
+          aria-label={t('lyrics.earlier')}
           onClick={() => setOffsetMs(offsetMs + OFFSET_STEP_MS)}
         >
           +
@@ -274,8 +278,8 @@ const SyncedLyrics = ({
           <button
             type="button"
             className={offsetButtonClass}
-            title="Save this timing for everyone"
-            aria-label="Save lyrics timing"
+            title={t('lyrics.saveTitle')}
+            aria-label={t('lyrics.save')}
             disabled={saving || offsetMs === savedOffsetMs}
             onClick={() => void saveOffset()}
           >

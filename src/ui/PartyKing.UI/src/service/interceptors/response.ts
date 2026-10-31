@@ -1,4 +1,5 @@
 import { AxiosResponse } from 'axios';
+import { i18n } from '@/i18n';
 import { ApiErrorOptions } from '@/service/ApiError';
 
 export const onResponseFulfilled = <T, D>(response: AxiosResponse<T, D>): T => {
@@ -22,7 +23,7 @@ const readableMessage = (response: RejectedRequest): string => {
   const problem = typeof data === 'object' ? data : undefined;
   const validationErrors = Object.values(problem?.errors ?? {}).flat();
 
-  return problem?.detail || validationErrors[0] || problem?.title || response.message || 'Request failed';
+  return problem?.detail || validationErrors[0] || problem?.title || response.message || i18n.t('apiErrors.requestFailed');
 };
 
 export const onResponseRejected = (response: RejectedRequest) => {

@@ -1,4 +1,5 @@
 import {useEffect, useRef, useState} from "react";
+import {useTranslation} from "react-i18next";
 import {Link, useNavigate} from "react-router-dom";
 import {sessionsApi} from "@/service/endpoints/sessions/sessionsApi";
 import {ROUTE_PATHS, sessionPath} from "@/router/constants";
@@ -6,6 +7,7 @@ import {InfoMessage} from "@/components/common/InfoMessage";
 import {ErrorMessage} from "@/components/common/ErrorMessage";
 
 export const Callback = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const authorizeStarted = useRef(false);
   const [authorizeError, setAuthorizeError] = useState<string | null>(null);
@@ -13,8 +15,8 @@ export const Callback = () => {
   const searchParams = new URLSearchParams(window.location.search);
   const code = searchParams.get('code');
   const state = searchParams.get('state');
-  const error = searchParams.get('error') ?? (code ? null : "Missing code");
-  const stateError = !error && !state ? "Missing state" : null;
+  const error = searchParams.get('error') ?? (code ? null : t('callback.missingCode'));
+  const stateError = !error && !state ? t('callback.missingState') : null;
 
   useEffect(() => {
     // The authorization code is single-use, so guard against the StrictMode double effect
@@ -25,8 +27,8 @@ export const Callback = () => {
 
     sessionsApi.authenticate(code, state)
       .then(user => navigate(sessionPath(user.sessionId), {replace: true}))
-      .catch((e: { message?: string }) => setAuthorizeError(e?.message ?? "Could not log in"));
-  }, [code, state, error, stateError, navigate]);
+      .catch((e: { message?: string }) => setAuthorizeError(e?.message ?? t('callback.loginFailed')));
+  }, [code, state, error, stateError, navigate, t]);
 
   const message = error ?? stateError ?? authorizeError;
 
@@ -34,10 +36,10 @@ export const Callback = () => {
     return (
       <div className="pt-8">
         <ErrorMessage message={message}/>
-        <Link to={ROUTE_PATHS.HOME} className="text-amber-500 underline">Back to the sessions</Link>
+        <Link to={ROUTE_PATHS.HOME} className="text-amber-500 underline">{t('common.backToSessions')}</Link>
       </div>
     );
   }
 
-  return <div className="pt-8"><InfoMessage message="Authorization successful. Redirecting to the session"/></div>;
+  return <div className="pt-8"><InfoMessage message={t('callback.success')}/></div>;
 };

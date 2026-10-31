@@ -8,6 +8,7 @@ import { FallbackPlaylistForm } from './FallbackPlaylistForm';
 import { SessionNameForm } from './SessionNameForm';
 import { SessionPasswordChangeForm } from './SessionPasswordChangeForm';
 import { SlideshowSettingsForm } from './SlideshowSettingsForm';
+import { useTranslation } from 'react-i18next';
 
 const SettingsSection = ({ title, children }: { title: string; children: ReactNode }): ReactNode => (
   <section aria-label={title} className="p-4 bg-slate-900 rounded-lg">
@@ -27,14 +28,15 @@ type Props = {
  * admins only; the API refuses everyone else.
  */
 export const SessionSettings = ({ session, onChanged }: Props): ReactNode => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   return (
     <>
       <button
         onClick={() => setOpen(true)}
-        aria-label="Session settings"
-        title="Session settings"
+        aria-label={t('sessionSettings.title')}
+        title={t('sessionSettings.title')}
         className="p-1 text-slate-400 hover:text-slate-200 cursor-pointer"
       >
         <SettingsIcon />
@@ -50,30 +52,30 @@ export const SessionSettings = ({ session, onChanged }: Props): ReactNode => {
         slotProps={{ paper: { className: 'bg-slate-800! text-slate-200! rounded-xl!' } }}
       >
         <DialogTitle id="session-settings-title" className="flex! items-center justify-between text-xl! font-semibold!">
-          Session settings
+          {t('sessionSettings.title')}
           <button
             onClick={() => setOpen(false)}
-            aria-label="Close"
-            title="Close"
+            aria-label={t('common.close')}
+            title={t('common.close')}
             className="p-1 text-slate-400 hover:text-slate-200 cursor-pointer"
           >
             <CloseIcon />
           </button>
         </DialogTitle>
         <DialogContent className="space-y-4">
-          <SettingsSection title="Name">
+          <SettingsSection title={t('sessionSettings.name')}>
             <SessionNameForm sessionId={session.id} currentName={session.name} onRenamed={onChanged} />
           </SettingsSection>
-          <SettingsSection title="Password">
+          <SettingsSection title={t('sessionSettings.password')}>
             <SessionPasswordChangeForm sessionId={session.id} />
           </SettingsSection>
-          <SettingsSection title="Fallback playlist">
+          <SettingsSection title={t('sessionSettings.fallbackPlaylist')}>
             <FallbackPlaylistForm session={session} onChanged={onChanged} />
           </SettingsSection>
-          <SettingsSection title="Slideshow">
+          <SettingsSection title={t('views.slideshow')}>
             <SlideshowSettingsForm sessionId={session.id} />
           </SettingsSection>
-          <SettingsSection title="Lyrics">
+          <SettingsSection title={t('views.lyrics')}>
             <AutoLyricsForm />
           </SettingsSection>
         </DialogContent>
