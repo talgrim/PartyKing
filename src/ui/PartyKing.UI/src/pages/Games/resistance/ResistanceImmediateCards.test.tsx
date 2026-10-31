@@ -317,7 +317,7 @@ describe('Strong Leader leader window', () => {
 describe('Keeping a Close Eye', () => {
   const eye = { id: 4, type: 'KeepingCloseEye', toDeal: false, inPlay: false } as const;
   const afterMission = (overrides: Partial<ResistanceGameDto> = {}) =>
-    game({ phase: 'MissionResult', missionNumber: 1, teamPlayerIds: ['p0', 'p1', 'p2'], yourPlotCards: [eye], ...overrides });
+    game({ phase: 'PeekWindow', missionNumber: 1, teamPlayerIds: ['p0', 'p1', 'p2'], yourPlotCards: [eye], ...overrides });
 
   it('offers the other team members whose card nobody looked at yet', async () => {
     const user = userEvent.setup();
@@ -339,5 +339,10 @@ describe('Keeping a Close Eye', () => {
 
     const early = render(<ResistanceCloseEye game={afterMission({ phase: 'PlayingMission' })} onPeek={vi.fn()} />);
     expect(early.container).toBeEmptyDOMElement();
+  });
+
+  it('no longer offers the picker once the window is over', () => {
+    render(<ResistanceCloseEye game={afterMission({ phase: 'MissionResult' })} onPeek={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: 'Podejrzyj kartę' })).toBeNull();
   });
 });

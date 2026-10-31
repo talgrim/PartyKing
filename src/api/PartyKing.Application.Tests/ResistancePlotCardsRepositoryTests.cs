@@ -146,11 +146,11 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
     private static Guid ResistanceTarget(ResistanceGame game, ResistancePlotCard card) =>
         ResistanceRoles.Neighbours(game, card.HolderPlayerId!.Value)[0];
 
-    /// <summary>Everybody confirms in an open leader or confidence window; nothing happens when none is open.</summary>
+    /// <summary>Everybody confirms in an open leader, confidence or peek window; nothing happens when none is open.</summary>
     private async Task PassWindowsAsync()
     {
         var game = await ReloadAsync();
-        if (game.Phase is not (ResistancePhase.LeaderWindow or ResistancePhase.ConfidenceWindow))
+        if (game.Phase is not (ResistancePhase.LeaderWindow or ResistancePhase.ConfidenceWindow or ResistancePhase.PeekWindow))
         {
             return;
         }
@@ -344,6 +344,7 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
             await _repository.PlayMissionCardAsync(_sessionId, member.PlayerId, true, ct);
         }
 
+        await PassWindowsAsync();
         await _repository.ContinueAsync(_sessionId, game.LeaderPlayerId, true, ct);
         await PassWindowsAsync();
 
@@ -973,7 +974,7 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         }
 
         game = await ReloadAsync();
-        Assert.Equal(ResistancePhase.MissionResult, game.Phase);
+        Assert.Equal(ResistancePhase.PeekWindow, game.Phase);
 
         return (game, game.PlotCards.Single(x => x.Location == ResistancePlotCardLocation.Hand));
     }
@@ -1022,6 +1023,43 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         var early = await _repository.PeekMissionCardAsync(_sessionId, card.HolderPlayerId, card.CardId, other, ct);
 
         Assert.Equal(ResistancePlayCardStatus.WrongPhase, early.Status);
+    }
+
+    [Fact]
+    public async Task PeekWindow_BlocksContinueUntilEveryoneConfirmedAndThenEndsThePeeking()
+    {
+        var ct = CancellationToken.None;
+        var (game, card) = await AfterTheMissionWithCloseEyeAsync();
+        var holder = card.HolderPlayerId!.Value;
+        var target = game.Players.First(x => x.IsOnTeam && x.PlayerId != holder).PlayerId;
+
+        Assert.Equal(ResistanceContinueStatus.NothingToContinue, (await _repository.ContinueAsync(_sessionId, game.LeaderPlayerId, true, ct)).Status);
+        Assert.Single((await ReloadAsync()).MissionResults);
+        foreach (var player in game.Players.Take(4))
+        {
+            await _repository.PassLeaderWindowAsync(_sessionId, player.PlayerId, ct);
+        }
+
+        Assert.Equal(ResistancePhase.PeekWindow, (await ReloadAsync()).Phase);
+        await _repository.PassLeaderWindowAsync(_sessionId, game.Players[4].PlayerId, ct);
+
+        Assert.Equal(ResistancePhase.MissionResult, (await ReloadAsync()).Phase);
+        Assert.Equal(ResistancePlayCardStatus.WrongPhase, (await _repository.PeekMissionCardAsync(_sessionId, holder, card.CardId, target, ct)).Status);
+        Assert.Equal(ResistanceContinueStatus.Continued, (await _repository.ContinueAsync(_sessionId, game.LeaderPlayerId, true, ct)).Status);
+    }
+
+    [Fact]
+    public async Task PeekWindow_IsSkippedWhenNoPlayableCardIsInAHand()
+    {
+        var game = await StartAsync(5, plotCards: false);
+        await SelectTeamAndVoteAsync(game, approve: true);
+        game = await ReloadAsync();
+        foreach (var member in game.Players.Where(x => x.IsOnTeam))
+        {
+            await _repository.PlayMissionCardAsync(_sessionId, member.PlayerId, true, CancellationToken.None);
+        }
+
+        Assert.Equal(ResistancePhase.MissionResult, (await ReloadAsync()).Phase);
     }
 
     [Fact]

@@ -61,7 +61,7 @@ const lobby = (names: string[], isOpen = false) => ({
   requiredFails: null as number | null,
   playedMissionPlayerIds: [] as string[],
   yourMissionCard: null as boolean | null,
-  missionResults: [] as { missionNumber: number; succeeded: boolean; failCount: number }[],
+  missionResults: [] as { missionNumber: number; succeeded: boolean; failCount: number; teamPlayerIds: string[] }[],
   yourPlotCards: [] as unknown[],
   plotCardCounts: [] as unknown[],
   opinionMakerPlayerIds: [] as string[],
@@ -698,7 +698,7 @@ describe('Resistance', () => {
           voteApproved: true,
           phase: 'MissionResult',
           teamPlayerIds: ['p0', 'p1'],
-          missionResults: [{ missionNumber: 1, succeeded: false, failCount: 1 }],
+          missionResults: [{ missionNumber: 1, succeeded: false, failCount: 1, teamPlayerIds: [] }],
         }),
       );
       renderPage('/s/session-1/games/resistance?tv=1');
@@ -775,7 +775,7 @@ describe('Resistance', () => {
             phase: 'MissionResult',
             yourPlayerId: 'p1',
             leaderPlayerId: 'p1',
-            missionResults: [{ missionNumber: 1, succeeded: true, failCount: 0 }],
+            missionResults: [{ missionNumber: 1, succeeded: true, failCount: 0, teamPlayerIds: [] }],
           }),
         );
         mocks.continueResistance.mockResolvedValue(started(five, { yourPlayerId: 'p1', missionNumber: 2 }));

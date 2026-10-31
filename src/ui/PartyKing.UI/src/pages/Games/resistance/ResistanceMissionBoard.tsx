@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { MissionBoardIcon, MissionResult } from './ResistanceIcons';
-import { ResistanceMissionResultDto } from '@/service/endpoints/games/types';
+import { ResistanceMissionResultDto, ResistancePlayerDto } from '@/service/endpoints/games/types';
 import { MissionBoardLayout } from './resistanceTeams';
 
 type Props = {
@@ -12,10 +12,12 @@ type Props = {
   rejectedTeams?: number;
   /** The finished missions. */
   missionResults?: readonly ResistanceMissionResultDto[];
+  /** The players of the game, to name each finished mission's team. */
+  players?: readonly Pick<ResistancePlayerDto, 'id' | 'name'>[];
 };
 
 /** The mission board of the current game with the result of every finished mission. */
-export const ResistanceMissionBoard = ({ board, className, currentMission = null, rejectedTeams = 0, missionResults = [] }: Props): ReactNode => (
+export const ResistanceMissionBoard = ({ board, className, currentMission = null, rejectedTeams = 0, missionResults = [], players = [] }: Props): ReactNode => (
   <MissionBoardIcon
     className={className}
     title="Mission board"
@@ -24,6 +26,11 @@ export const ResistanceMissionBoard = ({ board, className, currentMission = null
       const result = missionResults.find((x) => x.missionNumber === i + 1);
 
       return result == null ? null : result.succeeded ? 'success' : 'fail';
+    })}
+    teams={[0, 1, 2, 3, 4].map((i) => {
+      const ids = missionResults.find((x) => x.missionNumber === i + 1)?.teamPlayerIds ?? [];
+
+      return ids.flatMap((id) => players.find((p) => p.id === id)?.name ?? []);
     })}
     currentMission={currentMission}
     rejectedTeams={rejectedTeams}
