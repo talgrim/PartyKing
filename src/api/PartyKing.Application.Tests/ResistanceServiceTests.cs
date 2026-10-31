@@ -1,6 +1,7 @@
 using ErrorOr;
 using Microsoft.Extensions.Logging.Abstractions;
 using PartyKing.Application.Admin.Services;
+using PartyKing.Application.Games.Services.Resistance;
 using PartyKing.Application.Games.Services;
 using PartyKing.Application.Player.Services;
 using PartyKing.Application.Realtime;
@@ -23,7 +24,9 @@ public class ResistanceServiceTests
     private readonly FakeResistanceGamesRepository _games = new();
     private readonly FakeSessionMusicNotifier _notifier = new();
     private readonly FakeRulesProvider _rules = new();
-    private readonly ResistanceService _service;
+    private readonly ResistanceLobbyService _lobbyService;
+    private readonly ResistanceRoundService _roundService;
+    private readonly ResistancePlotCardService _plotCardService;
     private readonly Guid _id;
 
     public ResistanceServiceTests()
@@ -40,7 +43,12 @@ public class ResistanceServiceTests
             new NullSessionMusicNotifier(),
             new NullPlayerConnectionWatchdog(),
             NullLogger<SessionService>.Instance);
-        _service = new ResistanceService(sessionService, _sessions, _games, clock, _notifier, _rules);
+        var lobby = new ResistanceGameLobby(
+            sessionService, _sessions, _games, clock, new ResistanceLobbyNotifier(_notifier));
+        var gate = new ResistanceActionGate(lobby, _notifier);
+        _lobbyService = new ResistanceLobbyService(lobby, gate, _games, clock, _notifier, _rules);
+        _roundService = new ResistanceRoundService(gate, _games, clock);
+        _plotCardService = new ResistancePlotCardService(gate, _games);
         _id = _sessions.AddSession(HostId, new PasswordHasher().Hash("secret")).Id;
     }
 
@@ -50,11 +58,11 @@ public class ResistanceServiceTests
         var guest = new GameCaller("guest", false);
         var ct = CancellationToken.None;
 
-        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _service.CreateAsync(_id, guest, ct)).FirstError.Type);
-        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _service.OpenAsync(_id, guest, ct)).FirstError.Type);
-        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _service.KickAsync(_id, Guid.NewGuid(), guest, ct)).FirstError.Type);
-        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _service.ReorderAsync(_id, [], guest, ct)).FirstError.Type);
-        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _service.EndAsync(_id, guest, ct)).FirstError.Type);
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _lobbyService.CreateAsync(_id, guest, ct)).FirstError.Type);
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _lobbyService.OpenAsync(_id, guest, ct)).FirstError.Type);
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _lobbyService.KickAsync(_id, Guid.NewGuid(), guest, ct)).FirstError.Type);
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _lobbyService.ReorderAsync(_id, [], guest, ct)).FirstError.Type);
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _lobbyService.EndAsync(_id, guest, ct)).FirstError.Type);
     }
 
     [Fact]
@@ -62,27 +70,27 @@ public class ResistanceServiceTests
     {
         _rules.Rules.PlayerCounts[5] = new ResistanceCountRules(1, [2, 2, 2, 2, 2], [1, 1, 1, 1, 2]);
 
-        var created = await _service.CreateAsync(_id, Host, CancellationToken.None);
+        var created = await _lobbyService.CreateAsync(_id, Host, CancellationToken.None);
         _rules.Rules = ResistanceRules.Default();
 
         var five = created.Value.Rules.PlayerCounts.Single(x => x.PlayerCount == 5);
         Assert.Equal(1, five.Spies);
         Assert.Equal([1, 1, 1, 1, 2], five.RequiredFails);
-        Assert.Equal(1, (await _service.GetAsync(_id, Host, CancellationToken.None)).Value.Rules.PlayerCounts.Single(x => x.PlayerCount == 5).Spies);
+        Assert.Equal(1, (await _lobbyService.GetAsync(_id, Host, CancellationToken.None)).Value.Rules.PlayerCounts.Single(x => x.PlayerCount == 5).Spies);
     }
 
     [Fact]
     public async Task RefreshingRules_TakesTheCurrentConfigurationUntilTheGameIsOpen()
     {
-        await _service.CreateAsync(_id, Host, CancellationToken.None);
+        await _lobbyService.CreateAsync(_id, Host, CancellationToken.None);
         _rules.Rules.PlayerCounts[5] = new ResistanceCountRules(1, [2, 2, 2, 2, 2], [1, 1, 1, 1, 1]);
 
-        var refreshed = await _service.RefreshRulesAsync(_id, Host, CancellationToken.None);
+        var refreshed = await _lobbyService.RefreshRulesAsync(_id, Host, CancellationToken.None);
 
         Assert.Equal(1, refreshed.Value.Rules.PlayerCounts.Single(x => x.PlayerCount == 5).Spies);
 
-        await _service.OpenAsync(_id, Admin, CancellationToken.None);
-        var afterOpen = await _service.RefreshRulesAsync(_id, Host, CancellationToken.None);
+        await _lobbyService.OpenAsync(_id, Admin, CancellationToken.None);
+        var afterOpen = await _lobbyService.RefreshRulesAsync(_id, Host, CancellationToken.None);
 
         Assert.Equal(ErrorOr.ErrorType.Conflict, afterOpen.FirstError.Type);
     }
@@ -90,17 +98,17 @@ public class ResistanceServiceTests
     [Fact]
     public async Task PlotCards_AreOffByDefaultAndSwitchedUntilTheGameStarts()
     {
-        var created = await _service.CreateAsync(_id, Host, CancellationToken.None);
+        var created = await _lobbyService.CreateAsync(_id, Host, CancellationToken.None);
         Assert.False(created.Value.Rules.PlotCardsEnabled);
 
-        var enabled = await _service.SetPlotCardsAsync(_id, true, Host, CancellationToken.None);
+        var enabled = await _lobbyService.SetPlotCardsAsync(_id, true, Host, CancellationToken.None);
         Assert.True(enabled.Value.Rules.PlotCardsEnabled);
 
-        await _service.OpenAsync(_id, Admin, CancellationToken.None);
-        var afterOpen = await _service.SetPlotCardsAsync(_id, false, Host, CancellationToken.None);
+        await _lobbyService.OpenAsync(_id, Admin, CancellationToken.None);
+        var afterOpen = await _lobbyService.SetPlotCardsAsync(_id, false, Host, CancellationToken.None);
 
         Assert.False(afterOpen.IsError);
-        Assert.False((await _service.GetAsync(_id, Host, CancellationToken.None)).Value.Rules.PlotCardsEnabled);
+        Assert.False((await _lobbyService.GetAsync(_id, Host, CancellationToken.None)).Value.Rules.PlotCardsEnabled);
     }
 
     [Fact]
@@ -108,17 +116,17 @@ public class ResistanceServiceTests
     {
         var guest = new GameCaller("guest", false);
 
-        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _service.SetPlotCardsAsync(_id, true, guest, CancellationToken.None)).FirstError.Type);
-        Assert.Equal(ErrorOr.ErrorType.NotFound, (await _service.SetPlotCardsAsync(_id, true, Host, CancellationToken.None)).FirstError.Type);
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _lobbyService.SetPlotCardsAsync(_id, true, guest, CancellationToken.None)).FirstError.Type);
+        Assert.Equal(ErrorOr.ErrorType.NotFound, (await _lobbyService.SetPlotCardsAsync(_id, true, Host, CancellationToken.None)).FirstError.Type);
     }
 
     [Fact]
     public async Task RefreshingRules_KeepsThePlotCardsSwitch()
     {
-        await _service.CreateAsync(_id, Host, CancellationToken.None);
-        await _service.SetPlotCardsAsync(_id, true, Host, CancellationToken.None);
+        await _lobbyService.CreateAsync(_id, Host, CancellationToken.None);
+        await _lobbyService.SetPlotCardsAsync(_id, true, Host, CancellationToken.None);
 
-        var refreshed = await _service.RefreshRulesAsync(_id, Host, CancellationToken.None);
+        var refreshed = await _lobbyService.RefreshRulesAsync(_id, Host, CancellationToken.None);
 
         Assert.True(refreshed.Value.Rules.PlotCardsEnabled);
     }
@@ -143,15 +151,15 @@ public class ResistanceServiceTests
     {
         var guest = new GameCaller("guest", false);
 
-        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _service.RefreshRulesAsync(_id, guest, CancellationToken.None)).FirstError.Type);
-        Assert.Equal(ErrorOr.ErrorType.NotFound, (await _service.RefreshRulesAsync(_id, Host, CancellationToken.None)).FirstError.Type);
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _lobbyService.RefreshRulesAsync(_id, guest, CancellationToken.None)).FirstError.Type);
+        Assert.Equal(ErrorOr.ErrorType.NotFound, (await _lobbyService.RefreshRulesAsync(_id, Host, CancellationToken.None)).FirstError.Type);
     }
 
     [Fact]
     public async Task Creating_MakesAClosedGameAndOnlyOnce()
     {
-        var created = await _service.CreateAsync(_id, Host, CancellationToken.None);
-        var again = await _service.CreateAsync(_id, Admin, CancellationToken.None);
+        var created = await _lobbyService.CreateAsync(_id, Host, CancellationToken.None);
+        var again = await _lobbyService.CreateAsync(_id, Admin, CancellationToken.None);
 
         Assert.False(created.IsError);
         Assert.False(created.Value.IsOpen);
@@ -163,11 +171,11 @@ public class ResistanceServiceTests
     [Fact]
     public async Task Opening_IsForAdminsOnlyAndPushedOnce()
     {
-        await _service.CreateAsync(_id, Host, CancellationToken.None);
+        await _lobbyService.CreateAsync(_id, Host, CancellationToken.None);
 
-        var byHost = await _service.OpenAsync(_id, Host, CancellationToken.None);
-        var first = await _service.OpenAsync(_id, Admin, CancellationToken.None);
-        var second = await _service.OpenAsync(_id, Admin, CancellationToken.None);
+        var byHost = await _lobbyService.OpenAsync(_id, Host, CancellationToken.None);
+        var first = await _lobbyService.OpenAsync(_id, Admin, CancellationToken.None);
+        var second = await _lobbyService.OpenAsync(_id, Admin, CancellationToken.None);
 
         Assert.Equal(ErrorOr.ErrorType.Forbidden, byHost.FirstError.Type);
         Assert.True(first.Value.IsOpen);
@@ -178,7 +186,7 @@ public class ResistanceServiceTests
     [Fact]
     public async Task OpeningWithoutAGame_IsNotFound()
     {
-        var result = await _service.OpenAsync(_id, Admin, CancellationToken.None);
+        var result = await _lobbyService.OpenAsync(_id, Admin, CancellationToken.None);
 
         Assert.Equal(ErrorOr.ErrorType.NotFound, result.FirstError.Type);
     }
@@ -187,15 +195,15 @@ public class ResistanceServiceTests
     public async Task AClosedGame_IsHiddenFromGuestsButNotFromManagers()
     {
         var guest = new GameCaller("guest", false);
-        await _service.CreateAsync(_id, Host, CancellationToken.None);
+        await _lobbyService.CreateAsync(_id, Host, CancellationToken.None);
 
-        Assert.Equal(ErrorOr.ErrorType.NotFound, (await _service.GetAsync(_id, guest, CancellationToken.None)).FirstError.Type);
-        Assert.False((await _service.GetAsync(_id, Host, CancellationToken.None)).IsError);
-        Assert.False((await _service.GetAsync(_id, Admin, CancellationToken.None)).IsError);
+        Assert.Equal(ErrorOr.ErrorType.NotFound, (await _lobbyService.GetAsync(_id, guest, CancellationToken.None)).FirstError.Type);
+        Assert.False((await _lobbyService.GetAsync(_id, Host, CancellationToken.None)).IsError);
+        Assert.False((await _lobbyService.GetAsync(_id, Admin, CancellationToken.None)).IsError);
 
-        await _service.OpenAsync(_id, Admin, CancellationToken.None);
+        await _lobbyService.OpenAsync(_id, Admin, CancellationToken.None);
 
-        Assert.False((await _service.GetAsync(_id, guest, CancellationToken.None)).IsError);
+        Assert.False((await _lobbyService.GetAsync(_id, guest, CancellationToken.None)).IsError);
     }
 
     [Fact]
@@ -204,8 +212,8 @@ public class ResistanceServiceTests
         await OpenGameAsync();
         var player = await JoinAsync("Ola");
 
-        var joined = await _service.GetLobbyAsync(_id, player, CancellationToken.None);
-        var stranger = await _service.GetLobbyAsync(_id, new GameCaller("guest", false), CancellationToken.None);
+        var joined = await _lobbyService.GetLobbyAsync(_id, player, CancellationToken.None);
+        var stranger = await _lobbyService.GetLobbyAsync(_id, new GameCaller("guest", false), CancellationToken.None);
 
         Assert.True(joined.Value.IsOpen);
         Assert.True(joined.Value.Joined);
@@ -215,9 +223,9 @@ public class ResistanceServiceTests
     [Fact]
     public async Task Joining_NeedsAnOpenGame()
     {
-        await _service.CreateAsync(_id, Host, CancellationToken.None);
+        await _lobbyService.CreateAsync(_id, Host, CancellationToken.None);
 
-        var result = await _service.JoinAsync(_id, "Ola", new GameCaller("guest", false), CancellationToken.None);
+        var result = await _lobbyService.JoinAsync(_id, "Ola", new GameCaller("guest", false), CancellationToken.None);
 
         Assert.Equal("Resistance.NotOpen", result.FirstError.Code);
     }
@@ -228,7 +236,7 @@ public class ResistanceServiceTests
         await OpenGameAsync();
         await JoinAsync("Ola");
 
-        var duplicate = await _service.JoinAsync(_id, "  OLA ", new GameCaller("guest", false), CancellationToken.None);
+        var duplicate = await _lobbyService.JoinAsync(_id, "  OLA ", new GameCaller("guest", false), CancellationToken.None);
 
         Assert.Equal("Resistance.NameTaken", duplicate.FirstError.Code);
     }
@@ -242,8 +250,8 @@ public class ResistanceServiceTests
             await JoinAsync($"Player {i}");
         }
 
-        var eleventh = await _service.JoinAsync(_id, "Late", new GameCaller("guest", false), CancellationToken.None);
-        var game = await _service.GetAsync(_id, Admin, CancellationToken.None);
+        var eleventh = await _lobbyService.JoinAsync(_id, "Late", new GameCaller("guest", false), CancellationToken.None);
+        var game = await _lobbyService.GetAsync(_id, Admin, CancellationToken.None);
 
         Assert.Equal("Resistance.Full", eleventh.FirstError.Code);
         Assert.Equal(ResistanceGame.MaxPlayers, game.Value.Players.Count);
@@ -255,7 +263,7 @@ public class ResistanceServiceTests
         await OpenGameAsync();
         var player = await JoinAsync("Ola");
 
-        var game = await _service.GetAsync(_id, player, CancellationToken.None);
+        var game = await _lobbyService.GetAsync(_id, player, CancellationToken.None);
 
         Assert.Equal(player.PlayerId, game.Value.YourPlayerId);
         Assert.Equal(["Ola"], game.Value.Players.Select(x => x.Name));
@@ -267,7 +275,7 @@ public class ResistanceServiceTests
         await OpenGameAsync();
         await JoinAsync("Ola");
 
-        var game = await _service.GetAsync(_id, new GameCaller("guest", false), CancellationToken.None);
+        var game = await _lobbyService.GetAsync(_id, new GameCaller("guest", false), CancellationToken.None);
 
         Assert.Null(game.Value.YourPlayerId);
     }
@@ -277,9 +285,9 @@ public class ResistanceServiceTests
     {
         await OpenGameAsync();
 
-        await _service.JoinAsync(_id, "ignored", Host, CancellationToken.None);
-        await _service.JoinAsync(_id, null, Admin, CancellationToken.None);
-        var game = await _service.GetAsync(_id, Admin, CancellationToken.None);
+        await _lobbyService.JoinAsync(_id, "ignored", Host, CancellationToken.None);
+        await _lobbyService.JoinAsync(_id, null, Admin, CancellationToken.None);
+        var game = await _lobbyService.GetAsync(_id, Admin, CancellationToken.None);
 
         Assert.Equal(["Host (host)", "admin"], game.Value.Players.Select(x => x.Name));
     }
@@ -292,10 +300,10 @@ public class ResistanceServiceTests
         var ala = await JoinAsync("Ala");
         _notifier.ResistanceChanges.Clear();
 
-        var reordered = await _service.ReorderAsync(_id, [ala.PlayerId!.Value, ola.PlayerId!.Value], Host, CancellationToken.None);
-        var mismatch = await _service.ReorderAsync(_id, [ala.PlayerId.Value], Host, CancellationToken.None);
-        var kicked = await _service.KickAsync(_id, ala.PlayerId.Value, Admin, CancellationToken.None);
-        var missing = await _service.KickAsync(_id, Guid.NewGuid(), Admin, CancellationToken.None);
+        var reordered = await _lobbyService.ReorderAsync(_id, [ala.PlayerId!.Value, ola.PlayerId!.Value], Host, CancellationToken.None);
+        var mismatch = await _lobbyService.ReorderAsync(_id, [ala.PlayerId.Value], Host, CancellationToken.None);
+        var kicked = await _lobbyService.KickAsync(_id, ala.PlayerId.Value, Admin, CancellationToken.None);
+        var missing = await _lobbyService.KickAsync(_id, Guid.NewGuid(), Admin, CancellationToken.None);
 
         Assert.Equal(["Ala", "Ola"], reordered.Value.Players.Select(x => x.Name));
         Assert.Equal("Resistance.OrderMismatch", mismatch.FirstError.Code);
@@ -307,11 +315,11 @@ public class ResistanceServiceTests
     [Fact]
     public async Task Ending_DeletesTheGameAndIsPushed()
     {
-        await _service.CreateAsync(_id, Host, CancellationToken.None);
+        await _lobbyService.CreateAsync(_id, Host, CancellationToken.None);
         _notifier.ResistanceChanges.Clear();
 
-        var ended = await _service.EndAsync(_id, Host, CancellationToken.None);
-        var again = await _service.EndAsync(_id, Host, CancellationToken.None);
+        var ended = await _lobbyService.EndAsync(_id, Host, CancellationToken.None);
+        var again = await _lobbyService.EndAsync(_id, Host, CancellationToken.None);
 
         Assert.False(ended.IsError);
         Assert.Equal(ErrorOr.ErrorType.NotFound, again.FirstError.Type);
@@ -322,22 +330,22 @@ public class ResistanceServiceTests
     public async Task Starting_IsForManagersOfAnOpenGameWithFivePlayers()
     {
         var ct = CancellationToken.None;
-        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _service.StartAsync(_id, new GameCaller("guest", false), ct)).FirstError.Type);
-        Assert.Equal(ErrorOr.ErrorType.NotFound, (await _service.StartAsync(_id, Host, ct)).FirstError.Type);
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _roundService.StartAsync(_id, new GameCaller("guest", false), ct)).FirstError.Type);
+        Assert.Equal(ErrorOr.ErrorType.NotFound, (await _roundService.StartAsync(_id, Host, ct)).FirstError.Type);
 
-        await _service.CreateAsync(_id, Host, ct);
-        Assert.Equal("Resistance.NotOpen", (await _service.StartAsync(_id, Host, ct)).FirstError.Code);
+        await _lobbyService.CreateAsync(_id, Host, ct);
+        Assert.Equal("Resistance.NotOpen", (await _roundService.StartAsync(_id, Host, ct)).FirstError.Code);
 
-        await _service.OpenAsync(_id, Admin, ct);
+        await _lobbyService.OpenAsync(_id, Admin, ct);
         await JoinPlayersAsync(4);
-        Assert.Equal("Resistance.NotEnoughPlayers", (await _service.StartAsync(_id, Host, ct)).FirstError.Code);
+        Assert.Equal("Resistance.NotEnoughPlayers", (await _roundService.StartAsync(_id, Host, ct)).FirstError.Code);
 
         await JoinAsync("Player 5");
-        var started = await _service.StartAsync(_id, Admin, ct);
+        var started = await _roundService.StartAsync(_id, Admin, ct);
 
         Assert.NotNull(started.Value.StartedAt);
         Assert.Contains(started.Value.Players, x => x.Id == started.Value.LeaderPlayerId);
-        Assert.Equal("Resistance.AlreadyStarted", (await _service.StartAsync(_id, Host, ct)).FirstError.Code);
+        Assert.Equal("Resistance.AlreadyStarted", (await _roundService.StartAsync(_id, Host, ct)).FirstError.Code);
     }
 
     [Fact]
@@ -347,7 +355,7 @@ public class ResistanceServiceTests
         await JoinPlayersAsync(5);
         var before = _notifier.ResistanceChanges.Count;
 
-        await _service.StartAsync(_id, Host, CancellationToken.None);
+        await _roundService.StartAsync(_id, Host, CancellationToken.None);
 
         Assert.Equal(before + 1, _notifier.ResistanceChanges.Count);
     }
@@ -369,7 +377,7 @@ public class ResistanceServiceTests
     {
         await OpenGameAsync();
         var callers = await JoinPlayersAsync(8);
-        var started = await _service.StartAsync(_id, Host, CancellationToken.None);
+        var started = await _roundService.StartAsync(_id, Host, CancellationToken.None);
 
         Assert.Equal(1, started.Value.MissionNumber);
         Assert.Equal(3, started.Value.RequiredTeamSize);
@@ -381,18 +389,18 @@ public class ResistanceServiceTests
     public async Task SelectingATeam_IsOnlyForTheLeaderAndNeedsAStartedGame()
     {
         var ct = CancellationToken.None;
-        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _service.SelectTeamAsync(_id, [], new GameCaller("guest", false), ct)).FirstError.Type);
-        Assert.Equal(ErrorOr.ErrorType.NotFound, (await _service.SelectTeamAsync(_id, [], Host, ct)).FirstError.Type);
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _roundService.SelectTeamAsync(_id, [], new GameCaller("guest", false), ct)).FirstError.Type);
+        Assert.Equal(ErrorOr.ErrorType.NotFound, (await _roundService.SelectTeamAsync(_id, [], Host, ct)).FirstError.Type);
 
         var callers = await OpenGameAndJoinAsync(5);
-        Assert.Equal("Resistance.NotStarted", (await _service.SelectTeamAsync(_id, [], Host, ct)).FirstError.Code);
+        Assert.Equal("Resistance.NotStarted", (await _roundService.SelectTeamAsync(_id, [], Host, ct)).FirstError.Code);
 
-        var started = await _service.StartAsync(_id, Host, ct);
+        var started = await _roundService.StartAsync(_id, Host, ct);
         var ids = started.Value.Players.Select(x => x.Id).ToList();
         var notLeader = callers.First(x => x.PlayerId != started.Value.LeaderPlayerId);
 
-        var denied = await _service.SelectTeamAsync(_id, ids.Take(2).ToList(), notLeader, ct);
-        var manager = await _service.SelectTeamAsync(_id, ids.Take(2).ToList(), Admin, ct);
+        var denied = await _roundService.SelectTeamAsync(_id, ids.Take(2).ToList(), notLeader, ct);
+        var manager = await _roundService.SelectTeamAsync(_id, ids.Take(2).ToList(), Admin, ct);
 
         Assert.Equal("Resistance.NotLeader", denied.FirstError.Code);
         Assert.Equal(ErrorOr.ErrorType.Forbidden, denied.FirstError.Type);
@@ -404,57 +412,57 @@ public class ResistanceServiceTests
     {
         var ct = CancellationToken.None;
         var callers = await OpenGameAndJoinAsync(5);
-        var started = await _service.StartAsync(_id, Host, ct);
+        var started = await _roundService.StartAsync(_id, Host, ct);
         var leader = callers.First(x => x.PlayerId == started.Value.LeaderPlayerId);
         var ids = started.Value.Players.Select(x => x.Id).ToList();
 
-        Assert.Equal("Resistance.WrongTeamSize", (await _service.SelectTeamAsync(_id, ids.Take(1).ToList(), leader, ct)).FirstError.Code);
-        Assert.Equal("Resistance.WrongTeamSize", (await _service.SelectTeamAsync(_id, ids.Take(3).ToList(), leader, ct)).FirstError.Code);
-        Assert.Equal("Resistance.WrongTeamSize", (await _service.SelectTeamAsync(_id, [ids[0], ids[0]], leader, ct)).FirstError.Code);
-        Assert.Equal("Resistance.WrongTeamSize", (await _service.SelectTeamAsync(_id, null, leader, ct)).FirstError.Code);
-        Assert.Equal("Resistance.UnknownPlayer", (await _service.SelectTeamAsync(_id, [ids[0], Guid.NewGuid()], leader, ct)).FirstError.Code);
+        Assert.Equal("Resistance.WrongTeamSize", (await _roundService.SelectTeamAsync(_id, ids.Take(1).ToList(), leader, ct)).FirstError.Code);
+        Assert.Equal("Resistance.WrongTeamSize", (await _roundService.SelectTeamAsync(_id, ids.Take(3).ToList(), leader, ct)).FirstError.Code);
+        Assert.Equal("Resistance.WrongTeamSize", (await _roundService.SelectTeamAsync(_id, [ids[0], ids[0]], leader, ct)).FirstError.Code);
+        Assert.Equal("Resistance.WrongTeamSize", (await _roundService.SelectTeamAsync(_id, null, leader, ct)).FirstError.Code);
+        Assert.Equal("Resistance.UnknownPlayer", (await _roundService.SelectTeamAsync(_id, [ids[0], Guid.NewGuid()], leader, ct)).FirstError.Code);
     }
 
     [Fact]
     public async Task PlotCards_AreDrawnForTheLeaderAndDealtToOthers_HandsStayPrivateAndCountsPublic()
     {
         var ct = CancellationToken.None;
-        await _service.CreateAsync(_id, Host, ct);
-        await _service.SetPlotCardsAsync(_id, true, Host, ct);
-        await _service.OpenAsync(_id, Admin, ct);
+        await _lobbyService.CreateAsync(_id, Host, ct);
+        await _lobbyService.SetPlotCardsAsync(_id, true, Host, ct);
+        await _lobbyService.OpenAsync(_id, Admin, ct);
         var callers = await JoinPlayersAsync(5);
-        var started = await _service.StartAsync(_id, Host, ct);
+        var started = await _roundService.StartAsync(_id, Host, ct);
         var leader = callers.First(x => x.PlayerId == started.Value.LeaderPlayerId);
         var others = callers.Where(x => x.PlayerId != leader.PlayerId).ToList();
 
         Assert.Equal(ResistancePhaseDto.DealingCards, started.Value.Phase);
         Assert.Equal(1, started.Value.Rules.PlotCardsPerRound);
-        var drawn = (await _service.GetAsync(_id, leader, ct)).Value.YourPlotCards;
+        var drawn = (await _lobbyService.GetAsync(_id, leader, ct)).Value.YourPlotCards;
         Assert.Single(drawn);
         foreach (var other in others)
         {
-            Assert.Empty((await _service.GetAsync(_id, other, ct)).Value.YourPlotCards);
+            Assert.Empty((await _lobbyService.GetAsync(_id, other, ct)).Value.YourPlotCards);
         }
 
-        Assert.Equal("Resistance.CardsNotDealt", (await _service.SelectTeamAsync(_id, [leader.PlayerId!.Value], leader, ct)).FirstError.Code);
-        Assert.Equal("Resistance.NotLeader", (await _service.DealPlotCardsAsync(_id, [], others[0], ct)).FirstError.Code);
-        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _service.DealPlotCardsAsync(_id, [], Host, ct)).FirstError.Type);
+        Assert.Equal("Resistance.CardsNotDealt", (await _roundService.SelectTeamAsync(_id, [leader.PlayerId!.Value], leader, ct)).FirstError.Code);
+        Assert.Equal("Resistance.NotLeader", (await _plotCardService.DealPlotCardsAsync(_id, [], others[0], ct)).FirstError.Code);
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _plotCardService.DealPlotCardsAsync(_id, [], Host, ct)).FirstError.Type);
 
         var receiver = others[0];
         var deal = drawn.Where(x => x.ToDeal).Select(x => new ResistancePlotCardAssignmentDto(x.Id, receiver.PlayerId!.Value)).ToList();
         var before = _notifier.ResistanceChanges.Count;
-        var dealt = await _service.DealPlotCardsAsync(_id, deal, leader, ct);
+        var dealt = await _plotCardService.DealPlotCardsAsync(_id, deal, leader, ct);
 
         Assert.Equal(ResistancePhaseDto.SelectingTeam, dealt.Value.Phase);
         Assert.Equal(before + 1, _notifier.ResistanceChanges.Count);
         Assert.Equal(1, dealt.Value.PlotCardCounts.Sum(x => x.Count));
-        Assert.Equal(deal.Count, (await _service.GetAsync(_id, receiver, ct)).Value.YourPlotCards.Count);
+        Assert.Equal(deal.Count, (await _lobbyService.GetAsync(_id, receiver, ct)).Value.YourPlotCards.Count);
         foreach (var other in others.Skip(1))
         {
-            Assert.Empty((await _service.GetAsync(_id, other, ct)).Value.YourPlotCards);
+            Assert.Empty((await _lobbyService.GetAsync(_id, other, ct)).Value.YourPlotCards);
         }
 
-        Assert.Equal("Resistance.NotDealing", (await _service.DealPlotCardsAsync(_id, [], leader, ct)).FirstError.Code);
+        Assert.Equal("Resistance.NotDealing", (await _plotCardService.DealPlotCardsAsync(_id, [], leader, ct)).FirstError.Code);
     }
 
     [Theory]
@@ -472,11 +480,11 @@ public class ResistanceServiceTests
     {
         var ct = CancellationToken.None;
         var callers = await OpenGameAndJoinAsync(5);
-        await _service.StartAsync(_id, Host, ct);
+        await _roundService.StartAsync(_id, Host, ct);
         _games.PlayCardStatus = status;
 
-        var played = await _service.PlayPlotCardAsync(_id, 0, callers[1].PlayerId!.Value, callers[0], ct);
-        var confirmed = await _service.ConfirmPlotCardAsync(_id, 0, callers[0], ct);
+        var played = await _plotCardService.PlayPlotCardAsync(_id, 0, callers[1].PlayerId!.Value, callers[0], ct);
+        var confirmed = await _plotCardService.ConfirmPlotCardAsync(_id, 0, callers[0], ct);
 
         Assert.Equal(code, played.FirstError.Code);
         Assert.Equal(code, confirmed.FirstError.Code);
@@ -487,7 +495,7 @@ public class ResistanceServiceTests
     {
         var ct = CancellationToken.None;
         var callers = await OpenGameAndJoinAsync(5);
-        await _service.StartAsync(_id, Host, ct);
+        await _roundService.StartAsync(_id, Host, ct);
         var game = (await _games.GetAsync(_id, ct))!;
         var players = game.Players.OrderBy(x => x.Order).ToList();
         var (holder, target, bystander) = (players[0], players[1], players[2]);
@@ -516,10 +524,10 @@ public class ResistanceServiceTests
         });
         GameCaller CallerOf(ResistancePlayer p) => callers.First(x => x.PlayerId == p.PlayerId);
 
-        var asHolder = (await _service.GetAsync(_id, CallerOf(holder), ct)).Value;
-        var asTarget = (await _service.GetAsync(_id, CallerOf(target), ct)).Value;
-        var asBystander = (await _service.GetAsync(_id, CallerOf(bystander), ct)).Value;
-        var asHost = (await _service.GetAsync(_id, Host, ct)).Value;
+        var asHolder = (await _lobbyService.GetAsync(_id, CallerOf(holder), ct)).Value;
+        var asTarget = (await _lobbyService.GetAsync(_id, CallerOf(target), ct)).Value;
+        var asBystander = (await _lobbyService.GetAsync(_id, CallerOf(bystander), ct)).Value;
+        var asHost = (await _lobbyService.GetAsync(_id, Host, ct)).Value;
 
         // Open Up shows the holder's identity to the target; Overheard Conversation shows the neighbour's to the holder
         Assert.Equal((0, (ResistanceRoleDto)holder.Role!.Value), (asTarget.YourReveals.Single().CardId, asTarget.YourReveals.Single().Role));
@@ -538,7 +546,7 @@ public class ResistanceServiceTests
 
         // Once confirmed the identity card is not sent any more, but the log stays
         game.PlotCards.ForEach(x => x.IsConfirmed = true);
-        var after = (await _service.GetAsync(_id, CallerOf(target), ct)).Value;
+        var after = (await _lobbyService.GetAsync(_id, CallerOf(target), ct)).Value;
         Assert.Empty(after.YourReveals);
         Assert.All(after.PlayedPlotCards, x => Assert.True(x.IsConfirmed));
     }
@@ -548,7 +556,7 @@ public class ResistanceServiceTests
     {
         var ct = CancellationToken.None;
         var callers = await OpenGameAndJoinAsync(5);
-        await _service.StartAsync(_id, Host, ct);
+        await _roundService.StartAsync(_id, Host, ct);
         var game = (await _games.GetAsync(_id, ct))!;
         var holder = game.Players.OrderBy(x => x.Order).First();
         game.PlotCards.Add(new ResistancePlotCard
@@ -562,7 +570,7 @@ public class ResistanceServiceTests
             PlayedInMission = 1,
         });
 
-        var view = (await _service.GetAsync(_id, callers.First(x => x.PlayerId == holder.PlayerId), ct)).Value;
+        var view = (await _lobbyService.GetAsync(_id, callers.First(x => x.PlayerId == holder.PlayerId), ct)).Value;
 
         var logged = Assert.Single(view.PlayedPlotCards);
         Assert.Null(logged.TargetPlayerId);
@@ -575,7 +583,7 @@ public class ResistanceServiceTests
     {
         var ct = CancellationToken.None;
         var callers = await OpenGameAndJoinAsync(5);
-        await _service.StartAsync(_id, Host, ct);
+        await _roundService.StartAsync(_id, Host, ct);
         var game = (await _games.GetAsync(_id, ct))!;
         var players = game.Players.OrderBy(x => x.Order).ToList();
         game.Phase = ResistancePhase.PlayingMission;
@@ -594,9 +602,9 @@ public class ResistanceServiceTests
         });
         var bystander = callers.First(x => x.PlayerId == players[2].PlayerId);
 
-        var before = (await _service.GetAsync(_id, bystander, ct)).Value;
+        var before = (await _lobbyService.GetAsync(_id, bystander, ct)).Value;
         players[1].MissionCard = false;
-        var after = (await _service.GetAsync(_id, bystander, ct)).Value;
+        var after = (await _lobbyService.GetAsync(_id, bystander, ct)).Value;
 
         Assert.Equal(players[1].PlayerId, before.OpenMissionPlayerId);
         Assert.Null(before.OpenMissionCard);
@@ -609,13 +617,13 @@ public class ResistanceServiceTests
     {
         var ct = CancellationToken.None;
         var callers = await OpenGameAndJoinAsync(5);
-        var started = await _service.StartAsync(_id, Host, ct);
+        var started = await _roundService.StartAsync(_id, Host, ct);
         var leader = callers.First(x => x.PlayerId == started.Value.LeaderPlayerId);
 
         Assert.Equal(ResistancePhaseDto.SelectingTeam, started.Value.Phase);
         Assert.Empty(started.Value.PlotCardCounts);
-        Assert.Empty((await _service.GetAsync(_id, leader, ct)).Value.YourPlotCards);
-        Assert.Equal("Resistance.NotDealing", (await _service.DealPlotCardsAsync(_id, [], leader, ct)).FirstError.Code);
+        Assert.Empty((await _lobbyService.GetAsync(_id, leader, ct)).Value.YourPlotCards);
+        Assert.Equal("Resistance.NotDealing", (await _plotCardService.DealPlotCardsAsync(_id, [], leader, ct)).FirstError.Code);
     }
 
     [Fact]
@@ -623,19 +631,19 @@ public class ResistanceServiceTests
     {
         var ct = CancellationToken.None;
         var callers = await OpenGameAndJoinAsync(5);
-        var started = await _service.StartAsync(_id, Host, ct);
+        var started = await _roundService.StartAsync(_id, Host, ct);
         var leader = callers.First(x => x.PlayerId == started.Value.LeaderPlayerId);
         var other = started.Value.Players.First(x => x.Id != leader.PlayerId).Id;
         var before = _notifier.ResistanceChanges.Count;
 
-        var result = await _service.SelectTeamAsync(_id, [leader.PlayerId!.Value, other], leader, ct);
+        var result = await _roundService.SelectTeamAsync(_id, [leader.PlayerId!.Value, other], leader, ct);
 
         Assert.False(result.IsError);
         Assert.Equal(2, result.Value.TeamPlayerIds.Count);
         Assert.Contains(leader.PlayerId!.Value, result.Value.TeamPlayerIds);
         Assert.Contains(other, result.Value.TeamPlayerIds);
         Assert.Equal(before + 1, _notifier.ResistanceChanges.Count);
-        Assert.Equal("Resistance.TeamSubmitted", (await _service.SelectTeamAsync(_id, [leader.PlayerId.Value, other], leader, ct)).FirstError.Code);
+        Assert.Equal("Resistance.TeamSubmitted", (await _roundService.SelectTeamAsync(_id, [leader.PlayerId.Value, other], leader, ct)).FirstError.Code);
     }
 
     [Fact]
@@ -643,13 +651,13 @@ public class ResistanceServiceTests
     {
         var ct = CancellationToken.None;
         var callers = await OpenGameAndJoinAsync(5);
-        var started = await _service.StartAsync(_id, Host, ct);
+        var started = await _roundService.StartAsync(_id, Host, ct);
         var leader = callers.First(x => x.PlayerId == started.Value.LeaderPlayerId);
         var team = started.Value.Players.Take(2).Select(x => x.Id).ToList();
-        await _service.SelectTeamAsync(_id, team, leader, ct);
+        await _roundService.SelectTeamAsync(_id, team, leader, ct);
 
-        var asOther = await _service.GetAsync(_id, callers.First(x => x.PlayerId != leader.PlayerId), ct);
-        var asHost = await _service.GetAsync(_id, Host, ct);
+        var asOther = await _lobbyService.GetAsync(_id, callers.First(x => x.PlayerId != leader.PlayerId), ct);
+        var asHost = await _lobbyService.GetAsync(_id, Host, ct);
 
         Assert.Equal(team.Order(), asOther.Value.TeamPlayerIds.Order());
         Assert.Equal(team.Order(), asHost.Value.TeamPlayerIds.Order());
@@ -659,23 +667,23 @@ public class ResistanceServiceTests
     public async Task Voting_NeedsASubmittedTeamAndAPlayerOfTheGame()
     {
         var ct = CancellationToken.None;
-        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _service.VoteAsync(_id, true, new GameCaller("guest", false), ct)).FirstError.Type);
-        Assert.Equal(ErrorOr.ErrorType.NotFound, (await _service.VoteAsync(_id, true, Host, ct)).FirstError.Type);
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _roundService.VoteAsync(_id, true, new GameCaller("guest", false), ct)).FirstError.Type);
+        Assert.Equal(ErrorOr.ErrorType.NotFound, (await _roundService.VoteAsync(_id, true, Host, ct)).FirstError.Type);
 
         var callers = await OpenGameAndJoinAsync(5);
-        Assert.Equal("Resistance.NotStarted", (await _service.VoteAsync(_id, true, callers[0], ct)).FirstError.Code);
+        Assert.Equal("Resistance.NotStarted", (await _roundService.VoteAsync(_id, true, callers[0], ct)).FirstError.Code);
 
-        var started = await _service.StartAsync(_id, Host, ct);
-        Assert.Equal("Resistance.NotVoting", (await _service.VoteAsync(_id, true, callers[0], ct)).FirstError.Code);
+        var started = await _roundService.StartAsync(_id, Host, ct);
+        Assert.Equal("Resistance.NotVoting", (await _roundService.VoteAsync(_id, true, callers[0], ct)).FirstError.Code);
 
         var leader = callers.First(x => x.PlayerId == started.Value.LeaderPlayerId);
-        await _service.SelectTeamAsync(_id, started.Value.Players.Take(2).Select(x => x.Id).ToList(), leader, ct);
+        await _roundService.SelectTeamAsync(_id, started.Value.Players.Take(2).Select(x => x.Id).ToList(), leader, ct);
 
-        var watcher = await _service.VoteAsync(_id, true, Host, ct);
+        var watcher = await _roundService.VoteAsync(_id, true, Host, ct);
         Assert.Equal("Resistance.NotPlayer", watcher.FirstError.Code);
         Assert.Equal(ErrorOr.ErrorType.Forbidden, watcher.FirstError.Type);
-        Assert.Equal("Resistance.NotPlayer", (await _service.VoteAsync(_id, true, Admin, ct)).FirstError.Code);
-        Assert.False((await _service.VoteAsync(_id, true, callers[0], ct)).IsError);
+        Assert.Equal("Resistance.NotPlayer", (await _roundService.VoteAsync(_id, true, Admin, ct)).FirstError.Code);
+        Assert.False((await _roundService.VoteAsync(_id, true, callers[0], ct)).IsError);
     }
 
     [Fact]
@@ -685,12 +693,12 @@ public class ResistanceServiceTests
         var (callers, _) = await StartWithTeamAsync(5);
         var before = _notifier.ResistanceChanges.Count;
 
-        await _service.VoteAsync(_id, true, callers[0], ct);
-        await _service.VoteAsync(_id, false, callers[1], ct);
+        await _roundService.VoteAsync(_id, true, callers[0], ct);
+        await _roundService.VoteAsync(_id, false, callers[1], ct);
 
-        var asVoter = (await _service.GetAsync(_id, callers[0], ct)).Value;
-        var asOther = (await _service.GetAsync(_id, callers[2], ct)).Value;
-        var asHost = (await _service.GetAsync(_id, Host, ct)).Value;
+        var asVoter = (await _lobbyService.GetAsync(_id, callers[0], ct)).Value;
+        var asOther = (await _lobbyService.GetAsync(_id, callers[2], ct)).Value;
+        var asHost = (await _lobbyService.GetAsync(_id, Host, ct)).Value;
 
         Assert.Equal(before + 2, _notifier.ResistanceChanges.Count);
         Assert.Equal(ResistancePhaseDto.Voting, asHost.Phase);
@@ -711,17 +719,17 @@ public class ResistanceServiceTests
         var ct = CancellationToken.None;
         var (callers, _) = await StartWithTeamAsync(5);
 
-        await _service.VoteAsync(_id, true, callers[0], ct);
-        var changed = await _service.VoteAsync(_id, false, callers[0], ct);
+        await _roundService.VoteAsync(_id, true, callers[0], ct);
+        var changed = await _roundService.VoteAsync(_id, false, callers[0], ct);
         Assert.False(changed.Value.YourVote);
         Assert.Single(changed.Value.VotedPlayerIds);
 
         foreach (var caller in callers.Skip(1))
         {
-            await _service.VoteAsync(_id, true, caller, ct);
+            await _roundService.VoteAsync(_id, true, caller, ct);
         }
 
-        var late = await _service.VoteAsync(_id, true, callers[0], ct);
+        var late = await _roundService.VoteAsync(_id, true, callers[0], ct);
         Assert.Equal("Resistance.NotVoting", late.FirstError.Code);
     }
 
@@ -735,7 +743,7 @@ public class ResistanceServiceTests
 
         foreach (var viewer in new[] { callers[3], Host, Admin })
         {
-            var game = (await _service.GetAsync(_id, viewer, ct)).Value;
+            var game = (await _lobbyService.GetAsync(_id, viewer, ct)).Value;
             Assert.Equal(ResistancePhaseDto.PlayingMission, game.Phase);
             Assert.True(game.VoteApproved);
             Assert.Equal(5, game.Votes!.Count);
@@ -751,10 +759,10 @@ public class ResistanceServiceTests
         var (callers, leader) = await StartWithTeamAsync(5);
         await VoteAsync(callers, true, true, true, true, true);
 
-        var result = await _service.ContinueAsync(_id, leader, ct);
+        var result = await _roundService.ContinueAsync(_id, leader, ct);
 
         Assert.Equal("Resistance.NothingToContinue", result.FirstError.Code);
-        var game = (await _service.GetAsync(_id, Host, ct)).Value;
+        var game = (await _lobbyService.GetAsync(_id, Host, ct)).Value;
         Assert.Equal(2, game.TeamPlayerIds.Count);
         Assert.Equal(ResistancePhaseDto.PlayingMission, game.Phase);
         Assert.Equal(1, game.RequiredFails);
@@ -767,15 +775,15 @@ public class ResistanceServiceTests
     {
         var ct = CancellationToken.None;
         var (callers, leader) = await StartWithTeamAsync(5);
-        Assert.Equal("Resistance.NotPlayingMission", (await _service.PlayMissionCardAsync(_id, true, leader, ct)).FirstError.Code);
+        Assert.Equal("Resistance.NotPlayingMission", (await _roundService.PlayMissionCardAsync(_id, true, leader, ct)).FirstError.Code);
         await VoteAsync(callers, true, true, true, true, true);
 
-        var team = (await _service.GetAsync(_id, Host, ct)).Value.TeamPlayerIds;
+        var team = (await _lobbyService.GetAsync(_id, Host, ct)).Value.TeamPlayerIds;
         var outsider = callers.First(x => !team.Contains(x.PlayerId!.Value));
 
-        Assert.Equal("Resistance.NotPlayer", (await _service.PlayMissionCardAsync(_id, true, Host, ct)).FirstError.Code);
-        Assert.Equal("Resistance.NotPlayer", (await _service.PlayMissionCardAsync(_id, true, Admin, ct)).FirstError.Code);
-        var notOnTeam = await _service.PlayMissionCardAsync(_id, true, outsider, ct);
+        Assert.Equal("Resistance.NotPlayer", (await _roundService.PlayMissionCardAsync(_id, true, Host, ct)).FirstError.Code);
+        Assert.Equal("Resistance.NotPlayer", (await _roundService.PlayMissionCardAsync(_id, true, Admin, ct)).FirstError.Code);
+        var notOnTeam = await _roundService.PlayMissionCardAsync(_id, true, outsider, ct);
         Assert.Equal("Resistance.NotOnTeam", notOnTeam.FirstError.Code);
         Assert.Equal(ErrorOr.ErrorType.Forbidden, notOnTeam.FirstError.Type);
     }
@@ -786,14 +794,14 @@ public class ResistanceServiceTests
         var ct = CancellationToken.None;
         var mission = await StartMissionAsync(5, spiesOnTeam: 1);
 
-        var failed = await _service.PlayMissionCardAsync(_id, false, mission.Resistance[0], ct);
+        var failed = await _roundService.PlayMissionCardAsync(_id, false, mission.Resistance[0], ct);
         Assert.Equal("Resistance.MustSucceed", failed.FirstError.Code);
         Assert.Equal(ErrorOr.ErrorType.Forbidden, failed.FirstError.Type);
 
-        var played = await _service.PlayMissionCardAsync(_id, true, mission.Resistance[0], ct);
+        var played = await _roundService.PlayMissionCardAsync(_id, true, mission.Resistance[0], ct);
         Assert.False(played.IsError);
-        Assert.Equal("Resistance.AlreadyPlayed", (await _service.PlayMissionCardAsync(_id, true, mission.Resistance[0], ct)).FirstError.Code);
-        Assert.False((await _service.PlayMissionCardAsync(_id, false, mission.Spies[0], ct)).IsError);
+        Assert.Equal("Resistance.AlreadyPlayed", (await _roundService.PlayMissionCardAsync(_id, true, mission.Resistance[0], ct)).FirstError.Code);
+        Assert.False((await _roundService.PlayMissionCardAsync(_id, false, mission.Spies[0], ct)).IsError);
     }
 
     [Fact]
@@ -803,12 +811,12 @@ public class ResistanceServiceTests
         var mission = await StartMissionAsync(5, spiesOnTeam: 1);
         var before = _notifier.ResistanceChanges.Count;
 
-        await _service.PlayMissionCardAsync(_id, false, mission.Spies[0], ct);
+        await _roundService.PlayMissionCardAsync(_id, false, mission.Spies[0], ct);
 
         Assert.Equal(before + 1, _notifier.ResistanceChanges.Count);
-        var asSpy = (await _service.GetAsync(_id, mission.Spies[0], ct)).Value;
-        var asOther = (await _service.GetAsync(_id, mission.Resistance[0], ct)).Value;
-        var asHost = (await _service.GetAsync(_id, Host, ct)).Value;
+        var asSpy = (await _lobbyService.GetAsync(_id, mission.Spies[0], ct)).Value;
+        var asOther = (await _lobbyService.GetAsync(_id, mission.Resistance[0], ct)).Value;
+        var asHost = (await _lobbyService.GetAsync(_id, Host, ct)).Value;
 
         Assert.False(asSpy.YourMissionCard);
         Assert.Null(asOther.YourMissionCard);
@@ -827,10 +835,10 @@ public class ResistanceServiceTests
         var ct = CancellationToken.None;
         var mission = await StartMissionAsync(5, spiesOnTeam: 1);
 
-        await _service.PlayMissionCardAsync(_id, true, mission.Resistance[0], ct);
-        await _service.PlayMissionCardAsync(_id, false, mission.Spies[0], ct);
+        await _roundService.PlayMissionCardAsync(_id, true, mission.Resistance[0], ct);
+        await _roundService.PlayMissionCardAsync(_id, false, mission.Spies[0], ct);
 
-        var game = (await _service.GetAsync(_id, Host, ct)).Value;
+        var game = (await _lobbyService.GetAsync(_id, Host, ct)).Value;
         Assert.Equal(ResistancePhaseDto.MissionResult, game.Phase);
         var result = Assert.Single(game.MissionResults);
         Assert.Equal((1, false, 1), (result.MissionNumber, result.Succeeded, result.FailCount));
@@ -847,10 +855,10 @@ public class ResistanceServiceTests
 
         foreach (var caller in mission.Team)
         {
-            await _service.PlayMissionCardAsync(_id, true, caller, ct);
+            await _roundService.PlayMissionCardAsync(_id, true, caller, ct);
         }
 
-        var game = (await _service.GetAsync(_id, Host, ct)).Value;
+        var game = (await _lobbyService.GetAsync(_id, Host, ct)).Value;
         var result = Assert.Single(game.MissionResults);
         Assert.Equal((1, true, 0), (result.MissionNumber, result.Succeeded, result.FailCount));
         Assert.NotEmpty(result.TeamPlayerIds);
@@ -863,12 +871,12 @@ public class ResistanceServiceTests
         var ct = CancellationToken.None;
         _rules.Rules.PlayerCounts[5] = new ResistanceCountRules(2, [2, 3, 2, 3, 3], [2, 1, 1, 1, 1]);
         var mission = await StartMissionAsync(5, spiesOnTeam: 1);
-        Assert.Equal(2, (await _service.GetAsync(_id, Host, ct)).Value.RequiredFails);
+        Assert.Equal(2, (await _lobbyService.GetAsync(_id, Host, ct)).Value.RequiredFails);
 
-        await _service.PlayMissionCardAsync(_id, true, mission.Resistance[0], ct);
-        await _service.PlayMissionCardAsync(_id, false, mission.Spies[0], ct);
+        await _roundService.PlayMissionCardAsync(_id, true, mission.Resistance[0], ct);
+        await _roundService.PlayMissionCardAsync(_id, false, mission.Spies[0], ct);
 
-        var game = (await _service.GetAsync(_id, Host, ct)).Value;
+        var game = (await _lobbyService.GetAsync(_id, Host, ct)).Value;
         var result = Assert.Single(game.MissionResults);
         Assert.Equal((1, true, 1), (result.MissionNumber, result.Succeeded, result.FailCount));
         Assert.NotEmpty(result.TeamPlayerIds);
@@ -880,13 +888,13 @@ public class ResistanceServiceTests
     {
         var ct = CancellationToken.None;
         var mission = await StartMissionAsync(5, spiesOnTeam: 1);
-        var leaderId = (await _service.GetAsync(_id, Host, ct)).Value.LeaderPlayerId;
+        var leaderId = (await _lobbyService.GetAsync(_id, Host, ct)).Value.LeaderPlayerId;
         foreach (var caller in mission.Team)
         {
-            await _service.PlayMissionCardAsync(_id, caller.Equals(mission.Spies[0]) ? false : true, caller, ct);
+            await _roundService.PlayMissionCardAsync(_id, caller.Equals(mission.Spies[0]) ? false : true, caller, ct);
         }
 
-        var continued = (await _service.ContinueAsync(_id, Host, ct)).Value;
+        var continued = (await _roundService.ContinueAsync(_id, Host, ct)).Value;
 
         var order = continued.Players.Select(x => x.Id).ToList();
         Assert.Equal(order[(order.IndexOf(leaderId!.Value) + 1) % 5], continued.LeaderPlayerId);
@@ -906,24 +914,24 @@ public class ResistanceServiceTests
     {
         var ct = CancellationToken.None;
         var callers = await OpenGameAndJoinAsync(5);
-        await _service.StartAsync(_id, Host, ct);
+        await _roundService.StartAsync(_id, Host, ct);
 
         for (var round = 0; round < 3; round++)
         {
             await PlayRoundAsync(callers, fail: !resistanceWins);
             if (round < 2)
             {
-                await _service.ContinueAsync(_id, Host, ct);
+                await _roundService.ContinueAsync(_id, Host, ct);
             }
         }
 
-        var game = (await _service.GetAsync(_id, callers[0], ct)).Value;
+        var game = (await _lobbyService.GetAsync(_id, callers[0], ct)).Value;
         Assert.Equal(ResistancePhaseDto.GameOver, game.Phase);
         Assert.Equal(resistanceWins ? ResistanceRoleDto.Resistance : ResistanceRoleDto.Spy, game.Winner);
         Assert.Equal(3, game.MissionResults.Count(x => x.Succeeded == resistanceWins));
         Assert.Equal(5, game.RevealedRoles!.Count);
-        Assert.Equal("Resistance.GameOver", (await _service.ContinueAsync(_id, Host, ct)).FirstError.Code);
-        Assert.Equal("Resistance.GameOver", (await _service.PlayMissionCardAsync(_id, true, callers[0], ct)).FirstError.Code);
+        Assert.Equal("Resistance.GameOver", (await _roundService.ContinueAsync(_id, Host, ct)).FirstError.Code);
+        Assert.Equal("Resistance.GameOver", (await _roundService.PlayMissionCardAsync(_id, true, callers[0], ct)).FirstError.Code);
     }
 
     [Fact]
@@ -931,15 +939,15 @@ public class ResistanceServiceTests
     {
         var ct = CancellationToken.None;
         var callers = await OpenGameAndJoinAsync(5);
-        await _service.StartAsync(_id, Host, ct);
+        await _roundService.StartAsync(_id, Host, ct);
 
         foreach (var fail in new[] { false, true, false })
         {
             await PlayRoundAsync(callers, fail);
-            await _service.ContinueAsync(_id, Host, ct);
+            await _roundService.ContinueAsync(_id, Host, ct);
         }
 
-        var game = (await _service.GetAsync(_id, Host, ct)).Value;
+        var game = (await _lobbyService.GetAsync(_id, Host, ct)).Value;
         Assert.Equal(ResistancePhaseDto.SelectingTeam, game.Phase);
         Assert.Equal(4, game.MissionNumber);
         Assert.Equal([true, false, true], game.MissionResults.Select(x => x.Succeeded));
@@ -956,7 +964,7 @@ public class ResistanceServiceTests
         var approvals = Enumerable.Range(0, playerCount).Select(i => i < playerCount / 2).ToArray();
         await VoteAsync(callers, approvals);
 
-        var rejected = (await _service.GetAsync(_id, Host, ct)).Value;
+        var rejected = (await _lobbyService.GetAsync(_id, Host, ct)).Value;
         Assert.False(rejected.VoteApproved);
         Assert.Equal(1, rejected.RejectedTeams);
         Assert.Equal(ResistancePhaseDto.SelectingTeam, rejected.Phase);
@@ -978,16 +986,16 @@ public class ResistanceServiceTests
     {
         var ct = CancellationToken.None;
         var callers = await OpenGameAndJoinAsync(5);
-        var started = (await _service.StartAsync(_id, Host, ct)).Value;
+        var started = (await _roundService.StartAsync(_id, Host, ct)).Value;
         var order = started.Players.Select(x => x.Id).ToList();
         var seen = new List<Guid?> { started.LeaderPlayerId };
 
         for (var i = 0; i < 4; i++)
         {
             var leader = callers.First(x => x.PlayerId == seen[^1]);
-            await _service.SelectTeamAsync(_id, order.Take(2).ToList(), leader, ct);
+            await _roundService.SelectTeamAsync(_id, order.Take(2).ToList(), leader, ct);
             await VoteAsync(callers, false, false, false, false, false);
-            seen.Add((await _service.GetAsync(_id, Host, ct)).Value.LeaderPlayerId);
+            seen.Add((await _lobbyService.GetAsync(_id, Host, ct)).Value.LeaderPlayerId);
         }
 
         Assert.Equal(5, seen.Distinct().Count());
@@ -1005,17 +1013,17 @@ public class ResistanceServiceTests
         var mission = await StartMissionAsync(5, spiesOnTeam: 1);
         foreach (var caller in mission.Team)
         {
-            await _service.PlayMissionCardAsync(_id, !mission.Spies.Contains(caller), caller, ct);
+            await _roundService.PlayMissionCardAsync(_id, !mission.Spies.Contains(caller), caller, ct);
         }
 
-        var game = (await _service.GetAsync(_id, Host, ct)).Value;
+        var game = (await _lobbyService.GetAsync(_id, Host, ct)).Value;
         var other = mission.Team.First(x => x.PlayerId != game.LeaderPlayerId);
-        var denied = await _service.ContinueAsync(_id, other, ct);
+        var denied = await _roundService.ContinueAsync(_id, other, ct);
         Assert.Equal("Resistance.NotAllowed", denied.FirstError.Code);
         Assert.Equal(ErrorOr.ErrorType.Forbidden, denied.FirstError.Type);
-        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _service.ContinueAsync(_id, new GameCaller("guest", false), ct)).FirstError.Type);
-        Assert.False((await _service.ContinueAsync(_id, Host, ct)).IsError);
-        Assert.Equal("Resistance.NothingToContinue", (await _service.ContinueAsync(_id, Host, ct)).FirstError.Code);
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _roundService.ContinueAsync(_id, new GameCaller("guest", false), ct)).FirstError.Type);
+        Assert.False((await _roundService.ContinueAsync(_id, Host, ct)).IsError);
+        Assert.Equal("Resistance.NothingToContinue", (await _roundService.ContinueAsync(_id, Host, ct)).FirstError.Code);
     }
 
     [Fact]
@@ -1023,44 +1031,44 @@ public class ResistanceServiceTests
     {
         var ct = CancellationToken.None;
         var callers = await OpenGameAndJoinAsync(5);
-        var started = (await _service.StartAsync(_id, Host, ct)).Value;
+        var started = (await _roundService.StartAsync(_id, Host, ct)).Value;
         var team = started.Players.Take(2).Select(x => x.Id).ToList();
         var leaderId = started.LeaderPlayerId;
 
         for (var i = 1; i <= 5; i++)
         {
-            await _service.SelectTeamAsync(_id, team, callers.First(x => x.PlayerId == leaderId), ct);
+            await _roundService.SelectTeamAsync(_id, team, callers.First(x => x.PlayerId == leaderId), ct);
             await VoteAsync(callers, false, false, false, false, false);
             if (i < 5)
             {
-                Assert.Equal(i, (await _service.GetAsync(_id, Host, ct)).Value.RejectedTeams);
-                leaderId = (await _service.GetAsync(_id, Host, ct)).Value.LeaderPlayerId;
+                Assert.Equal(i, (await _lobbyService.GetAsync(_id, Host, ct)).Value.RejectedTeams);
+                leaderId = (await _lobbyService.GetAsync(_id, Host, ct)).Value.LeaderPlayerId;
             }
         }
 
-        var over = (await _service.GetAsync(_id, callers[0], ct)).Value;
+        var over = (await _lobbyService.GetAsync(_id, callers[0], ct)).Value;
         Assert.Equal(ResistancePhaseDto.GameOver, over.Phase);
         Assert.Equal(ResistanceRoleDto.Spy, over.Winner);
         Assert.Equal(5, over.RejectedTeams);
         Assert.Equal(5, over.Votes!.Count);
         Assert.Equal(5, over.RevealedRoles!.Count);
-        Assert.Equal("Resistance.GameOver", (await _service.ContinueAsync(_id, Host, ct)).FirstError.Code);
-        Assert.Equal("Resistance.GameOver", (await _service.VoteAsync(_id, true, callers[0], ct)).FirstError.Code);
-        Assert.Equal("Resistance.GameOver", (await _service.SelectTeamAsync(_id, team, callers.First(x => x.PlayerId == leaderId), ct)).FirstError.Code);
+        Assert.Equal("Resistance.GameOver", (await _roundService.ContinueAsync(_id, Host, ct)).FirstError.Code);
+        Assert.Equal("Resistance.GameOver", (await _roundService.VoteAsync(_id, true, callers[0], ct)).FirstError.Code);
+        Assert.Equal("Resistance.GameOver", (await _roundService.SelectTeamAsync(_id, team, callers.First(x => x.PlayerId == leaderId), ct)).FirstError.Code);
     }
 
     private async Task<List<GameCaller>> EndGameAsync()
     {
         var ct = CancellationToken.None;
         var callers = await OpenGameAndJoinAsync(5);
-        var started = (await _service.StartAsync(_id, Host, ct)).Value;
+        var started = (await _roundService.StartAsync(_id, Host, ct)).Value;
         var team = started.Players.Take(2).Select(x => x.Id).ToList();
         var leaderId = started.LeaderPlayerId;
         for (var i = 1; i <= 5; i++)
         {
-            await _service.SelectTeamAsync(_id, team, callers.First(x => x.PlayerId == leaderId), ct);
+            await _roundService.SelectTeamAsync(_id, team, callers.First(x => x.PlayerId == leaderId), ct);
             await VoteAsync(callers, false, false, false, false, false);
-            leaderId = (await _service.GetAsync(_id, Host, ct)).Value.LeaderPlayerId;
+            leaderId = (await _lobbyService.GetAsync(_id, Host, ct)).Value.LeaderPlayerId;
         }
 
         return callers;
@@ -1073,7 +1081,7 @@ public class ResistanceServiceTests
         var callers = await EndGameAsync();
 
         var before = _notifier.ResistanceChanges.Count;
-        var restarted = await _service.RestartAsync(_id, Host, ct);
+        var restarted = await _roundService.RestartAsync(_id, Host, ct);
 
         Assert.False(restarted.IsError);
         var game = restarted.Value;
@@ -1087,7 +1095,7 @@ public class ResistanceServiceTests
         Assert.Null(game.StartedAt);
         Assert.True(game.IsOpen);
         Assert.Null(game.LeaderPlayerId);
-        Assert.All(callers, x => Assert.Null(_service.GetAsync(_id, x, ct).Result.Value.YourRole));
+        Assert.All(callers, x => Assert.Null(_lobbyService.GetAsync(_id, x, ct).Result.Value.YourRole));
         Assert.Equal(before + 1, _notifier.ResistanceChanges.Count);
     }
 
@@ -1096,7 +1104,7 @@ public class ResistanceServiceTests
     {
         await StartWithTeamAsync(5);
 
-        var result = await _service.RestartAsync(_id, Host, CancellationToken.None);
+        var result = await _roundService.RestartAsync(_id, Host, CancellationToken.None);
 
         Assert.Equal("Resistance.NotOver", result.FirstError.Code);
     }
@@ -1106,7 +1114,7 @@ public class ResistanceServiceTests
     {
         await OpenGameAndJoinAsync(5);
 
-        var result = await _service.RestartAsync(_id, Host, CancellationToken.None);
+        var result = await _roundService.RestartAsync(_id, Host, CancellationToken.None);
 
         Assert.Equal("Resistance.NotStarted", result.FirstError.Code);
     }
@@ -1116,7 +1124,7 @@ public class ResistanceServiceTests
     {
         var callers = await EndGameAsync();
 
-        var result = await _service.RestartAsync(_id, callers[0], CancellationToken.None);
+        var result = await _roundService.RestartAsync(_id, callers[0], CancellationToken.None);
 
         Assert.True(result.IsError);
         Assert.Equal(ErrorType.Forbidden, result.FirstError.Type);
@@ -1128,14 +1136,14 @@ public class ResistanceServiceTests
         var ct = CancellationToken.None;
         var (callers, leader) = await StartWithTeamAsync(5);
         await VoteAsync(callers, false, false, false, false, false);
-        var next = (await _service.GetAsync(_id, Host, ct)).Value;
+        var next = (await _lobbyService.GetAsync(_id, Host, ct)).Value;
         var team = next.Players.Take(2).Select(x => x.Id).ToList();
-        await _service.SelectTeamAsync(_id, team, callers.First(x => x.PlayerId == next.LeaderPlayerId), ct);
+        await _roundService.SelectTeamAsync(_id, team, callers.First(x => x.PlayerId == next.LeaderPlayerId), ct);
 
         await VoteAsync(callers, true, true, true, true, true);
 
         Assert.NotEqual(leader.PlayerId, next.LeaderPlayerId);
-        Assert.Equal(0, (await _service.GetAsync(_id, Host, ct)).Value.RejectedTeams);
+        Assert.Equal(0, (await _lobbyService.GetAsync(_id, Host, ct)).Value.RejectedTeams);
     }
 
     [Fact]
@@ -1144,7 +1152,7 @@ public class ResistanceServiceTests
         var (callers, _) = await StartWithTeamAsync(5);
         await VoteAsync(callers, false, false, false, false, false);
 
-        var game = (await _service.GetAsync(_id, callers[0], CancellationToken.None)).Value;
+        var game = (await _lobbyService.GetAsync(_id, callers[0], CancellationToken.None)).Value;
 
         Assert.Null(game.Winner);
         Assert.Null(game.RevealedRoles);
@@ -1161,7 +1169,7 @@ public class ResistanceServiceTests
     {
         await OpenGameAsync();
         var callers = await JoinPlayersAsync(players);
-        await _service.StartAsync(_id, Host, CancellationToken.None);
+        await _roundService.StartAsync(_id, Host, CancellationToken.None);
 
         var game = await _games.GetAsync(_id, CancellationToken.None);
 
@@ -1175,12 +1183,12 @@ public class ResistanceServiceTests
     {
         await OpenGameAsync();
         var callers = await JoinPlayersAsync(5);
-        await _service.StartAsync(_id, Host, CancellationToken.None);
+        await _roundService.StartAsync(_id, Host, CancellationToken.None);
         var ids = callers.Select(x => x.PlayerId!.Value).ToList();
 
-        var join = await _service.JoinAsync(_id, "Late", new GameCaller("late", false), CancellationToken.None);
-        var kick = await _service.KickAsync(_id, ids[0], Admin, CancellationToken.None);
-        var reorder = await _service.ReorderAsync(_id, ids, Admin, CancellationToken.None);
+        var join = await _lobbyService.JoinAsync(_id, "Late", new GameCaller("late", false), CancellationToken.None);
+        var kick = await _lobbyService.KickAsync(_id, ids[0], Admin, CancellationToken.None);
+        var reorder = await _lobbyService.ReorderAsync(_id, ids, Admin, CancellationToken.None);
 
         Assert.Equal("Resistance.Started", join.FirstError.Code);
         Assert.Equal("Resistance.Started", kick.FirstError.Code);
@@ -1192,12 +1200,12 @@ public class ResistanceServiceTests
     {
         await OpenGameAsync();
         var callers = await JoinPlayersAsync(7);
-        await _service.StartAsync(_id, Host, CancellationToken.None);
+        await _roundService.StartAsync(_id, Host, CancellationToken.None);
         var game = await _games.GetAsync(_id, CancellationToken.None);
 
         foreach (var caller in callers)
         {
-            var dto = (await _service.GetAsync(_id, caller, CancellationToken.None)).Value;
+            var dto = (await _lobbyService.GetAsync(_id, caller, CancellationToken.None)).Value;
             var role = game!.Players.Single(x => x.PlayerId == caller.PlayerId).Role;
 
             Assert.Equal((ResistanceRoleDto?)role, dto.YourRole);
@@ -1220,11 +1228,11 @@ public class ResistanceServiceTests
     {
         await OpenGameAsync();
         await JoinPlayersAsync(5);
-        await _service.StartAsync(_id, Host, CancellationToken.None);
+        await _roundService.StartAsync(_id, Host, CancellationToken.None);
 
         foreach (var observer in new[] { Admin, Host, new GameCaller("guest", false) })
         {
-            var dto = (await _service.GetAsync(_id, observer, CancellationToken.None)).Value;
+            var dto = (await _lobbyService.GetAsync(_id, observer, CancellationToken.None)).Value;
 
             Assert.Null(dto.YourRole);
             Assert.Null(dto.FellowSpies);
@@ -1237,11 +1245,11 @@ public class ResistanceServiceTests
     {
         await OpenGameAsync();
         await JoinPlayersAsync(5);
-        Assert.False((await _service.GetLobbyAsync(_id, Host, CancellationToken.None)).Value.IsStarted);
+        Assert.False((await _lobbyService.GetLobbyAsync(_id, Host, CancellationToken.None)).Value.IsStarted);
 
-        await _service.StartAsync(_id, Host, CancellationToken.None);
+        await _roundService.StartAsync(_id, Host, CancellationToken.None);
 
-        Assert.True((await _service.GetLobbyAsync(_id, Host, CancellationToken.None)).Value.IsStarted);
+        Assert.True((await _lobbyService.GetLobbyAsync(_id, Host, CancellationToken.None)).Value.IsStarted);
     }
 
     [Theory]
@@ -1256,9 +1264,9 @@ public class ResistanceServiceTests
     {
         var ct = CancellationToken.None;
         var callers = await OpenGameAndJoinAsync(count);
-        var started = (await _service.StartAsync(_id, Host, ct)).Value;
+        var started = (await _roundService.StartAsync(_id, Host, ct)).Value;
         var leader = callers.First(x => x.PlayerId == started.LeaderPlayerId);
-        await _service.SelectTeamAsync(_id, started.Players.Take(2).Select(x => x.Id).ToList(), leader, ct);
+        await _roundService.SelectTeamAsync(_id, started.Players.Take(2).Select(x => x.Id).ToList(), leader, ct);
 
         return (callers, leader);
     }
@@ -1272,19 +1280,19 @@ public class ResistanceServiceTests
     {
         var ct = CancellationToken.None;
         var callers = await OpenGameAndJoinAsync(count);
-        var started = (await _service.StartAsync(_id, Host, ct)).Value;
+        var started = (await _roundService.StartAsync(_id, Host, ct)).Value;
 
         var spies = new List<GameCaller>();
         var resistance = new List<GameCaller>();
         foreach (var caller in callers)
         {
-            var role = (await _service.GetAsync(_id, caller, ct)).Value.YourRole;
+            var role = (await _lobbyService.GetAsync(_id, caller, ct)).Value.YourRole;
             (role == ResistanceRoleDto.Spy ? spies : resistance).Add(caller);
         }
 
         var team = spies.Take(spiesOnTeam).Concat(resistance).Take(started.RequiredTeamSize!.Value).ToList();
         var leader = callers.First(x => x.PlayerId == started.LeaderPlayerId);
-        var selected = await _service.SelectTeamAsync(_id, team.Select(x => x.PlayerId!.Value).ToList(), leader, ct);
+        var selected = await _roundService.SelectTeamAsync(_id, team.Select(x => x.PlayerId!.Value).ToList(), leader, ct);
         Assert.False(selected.IsError);
         await VoteAsync(callers, Enumerable.Repeat(true, count).ToArray());
 
@@ -1301,11 +1309,11 @@ public class ResistanceServiceTests
     private async Task PlayRoundAsync(List<GameCaller> callers, bool fail)
     {
         var ct = CancellationToken.None;
-        var game = (await _service.GetAsync(_id, Host, ct)).Value;
+        var game = (await _lobbyService.GetAsync(_id, Host, ct)).Value;
         var roles = new Dictionary<Guid, ResistanceRoleDto>();
         foreach (var caller in callers)
         {
-            roles[caller.PlayerId!.Value] = (await _service.GetAsync(_id, caller, ct)).Value.YourRole!.Value;
+            roles[caller.PlayerId!.Value] = (await _lobbyService.GetAsync(_id, caller, ct)).Value.YourRole!.Value;
         }
 
         var spies = callers.Where(x => roles[x.PlayerId!.Value] == ResistanceRoleDto.Spy);
@@ -1313,12 +1321,12 @@ public class ResistanceServiceTests
         var team = (fail ? spies.Take(1).Concat(resistance) : resistance).Take(game.RequiredTeamSize!.Value).ToList();
 
         var leader = callers.First(x => x.PlayerId == game.LeaderPlayerId);
-        Assert.False((await _service.SelectTeamAsync(_id, team.Select(x => x.PlayerId!.Value).ToList(), leader, ct)).IsError);
+        Assert.False((await _roundService.SelectTeamAsync(_id, team.Select(x => x.PlayerId!.Value).ToList(), leader, ct)).IsError);
         await VoteAsync(callers, Enumerable.Repeat(true, callers.Count).ToArray());
         foreach (var caller in team)
         {
             var success = roles[caller.PlayerId!.Value] == ResistanceRoleDto.Resistance;
-            Assert.False((await _service.PlayMissionCardAsync(_id, success, caller, ct)).IsError);
+            Assert.False((await _roundService.PlayMissionCardAsync(_id, success, caller, ct)).IsError);
         }
     }
 
@@ -1327,7 +1335,7 @@ public class ResistanceServiceTests
     {
         for (var i = 0; i < callers.Count; i++)
         {
-            var result = await _service.VoteAsync(_id, approvals[i], callers[i], CancellationToken.None);
+            var result = await _roundService.VoteAsync(_id, approvals[i], callers[i], CancellationToken.None);
             Assert.False(result.IsError);
         }
     }
@@ -1352,13 +1360,13 @@ public class ResistanceServiceTests
 
     private async Task OpenGameAsync()
     {
-        await _service.CreateAsync(_id, Host, CancellationToken.None);
-        await _service.OpenAsync(_id, Admin, CancellationToken.None);
+        await _lobbyService.CreateAsync(_id, Host, CancellationToken.None);
+        await _lobbyService.OpenAsync(_id, Admin, CancellationToken.None);
     }
 
     private async Task<GameCaller> JoinAsync(string name)
     {
-        var joined = await _service.JoinAsync(_id, name, new GameCaller("guest", false), CancellationToken.None);
+        var joined = await _lobbyService.JoinAsync(_id, name, new GameCaller("guest", false), CancellationToken.None);
 
         return new GameCaller("guest", false, joined.Value);
     }

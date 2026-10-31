@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using PartyKing.API.Controllers.Games.Resistance;
+using PartyKing.Application.Games.Services.Resistance;
 using PartyKing.Application.Games.Services;
 using PartyKing.Contract.V1.Games.Resistance;
 using PartyKing.Domain.Entities.Games;
@@ -32,9 +33,9 @@ public class ResistanceControllerTests
         var cookies = new FakeCookies(_playerId);
         var context = new ControllerContext { HttpContext = httpContext };
 
-        _lifecycle = new ResistanceController(accessor, _service, cookies) { ControllerContext = context };
-        _round = new ResistanceRoundController(accessor, _service, cookies) { ControllerContext = context };
-        _plotCards = new ResistancePlotCardsController(accessor, _service, cookies) { ControllerContext = context };
+        _lifecycle = new ResistanceController(accessor, _service, _service, cookies) { ControllerContext = context };
+        _round = new ResistanceRoundController(accessor, _service, _service, cookies) { ControllerContext = context };
+        _plotCards = new ResistancePlotCardsController(accessor, _service, _service, cookies) { ControllerContext = context };
     }
 
     [Fact]
@@ -210,7 +211,7 @@ public class ResistanceControllerTests
         DateTimeOffset.UtcNow, true, [], null, 10, null, null, null, null, 1, null, [], null, 0, null, [], null,
         null, null, null, new ResistanceRulesDto([], false, 1), null, [], null, [], [], [], [], [], [], [], null, null, [], []);
 
-    private sealed class FakeResistanceService : IResistanceService
+    private sealed class FakeResistanceService : IResistanceLobbyService, IResistanceRoundService, IResistancePlotCardService
     {
         public ErrorOr<ResistanceGameDto> Result { get; set; }
 
