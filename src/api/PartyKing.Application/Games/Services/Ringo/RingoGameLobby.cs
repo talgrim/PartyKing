@@ -9,12 +9,12 @@ namespace PartyKing.Application.Games.Services.Ringo;
 internal sealed class RingoGameLobby : GameLobby<RingoGame, RingoPlayer>
 {
     public RingoGameLobby(
-        ISessionService sessionService,
+        ISessionAuthorizer sessionAuthorizer,
         ISessionsRepository sessions,
         IRingoGamesRepository games,
         IDateTimeProvider clock,
         RingoLobbyNotifier notifier)
-        : base(sessionService, sessions, games, clock, notifier, new GameLobbyOptions("Ringo"))
+        : base(sessionAuthorizer, sessions, games, clock, notifier, new GameLobbyOptions("Ringo"))
     {
     }
 }

@@ -71,18 +71,18 @@ internal class RingoRuleSuggestionService : IRingoRuleSuggestionService
             "Before every sip you must pay a compliment to the person on your right.",
         ]);
 
-    private readonly ISessionService _sessionService;
+    private readonly ISessionAuthorizer _sessionAuthorizer;
     private readonly IChatClient _chatClient;
     private readonly LlmConfiguration _configuration;
     private readonly ILogger<RingoRuleSuggestionService> _logger;
 
     public RingoRuleSuggestionService(
-        ISessionService sessionService,
+        ISessionAuthorizer sessionAuthorizer,
         IChatClient chatClient,
         IOptions<LlmConfiguration> configuration,
         ILogger<RingoRuleSuggestionService> logger)
     {
-        _sessionService = sessionService;
+        _sessionAuthorizer = sessionAuthorizer;
         _chatClient = chatClient;
         _configuration = configuration.Value;
         _logger = logger;
@@ -96,7 +96,7 @@ internal class RingoRuleSuggestionService : IRingoRuleSuggestionService
         UiLanguage language,
         CancellationToken cancellationToken)
     {
-        if (await _sessionService.AuthorizeManagerAsync(sessionId, profileId, isAdmin, cancellationToken)
+        if (await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, profileId, isAdmin, cancellationToken)
             is { IsError: true } denied)
         {
             return denied.Errors;

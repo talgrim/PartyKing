@@ -20,20 +20,20 @@ public class SlideshowController : CoreController
     private const long MaxUploadRequestBytes = 100L * 1024 * 1024;
 
     private readonly ISlideshowService _slideshowService;
-    private readonly ISessionService _sessionService;
+    private readonly ISessionAuthorizer _sessionAuthorizer;
     private readonly ICookieAuthorizationHandler _cookieAuthorizationHandler;
     private readonly ILogger<SlideshowController> _logger;
 
     public SlideshowController(
         IHttpContextAccessor httpContextAccessor,
         ISlideshowService slideshowService,
-        ISessionService sessionService,
+        ISessionAuthorizer sessionAuthorizer,
         ICookieAuthorizationHandler cookieAuthorizationHandler,
         ILogger<SlideshowController> logger)
         : base(httpContextAccessor)
     {
         _slideshowService = slideshowService;
-        _sessionService = sessionService;
+        _sessionAuthorizer = sessionAuthorizer;
         _cookieAuthorizationHandler = cookieAuthorizationHandler;
         _logger = logger;
     }
@@ -119,6 +119,6 @@ public class SlideshowController : CoreController
         var profileId = _cookieAuthorizationHandler.TryReadProfileId(Request, out var id) ? id : null;
         var isAdmin = (await HttpContext.AuthenticateAsync(Constants.AdminScheme)).Succeeded;
 
-        return await _sessionService.AuthorizeManagerAsync(sessionId, profileId, isAdmin, cancellationToken);
+        return await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, profileId, isAdmin, cancellationToken);
     }
 }

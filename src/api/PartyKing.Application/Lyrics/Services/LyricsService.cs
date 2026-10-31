@@ -39,7 +39,7 @@ internal class LyricsService : ILyricsService
     private readonly ILrclibClient _lrclibClient;
     private readonly ILyricsCache _cache;
     private readonly ILyricsOffsetsRepository _offsetsRepository;
-    private readonly ISessionService _sessionService;
+    private readonly ISessionAuthorizer _sessionAuthorizer;
     private readonly ISessionMusicNotifier _notifier;
 
     public LyricsService(
@@ -47,14 +47,14 @@ internal class LyricsService : ILyricsService
         ILrclibClient lrclibClient,
         ILyricsCache cache,
         ILyricsOffsetsRepository offsetsRepository,
-        ISessionService sessionService,
+        ISessionAuthorizer sessionAuthorizer,
         ISessionMusicNotifier notifier)
     {
         _queueRepository = queueRepository;
         _lrclibClient = lrclibClient;
         _cache = cache;
         _offsetsRepository = offsetsRepository;
-        _sessionService = sessionService;
+        _sessionAuthorizer = sessionAuthorizer;
         _notifier = notifier;
     }
 
@@ -98,7 +98,7 @@ internal class LyricsService : ILyricsService
         bool isAdmin,
         CancellationToken cancellationToken)
     {
-        var authorized = await _sessionService.AuthorizeManagerAsync(sessionId, profileId, isAdmin, cancellationToken);
+        var authorized = await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, profileId, isAdmin, cancellationToken);
         if (authorized.IsError)
         {
             return authorized.Errors;
