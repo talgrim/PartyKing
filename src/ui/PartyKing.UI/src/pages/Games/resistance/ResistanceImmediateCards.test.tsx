@@ -257,6 +257,49 @@ describe('Take Responsibility', () => {
     expect(onTake).toHaveBeenCalledWith(9, 'p3', false);
   });
 
+  it('sends true when the Opinion Maker is chosen', async () => {
+    const user = userEvent.setup();
+    const onTake = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ResistanceTakeResponsibility
+        game={selecting({ opinionMakerPlayerIds: ['p3'], plotCardCounts: [{ playerId: 'p3', count: 2 }] })}
+        onTake={onTake}
+      />,
+    );
+
+    await user.selectOptions(screen.getByLabelText('Któremu graczowi zabierasz kartę'), 'p3');
+    await user.click(screen.getByLabelText(/Kreator opinii/));
+    await user.click(screen.getByRole('button', { name: 'Zabierz kartę' }));
+
+    expect(onTake).toHaveBeenCalledWith(9, 'p3', true);
+  });
+
+  it('asks for no choice when the target has only the Opinion Maker, and follows it to a new holder', async () => {
+    const user = userEvent.setup();
+    const onTake = vi.fn().mockResolvedValue(undefined);
+    const { rerender } = render(
+      <ResistanceTakeResponsibility
+        game={selecting({ opinionMakerPlayerIds: ['p3'], plotCardCounts: [{ playerId: 'p3', count: 0 }] })}
+        onTake={onTake}
+      />,
+    );
+
+    await user.selectOptions(screen.getByLabelText('Któremu graczowi zabierasz kartę'), 'p3');
+    expect(screen.queryByLabelText('Losowa karta z ręki')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Zabierz kartę' }));
+    expect(onTake).toHaveBeenCalledWith(9, 'p3', null);
+
+    // After the push the Opinion Maker is held by the taker, so the old target has nothing to choose between
+    rerender(
+      <ResistanceTakeResponsibility
+        game={selecting({ opinionMakerPlayerIds: ['p0'], plotCardCounts: [{ playerId: 'p3', count: 2 }] })}
+        onTake={onTake}
+      />,
+    );
+    await user.selectOptions(screen.getByLabelText('Któremu graczowi zabierasz kartę'), 'p3');
+    expect(screen.queryByLabelText('Losowa karta z ręki')).not.toBeInTheDocument();
+  });
+
   it('is hidden while a team is voted on and without the card', () => {
     const voting = render(<ResistanceTakeResponsibility game={selecting({ phase: 'Voting' })} onTake={vi.fn()} />);
     expect(voting.container).toBeEmptyDOMElement();

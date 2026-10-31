@@ -55,6 +55,28 @@ describe('ResistanceVotePanel with an Opinion Maker', () => {
   });
 });
 
+describe('ResistanceVotePanel when the Opinion Maker changes hands', () => {
+  it('turns the previous holder into a waiting voter and the new holder into the first, locked voter', () => {
+    const before = game({ yourPlayerId: 'p0', opinionMakerPlayerIds: ['p0'] });
+    const after = game({ yourPlayerId: 'p0', opinionMakerPlayerIds: ['p1'] });
+    const { rerender } = render(<ResistanceVotePanel game={before} onVote={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Odrzuć' })).not.toHaveAttribute('aria-disabled', 'true');
+
+    rerender(<ResistanceVotePanel game={after} onVote={vi.fn()} />);
+    expect(screen.getByText('Najpierw głosuje kreator opinii: Bartek.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Odrzuć' })).toHaveAttribute('aria-disabled', 'true');
+
+    rerender(<ResistanceVotePanel game={game({ ...after, yourPlayerId: 'p1' })} onVote={vi.fn()} />);
+    expect(screen.queryByText(/Najpierw głosuje/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Odrzuć' })).not.toHaveAttribute('aria-disabled', 'true');
+
+    rerender(
+      <ResistanceVotePanel game={game({ ...after, yourPlayerId: 'p1', yourVote: false, votedPlayerIds: ['p1'] })} onVote={vi.fn()} />,
+    );
+    expect(screen.getByRole('button', { name: 'Zatwierdź' })).toHaveAttribute('aria-disabled', 'true');
+  });
+});
+
 describe('ResistancePlayerMarks with an Opinion Maker', () => {
   it('shows the Opinion Maker badge and, once revealed, their vote', () => {
     render(
