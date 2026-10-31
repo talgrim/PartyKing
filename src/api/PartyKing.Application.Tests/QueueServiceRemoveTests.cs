@@ -2,7 +2,6 @@ using ErrorOr;
 using Microsoft.Extensions.Logging.Abstractions;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Domain.Entities.Sessions;
-using PartyKing.Infrastructure.Repositories;
 using PartyKing.Infrastructure.Results;
 
 namespace PartyKing.Application.Tests;

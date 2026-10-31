@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using PartyKing.API.Authorization;
 using PartyKing.Application.Games.Services.Resistance;
-using PartyKing.Application.Games.Services;
 using PartyKing.Contract.V1.Games.Resistance;
 using PartyKing.Infrastructure.Authorization;
 

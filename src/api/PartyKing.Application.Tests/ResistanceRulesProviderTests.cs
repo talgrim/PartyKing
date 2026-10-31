@@ -1,8 +1,6 @@
 using Microsoft.Extensions.Options;
 using PartyKing.Application.Configuration;
 using PartyKing.Application.Games.Services.Resistance;
-using PartyKing.Application.Games.Services;
-using PartyKing.Domain.Entities.Games;
 
 namespace PartyKing.Application.Tests;
 

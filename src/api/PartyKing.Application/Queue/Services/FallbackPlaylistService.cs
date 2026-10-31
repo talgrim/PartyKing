@@ -3,7 +3,6 @@ using PartyKing.Application.Queue.Helpers;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Contract.V1.Spotify;
-using PartyKing.Domain.Results;
 using PartyKing.Infrastructure.Repositories;
 using PartyKing.Infrastructure.Spotify.RestApi;
 using SpotifyAPI.Web;
