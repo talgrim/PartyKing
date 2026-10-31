@@ -8,6 +8,7 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import SettingsIcon from '@mui/icons-material/Settings';
 import { PageNavigation } from '@/components/common/PageNavigation';
 import { ResistanceManagerControls } from '@/pages/Games/resistance/ResistanceManagerControls';
 import { ResistanceCompactBoard } from '@/pages/Games/resistance/ResistanceCompactBoard';
@@ -33,6 +34,7 @@ import { useViewerRole } from '@/service/endpoints/sessions/useViewerRole';
 import { resistanceLobbyKey } from '@/service/realtime/sessionMusicEvents';
 import { useSessionMusicHub } from '@/service/realtime/useSessionMusicHub';
 import { usePersistedFlag } from '@/utils/usePersistedFlag';
+import { ResistanceGameSettings } from './ResistanceGameSettings';
 import { ResistanceSettings } from './ResistanceSettings';
 
 /** From this width a player has room for their own view and the board side by side, so there is no switch. */
@@ -66,6 +68,7 @@ export const Resistance = (): ReactNode => {
   const [boardView, setBoardView] = usePersistedFlag('partyking.resistanceBoardView', false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [managingPlayers, setManagingPlayers] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [confirmingEnd, setConfirmingEnd] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [message, setMessage] = useState<string>();
@@ -114,15 +117,6 @@ export const Resistance = (): ReactNode => {
       await mutate(gamesApi.refreshResistanceRules(sessionId), { revalidate: false });
     } catch {
       setMessage('Could not refresh the rules.');
-    }
-  };
-
-  const setPlotCards = async (enabled: boolean) => {
-    setMessage(undefined);
-    try {
-      await mutate(gamesApi.setResistancePlotCards(sessionId, enabled), { revalidate: false });
-    } catch {
-      setMessage('Could not change the plot cards.');
     }
   };
 
@@ -278,10 +272,30 @@ export const Resistance = (): ReactNode => {
       onClick={() => setRulesOpen(true)}
       aria-label="Rules"
       title="Rules"
-      className="ml-auto p-1 text-slate-400 hover:text-slate-200 cursor-pointer"
+      className="p-1 text-slate-400 hover:text-slate-200 cursor-pointer"
     >
       <InfoOutlinedIcon />
     </button>
+  );
+
+  const settingsButton = game && canManage && (
+    <button
+      type="button"
+      onClick={() => setSettingsOpen(true)}
+      disabled={started}
+      aria-label="Game settings"
+      title={started ? 'Ustawienia są zablokowane po rozpoczęciu gry' : 'Game settings'}
+      className="p-1 text-slate-400 hover:text-slate-200 cursor-pointer disabled:opacity-50 disabled:cursor-default disabled:hover:text-slate-400"
+    >
+      <SettingsIcon />
+    </button>
+  );
+
+  const trailingButtons = (
+    <div className="ml-auto flex items-center gap-1">
+      {rulesButton}
+      {settingsButton}
+    </div>
   );
 
   const managerControls = game && canManage && (
@@ -293,7 +307,6 @@ export const Resistance = (): ReactNode => {
       onStart={() => void startGame()}
       onOpen={() => void openGame()}
       onRefreshRules={() => void refreshRules()}
-      onSetPlotCards={(enabled) => void setPlotCards(enabled)}
       onContinue={() => void continueGame()}
       onRestart={() => void restartGame()}
     />
@@ -327,7 +340,7 @@ export const Resistance = (): ReactNode => {
             {managerControls}
             {playerCount}
             {message && <span className="text-amber-500">{message}</span>}
-            {rulesButton}
+            {trailingButtons}
           </div>
         </nav>
       ) : (
@@ -347,7 +360,7 @@ export const Resistance = (): ReactNode => {
               Controls
             </button>
           )}
-          {rulesButton}
+          {trailingButtons}
         </nav>
       )}
 
@@ -402,6 +415,8 @@ export const Resistance = (): ReactNode => {
       {canManage && !started && (
         <ResistanceSettings sessionId={sessionId} open={managingPlayers} onClose={() => setManagingPlayers(false)} />
       )}
+
+      {canManage && <ResistanceGameSettings sessionId={sessionId} open={settingsOpen} onClose={() => setSettingsOpen(false)} />}
 
       <Dialog
         open={confirmingEnd}

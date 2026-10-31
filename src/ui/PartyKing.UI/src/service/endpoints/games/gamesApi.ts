@@ -115,7 +115,7 @@ export const gamesApi = {
       withCredentials: true,
     }) as unknown as Promise<ResistanceGameDto>,
 
-  /** Host or admin: switches the plot cards add-on on or off; 409 once the game is open or started. */
+  /** Host or admin: switches the plot cards add-on on or off; 409 once the game has started. */
   setResistancePlotCards: (sessionId: string, enabled: boolean) =>
     axios.put(`/sessions/${sessionId}/games/resistance/rules/plot-cards`, { enabled }, {
       withCredentials: true,
