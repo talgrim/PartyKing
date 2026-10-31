@@ -1,4 +1,5 @@
 import { KeyboardEvent, ReactNode } from 'react';
+import { ResistanceMissionTeamInfo } from './ResistanceMissionTeamInfo';
 
 type IconProps = {
   className?: string;
@@ -396,6 +397,8 @@ type MissionBoardProps = {
   teamSizes: readonly number[];
   /** Outcome of each finished mission, null while it hasn't been played. */
   results: readonly MissionResult[];
+  /** Names of the team of each finished mission; a mission with a team gets an (i) badge showing it. */
+  teams?: readonly (readonly string[] | null)[];
   /** Index (0-4) of the mission being played, or null when the game is over. */
   currentMission: number | null;
   /** Teams rejected in a row during the current mission (0-5). */
@@ -415,6 +418,7 @@ const MAX_REJECTIONS = 5;
 export const MissionBoardIcon = ({
   teamSizes,
   results,
+  teams = [],
   currentMission,
   rejectedTeams,
   fourthMissionNeedsTwoFails,
@@ -462,6 +466,9 @@ export const MissionBoardIcon = ({
             <text x={cx} y={150} textAnchor="middle" fontSize="12" fontWeight="700" fill={COLORS.gold} fontFamily="sans-serif">
               2 PORAŻKI
             </text>
+          )}
+          {result !== null && (teams[i]?.length ?? 0) > 0 && (
+            <ResistanceMissionTeamInfo cx={cx + 34} cy={34} missionNumber={i + 1} succeeded={result === 'success'} names={teams[i] ?? []} />
           )}
         </g>
       );

@@ -30,7 +30,7 @@ export const ResistanceTvBoard = ({ game, board, banner, yourPlayerId }: Props):
   const votes = allVotes ?? earlyVotes;
 
   // The cards of the mission that just finished, until "Dalej" starts the next one (also when it ended the game).
-  const finished = game?.phase === 'MissionResult' || game?.phase === 'GameOver'
+  const finished = game?.phase === 'PeekWindow' || game?.phase === 'MissionResult' || game?.phase === 'GameOver'
     ? game.missionResults.find((result) => result.missionNumber === game.missionNumber)
     : undefined;
   const openPlayer = game?.players.find((player) => player.id === game.openMissionPlayerId);
@@ -50,6 +50,7 @@ export const ResistanceTvBoard = ({ game, board, banner, yourPlayerId }: Props):
             currentMission={game?.startedAt != null ? game.missionNumber - 1 : null}
             rejectedTeams={game?.rejectedTeams}
             missionResults={game?.missionResults}
+            players={game?.players}
           />
         </div>
         {(team.length > 0 || votes || showCards) && (

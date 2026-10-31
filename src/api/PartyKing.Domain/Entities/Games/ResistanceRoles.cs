@@ -50,11 +50,11 @@ public static class ResistanceRoles
     }
 
     /// <summary>
-    /// Whether <paramref name="target"/>'s mission card of the finished mission can still be peeked at: it was played,
+    /// Whether <paramref name="target"/>'s mission card of the finished mission can be peeked at (in the peek window): it was played,
     /// is not the peeker's own and no Keeping a Close Eye looked at it yet.
     /// </summary>
     public static bool CanPeek(ResistanceGame game, Guid peeker, Guid target) =>
-        game.Phase == ResistancePhase.MissionResult
+        game.Phase == ResistancePhase.PeekWindow
         && target != peeker
         && game.Players.Any(x => x.PlayerId == target && x.MissionCard is not null)
         && !game.PlotCards.Any(x => x.Type == ResistancePlotCardType.KeepingCloseEye
@@ -64,7 +64,7 @@ public static class ResistanceRoles
 
     /// <summary>The mission cards <paramref name="peeker"/> looked at this mission (player id, true = Success); private to them.</summary>
     public static IEnumerable<(Guid PlayerId, bool Success)> PeekedCards(ResistanceGame game, Guid peeker) =>
-        game.Phase != ResistancePhase.MissionResult
+        game.Phase is not (ResistancePhase.PeekWindow or ResistancePhase.MissionResult)
             ? []
             : game.PlotCards
                 .Where(x => x.Type == ResistancePlotCardType.KeepingCloseEye
@@ -123,7 +123,7 @@ public static class ResistanceRoles
 
     /// <summary>
     /// Ends a window (everyone passed, or a card was played). The leader window goes on to the draw or the team; the
-    /// confidence window, passed by everyone, starts the mission.
+    /// confidence window, passed by everyone, starts the mission, and the peek window shows the "Dalej" step.
     /// </summary>
     public static void AfterWindow(ResistanceGame game)
     {
@@ -135,6 +135,12 @@ public static class ResistanceRoles
         if (game.Phase == ResistancePhase.ConfidenceWindow)
         {
             StartMission(game);
+            return;
+        }
+
+        if (game.Phase == ResistancePhase.PeekWindow)
+        {
+            game.Phase = ResistancePhase.MissionResult;
             return;
         }
 
@@ -327,12 +333,20 @@ public static class ResistanceRoles
             MissionNumber = game.MissionNumber,
             FailCount = fails,
             Succeeded = succeeded,
+            TeamPlayerIds = game.Players.Where(x => x.IsOnTeam).OrderBy(x => x.Order).Select(x => x.PlayerId).ToList(),
         });
 
         if (game.ResistanceScore >= MissionsToWin || game.SpyScore >= MissionsToWin)
         {
             game.Phase = ResistancePhase.GameOver;
             game.Winner = game.ResistanceScore >= MissionsToWin ? ResistanceRole.Resistance : ResistanceRole.Spy;
+            return;
+        }
+
+        // The outcome is public at once; a playable card in a hand opens the window for Keeping a Close Eye first
+        if (HasPlayableCards(game))
+        {
+            OpenWindow(game, ResistancePhase.PeekWindow, beforeDraw: false);
             return;
         }
 

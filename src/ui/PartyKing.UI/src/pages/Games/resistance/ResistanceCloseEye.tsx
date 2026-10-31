@@ -8,7 +8,7 @@ type Props = {
 };
 
 /**
- * Keeping a Close Eye: once the mission is played (until "Dalej") its holder looks at one team member's mission card.
+ * Keeping a Close Eye: in the peek window after the mission is played its holder looks at one team member's mission card.
  * Not your own, and a card nobody has looked at yet. The play is public; the card seen stays with the peeker.
  */
 export const ResistanceCloseEye = ({ game, onPeek }: Props): ReactNode => {
@@ -19,7 +19,8 @@ export const ResistanceCloseEye = ({ game, onPeek }: Props): ReactNode => {
   const { name, effect, Icon } = PLOT_CARDS.KeepingCloseEye;
   const nameOf = (id: string) => game.players.find((player) => player.id === id)?.name ?? '?';
 
-  if (game.phase !== 'MissionResult' || (card == null && peeks.length === 0)) return null;
+  const inWindow = game.phase === 'PeekWindow';
+  if (!(inWindow || game.phase === 'MissionResult') || (card == null && peeks.length === 0)) return null;
 
   const looked = game.playedPlotCards
     .filter((x) => x.type === 'KeepingCloseEye' && x.missionNumber === game.missionNumber)
@@ -49,7 +50,7 @@ export const ResistanceCloseEye = ({ game, onPeek }: Props): ReactNode => {
             {nameOf(seen.playerId)} zagrał/a: {seen.success ? 'Sukces' : 'Porażka'}
           </p>
         ))}
-        {card != null && options.length > 0 && (
+        {inWindow && card != null && options.length > 0 && (
           <>
             <p className="mb-1 text-sm text-slate-400">{effect}</p>
             <label htmlFor="close-eye-target" className="sr-only">

@@ -103,8 +103,11 @@ public record ResistancePlotCardAssignmentDto(int CardId, Guid PlayerId);
 /// <summary>Every drawn card except Establish Confidence (the leader keeps it) goes to a player other than the leader.</summary>
 public record ResistanceDealPlotCardsRequest(IReadOnlyList<ResistancePlotCardAssignmentDto> Assignments);
 
-/// <summary>The public outcome of a finished mission: how many Fail cards were played, not by whom.</summary>
-public record ResistanceMissionResultDto(int MissionNumber, bool Succeeded, int FailCount);
+/// <summary>
+/// The public outcome of a finished mission: the team that went and how many Fail cards were played, not by whom.
+/// The team is empty for a mission recorded before teams were kept.
+/// </summary>
+public record ResistanceMissionResultDto(int MissionNumber, bool Succeeded, int FailCount, IReadOnlyList<Guid> TeamPlayerIds);
 
 /// <summary>
 /// The numbers the game was created with (copied from the server configuration, refreshed on request until the game
@@ -132,6 +135,7 @@ public enum ResistancePhaseDto
     ResolvingCards,
     LeaderWindow,
     ConfidenceWindow,
+    PeekWindow,
 }
 
 /// <summary>How one player voted on the team; public once everybody has voted.</summary>

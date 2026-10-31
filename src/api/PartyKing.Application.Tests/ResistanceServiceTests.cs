@@ -832,7 +832,9 @@ public class ResistanceServiceTests
         var game = (await _service.GetAsync(_id, Host, ct)).Value;
         Assert.Equal(ResistancePhaseDto.MissionResult, game.Phase);
         var result = Assert.Single(game.MissionResults);
-        Assert.Equal(new ResistanceMissionResultDto(1, false, 1), result);
+        Assert.Equal((1, false, 1), (result.MissionNumber, result.Succeeded, result.FailCount));
+        Assert.NotEmpty(result.TeamPlayerIds);
+        Assert.Equal(game.TeamPlayerIds, result.TeamPlayerIds);
         Assert.Equal(1, game.MissionNumber);
     }
 
@@ -847,8 +849,11 @@ public class ResistanceServiceTests
             await _service.PlayMissionCardAsync(_id, true, caller, ct);
         }
 
-        var result = Assert.Single((await _service.GetAsync(_id, Host, ct)).Value.MissionResults);
-        Assert.Equal(new ResistanceMissionResultDto(1, true, 0), result);
+        var game = (await _service.GetAsync(_id, Host, ct)).Value;
+        var result = Assert.Single(game.MissionResults);
+        Assert.Equal((1, true, 0), (result.MissionNumber, result.Succeeded, result.FailCount));
+        Assert.NotEmpty(result.TeamPlayerIds);
+        Assert.Equal(game.TeamPlayerIds, result.TeamPlayerIds);
     }
 
     [Fact]
@@ -862,8 +867,11 @@ public class ResistanceServiceTests
         await _service.PlayMissionCardAsync(_id, true, mission.Resistance[0], ct);
         await _service.PlayMissionCardAsync(_id, false, mission.Spies[0], ct);
 
-        var result = Assert.Single((await _service.GetAsync(_id, Host, ct)).Value.MissionResults);
-        Assert.Equal(new ResistanceMissionResultDto(1, true, 1), result);
+        var game = (await _service.GetAsync(_id, Host, ct)).Value;
+        var result = Assert.Single(game.MissionResults);
+        Assert.Equal((1, true, 1), (result.MissionNumber, result.Succeeded, result.FailCount));
+        Assert.NotEmpty(result.TeamPlayerIds);
+        Assert.Equal(game.TeamPlayerIds, result.TeamPlayerIds);
     }
 
     [Fact]

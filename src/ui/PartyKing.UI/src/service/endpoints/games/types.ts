@@ -116,7 +116,7 @@ export type ResistanceGameDto = {
   openMissionPlayerId: string | null;
   /** That player's mission card (true = Success), public once they played it. */
   openMissionCard: boolean | null;
-  /** LeaderWindow or ConfidenceWindow: the players who confirmed they play no card; public. */
+  /** LeaderWindow, ConfidenceWindow or PeekWindow: the players who confirmed they play no card; public. */
   leaderWindowPassedPlayerIds: string[];
   /** The mission cards you looked at with Keeping a Close Eye this mission (true = Success); private. */
   yourPeeks: ResistanceMissionPeekDto[];
@@ -175,6 +175,8 @@ export type ResistanceMissionResultDto = {
   missionNumber: number;
   succeeded: boolean;
   failCount: number;
+  /** The players on the mission's team (empty for a mission recorded before teams were kept). */
+  teamPlayerIds: string[];
 };
 
 // Mirrors PartyKing.Contract.V1.Games.ResistanceRulesDto
@@ -198,7 +200,7 @@ export type ResistanceCountRulesDto = {
 
 export type ResistanceRole = 'Resistance' | 'Spy';
 
-/** DealingCards: the leader hands out the plot cards just drawn (add-on only); ResolvingCards: the immediate plot cards are played and their receivers confirm; SelectingTeam: the leader picks (the votes that rejected the last team stay public until then); Voting: the team is up for a vote; PlayingMission: the approved team plays cards; LeaderWindow: a Strong Leader is out there, so everyone confirms they play no card or its holder takes the lead; ConfidenceWindow: the team was approved while a No Confidence is out there, so everyone confirms they play no card or its holder cancels the approval; MissionResult: the outcome waits for "Dalej". */
+/** DealingCards: the leader hands out the plot cards just drawn (add-on only); ResolvingCards: the immediate plot cards are played and their receivers confirm; SelectingTeam: the leader picks (the votes that rejected the last team stay public until then); Voting: the team is up for a vote; PlayingMission: the approved team plays cards; LeaderWindow: a Strong Leader is out there, so everyone confirms they play no card or its holder takes the lead; ConfidenceWindow: the team was approved while a playable card is out there, so everyone confirms they play no card, the holder of No Confidence cancels the approval or the holder of In the Spotlight names who plays openly; PeekWindow: the mission is played and its outcome is public, but a playable card is out there, so everyone confirms they play no card or the holder of Keeping a Close Eye looks at a mission card; MissionResult: the outcome waits for "Dalej". */
 export type ResistancePhase =
   | 'SelectingTeam'
   | 'Voting'
@@ -208,7 +210,8 @@ export type ResistancePhase =
   | 'DealingCards'
   | 'ResolvingCards'
   | 'LeaderWindow'
-  | 'ConfidenceWindow';
+  | 'ConfidenceWindow'
+  | 'PeekWindow';
 
 // Mirrors PartyKing.Contract.V1.Games.ResistanceVoteDto
 export type ResistanceVoteDto = {

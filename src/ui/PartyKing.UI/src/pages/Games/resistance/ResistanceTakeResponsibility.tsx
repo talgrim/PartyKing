@@ -8,7 +8,7 @@ type Props = {
 };
 
 /** The steps of the round in which Take Responsibility can be played: not while a team is voted on. */
-const PLAYABLE_PHASES = ['SelectingTeam', 'PlayingMission', 'MissionResult'];
+const PLAYABLE_PHASES = ['SelectingTeam', 'PlayingMission', 'PeekWindow', 'MissionResult'];
 
 /**
  * Take Responsibility: its holder takes a card from another player. A face-up Opinion Maker can be taken on purpose;

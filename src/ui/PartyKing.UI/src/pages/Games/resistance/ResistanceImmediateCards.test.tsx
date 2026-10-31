@@ -257,6 +257,49 @@ describe('Take Responsibility', () => {
     expect(onTake).toHaveBeenCalledWith(9, 'p3', false);
   });
 
+  it('sends true when the Opinion Maker is chosen', async () => {
+    const user = userEvent.setup();
+    const onTake = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ResistanceTakeResponsibility
+        game={selecting({ opinionMakerPlayerIds: ['p3'], plotCardCounts: [{ playerId: 'p3', count: 2 }] })}
+        onTake={onTake}
+      />,
+    );
+
+    await user.selectOptions(screen.getByLabelText('Któremu graczowi zabierasz kartę'), 'p3');
+    await user.click(screen.getByLabelText(/Kreator opinii/));
+    await user.click(screen.getByRole('button', { name: 'Zabierz kartę' }));
+
+    expect(onTake).toHaveBeenCalledWith(9, 'p3', true);
+  });
+
+  it('asks for no choice when the target has only the Opinion Maker, and follows it to a new holder', async () => {
+    const user = userEvent.setup();
+    const onTake = vi.fn().mockResolvedValue(undefined);
+    const { rerender } = render(
+      <ResistanceTakeResponsibility
+        game={selecting({ opinionMakerPlayerIds: ['p3'], plotCardCounts: [{ playerId: 'p3', count: 0 }] })}
+        onTake={onTake}
+      />,
+    );
+
+    await user.selectOptions(screen.getByLabelText('Któremu graczowi zabierasz kartę'), 'p3');
+    expect(screen.queryByLabelText('Losowa karta z ręki')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Zabierz kartę' }));
+    expect(onTake).toHaveBeenCalledWith(9, 'p3', null);
+
+    // After the push the Opinion Maker is held by the taker, so the old target has nothing to choose between
+    rerender(
+      <ResistanceTakeResponsibility
+        game={selecting({ opinionMakerPlayerIds: ['p0'], plotCardCounts: [{ playerId: 'p3', count: 2 }] })}
+        onTake={onTake}
+      />,
+    );
+    await user.selectOptions(screen.getByLabelText('Któremu graczowi zabierasz kartę'), 'p3');
+    expect(screen.queryByLabelText('Losowa karta z ręki')).not.toBeInTheDocument();
+  });
+
   it('is hidden while a team is voted on and without the card', () => {
     const voting = render(<ResistanceTakeResponsibility game={selecting({ phase: 'Voting' })} onTake={vi.fn()} />);
     expect(voting.container).toBeEmptyDOMElement();
@@ -317,7 +360,7 @@ describe('Strong Leader leader window', () => {
 describe('Keeping a Close Eye', () => {
   const eye = { id: 4, type: 'KeepingCloseEye', toDeal: false, inPlay: false } as const;
   const afterMission = (overrides: Partial<ResistanceGameDto> = {}) =>
-    game({ phase: 'MissionResult', missionNumber: 1, teamPlayerIds: ['p0', 'p1', 'p2'], yourPlotCards: [eye], ...overrides });
+    game({ phase: 'PeekWindow', missionNumber: 1, teamPlayerIds: ['p0', 'p1', 'p2'], yourPlotCards: [eye], ...overrides });
 
   it('offers the other team members whose card nobody looked at yet', async () => {
     const user = userEvent.setup();
@@ -339,5 +382,10 @@ describe('Keeping a Close Eye', () => {
 
     const early = render(<ResistanceCloseEye game={afterMission({ phase: 'PlayingMission' })} onPeek={vi.fn()} />);
     expect(early.container).toBeEmptyDOMElement();
+  });
+
+  it('no longer offers the picker once the window is over', () => {
+    render(<ResistanceCloseEye game={afterMission({ phase: 'MissionResult' })} onPeek={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: 'Podejrzyj kartę' })).toBeNull();
   });
 });

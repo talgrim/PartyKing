@@ -115,6 +115,10 @@ namespace PartyKing.Persistence.Migrations
                     b.Property<bool>("Succeeded")
                         .HasColumnType("INTEGER");
 
+                    b.PrimitiveCollection<string>("TeamPlayerIds")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.HasKey("SessionId", "MissionNumber");
 
                     b.ToTable("ResistanceMissionResults");

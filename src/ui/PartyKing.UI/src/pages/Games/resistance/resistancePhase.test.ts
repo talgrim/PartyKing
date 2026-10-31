@@ -163,7 +163,7 @@ describe('resistancePhaseDescription', () => {
 
     it('reports the mission result with the score and who continues', () => {
       const text = resistancePhaseDescription(
-        voting({ phase: 'MissionResult', missionResults: [{ missionNumber: 1, succeeded: false, failCount: 1 }] }),
+        voting({ phase: 'MissionResult', missionResults: [{ missionNumber: 1, succeeded: false, failCount: 1, teamPlayerIds: [] }] }),
         host,
         2,
       );
@@ -174,7 +174,7 @@ describe('resistancePhaseDescription', () => {
     });
 
     it('names the reason the game ended', () => {
-      const missions = [1, 2, 3].map((missionNumber) => ({ missionNumber, succeeded: true, failCount: 0 }));
+      const missions = [1, 2, 3].map((missionNumber) => ({ missionNumber, succeeded: true, failCount: 0, teamPlayerIds: [] }));
       const text = resistancePhaseDescription(
         voting({ phase: 'GameOver', winner: 'Resistance', missionResults: missions }),
         guest,

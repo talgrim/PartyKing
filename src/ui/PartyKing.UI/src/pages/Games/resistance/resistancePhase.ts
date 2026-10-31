@@ -78,7 +78,10 @@ export const resistancePhaseDescription = (
           ? ' Twoje potwierdzenie jest zapisane.'
           : ' Potwierdź, że nie zagrywasz karty (albo zagraj ją).';
 
-      return `Drużyna (${names.join(', ')}) została zatwierdzona (${tally}), ale zanim wyruszy, gracze decydują, czy zagrywają karty Intrygi. Potwierdzili: ${passed}/${count}.${mine}`;
+      const openName = game.players.find((player) => player.id === game.openMissionPlayerId)?.name;
+      const open = openName == null ? '' : ` ${openName} musi zagrać kartę misji jawnie („Pod obserwacją”).`;
+
+      return `Drużyna (${names.join(', ')}) została zatwierdzona (${tally}), ale zanim wyruszy, gracze decydują, czy zagrywają karty Intrygi. Potwierdzili: ${passed}/${count}.${open}${mine}`;
     }
 
     if (game.phase === 'ResolvingCards') {
@@ -110,6 +113,21 @@ export const resistancePhaseDescription = (
           : ` ${openName} zagrał/a kartę jawnie: ${game.openMissionCard ? 'Sukces' : 'Porażka'}.`;
 
       return `Drużyna (${names.join(', ')}) została zatwierdzona (${tally}) i wykonuje ${mission} misję. ${progress}${rule}${mine}${open}`;
+    }
+
+    if (game.phase === 'PeekWindow') {
+      const last = results.find((result) => result.missionNumber === game.missionNumber);
+      const outcome = last?.succeeded
+        ? 'Misja zakończyła się sukcesem'
+        : `Misja zakończyła się porażką (kart Porażka: ${last?.failCount ?? 0})`;
+      const passed = game.leaderWindowPassedPlayerIds.length;
+      const mine = game.yourPlayerId == null
+        ? ''
+        : game.leaderWindowPassedPlayerIds.includes(game.yourPlayerId)
+          ? ' Twoje potwierdzenie jest zapisane.'
+          : ' Potwierdź, że nie zagrywasz karty (albo zagraj ją).';
+
+      return `${outcome}. Wynik: ${score}. Zanim lider przejdzie dalej, gracze decydują, czy zagrywają karty Intrygi. Potwierdzili: ${passed}/${count}.${mine}`;
     }
 
     if (game.phase === 'MissionResult') {
