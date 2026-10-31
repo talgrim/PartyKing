@@ -6,6 +6,7 @@
   "scripts": {
     "start": "vite",
     "build": "vite build",
+    "lint": "eslint .",
     "test": "vitest run"
   },
   "dependencies": {
@@ -51,6 +52,7 @@
     "globals": "^16.3.0",
     "jsdom": "^29.1.1",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.72.1",
     "vite": "^7.0.4",
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^3.2.4"

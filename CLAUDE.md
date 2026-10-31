@@ -19,6 +19,7 @@ Backend (run from `src/api`):
 Frontend (from `src/ui/PartyKing.UI`):
 - `npm install`, then `npm start` (Vite dev server on port 2137, host `0.0.0.0`, polling watch for WSL2/Windows HMR)
 - `npm run build`
+- `npm run lint` runs ESLint (flat config in `eslint.config.js`: `typescript-eslint` recommended, react-hooks, react-refresh, import and unused-imports rules; formatting is not enforced). `npx eslint --fix` removes unused imports.
 - `npm test` runs `vitest run`, takes ~15s. To run a single test: `npx vitest run src/path/to/file.test.ts`. Tests run in jsdom with `testSetup.ts` (jest-dom matchers).
 
 ## Deployment (Docker / Fly.io)

@@ -27,7 +27,7 @@ export class ApiError extends Error {
 
       if (Array.isArray(respData.detail)) {
         respData.detail = respData.detail
-          .map((a: any) => `(${Object.values(a)})`)
+          .map((a: object) => `(${Object.values(a)})`)
           .join(', ');
       }
 
@@ -37,7 +37,7 @@ export class ApiError extends Error {
         status: response.status,
         statusText: response.statusText,
       });
-    } catch (err) {
+    } catch {
       switch (response.status) {
         case HTTP_STATUS_CODE.BAD_REQUEST:
           return createError(

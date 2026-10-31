@@ -23,7 +23,6 @@ const redirectLocalhostToLoopbackIp = (): Plugin => ({
 });
 
 // https://vitejs.dev/config/
-// eslint-disable-next-line import/no-default-export
 export default defineConfig({
   server: { 
     port: 2137,

@@ -83,6 +83,8 @@ export const MusicQueue = (): ReactNode => {
           { replace: true },
         );
       });
+    // Runs once per token: onJoined and setSearchParams are new functions on every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [joinToken, sessionId]);
 
   // Guests get the lyrics only: the slideshow is for the host and admins, so no guest ever requests the photos
@@ -129,7 +131,6 @@ export const MusicQueue = (): ReactNode => {
   const hostPlayerPush = useRef<HostPlayerPushHandlers>({});
   const hub = useSessionMusicHub(sessionId, Boolean(session && !locked), hostPlayerPush);
   const unlocked = Boolean(session && !locked);
-  const canManage = isHost || isAdmin;
   // The admin opens the games, so everyone else (the host included) is invited to join
   const invitable = unlocked && !isAdmin;
 

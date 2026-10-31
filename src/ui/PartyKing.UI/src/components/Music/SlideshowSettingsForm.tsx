@@ -39,7 +39,6 @@ export const SlideshowSettingsForm = ({ sessionId }: Props): ReactNode => {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
   // The wheel changes the seconds while the pointer is over the field, focused or not. React registers wheel
