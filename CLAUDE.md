@@ -80,3 +80,4 @@ Frontend (`PartyKing.UI/src`):
 - Commits should be atomic if possible. If working on a big task and commiting parts of the code in batches, separate commits may not build intermittently as long as the project builds after all changes are commited (no need to re-apply changes only to adhere to this convention).
 - When exploring automatically assume that the user is in "Interview" mode, meaning that you can ask him questions regarding the task. Also don't make any changes when prompt ask only for exploring and analysis.
 - All classes placed in the Contract project should end with "Dto", if they only specify a dto
+- Don't use expression statements for methods if they are long enough to be wrapped to the next line.
