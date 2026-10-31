@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using PartyKing.Application.Mappings;
 using PartyKing.Application.Queue.Helpers;
 using PartyKing.Application.Realtime;
+using PartyKing.Application.Sessions;
 using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Contract.V1.Queue;
@@ -33,14 +34,13 @@ public interface IQueueService
         CancellationToken cancellationToken);
 
     /// <summary>
-    /// Removes a waiting song. Forbidden unless the caller is an admin or <paramref name="profileId"/> hosts the
+    /// Removes a waiting song. Forbidden unless the caller is an admin or <paramref name="caller"/> hosts the
     /// session; conflict when the song is no longer waiting (it is playing or has been played).
     /// </summary>
     Task<ErrorOr<Success>> RemoveAsync(
         Guid sessionId,
         int songId,
-        string? profileId,
-        bool isAdmin,
+        SessionCaller caller,
         CancellationToken cancellationToken);
 }
 
@@ -150,8 +150,7 @@ internal class QueueService : IQueueService
     public async Task<ErrorOr<Success>> RemoveAsync(
         Guid sessionId,
         int songId,
-        string? profileId,
-        bool isAdmin,
+        SessionCaller caller,
         CancellationToken cancellationToken)
     {
         var session = await _sessionsRepository.GetAsync(sessionId, cancellationToken);
@@ -160,8 +159,7 @@ internal class QueueService : IQueueService
             return SessionErrors.NotFound();
         }
 
-        var isHost = profileId is not null && session.HostProfileId == profileId;
-        if (!isAdmin && !isHost)
+        if (!SessionRoles.IsManager(session, caller))
         {
             return Error.Forbidden(description: "Only the host or an admin can remove songs from the queue");
         }

@@ -2,6 +2,7 @@ using ErrorOr;
 using PartyKing.Application.Queue.Helpers;
 using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Application.Sessions.Services;
+using PartyKing.Application.Sessions;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Contract.V1.Spotify;
 using PartyKing.Infrastructure.Repositories;
@@ -14,14 +15,13 @@ public interface IFallbackPlaylistService
 {
     /// <summary>
     /// Sets the playlist played whenever the queue is empty, or clears it when <paramref name="playlist"/> is empty.
-    /// Only the host (<paramref name="profileId"/>) or an admin may; the playlist must belong to the session's host.
+    /// Only the host (<paramref name="caller"/>) or an admin may; the playlist must belong to the session's host.
     /// </summary>
     Task<ErrorOr<Success>> SetAsync(
         Guid sessionId,
         string? playlist,
         bool shuffle,
-        string? profileId,
-        bool isAdmin,
+        SessionCaller caller,
         CancellationToken cancellationToken);
 
     /// <summary>The playlists the host owns, to choose from. Forbidden unless <paramref name="profileId"/> hosts the session.</summary>
@@ -63,11 +63,10 @@ internal class FallbackPlaylistService : IFallbackPlaylistService
         Guid sessionId,
         string? playlist,
         bool shuffle,
-        string? profileId,
-        bool isAdmin,
+        SessionCaller caller,
         CancellationToken cancellationToken)
     {
-        if (await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, profileId, isAdmin, cancellationToken)
+        if (await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, caller, cancellationToken)
             is { IsError: true } denied)
         {
             return denied.Errors;

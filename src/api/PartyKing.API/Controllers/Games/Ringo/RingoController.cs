@@ -153,7 +153,7 @@ public class RingoController : LobbyGameControllerBase
         var caller = await Caller(sessionId);
 
         var result = await _ruleSuggestionService.SuggestAsync(
-            sessionId, request.PreviousRules, caller.ProfileId, caller.IsAdmin, GetLanguage(), cancellationToken);
+            sessionId, request.PreviousRules, caller, GetLanguage(), cancellationToken);
 
         return result.Match(Ok, Problem);
     }

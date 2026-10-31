@@ -1,10 +1,9 @@
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using PartyKing.API.Authentication;
 using PartyKing.API.Authorization;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Contract.V1.Sessions;
-using PartyKing.Infrastructure.Authentication;
 using PartyKing.Infrastructure.Authorization;
 
 namespace PartyKing.API.Controllers;
@@ -96,10 +95,9 @@ public class SessionsController : CoreController
     [ProducesResponseType<JoinTokenDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> CreateJoinToken(Guid sessionId, CancellationToken cancellationToken)
     {
-        var profileId = _cookieAuthorizationHandler.TryReadProfileId(Request, out var id) ? id : null;
-        var isAdmin = (await HttpContext.AuthenticateAsync(Constants.AdminScheme)).Succeeded;
+        var caller = await HttpContext.ReadSessionCallerAsync(_cookieAuthorizationHandler);
 
-        var result = await _joinTokenService.CreateJoinTokenAsync(sessionId, profileId, isAdmin, cancellationToken);
+        var result = await _joinTokenService.CreateJoinTokenAsync(sessionId, caller, cancellationToken);
 
         return result.Match(Ok, Problem);
     }
@@ -113,9 +111,9 @@ public class SessionsController : CoreController
         [FromBody] RenameSessionRequestDto request,
         CancellationToken cancellationToken)
     {
-        var (profileId, isAdmin) = await ReadCallerAsync();
+        var caller = await HttpContext.ReadSessionCallerAsync(_cookieAuthorizationHandler);
 
-        var result = await _sessionService.RenameAsync(sessionId, request.Name, profileId, isAdmin, cancellationToken);
+        var result = await _sessionService.RenameAsync(sessionId, request.Name, caller, cancellationToken);
 
         return result.Match(_ => NoContent(), Problem);
     }
@@ -132,13 +130,12 @@ public class SessionsController : CoreController
         [FromBody] ChangeSessionPasswordRequestDto request,
         CancellationToken cancellationToken)
     {
-        var (profileId, isAdmin) = await ReadCallerAsync();
+        var caller = await HttpContext.ReadSessionCallerAsync(_cookieAuthorizationHandler);
 
         var result = await _accessService.ChangePasswordAsync(
             sessionId,
             request.Password,
-            profileId,
-            isAdmin,
+            caller,
             cancellationToken);
 
         if (result.IsError)
@@ -172,19 +169,10 @@ public class SessionsController : CoreController
     {
         // The signed cookie is enough to know who the host is; whether their Spotify token still works is a
         // separate matter, handled where the token is used
-        var profileId = _cookieAuthorizationHandler.TryReadProfileId(Request, out var id) ? id : null;
-        var isAdmin = (await HttpContext.AuthenticateAsync(Constants.AdminScheme)).Succeeded;
+        var caller = await HttpContext.ReadSessionCallerAsync(_cookieAuthorizationHandler);
 
-        var result = await _sessionAuthorizer.GetViewerRoleAsync(sessionId, profileId, isAdmin, cancellationToken);
+        var result = await _sessionAuthorizer.GetViewerRoleAsync(sessionId, caller, cancellationToken);
 
         return result.Match(Ok, Problem);
-    }
-
-    private async Task<(string? ProfileId, bool IsAdmin)> ReadCallerAsync()
-    {
-        var profileId = _cookieAuthorizationHandler.TryReadProfileId(Request, out var id) ? id : null;
-        var isAdmin = (await HttpContext.AuthenticateAsync(Constants.AdminScheme)).Succeeded;
-
-        return (profileId, isAdmin);
     }
 }

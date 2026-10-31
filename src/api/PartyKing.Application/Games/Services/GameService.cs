@@ -1,6 +1,7 @@
 using ErrorOr;
 using PartyKing.Application.Localization;
 using PartyKing.Application.Sessions.Services;
+using PartyKing.Application.Sessions;
 using PartyKing.Contract.V1.Games;
 
 namespace PartyKing.Application.Games.Services;
@@ -13,8 +14,7 @@ public interface IGameService
     /// </summary>
     Task<ErrorOr<IReadOnlyList<GameDto>>> ListAsync(
         Guid sessionId,
-        string? profileId,
-        bool isAdmin,
+        SessionCaller caller,
         UiLanguage language,
         CancellationToken cancellationToken);
 }
@@ -45,12 +45,11 @@ internal class GameService : IGameService
 
     public async Task<ErrorOr<IReadOnlyList<GameDto>>> ListAsync(
         Guid sessionId,
-        string? profileId,
-        bool isAdmin,
+        SessionCaller caller,
         UiLanguage language,
         CancellationToken cancellationToken)
     {
-        if (await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, profileId, isAdmin, cancellationToken)
+        if (await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, caller, cancellationToken)
             is { IsError: true } denied)
         {
             return denied.Errors;

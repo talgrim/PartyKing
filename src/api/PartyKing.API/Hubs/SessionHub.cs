@@ -1,8 +1,7 @@
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.SignalR;
+using PartyKing.API.Authentication;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Slideshow.Services;
-using PartyKing.Infrastructure.Authentication;
 using PartyKing.Infrastructure.Authorization;
 
 namespace PartyKing.API.Hubs;
@@ -68,10 +67,9 @@ public class SessionHub : Hub
             ?? throw new HubException("HTTP context is required");
         var sessionId = (Guid)Context.Items[SessionIdItem]!;
 
-        var profileId = _cookieAuthorizationHandler.TryReadProfileId(http.Request, out var id) ? id : null;
-        var isAdmin = (await http.AuthenticateAsync(Constants.AdminScheme)).Succeeded;
+        var caller = await http.ReadSessionCallerAsync(_cookieAuthorizationHandler);
 
-        if ((await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, profileId, isAdmin, Context.ConnectionAborted)).IsError)
+        if ((await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, caller, Context.ConnectionAborted)).IsError)
         {
             throw new HubException("Only the host or an admin can watch the slideshow");
         }

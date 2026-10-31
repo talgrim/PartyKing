@@ -1,9 +1,8 @@
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
+using PartyKing.API.Authentication;
 using PartyKing.API.Authorization;
 using PartyKing.Application.Lyrics.Services;
 using PartyKing.Contract.V1.Lyrics;
-using PartyKing.Infrastructure.Authentication;
 using PartyKing.Infrastructure.Authorization;
 
 namespace PartyKing.API.Controllers;
@@ -49,14 +48,12 @@ public class LyricsController : CoreController
         [FromBody] SetLyricsOffsetRequestDto request,
         CancellationToken cancellationToken)
     {
-        var profileId = _cookieAuthorizationHandler.TryReadProfileId(Request, out var id) ? id : null;
-        var isAdmin = (await HttpContext.AuthenticateAsync(Constants.AdminScheme)).Succeeded;
+        var caller = await HttpContext.ReadSessionCallerAsync(_cookieAuthorizationHandler);
 
         var result = await _lyricsService.SetOffsetAsync(
             sessionId,
             request.OffsetMs,
-            profileId,
-            isAdmin,
+            caller,
             cancellationToken);
 
         return result.Match(_ => NoContent(), Problem);

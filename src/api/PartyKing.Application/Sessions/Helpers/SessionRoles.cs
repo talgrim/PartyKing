@@ -4,14 +4,13 @@ namespace PartyKing.Application.Sessions.Helpers;
 
 internal static class SessionRoles
 {
-    /// <param name="profileId">The logged-in host's profile id, if any.</param>
-    public static bool IsHost(Session session, string? profileId)
+    public static bool IsHost(Session session, SessionCaller caller)
     {
-        return profileId is not null && session.HostProfileId == profileId;
+        return caller.ProfileId is not null && session.HostProfileId == caller.ProfileId;
     }
 
-    public static bool IsManager(Session session, string? profileId, bool isAdmin)
+    public static bool IsManager(Session session, SessionCaller caller)
     {
-        return isAdmin || IsHost(session, profileId);
+        return caller.IsAdmin || IsHost(session, caller);
     }
 }

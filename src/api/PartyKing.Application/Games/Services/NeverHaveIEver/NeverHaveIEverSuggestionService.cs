@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PartyKing.Application.Localization;
 using PartyKing.Application.Sessions.Services;
+using PartyKing.Application.Sessions;
 using PartyKing.Contract.V1.Games;
 using PartyKing.Infrastructure.Llm;
 
@@ -17,8 +18,7 @@ public interface INeverHaveIEverSuggestionService
     /// </summary>
     Task<ErrorOr<GameSuggestionsDto>> SuggestAsync(
         Guid sessionId,
-        string? profileId,
-        bool isAdmin,
+        SessionCaller caller,
         UiLanguage language,
         CancellationToken cancellationToken);
 }
@@ -83,12 +83,11 @@ internal class NeverHaveIEverSuggestionService : INeverHaveIEverSuggestionServic
 
     public async Task<ErrorOr<GameSuggestionsDto>> SuggestAsync(
         Guid sessionId,
-        string? profileId,
-        bool isAdmin,
+        SessionCaller caller,
         UiLanguage language,
         CancellationToken cancellationToken)
     {
-        if (await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, profileId, isAdmin, cancellationToken)
+        if (await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, caller, cancellationToken)
             is { IsError: true } denied)
         {
             return denied.Errors;
