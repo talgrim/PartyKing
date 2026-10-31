@@ -477,17 +477,24 @@ public class ResistanceGameViewBuilderTests
     }
 
     /// <summary>The caller-only fields blanked: what is left is what every viewer is allowed to see.</summary>
-    private static string PublicPart(ResistanceGameDto dto) => JsonSerializer.Serialize(dto with
+    private static string PublicPart(ResistanceGameDto dto)
     {
-        YourPlayerId = null,
-        YourRole = null,
-        FellowSpies = null,
-        YourVote = null,
-        YourMissionCard = null,
-        YourPlotCards = [],
-        YourReveals = [],
-        YourPeeks = []
-    });
+        var json = JsonSerializer.SerializeToNode(dto)!.AsObject();
+        string[] callerOnly =
+        [
+            nameof(ResistanceGameDto.YourPlayerId), nameof(ResistanceGameDto.YourRole),
+            nameof(ResistanceGameDto.FellowSpies), nameof(ResistanceGameDto.YourVote),
+            nameof(ResistanceGameDto.YourMissionCard), nameof(ResistanceGameDto.YourPlotCards),
+            nameof(ResistanceGameDto.YourReveals), nameof(ResistanceGameDto.YourPeeks)
+        ];
+
+        foreach (var name in callerOnly)
+        {
+            Assert.True(json.Remove(name), $"{name} is not a property of the serialized DTO");
+        }
+
+        return json.ToJsonString();
+    }
 
     [Theory]
     [MemberData(nameof(Scenarios))]

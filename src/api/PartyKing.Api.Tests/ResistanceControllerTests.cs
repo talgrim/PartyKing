@@ -207,9 +207,14 @@ public class ResistanceControllerTests
         { Error.NotFound("Resistance.NotFound", "x"), StatusCodes.Status404NotFound },
     };
 
-    private static ResistanceGameDto Game() => new(
-        DateTimeOffset.UtcNow, true, [], null, 10, null, null, null, null, 1, null, [], null, 0, null, [], null,
-        null, null, null, new ResistanceRulesDto([], false, 1), null, [], null, [], [], [], [], [], [], [], null, null, [], []);
+    private static ResistanceGameDto Game() => new()
+    {
+        CreatedAt = DateTimeOffset.UtcNow,
+        IsOpen = true,
+        MaxPlayers = 10,
+        MissionNumber = 1,
+        Rules = new ResistanceRulesDto([], false, 1)
+    };
 
     /// <summary>Only the player cookie of the Resistance game is read; the rest is not used by the controller.</summary>
     private sealed class FakeCookies : ICookieAuthorizationHandler
