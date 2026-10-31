@@ -9,6 +9,7 @@ using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Enums;
 using PartyKing.Domain.Results;
 using PartyKing.Infrastructure.Repositories;
+using PartyKing.Infrastructure.Results;
 using PartyKing.Infrastructure.Spotify.RestApi;
 using PartyKing.Infrastructure.Youtube.RestApi;
 

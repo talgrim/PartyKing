@@ -5,16 +5,17 @@ using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Slideshow.Services;
+using PartyKing.Application.Spotify.Services;
+using PartyKing.Application.System;
 using PartyKing.Contract.V1.Lyrics;
 using PartyKing.Contract.V1.Player;
 using PartyKing.Contract.V1.Queue;
 using PartyKing.Contract.V1.Slideshow;
-using PartyKing.Application.Spotify.Services;
-using PartyKing.Application.System;
 using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Entities.Sessions;
 using PartyKing.Domain.Enums;
 using PartyKing.Infrastructure.Repositories;
+using PartyKing.Infrastructure.Results;
 
 namespace PartyKing.Application.Tests;
 

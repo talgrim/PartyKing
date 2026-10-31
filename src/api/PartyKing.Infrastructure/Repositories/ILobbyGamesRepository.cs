@@ -1,26 +1,7 @@
 using PartyKing.Domain.Entities.Games;
+using PartyKing.Infrastructure.Results;
 
 namespace PartyKing.Infrastructure.Repositories;
-
-public enum LobbyStatus
-{
-    NoGame,
-    NotOpen,
-
-    /// <summary>The game has started, so its players no longer change.</summary>
-    Started,
-    NameTaken,
-
-    /// <summary>The game already has as many players as it allows.</summary>
-    Full,
-    NoPlayer,
-
-    /// <summary>The ids to reorder are not exactly the game's players.</summary>
-    OrderMismatch,
-    Done,
-}
-
-public record LobbyResult<TGame>(LobbyStatus Status, TGame? Game);
 
 /// <summary>What every game with a lobby (one game per session, opened by an admin, joined by name) stores.</summary>
 public interface ILobbyGamesRepository<TGame, TPlayer>

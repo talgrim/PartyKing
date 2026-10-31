@@ -1,5 +1,6 @@
 using PartyKing.Domain.Entities.Queue;
 using PartyKing.Infrastructure.Repositories;
+using PartyKing.Infrastructure.Results;
 
 namespace PartyKing.Infrastructure.Metrics;
 
