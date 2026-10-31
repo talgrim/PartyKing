@@ -836,6 +836,61 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task TakeResponsibility_TakesTheOpinionMakerWhenTheTargetHasNoHandAndTheCallerAsksForIt()
+    {
+        var (game, card, target) = await WithTakeResponsibilityAsync();
+        var maker = SpareCardId(game);
+        await SetCardAsync(maker, target, ResistancePlotCardLocation.InPlay, ResistancePlotCardType.OpinionMaker);
+
+        var result = await _repository.TakeResponsibilityAsync(_sessionId, card.HolderPlayerId, card.CardId, target, true, CancellationToken.None);
+
+        Assert.Equal(ResistancePlayCardStatus.Done, result.Status);
+        Assert.Equal(card.HolderPlayerId, (await ReloadAsync()).PlotCards.Single(x => x.CardId == maker).HolderPlayerId);
+    }
+
+    [Fact]
+    public async Task TakeResponsibility_KeepsAStolenOpinionMakerInPlay_AndTheNewHolderVotesFirstAndIsLocked()
+    {
+        var ct = CancellationToken.None;
+        var (game, card, target) = await WithTakeResponsibilityAsync();
+        var (taker, maker) = (card.HolderPlayerId!.Value, SpareCardId(game));
+        await SetCardAsync(maker, target, ResistancePlotCardLocation.InPlay, ResistancePlotCardType.OpinionMaker);
+        await _repository.TakeResponsibilityAsync(_sessionId, taker, card.CardId, target, null, ct);
+
+        var after = await ReloadAsync();
+        var stolen = after.PlotCards.Single(x => x.CardId == maker);
+        Assert.Equal((ResistancePlotCardLocation.InPlay, taker), (stolen.Location, stolen.HolderPlayerId));
+        Assert.Equal([taker], ResistanceRoles.OpinionMakerIds(after));
+
+        var team = after.Players.OrderBy(x => x.Order).Take(after.Rules.TeamSize(after.Players.Count, after.MissionNumber)).Select(x => x.PlayerId).ToList();
+        await _repository.SelectTeamAsync(_sessionId, after.LeaderPlayerId, team, ct);
+
+        // The previous holder is an ordinary voter now and waits for the new one
+        Assert.Equal(ResistanceVoteStatus.OpinionMakersFirst, (await _repository.VoteAsync(_sessionId, target, true, ct)).Status);
+        Assert.Equal(ResistanceVoteStatus.Voted, (await _repository.VoteAsync(_sessionId, taker, false, ct)).Status);
+        Assert.Equal(ResistanceVoteStatus.VoteLocked, (await _repository.VoteAsync(_sessionId, taker, true, ct)).Status);
+        Assert.Equal(ResistanceVoteStatus.Voted, (await _repository.VoteAsync(_sessionId, target, true, ct)).Status);
+        Assert.Equal(ResistanceVoteStatus.Voted, (await _repository.VoteAsync(_sessionId, target, false, ct)).Status);
+    }
+
+    [Fact]
+    public async Task TakeResponsibility_CountsATakerWhoAlreadyHasAnOpinionMakerOnce()
+    {
+        var (game, card, target) = await WithTakeResponsibilityAsync();
+        var taker = card.HolderPlayerId!.Value;
+        var (own, stolen) = (SpareCardId(game), SpareCardId(game, 1));
+        await SetCardAsync(own, taker, ResistancePlotCardLocation.InPlay, ResistancePlotCardType.OpinionMaker);
+        await SetCardAsync(stolen, target, ResistancePlotCardLocation.InPlay, ResistancePlotCardType.OpinionMaker);
+
+        await _repository.TakeResponsibilityAsync(_sessionId, taker, card.CardId, target, null, CancellationToken.None);
+
+        var after = await ReloadAsync();
+        Assert.Equal([taker], ResistanceRoles.OpinionMakerIds(after));
+        Assert.All(after.PlotCards.Where(x => x.Type == ResistancePlotCardType.OpinionMaker && x.Location == ResistancePlotCardLocation.InPlay),
+            x => Assert.Equal(taker, x.HolderPlayerId));
+    }
+
+    [Fact]
     public async Task TakeResponsibility_IsLostWhenTheTargetHasNothing()
     {
         var (_, card, target) = await WithTakeResponsibilityAsync();
