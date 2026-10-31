@@ -1,5 +1,49 @@
 {
   "language": {
     "label": "Język"
+  },
+  "common": {
+    "somethingWentWrong": "Coś poszło nie tak",
+    "noSessionsYet": "Nie ma jeszcze żadnych sesji.",
+    "hostName": "Gospodarz: {{name}}",
+    "noHost": "Brak gospodarza"
+  },
+  "home": {
+    "adminPanel": "Panel administratora",
+    "title": "Dołącz do imprezy",
+    "subtitle": "Wybierz sesję poniżej albo wyszukaj ją po kodzie",
+    "findSession": "Znajdź sesję",
+    "searchPlaceholder": "Szukaj po kodzie sesji",
+    "searchLabel": "Szukaj sesji po kodzie",
+    "loadError": "Nie udało się wczytać sesji",
+    "loading": "Wczytywanie sesji…",
+    "noMatch": "Żadna sesja nie pasuje do „{{search}}”.",
+    "sessions": "Sesje",
+    "passwordProtected": "Chroniona hasłem"
+  },
+  "admin": {
+    "allSessions": "Wszystkie sesje",
+    "title": "Administrator",
+    "checkingLogin": "Sprawdzanie logowania…",
+    "apiUnreachable": "Nie można połączyć się z API",
+    "username": "Nazwa użytkownika",
+    "password": "Hasło",
+    "logIn": "Zaloguj się",
+    "logOut": "Wyloguj się",
+    "newSessionNamePlaceholder": "Nazwa nowej sesji (opcjonalnie)",
+    "newSessionNameLabel": "Nazwa nowej sesji",
+    "sessionPasswordPlaceholder": "Hasło sesji",
+    "newSessionPasswordLabel": "Hasło nowej sesji",
+    "createSession": "Utwórz sesję",
+    "sessionCreated": "Sesja utworzona",
+    "sessionDeleted": "Sesja usunięta",
+    "hostRemoved": "Gospodarz usunięty",
+    "linkCopied": "Skopiowano link do „{{name}}”",
+    "confirmDelete": "Usunąć „{{name}}” ({{code}}) razem z kolejką i zdjęciami?",
+    "confirmRemoveHost": "Odebrać {{host}} rolę gospodarza sesji „{{name}}”?",
+    "copyLink": "Kopiuj link",
+    "games": "Gry",
+    "removeHost": "Usuń gospodarza",
+    "delete": "Usuń"
   }
 }

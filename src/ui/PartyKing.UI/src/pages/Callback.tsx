@@ -32,12 +32,12 @@ export const Callback = () => {
 
   if (message) {
     return (
-      <>
+      <div className="pt-8">
         <ErrorMessage message={message}/>
         <Link to={ROUTE_PATHS.HOME} className="text-amber-500 underline">Back to the sessions</Link>
-      </>
+      </div>
     );
   }
 
-  return <InfoMessage message="Authorization successful. Redirecting to the session"/>;
+  return <div className="pt-8"><InfoMessage message="Authorization successful. Redirecting to the session"/></div>;
 };

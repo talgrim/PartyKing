@@ -116,7 +116,7 @@ export const Ringo = (): ReactNode => {
 
   return (
     <div className="relative w-full h-screen bg-slate-800 text-slate-400">
-      <nav className="absolute inset-x-0 top-0 h-[10%] px-[10%] flex items-center gap-2">
+      <nav className="absolute inset-x-0 top-0 h-[10%] pl-[max(10%,5rem)] pr-[10%] flex items-center gap-2">
         {canManage ? (
           <Link to={sessionGamesPath(sessionId)} className={navClass}>
             Back to the games

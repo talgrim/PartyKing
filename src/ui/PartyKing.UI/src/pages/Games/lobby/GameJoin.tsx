@@ -51,7 +51,7 @@ const JoinForm = ({ title, isHost, isAdmin, kicked, join, onJoined }: FormProps)
   };
 
   return (
-    <form onSubmit={(event) => void submit(event)} className="flex flex-col gap-3 p-4 max-w-sm mx-auto">
+    <form onSubmit={(event) => void submit(event)} className="flex flex-col gap-3 p-4 pt-10 max-w-sm mx-auto">
       <h1 className="text-xl text-slate-200">{title}</h1>
       {kicked && <p className="text-amber-500">Usunięto cię z gry.</p>}
       {!isHost && (
@@ -111,7 +111,7 @@ export const GameJoin = ({ sessionId, title, lobby, error, isLoading, join, onJo
 
   if (lobby.isStarted && !wasJoined) {
     return (
-      <p className="p-4 text-slate-200">
+      <p className="p-4 pt-10 text-slate-200">
         Ta gra już się rozpoczęła.{' '}
         <Link to={sessionPath(sessionId)} className="underline">
           Wróć do sesji
@@ -122,7 +122,7 @@ export const GameJoin = ({ sessionId, title, lobby, error, isLoading, join, onJo
 
   if (!lobby.isOpen && !wasJoined) {
     return (
-      <p className="p-4 text-slate-200">
+      <p className="p-4 pt-10 text-slate-200">
         Ta gra nie jest jeszcze otwarta.{' '}
         <Link to={sessionPath(sessionId)} className="underline">
           Wróć do sesji

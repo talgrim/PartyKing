@@ -1,5 +1,49 @@
 {
   "language": {
     "label": "Language"
+  },
+  "common": {
+    "somethingWentWrong": "Something went wrong",
+    "noSessionsYet": "There are no sessions yet.",
+    "hostName": "Host: {{name}}",
+    "noHost": "No host yet"
+  },
+  "home": {
+    "adminPanel": "Admin panel",
+    "title": "Join a party",
+    "subtitle": "Pick a session below or search by its code",
+    "findSession": "Find a session",
+    "searchPlaceholder": "Search by session code",
+    "searchLabel": "Search sessions by code",
+    "loadError": "Could not load the sessions",
+    "loading": "Loading sessions…",
+    "noMatch": "No session matches “{{search}}”.",
+    "sessions": "Sessions",
+    "passwordProtected": "Password protected"
+  },
+  "admin": {
+    "allSessions": "All sessions",
+    "title": "Admin",
+    "checkingLogin": "Checking the login…",
+    "apiUnreachable": "Could not reach the API",
+    "username": "Username",
+    "password": "Password",
+    "logIn": "Log in",
+    "logOut": "Log out",
+    "newSessionNamePlaceholder": "New session name (optional)",
+    "newSessionNameLabel": "New session name",
+    "sessionPasswordPlaceholder": "Session password",
+    "newSessionPasswordLabel": "New session password",
+    "createSession": "Create session",
+    "sessionCreated": "Session created",
+    "sessionDeleted": "Session deleted",
+    "hostRemoved": "Host removed",
+    "linkCopied": "Link to “{{name}}” copied",
+    "confirmDelete": "Delete “{{name}}” ({{code}}) together with its queue and photos?",
+    "confirmRemoveHost": "Remove {{host}} as the host of “{{name}}”?",
+    "copyLink": "Copy link",
+    "games": "Games",
+    "removeHost": "Remove host",
+    "delete": "Delete"
   }
 }
