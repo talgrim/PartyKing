@@ -146,18 +146,23 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
     private static Guid ResistanceTarget(ResistanceGame game, ResistancePlotCard card) =>
         ResistanceRoles.Neighbours(game, card.HolderPlayerId!.Value)[0];
 
-    /// <summary>Everybody confirms in an open leader, confidence or peek window; nothing happens when none is open.</summary>
-    private async Task PassWindowsAsync()
+    /// <summary>Everybody confirms in the open windows one after another (up to <paramref name="stopAt"/>); nothing happens when none is open.</summary>
+    private async Task PassWindowsAsync(ResistancePhase? stopAt = null)
     {
-        var game = await ReloadAsync();
-        if (game.Phase is not (ResistancePhase.LeaderWindow or ResistancePhase.ConfidenceWindow or ResistancePhase.PeekWindow))
+        while (true)
         {
-            return;
-        }
+            var game = await ReloadAsync();
+            if (game.Phase is not (ResistancePhase.LeaderWindow or ResistancePhase.ConfidenceWindow
+                    or ResistancePhase.PeekWindow)
+                || game.Phase == stopAt)
+            {
+                return;
+            }
 
-        foreach (var player in game.Players)
-        {
-            await _repository.PassLeaderWindowAsync(_sessionId, player.PlayerId, CancellationToken.None);
+            foreach (var player in game.Players)
+            {
+                await _repository.PassLeaderWindowAsync(_sessionId, player.PlayerId, CancellationToken.None);
+            }
         }
     }
 
@@ -628,14 +633,14 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         Assert.DoesNotContain(restarted.PlotCards, x => x.Location == ResistancePlotCardLocation.Played || x.IsConfirmed || x.TargetPlayerId is not null);
     }
 
-    /// <summary>A started 5-player game whose approved team plays the mission, with the one drawn In the Spotlight dealt.</summary>
+    /// <summary>A started 5-player game whose team was approved and waits in the confidence window, with the one drawn In the Spotlight dealt.</summary>
     private async Task<(ResistanceGame Game, ResistancePlotCard Card)> PlayingWithSpotlightAsync()
     {
         var game = await StartAsync(5, plotCards: true, onlyType: ResistancePlotCardType.InTheSpotlight);
         await DealAsync(game);
-        await SelectTeamAndVoteAsync(await ReloadAsync(), approve: true);
+        await SelectTeamAndVoteAsync(await ReloadAsync(), approve: true, passWindows: false);
         game = await ReloadAsync();
-        Assert.Equal(ResistancePhase.PlayingMission, game.Phase);
+        Assert.Equal(ResistancePhase.ConfidenceWindow, game.Phase);
 
         return (game, game.PlotCards.Single(x => x.Location == ResistancePlotCardLocation.Hand));
     }
@@ -653,11 +658,63 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         var after = await ReloadAsync();
         Assert.Equal(target.PlayerId, ResistanceRoles.OpenMissionPlayerId(after));
         Assert.Empty(ResistanceRoles.UnconfirmedCards(after));
-        Assert.Equal(ResistancePhase.PlayingMission, after.Phase);
+        Assert.Equal(ResistancePhase.ConfidenceWindow, after.Phase);
     }
 
     [Fact]
-    public async Task InTheSpotlight_IsPlayedOnlyWhileTheMissionIsPlayed()
+    public async Task ConfidenceWindow_BlocksTheMissionCardsUntilEveryoneConfirmed()
+    {
+        var ct = CancellationToken.None;
+        var (game, _) = await PlayingWithSpotlightAsync();
+        var member = game.Players.First(x => x.IsOnTeam);
+
+        Assert.Equal(ResistanceMissionStatus.NotPlaying, (await _repository.PlayMissionCardAsync(_sessionId, member.PlayerId, true, ct)).Status);
+        foreach (var player in game.Players.Take(4))
+        {
+            await _repository.PassLeaderWindowAsync(_sessionId, player.PlayerId, ct);
+        }
+
+        Assert.Equal(ResistancePhase.ConfidenceWindow, (await ReloadAsync()).Phase);
+        await _repository.PassLeaderWindowAsync(_sessionId, game.Players[4].PlayerId, ct);
+
+        Assert.Equal(ResistancePhase.PlayingMission, (await ReloadAsync()).Phase);
+        Assert.Equal(ResistanceMissionStatus.Played, (await _repository.PlayMissionCardAsync(_sessionId, member.PlayerId, true, ct)).Status);
+    }
+
+    [Fact]
+    public async Task NoConfidence_GivesBackAnInTheSpotlightPlayedInTheSameWindow()
+    {
+        var ct = CancellationToken.None;
+        var (game, spotlight) = await PlayingWithSpotlightAsync();
+        var target = game.Players.First(x => x.IsOnTeam && x.PlayerId != spotlight.HolderPlayerId).PlayerId;
+        await _repository.PlayPlotCardAsync(_sessionId, spotlight.HolderPlayerId, spotlight.CardId, target, ct);
+        var other = game.Players.First(x => x.PlayerId != spotlight.HolderPlayerId).PlayerId;
+        await SetCardAsync(SpareCardId(game), other, ResistancePlotCardLocation.Hand, ResistancePlotCardType.NoConfidence);
+
+        var played = await _repository.PlayNoConfidenceAsync(_sessionId, other, SpareCardId(game), ct);
+
+        Assert.Equal(ResistancePlayCardStatus.Done, played.Status);
+        var after = await ReloadAsync();
+        var back = after.PlotCards.Single(x => x.CardId == spotlight.CardId);
+        Assert.Equal((ResistancePlotCardLocation.Hand, spotlight.HolderPlayerId), (back.Location, back.HolderPlayerId));
+        Assert.Null(ResistanceRoles.OpenMissionPlayerId(after));
+    }
+
+    [Fact]
+    public async Task InTheSpotlight_CannotBePlayedOnceTheMissionCardsAreBeingPlayed()
+    {
+        var ct = CancellationToken.None;
+        var (game, card) = await PlayingWithSpotlightAsync();
+        var target = game.Players.First(x => x.IsOnTeam && x.PlayerId != card.HolderPlayerId).PlayerId;
+        await PassWindowsAsync();
+
+        var late = await _repository.PlayPlotCardAsync(_sessionId, card.HolderPlayerId, card.CardId, target, ct);
+
+        Assert.Equal(ResistancePlayCardStatus.NotPlayingMission, late.Status);
+    }
+
+    [Fact]
+    public async Task InTheSpotlight_IsPlayedOnlyInTheConfidenceWindow()
     {
         var ct = CancellationToken.None;
         var game = await StartAsync(5, plotCards: true, onlyType: ResistancePlotCardType.InTheSpotlight);
@@ -671,15 +728,13 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task InTheSpotlight_RejectsTargetsOutsideTheTeamPlayersWhoPlayedAndTheHolder()
+    public async Task InTheSpotlight_RejectsTargetsOutsideTheTeamAndTheHolder()
     {
         var ct = CancellationToken.None;
         var (game, card) = await PlayingWithSpotlightAsync();
         var outsider = game.Players.First(x => !x.IsOnTeam && x.PlayerId != card.HolderPlayerId);
-        var member = game.Players.First(x => x.IsOnTeam && x.PlayerId != card.HolderPlayerId);
-        await _repository.PlayMissionCardAsync(_sessionId, member.PlayerId, true, ct);
 
-        foreach (var invalid in new[] { outsider.PlayerId, member.PlayerId, card.HolderPlayerId!.Value, Guid.NewGuid() })
+        foreach (var invalid in new[] { outsider.PlayerId, card.HolderPlayerId!.Value, Guid.NewGuid() })
         {
             var result = await _repository.PlayPlotCardAsync(_sessionId, card.HolderPlayerId, card.CardId, invalid, ct);
             Assert.Equal(ResistancePlayCardStatus.InvalidTarget, result.Status);
