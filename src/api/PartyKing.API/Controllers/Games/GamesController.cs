@@ -25,7 +25,9 @@ public class GamesController : GameControllerBase
         _gameService = gameService;
     }
 
-    /// <summary>Host or admin: the games available in the session. 403 for guests.</summary>
+    /// <summary>
+    /// Host or admin: the games available in the session, named in the <c>Accept-Language</c> language. 403 for guests.
+    /// </summary>
     [HttpGet]
     [RequireSessionAccess]
     [ProducesResponseType<IReadOnlyList<GameDto>>(StatusCodes.Status200OK)]
@@ -34,7 +36,7 @@ public class GamesController : GameControllerBase
         var profileId = Cookies.TryReadProfileId(Request, out var id) ? id : null;
         var isAdmin = (await HttpContext.AuthenticateAsync(Constants.AdminScheme)).Succeeded;
 
-        var result = await _gameService.ListAsync(sessionId, profileId, isAdmin, cancellationToken);
+        var result = await _gameService.ListAsync(sessionId, profileId, isAdmin, GetLanguage(), cancellationToken);
 
         return result.Match(Ok, Problem);
     }
