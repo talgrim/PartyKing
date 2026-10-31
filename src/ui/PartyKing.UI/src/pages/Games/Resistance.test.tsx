@@ -858,7 +858,11 @@ describe('Resistance', () => {
       mocks.getResistance.mockResolvedValue(
         rejected({ yourPlayerId: null, yourRole: null, phase: 'GameOver', winner: 'Spy', rejectedTeams: 5, revealedRoles: [] }),
       );
-      mocks.restartResistance.mockResolvedValue(lobby(five, true));
+      mocks.restartResistance.mockImplementation(async () => {
+        // the server now answers with the restarted lobby, also to the refetch that follows
+        mocks.getResistance.mockResolvedValue(lobby(five, true));
+        return lobby(five, true);
+      });
       renderPage('/s/session-1/games/resistance?tv=1');
 
       await userEvent.click(await screen.findByRole('button', { name: 'Restart game' }));
