@@ -1,4 +1,5 @@
 using PartyKing.Application.Games.Services;
+using PartyKing.Application.Games.Services.Resistance;
 using PartyKing.Contract.V1.Games.Resistance;
 using PartyKing.Domain.Entities.Games;
 
@@ -17,7 +18,7 @@ internal static class ResistanceGameViewBuilder
             .Select(x => new ResistancePlayerDto(x.PlayerId, x.DisplayName))
             .ToList();
 
-        var you = GameLobby<ResistanceGame, ResistancePlayer>.IsPlayer(game, caller)
+        var you = ResistanceGameLobby.IsPlayer(game, caller)
             ? game.Players.First(x => x.PlayerId == caller.PlayerId)
             : null;
         var yourRole = game.IsStarted ? you?.Role : null;
