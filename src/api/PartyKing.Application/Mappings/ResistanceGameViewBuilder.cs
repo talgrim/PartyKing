@@ -37,14 +37,14 @@ internal static class ResistanceGameViewBuilder
             ResistanceGame.MaxPlayers,
             game.StartedAt,
             game.LeaderPlayerId,
-            yourRole is { } role ? (ResistanceRoleDto)role : null,
+            yourRole is { } role ? role.ToDto() : null,
             FellowSpies(game, you, yourRole),
             game.MissionNumber,
             game.IsStarted ? game.Rules.TeamSize(game.Players.Count, game.MissionNumber) : null,
             game.Players.Where(x => x.IsOnTeam).OrderBy(x => x.Order).Select(x => x.PlayerId).ToList(),
-            game.IsStarted ? (ResistancePhaseDto)game.Phase : null,
+            game.IsStarted ? game.Phase.ToDto() : null,
             game.RejectedTeams,
-            game.Winner is { } winner ? (ResistanceRoleDto)winner : null,
+            game.Winner is { } winner ? winner.ToDto() : null,
             voted.Select(x => x.PlayerId).ToList(),
             you?.Vote,
             revealed ? voted.Select(x => new ResistanceVoteDto(x.PlayerId, x.Vote!.Value)).ToList() : null,
@@ -85,7 +85,7 @@ internal static class ResistanceGameViewBuilder
         game.Phase == ResistancePhase.GameOver
             ? game.Players
                 .OrderBy(x => x.Order)
-                .Select(x => new ResistanceRevealedRoleDto(x.PlayerId, (ResistanceRoleDto)x.Role!.Value))
+                .Select(x => new ResistanceRevealedRoleDto(x.PlayerId, x.Role!.Value.ToDto()))
                 .ToList()
             : null;
 
@@ -107,7 +107,7 @@ internal static class ResistanceGameViewBuilder
                 .OrderBy(x => x.CardId)
                 .Select(x => new ResistancePlotCardDto(
                     x.CardId,
-                    (ResistancePlotCardTypeDto)x.Type,
+                    x.Type.ToDto(),
                     x.Location == ResistancePlotCardLocation.Drawn && x.Type != ResistancePlotCardType.EstablishConfidence,
                     x.Location == ResistancePlotCardLocation.InPlay))
                 .ToList();
@@ -143,7 +143,7 @@ internal static class ResistanceGameViewBuilder
             .Where(x => x.Location == ResistancePlotCardLocation.Played)
             .OrderByDescending(x => x.PlayedAt)
             .Select(x => new ResistancePlayedPlotCardDto(
-                x.CardId, (ResistancePlotCardTypeDto)x.Type, x.HolderPlayerId!.Value, x.TargetPlayerId,
+                x.CardId, x.Type.ToDto(), x.HolderPlayerId!.Value, x.TargetPlayerId,
                 x.PlayedInMission, x.IsConfirmed))
             .ToList();
 
@@ -156,7 +156,7 @@ internal static class ResistanceGameViewBuilder
                 .Select(x => new ResistanceCardRevealDto(
                     x.CardId,
                     ResistanceRoles.Revealed(x)!.Value,
-                    (ResistanceRoleDto)game.Players.First(p => p.PlayerId == ResistanceRoles.Revealed(x)).Role!.Value))
+                    game.Players.First(p => p.PlayerId == ResistanceRoles.Revealed(x)).Role!.Value.ToDto()))
                 .ToList();
 
     /// <summary>Who confirmed in a window, never who holds a card.</summary>

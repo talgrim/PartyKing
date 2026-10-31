@@ -1,28 +1,22 @@
 using PartyKing.Contract.V1.Slideshow;
 using PartyKing.Domain.Entities.Slideshow;
+using Riok.Mapperly.Abstractions;
 
 namespace PartyKing.Application.Mappings;
 
-public static class SlideshowSettingsDtoMappings
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public static partial class SlideshowSettingsDtoMappings
 {
     public static SlideshowSettings ToDomain(this SlideshowSettingsDto dto, Guid sessionId, TimeSpan defaultSlideTime)
     {
-        return new SlideshowSettings
-        {
-            SessionId = sessionId,
-            AutoRepeat = dto.AutoRepeat,
-            StartFromBeginning = dto.StartFromBeginning,
-            SlideTime = dto.SlideTime ?? defaultSlideTime,
-        };
+        var settings = Map(dto, sessionId);
+        settings.SlideTime = dto.SlideTime ?? defaultSlideTime;
+        return settings;
     }
 
-    public static SlideshowSettingsDto ToDto(this SlideshowSettings settings)
-    {
-        return new SlideshowSettingsDto
-        {
-            AutoRepeat = settings.AutoRepeat,
-            StartFromBeginning = settings.StartFromBeginning,
-            SlideTime = settings.SlideTime,
-        };
-    }
+    public static partial SlideshowSettingsDto ToDto(this SlideshowSettings settings);
+
+    // SlideTime is optional in the DTO, so ToDomain fills it with the default.
+    [MapperIgnoreTarget(nameof(SlideshowSettings.SlideTime))]
+    private static partial SlideshowSettings Map(SlideshowSettingsDto dto, Guid sessionId);
 }

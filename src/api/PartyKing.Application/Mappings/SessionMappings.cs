@@ -1,19 +1,17 @@
 using PartyKing.Contract.V1.Sessions;
 using PartyKing.Domain.Entities.Sessions;
+using Riok.Mapperly.Abstractions;
 
 namespace PartyKing.Application.Mappings;
 
-public static class SessionMappings
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public static partial class SessionMappings
 {
-    public static SessionDto ToDto(this Session session)
-    {
-        return new SessionDto(
-            session.Id,
-            session.Code,
-            session.Name,
-            session.HostProfile?.DisplayName ?? session.HostProfileId,
-            session.HostProfileId is not null,
-            session.FallbackPlaylistName,
-            session.FallbackShuffle);
-    }
+    [MapPropertyFromSource(nameof(SessionDto.HostName), Use = nameof(HostNameOf))]
+    [MapPropertyFromSource(nameof(SessionDto.HasHost), Use = nameof(HasHostOf))]
+    public static partial SessionDto ToDto(this Session session);
+
+    private static string? HostNameOf(Session session) => session.HostProfile?.DisplayName ?? session.HostProfileId;
+
+    private static bool HasHostOf(Session session) => session.HostProfileId is not null;
 }

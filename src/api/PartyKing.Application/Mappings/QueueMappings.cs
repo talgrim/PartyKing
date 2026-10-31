@@ -1,46 +1,29 @@
-using PartyKing.Contract.V1.Enums;
 using PartyKing.Contract.V1.Queue;
 using PartyKing.Contract.V1.Spotify;
 using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Entities.Spotify;
 using PartyKing.Domain.Enums;
+using Riok.Mapperly.Abstractions;
 
 namespace PartyKing.Application.Mappings;
 
-public static class QueueMappings
+[Mapper(
+    RequiredMappingStrategy = RequiredMappingStrategy.Target,
+    EnumMappingStrategy = EnumMappingStrategy.ByName)]
+public static partial class QueueMappings
 {
-    public static QueueItemDto ToDto(this QueueItem item)
-    {
-        var source = item.Source == QueueItemSource.Spotify ? SongSource.Spotify : SongSource.Youtube;
+    [MapProperty(nameof(QueueItem.Title), nameof(QueueItemDto.Name))]
+    public static partial QueueItemDto ToDto(this QueueItem item);
 
-        return new QueueItemDto(
-            item.Id,
-            source,
-            item.Url,
-            item.Title,
-            item.Artists,
-            item.AlbumArtUrl,
-            item.DurationMs,
-            item.IsFallback);
-    }
+    // Id and Status are not copied from the song: the database assigns the id and the constructor starts at Queued.
+    [MapperIgnoreTarget(nameof(QueueItem.Id))]
+    [MapperIgnoreTarget(nameof(QueueItem.Status))]
+    [MapValue(nameof(QueueItem.Source), QueueItemSource.Spotify)]
+    [MapProperty(nameof(Song.Uri), nameof(QueueItem.Url))]
+    [MapProperty(nameof(Song.Name), nameof(QueueItem.Title))]
+    [MapProperty(nameof(Song.ArtistsDisplay), nameof(QueueItem.Artists))]
+    public static partial QueueItem ToQueueItem(this Song song, Guid sessionId, bool isFallback = false);
 
-    public static QueueItem ToQueueItem(this Song song, Guid sessionId, bool isFallback = false)
-    {
-        return new QueueItem(
-            sessionId,
-            QueueItemSource.Spotify,
-            song.Uri,
-            song.Name,
-            song.ArtistsDisplay,
-            song.AlbumArtUrl,
-            song.DurationMs)
-        {
-            IsFallback = isFallback
-        };
-    }
-
-    public static SpotifyTrackDto ToDto(this Song song)
-    {
-        return new SpotifyTrackDto(song.Uri, song.Name, song.ArtistsDisplay, song.AlbumArtUrl, song.DurationMs);
-    }
+    [MapProperty(nameof(Song.ArtistsDisplay), nameof(SpotifyTrackDto.Artists))]
+    public static partial SpotifyTrackDto ToDto(this Song song);
 }
