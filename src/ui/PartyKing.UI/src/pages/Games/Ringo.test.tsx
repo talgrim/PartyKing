@@ -82,10 +82,10 @@ describe('Ringo', () => {
 
     await waitFor(() => expect(mocks.flip).toHaveBeenCalledTimes(1));
     expect(mocks.flip.mock.calls[0][0]).toBe('session-1');
-    const overlay = await screen.findByRole('dialog', { name: 'Siódemka Pik' });
-    expect(overlay).toHaveTextContent('batmana');
+    const overlay = await screen.findByRole('dialog', { name: 'Seven of Spades' });
+    expect(overlay).toHaveTextContent('Batman');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Kontynuuj' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Continue' }));
 
     await waitFor(() => expect(mocks.continue).toHaveBeenCalledWith('session-1'));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
@@ -97,21 +97,21 @@ describe('Ringo', () => {
 
     renderPage();
 
-    expect(await screen.findByRole('dialog', { name: 'As Pik' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'Ace of Spades' })).toBeInTheDocument();
     screen.getAllByRole('button', { name: 'Face down card' }).forEach((card) => expect(card).toBeDisabled());
   });
 
   it('offers rule suggestions on an ace only', async () => {
     mocks.getRingo.mockResolvedValue({ seed: 1, flips: [flip(12)], pendingCardId: 12, ...table });
     const { unmount } = renderPage();
-    expect(await screen.findByRole('button', { name: 'Zaproponuj zasady' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Suggest rules' })).toBeInTheDocument();
     unmount();
 
     mocks.getRingo.mockResolvedValue({ seed: 1, flips: [flip(5)], pendingCardId: 5, ...table });
     renderPage();
 
-    expect(await screen.findByRole('dialog', { name: 'Siódemka Pik' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Zaproponuj zasady' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'Seven of Spades' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Suggest rules' })).not.toBeInTheDocument();
   });
 
   it('shows the end of the game with the name of whoever flipped the fourth king', async () => {
@@ -124,12 +124,12 @@ describe('Ringo', () => {
     mocks.end.mockResolvedValue(undefined);
     renderPage();
 
-    const screenOver = await screen.findByRole('dialog', { name: 'Koniec gry' });
-    expect(screenOver).toHaveTextContent('guest odwrócił/a czwartego króla: Król Trefl');
-    expect(screen.queryByRole('button', { name: 'Kontynuuj' })).not.toBeInTheDocument();
+    const screenOver = await screen.findByRole('dialog', { name: 'Game over' });
+    expect(screenOver).toHaveTextContent('guest flipped the fourth king: King of Clubs');
+    expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
     screen.getAllByRole('button', { name: 'Face down card' }).forEach((card) => expect(card).toBeDisabled());
 
-    await userEvent.click(screen.getByRole('button', { name: 'Zakończ grę' }));
+    await userEvent.click(within(screenOver).getByRole('button', { name: 'End game' }));
 
     await waitFor(() => expect(mocks.end).toHaveBeenCalledWith('session-1'));
     expect(await screen.findByText('Games page')).toBeInTheDocument();
@@ -140,8 +140,8 @@ describe('Ringo', () => {
 
     renderPage();
 
-    expect(await screen.findByLabelText('Króle 1/4')).toHaveTextContent('K♠');
-    expect(screen.getByLabelText('Asy 2')).toHaveTextContent('A♠A♥');
+    expect(await screen.findByLabelText('Kings 1/4')).toHaveTextContent('K♠');
+    expect(screen.getByLabelText('Aces 2')).toHaveTextContent('A♠A♥');
   });
 
   it('lists the history in a drawer that is collapsed by default', async () => {
@@ -159,8 +159,8 @@ describe('Ringo', () => {
     await userEvent.click(screen.getByRole('button', { name: 'History' }));
 
     const items = within(screen.getByRole('complementary', { name: 'History' })).getAllByRole('listitem');
-    expect(items[0]).toHaveTextContent(/^\d{2}:\d{2}: admin odwrócił\/a kartę: As Pik$/);
-    expect(items[1]).toHaveTextContent(/^\d{2}:\d{2}: guest odwrócił\/a kartę: Dwójka Pik$/);
+    expect(items[0]).toHaveTextContent(/^\d{2}:\d{2}: admin flipped the card: Ace of Spades$/);
+    expect(items[1]).toHaveTextContent(/^\d{2}:\d{2}: guest flipped the card: Two of Spades$/);
   });
 
   it('ends the game only after a confirmation', async () => {
