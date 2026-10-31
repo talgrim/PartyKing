@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+
 [assembly:InternalsVisibleTo("PartyKing.Persistence")]
 
 namespace PartyKing.Domain.Entities.Spotify;
