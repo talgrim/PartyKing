@@ -1,32 +1,39 @@
-using Microsoft.Extensions.Logging.Abstractions;
-using PartyKing.Application.Admin.Services;
+using ErrorOr;
 using PartyKing.Application.Player.Services;
-using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
 
 namespace PartyKing.Application.Tests;
 
-public class SessionCleanupTests
+public class SessionAdminServiceTests
 {
     private readonly FakeSessionsRepository _sessions = new();
     private readonly PlayerStateStore _playerStates = new(new FakeClock());
     private readonly FakeHostTokenProvider _tokens = new();
     private readonly FakeSlideshowService _slideshows = new();
-    private readonly SessionService _service;
+    private readonly SessionAdminService _service;
 
-    public SessionCleanupTests()
+    public SessionAdminServiceTests()
     {
-        _service = new SessionService(
-            _sessions,
-            new PasswordHasher(),
-            _playerStates,
-            _tokens,
-            _slideshows,
-            JoinTokens.Create(new FakeClock()),
-            new FakeClock(),
-            new NullSessionMusicNotifier(),
-            new NullPlayerConnectionWatchdog(),
-            NullLogger<SessionService>.Instance);
+        _service = SessionTestServices.Admin(_sessions, _playerStates, _tokens, _slideshows);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("abc")]
+    public async Task CreatingASession_WithoutAValidPassword_IsRejected(string? password)
+    {
+        var result = await _service.CreateAsync("Party", password, CancellationToken.None);
+
+        Assert.Equal(ErrorType.Validation, result.FirstError.Type);
+    }
+
+    [Fact]
+    public async Task CreatingASession_WithAnOverlongPassword_IsRejected()
+    {
+        var result = await _service.CreateAsync("Party", new string('a', 101), CancellationToken.None);
+
+        Assert.Equal(ErrorType.Validation, result.FirstError.Type);
     }
 
     [Fact]

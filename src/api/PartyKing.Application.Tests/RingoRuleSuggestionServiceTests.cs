@@ -24,19 +24,9 @@ public class RingoRuleSuggestionServiceTests
     public RingoRuleSuggestionServiceTests()
     {
         var clock = new FakeClock();
-        var sessionService = new SessionService(
-            _sessions,
-            new PasswordHasher(),
-            new PlayerStateStore(clock),
-            new FakeHostTokenProvider(),
-            new FakeSlideshowService(),
-            JoinTokens.Create(clock),
-            clock,
-            new NullSessionMusicNotifier(),
-            new NullPlayerConnectionWatchdog(),
-            NullLogger<SessionService>.Instance);
+        var sessionAuthorizer = new SessionAuthorizer(_sessions);
         _service = new RingoRuleSuggestionService(
-            sessionService,
+            sessionAuthorizer,
             _chat,
             Options.Create(_configuration),
             NullLogger<RingoRuleSuggestionService>.Instance);

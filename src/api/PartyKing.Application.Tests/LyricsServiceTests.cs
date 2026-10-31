@@ -30,18 +30,8 @@ public class LyricsServiceTests
         var clock = new FakeClock();
         var sessions = new FakeSessionsRepository();
         _sessionId = sessions.AddSession(HostId).Id;
-        var sessionService = new SessionService(
-            sessions,
-            new PasswordHasher(),
-            new PlayerStateStore(clock),
-            new FakeHostTokenProvider(),
-            new FakeSlideshowService(),
-            JoinTokens.Create(clock),
-            clock,
-            new NullSessionMusicNotifier(),
-            new NullPlayerConnectionWatchdog(),
-            NullLogger<SessionService>.Instance);
-        _service = new LyricsService(_queue, _lrclib, new LyricsCache(clock), _offsets, sessionService, _notifier);
+        var sessionAuthorizer = new SessionAuthorizer(sessions);
+        _service = new LyricsService(_queue, _lrclib, new LyricsCache(clock), _offsets, sessionAuthorizer, _notifier);
         _queue.Playing = Song(7, "Song");
     }
 

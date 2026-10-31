@@ -19,18 +19,8 @@ public class GameServiceTests
     public GameServiceTests()
     {
         var clock = new FakeClock();
-        var sessionService = new SessionService(
-            _sessions,
-            new PasswordHasher(),
-            new PlayerStateStore(clock),
-            new FakeHostTokenProvider(),
-            new FakeSlideshowService(),
-            JoinTokens.Create(clock),
-            clock,
-            new NullSessionMusicNotifier(),
-            new NullPlayerConnectionWatchdog(),
-            NullLogger<SessionService>.Instance);
-        _service = new GameService(sessionService);
+        var sessionAuthorizer = new SessionAuthorizer(_sessions);
+        _service = new GameService(sessionAuthorizer);
         _id = _sessions.AddSession(HostId, new PasswordHasher().Hash("secret")).Id;
     }
 

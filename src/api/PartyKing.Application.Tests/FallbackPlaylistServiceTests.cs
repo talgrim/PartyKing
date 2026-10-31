@@ -25,19 +25,9 @@ public class FallbackPlaylistServiceTests
     public FallbackPlaylistServiceTests()
     {
         var clock = new FakeClock();
-        var sessionService = new SessionService(
-            _sessions,
-            new PasswordHasher(),
-            new PlayerStateStore(clock),
-            _tokens,
-            new FakeSlideshowService(),
-            JoinTokens.Create(clock),
-            clock,
-            new NullSessionMusicNotifier(),
-            new NullPlayerConnectionWatchdog(),
-            NullLogger<SessionService>.Instance);
+        var sessionAuthorizer = new SessionAuthorizer(_sessions);
         _service = new FallbackPlaylistService(
-            sessionService,
+            sessionAuthorizer,
             _sessions,
             _spotify,
             _tokens,

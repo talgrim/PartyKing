@@ -28,19 +28,9 @@ public abstract class ResistanceServiceTestBase
     private protected ResistanceServiceTestBase()
     {
         var clock = new FakeClock();
-        var sessionService = new SessionService(
-            _sessions,
-            new PasswordHasher(),
-            new PlayerStateStore(clock),
-            new FakeHostTokenProvider(),
-            new FakeSlideshowService(),
-            JoinTokens.Create(clock),
-            clock,
-            new NullSessionMusicNotifier(),
-            new NullPlayerConnectionWatchdog(),
-            NullLogger<SessionService>.Instance);
+        var sessionAuthorizer = new SessionAuthorizer(_sessions);
         var lobby = new ResistanceGameLobby(
-            sessionService, _sessions, _games, clock, new ResistanceLobbyNotifier(_notifier));
+            sessionAuthorizer, _sessions, _games, clock, new ResistanceLobbyNotifier(_notifier));
         var gate = new ResistanceActionGate(lobby, _notifier);
         _lobbyService = new ResistanceLobbyService(lobby, gate, _games, clock, _notifier, _rules);
         _roundService = new ResistanceRoundService(gate, _games, clock);
