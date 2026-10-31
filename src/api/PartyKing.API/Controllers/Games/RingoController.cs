@@ -141,7 +141,7 @@ public class RingoController : GameControllerBase
     }
 
     /// <summary>
-    /// Host or admin: new rules in Polish for a flipped ace from the language model, or from a built-in list when it is
+    /// Host or admin: new rules for a flipped ace from the language model, in the <c>Accept-Language</c> language,, or from a built-in list when it is
     /// unavailable, none of them among the previous rules in the body. 400 for an oversized list, 403 for guests.
     /// </summary>
     [HttpPost("rule-suggestions")]
@@ -156,7 +156,7 @@ public class RingoController : GameControllerBase
         var caller = await ReadCallerAsync(GameKind.Ringo, sessionId);
 
         var result = await _ruleSuggestionService.SuggestAsync(
-            sessionId, request.PreviousRules, caller.ProfileId, caller.IsAdmin, cancellationToken);
+            sessionId, request.PreviousRules, caller.ProfileId, caller.IsAdmin, GetLanguage(), cancellationToken);
 
         return result.Match(Ok, Problem);
     }
