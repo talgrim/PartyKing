@@ -2,7 +2,7 @@ using ErrorOr;
 using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.System;
-using PartyKing.Contract.V1.Games;
+using PartyKing.Contract.V1.Games.Ringo;
 using PartyKing.Domain.Entities.Games;
 using PartyKing.Infrastructure.Repositories;
 using PartyKing.Infrastructure.Results;

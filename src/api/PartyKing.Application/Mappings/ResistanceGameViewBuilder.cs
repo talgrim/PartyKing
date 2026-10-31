@@ -1,5 +1,5 @@
 using PartyKing.Application.Games.Services;
-using PartyKing.Contract.V1.Games;
+using PartyKing.Contract.V1.Games.Resistance;
 using PartyKing.Domain.Entities.Games;
 
 namespace PartyKing.Application.Mappings;

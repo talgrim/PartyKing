@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using PartyKing.API.Authorization;
 using PartyKing.Application.Games.Services;
 using PartyKing.Contract.V1.Games;
+using PartyKing.Contract.V1.Games.Ringo;
 using PartyKing.Domain.Entities.Games;
 using PartyKing.Infrastructure.Authorization;
 

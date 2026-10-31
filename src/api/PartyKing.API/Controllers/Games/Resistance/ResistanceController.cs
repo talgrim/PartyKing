@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using PartyKing.API.Authorization;
 using PartyKing.Application.Games.Services;
-using PartyKing.Contract.V1.Games;
+using PartyKing.Contract.V1.Games.Resistance;
 using PartyKing.Infrastructure.Authorization;
 
 namespace PartyKing.API.Controllers.Games.Resistance;
