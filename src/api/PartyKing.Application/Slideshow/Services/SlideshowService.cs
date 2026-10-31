@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using PartyKing.Application.Configuration;
 using PartyKing.Application.Mappings;
 using PartyKing.Application.Realtime;
+using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Application.System;
 using PartyKing.Contract.V1.Slideshow;
 using PartyKing.Domain.Entities.Slideshow;
@@ -90,7 +91,7 @@ internal class SlideshowService : ISlideshowService
     {
         if (await _sessionsRepository.GetAsync(sessionId, cancellationToken) is null)
         {
-            return SessionNotFound();
+            return SessionErrors.NotFound();
         }
 
         return (await LoadSettingsAsync(sessionId, cancellationToken)).ToDto();
@@ -108,7 +109,7 @@ internal class SlideshowService : ISlideshowService
 
         if (await _sessionsRepository.GetAsync(sessionId, cancellationToken) is null)
         {
-            return SessionNotFound();
+            return SessionErrors.NotFound();
         }
 
         await _imagesRepository.SaveSettingsAsync(
@@ -382,7 +383,6 @@ internal class SlideshowService : ISlideshowService
 
     private string SessionDirectory(Guid sessionId) => $"{_slideshowConfiguration.UploadedPhotosDirectory}/{sessionId}";
 
-    private static Error SessionNotFound() => Error.NotFound(description: "The session was not found");
 
     private class SessionSlide
     {

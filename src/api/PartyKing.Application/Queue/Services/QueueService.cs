@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using PartyKing.Application.Mappings;
 using PartyKing.Application.Queue.Helpers;
 using PartyKing.Application.Realtime;
+using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Contract.V1.Queue;
 using PartyKing.Domain.Entities.Queue;
@@ -82,7 +83,7 @@ internal class QueueService : IQueueService
         var session = await _sessionsRepository.GetAsync(sessionId, cancellationToken);
         if (session is null)
         {
-            return SessionNotFound();
+            return SessionErrors.NotFound();
         }
 
         var parsed = SongInputParser.Parse(input);
@@ -118,7 +119,7 @@ internal class QueueService : IQueueService
     {
         if (await _sessionsRepository.GetAsync(sessionId, cancellationToken) is null)
         {
-            return SessionNotFound();
+            return SessionErrors.NotFound();
         }
 
         var items = await _queueRepository.GetPendingAsync(sessionId, cancellationToken);
@@ -135,7 +136,7 @@ internal class QueueService : IQueueService
         var session = await _sessionsRepository.GetAsync(sessionId, cancellationToken);
         if (session is null)
         {
-            return SessionNotFound();
+            return SessionErrors.NotFound();
         }
 
         if (session.HostProfileId != hostProfileId)
@@ -156,7 +157,7 @@ internal class QueueService : IQueueService
         var session = await _sessionsRepository.GetAsync(sessionId, cancellationToken);
         if (session is null)
         {
-            return SessionNotFound();
+            return SessionErrors.NotFound();
         }
 
         var isHost = profileId is not null && session.HostProfileId == profileId;
@@ -221,7 +222,6 @@ internal class QueueService : IQueueService
             : next.ToDto();
     }
 
-    private static Error SessionNotFound() => Error.NotFound(description: "The session was not found");
 
     private async Task<ErrorOr<QueueItem>> CreateYoutubeItemAsync(
         Guid sessionId,

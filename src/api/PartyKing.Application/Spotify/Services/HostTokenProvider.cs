@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using ErrorOr;
 using Microsoft.Extensions.DependencyInjection;
+using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Application.System;
 using PartyKing.Domain.Results;
 using PartyKing.Infrastructure.Repositories;
@@ -50,7 +51,7 @@ internal class HostTokenProvider : IHostTokenProvider
 
         if (session is null)
         {
-            return Error.NotFound(description: "The session was not found");
+            return SessionErrors.NotFound();
         }
 
         if (session.HostProfileId is null)

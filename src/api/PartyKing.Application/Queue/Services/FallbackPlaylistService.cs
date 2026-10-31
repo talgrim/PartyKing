@@ -1,5 +1,6 @@
 using ErrorOr;
 using PartyKing.Application.Queue.Helpers;
+using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Contract.V1.Spotify;
@@ -75,7 +76,7 @@ internal class FallbackPlaylistService : IFallbackPlaylistService
         var session = await _sessionsRepository.GetAsync(sessionId, cancellationToken);
         if (session is null)
         {
-            return SessionNotFound();
+            return SessionErrors.NotFound();
         }
 
         if (string.IsNullOrWhiteSpace(playlist))
@@ -128,7 +129,7 @@ internal class FallbackPlaylistService : IFallbackPlaylistService
         var session = await _sessionsRepository.GetAsync(sessionId, cancellationToken);
         if (session is null)
         {
-            return SessionNotFound();
+            return SessionErrors.NotFound();
         }
 
         if (session.HostProfileId != profileId)
@@ -170,6 +171,4 @@ internal class FallbackPlaylistService : IFallbackPlaylistService
 
         return Result.Success;
     }
-
-    private static Error SessionNotFound() => Error.NotFound(description: "The session was not found");
 }
