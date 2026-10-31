@@ -190,23 +190,53 @@ describe('Resistance', () => {
     mocks.setResistancePlotCards.mockResolvedValue(lobby([]));
     renderPage();
 
-    await userEvent.click(await screen.findByRole('checkbox', { name: 'Plot cards' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Game settings' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Ustawienia gry' });
+    expect(within(dialog).getByRole('region', { name: 'Karty Intryg' })).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole('checkbox', { name: 'Włącz karty Intryg' }));
 
     expect(mocks.setResistancePlotCards).toHaveBeenCalledWith('session-1', true);
   });
 
-  it('keeps the plot cards toggle usable in the open lobby and hides it after the start', async () => {
+  it('shows a message when the plot cards cannot be switched', async () => {
+    mocks.setResistancePlotCards.mockRejectedValue(new Error('boom'));
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Game settings' }));
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Włącz karty Intryg' }));
+
+    expect(await screen.findByText('Nie udało się zmienić ustawienia kart Intryg.')).toBeInTheDocument();
+  });
+
+  it('keeps the game settings usable in the open lobby and disables them after the start', async () => {
     mocks.getResistance.mockResolvedValue(lobby(['Ala'], true));
     const { unmount } = renderPage();
 
-    expect(await screen.findByRole('checkbox', { name: 'Plot cards' })).toBeEnabled();
+    expect(await screen.findByRole('button', { name: 'Game settings' })).toBeEnabled();
     unmount();
 
     mocks.getResistance.mockResolvedValue(started(['Ala', 'Ola', 'Ela', 'Ula', 'Ewa']));
     renderPage();
 
     await screen.findByRole('img', { name: 'Leader' });
-    expect(screen.queryByRole('checkbox', { name: 'Plot cards' })).not.toBeInTheDocument();
+    const gear = screen.getByRole('button', { name: 'Game settings' });
+    expect(gear).toBeDisabled();
+    expect(gear).toHaveAttribute('title', 'Ustawienia są zablokowane po rozpoczęciu gry');
+  });
+
+  it('offers the game settings to a host on the phone layout without opening the controls', async () => {
+    mocks.role = { isHost: true, isAdmin: false };
+    renderPage();
+
+    expect(await screen.findByRole('button', { name: 'Game settings' })).toBeEnabled();
+  });
+
+  it('gives guests no game settings', async () => {
+    mocks.role = { isHost: false, isAdmin: false };
+    renderPage();
+
+    await screen.findByRole('img', { name: 'Mission board' });
+    expect(screen.queryByRole('button', { name: 'Game settings' })).not.toBeInTheDocument();
   });
 
   it('gives the host no Open button and links back to the games', async () => {
@@ -836,7 +866,7 @@ describe('Resistance', () => {
       expect(mocks.restartResistance).toHaveBeenCalledWith('session-1');
       await waitFor(() => expect(screen.queryByRole('button', { name: 'Restart game' })).not.toBeInTheDocument());
       expect(await screen.findByRole('button', { name: 'Start game' }, { timeout: 5000 })).toBeEnabled();
-      expect(await screen.findByLabelText('Plot cards', undefined, { timeout: 5000 })).toBeEnabled();
+      expect(await screen.findByRole('button', { name: 'Game settings' }, { timeout: 5000 })).toBeEnabled();
     });
 
     it('offers no restart while the game is on', async () => {
