@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Games.Services;
+using PartyKing.Application.Localization;
 using PartyKing.Application.Player.Services;
 using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
@@ -42,13 +43,15 @@ public class RingoRuleSuggestionServiceTests
         _id = _sessions.AddSession(HostId, new PasswordHasher().Hash("secret")).Id;
     }
 
-    private Task<ErrorOr.ErrorOr<GameSuggestionsDto>> SuggestAsync(IReadOnlyList<string>? previous = null) =>
-        _service.SuggestAsync(_id, previous, HostId, false, CancellationToken.None);
+    private Task<ErrorOr.ErrorOr<GameSuggestionsDto>> SuggestAsync(
+        IReadOnlyList<string>? previous = null,
+        UiLanguage language = UiLanguage.Pl) =>
+        _service.SuggestAsync(_id, previous, HostId, false, language, CancellationToken.None);
 
     [Fact]
     public async Task Guests_AreForbidden_AndTheModelIsNotAsked()
     {
-        var result = await _service.SuggestAsync(_id, null, "someone-else", false, CancellationToken.None);
+        var result = await _service.SuggestAsync(_id, null, "someone-else", false, UiLanguage.Pl, CancellationToken.None);
 
         Assert.Equal(ErrorOr.ErrorType.Forbidden, result.FirstError.Type);
         Assert.Equal(0, _chat.Calls);
@@ -84,6 +87,42 @@ public class RingoRuleSuggestionServiceTests
         await SuggestAsync();
 
         Assert.DoesNotContain("Nie powtarzaj", _chat.LastUserPrompt);
+    }
+
+    [Fact]
+    public async Task InEnglish_TheModelIsAskedInEnglish_AndToAvoidThePreviousRules()
+    {
+        _chat.Reply = """["Rule A.", "Rule B."]""";
+
+        var result = await SuggestAsync(["Rule A."], UiLanguage.En);
+
+        Assert.Equal(["Rule B."], result.Value.Suggestions);
+        Assert.Contains("in English", _chat.LastSystemPrompt);
+        Assert.Contains("Do not repeat these rules: Rule A.", _chat.LastUserPrompt);
+        Assert.DoesNotContain("Nie powtarzaj", _chat.LastUserPrompt);
+    }
+
+    [Fact]
+    public async Task InPolish_TheModelIsAskedInPolish()
+    {
+        _chat.Reply = """["Reguła A."]""";
+
+        await SuggestAsync(language: UiLanguage.Pl);
+
+        Assert.Contains("po polsku", _chat.LastSystemPrompt);
+        Assert.Contains("Podaj", _chat.LastUserPrompt);
+    }
+
+    [Fact]
+    public async Task TheEnglishBuiltInList_HasNoPolishRules_AndSkipsThePreviousOnes()
+    {
+        _configuration.ApiKey = null;
+
+        var first = (await SuggestAsync(language: UiLanguage.En)).Value.Suggestions;
+        var second = (await SuggestAsync(first, UiLanguage.En)).Value.Suggestions;
+
+        Assert.All(first.Concat(second), rule => Assert.DoesNotContain(rule, c => "ąćęłńóśźż„".Contains(c)));
+        Assert.Empty(first.Intersect(second));
     }
 
     [Fact]
@@ -173,6 +212,6 @@ public class RingoRuleSuggestionServiceTests
         _chat.Failure = new OperationCanceledException(cts.Token);
 
         await Assert.ThrowsAsync<OperationCanceledException>(() =>
-            _service.SuggestAsync(_id, null, HostId, false, cts.Token));
+            _service.SuggestAsync(_id, null, HostId, false, UiLanguage.Pl, cts.Token));
     }
 }

@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Games.Services;
+using PartyKing.Application.Localization;
 using PartyKing.Application.Player.Services;
 using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
@@ -41,13 +42,14 @@ public class NeverHaveIEverSuggestionServiceTests
         _id = _sessions.AddSession(HostId, new PasswordHasher().Hash("secret")).Id;
     }
 
-    private Task<ErrorOr.ErrorOr<PartyKing.Contract.V1.Games.GameSuggestionsDto>> SuggestAsync() =>
-        _service.SuggestAsync(_id, HostId, false, CancellationToken.None);
+    private Task<ErrorOr.ErrorOr<PartyKing.Contract.V1.Games.GameSuggestionsDto>> SuggestAsync(
+        UiLanguage language = UiLanguage.Pl) =>
+        _service.SuggestAsync(_id, HostId, false, language, CancellationToken.None);
 
     [Fact]
     public async Task Guests_AreForbidden_AndTheModelIsNotAsked()
     {
-        var result = await _service.SuggestAsync(_id, "someone-else", false, CancellationToken.None);
+        var result = await _service.SuggestAsync(_id, "someone-else", false, UiLanguage.Pl, CancellationToken.None);
 
         Assert.Equal(ErrorOr.ErrorType.Forbidden, result.FirstError.Type);
         Assert.Equal(0, _chat.Calls);
@@ -88,6 +90,42 @@ public class NeverHaveIEverSuggestionServiceTests
     }
 
     [Fact]
+    public async Task InEnglish_TheModelIsAskedInEnglish()
+    {
+        _chat.Reply = """["Never have I ever A."]""";
+
+        var result = await SuggestAsync(UiLanguage.En);
+
+        Assert.Equal(["Never have I ever A."], result.Value.Suggestions);
+        Assert.Contains("in English", _chat.LastSystemPrompt);
+        Assert.Contains("Give", _chat.LastUserPrompt);
+    }
+
+    [Fact]
+    public async Task InPolish_TheModelIsAskedInPolish()
+    {
+        _chat.Reply = """["Nigdy w życiu nie A."]""";
+
+        await SuggestAsync(UiLanguage.Pl);
+
+        Assert.Contains("po polsku", _chat.LastSystemPrompt);
+        Assert.Contains("Podaj", _chat.LastUserPrompt);
+    }
+
+    [Theory]
+    [InlineData(UiLanguage.En, "Never have I ever")]
+    [InlineData(UiLanguage.Pl, "Nigdy w życiu nie")]
+    public async Task TheBuiltInList_IsInTheLanguage(UiLanguage language, string start)
+    {
+        _configuration.ApiKey = null;
+
+        var result = await SuggestAsync(language);
+
+        Assert.True(result.Value.FromFallback);
+        Assert.All(result.Value.Suggestions, statement => Assert.StartsWith(start, statement));
+    }
+
+    [Fact]
     public async Task AnAnswerThatIsNotAJsonArray_FallsBackToTheBuiltInList()
     {
         _chat.Reply = "Przepraszam, nie mogę.";
@@ -103,7 +141,7 @@ public class NeverHaveIEverSuggestionServiceTests
         _chat.Failure = new OperationCanceledException(cancellation.Token);
 
         await Assert.ThrowsAsync<OperationCanceledException>(() =>
-            _service.SuggestAsync(_id, HostId, false, cancellation.Token));
+            _service.SuggestAsync(_id, HostId, false, UiLanguage.Pl, cancellation.Token));
     }
 
     [Fact]

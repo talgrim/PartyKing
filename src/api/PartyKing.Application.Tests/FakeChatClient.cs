@@ -14,12 +14,16 @@ internal sealed class FakeChatClient : IChatClient
     /// <summary>The text of the user message of the last call.</summary>
     public string? LastUserPrompt { get; private set; }
 
+    /// <summary>The text of the system message of the last call.</summary>
+    public string? LastSystemPrompt { get; private set; }
+
     public Task<ChatResponse> GetResponseAsync(
         IEnumerable<ChatMessage> messages,
         ChatOptions? options = null,
         CancellationToken cancellationToken = default)
     {
         Calls++;
+        LastSystemPrompt = messages.LastOrDefault(message => message.Role == ChatRole.System)?.Text;
         LastUserPrompt = messages.LastOrDefault(message => message.Role == ChatRole.User)?.Text;
 
         return Failure is null
