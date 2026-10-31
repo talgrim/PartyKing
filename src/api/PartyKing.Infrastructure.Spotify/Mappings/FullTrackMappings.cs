@@ -1,50 +1,35 @@
-﻿using PartyKing.Domain.Entities.Spotify;
+using PartyKing.Domain.Entities.Spotify;
+using Riok.Mapperly.Abstractions;
 using SpotifyAPI.Web;
 
 namespace PartyKing.Infrastructure.Spotify.Mappings;
 
-public static class FullTrackMappings
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public static partial class FullTrackMappings
 {
-    public static Song ToDomain(this FullTrack track)
-    {
-        return new Song
-        {
-            Id = track.Id,
-            Uri = track.Uri,
-            Name = track.Name,
-            AlbumArtUrl = track.Album.Images.FirstOrDefault()?.Url,
-            DurationMs = track.DurationMs,
-            Album = track.Album.ToDomain(),
-            Artists = track.Artists.Select(ToDomain).ToList(),
-        };
-    }
+    [MapPropertyFromSource(nameof(Song.AlbumArtUrl), Use = nameof(AlbumArtOf))]
+    public static partial Song ToDomain(this FullTrack track);
 
-    public static Playlist ToDomain(this FullPlaylist playlist)
-    {
-        return new Playlist
-        {
-            Id = playlist.Id!,
-            Name = playlist.Name ?? string.Empty,
-            OwnerId = playlist.Owner?.Id ?? string.Empty,
-            ImageUrl = playlist.Images?.FirstOrDefault()?.Url,
-            TrackCount = playlist.Tracks?.Total ?? 0
-        };
-    }
+    [MapPropertyFromSource(nameof(Playlist.Id), Use = nameof(PlaylistIdOf))]
+    [MapPropertyFromSource(nameof(Playlist.Name), Use = nameof(PlaylistNameOf))]
+    [MapPropertyFromSource(nameof(Playlist.OwnerId), Use = nameof(OwnerIdOf))]
+    [MapPropertyFromSource(nameof(Playlist.ImageUrl), Use = nameof(PlaylistImageOf))]
+    [MapPropertyFromSource(nameof(Playlist.TrackCount), Use = nameof(TrackCountOf))]
+    public static partial Playlist ToDomain(this FullPlaylist playlist);
 
-    public static Album ToDomain(this SimpleAlbum album)
-    {
-        return new Album
-        {
-            Name = album.Name,
-            Artists = album.Artists.Select(ToDomain).ToList()
-        };
-    }
+    public static partial Album ToDomain(this SimpleAlbum album);
 
-    public static Artist ToDomain(this SimpleArtist artist)
-    {
-        return new Artist
-        {
-            Name = artist.Name
-        };
-    }
+    public static partial Artist ToDomain(this SimpleArtist artist);
+
+    private static string? AlbumArtOf(FullTrack track) => track.Album.Images.FirstOrDefault()?.Url;
+
+    private static string PlaylistIdOf(FullPlaylist playlist) => playlist.Id!;
+
+    private static string PlaylistNameOf(FullPlaylist playlist) => playlist.Name ?? string.Empty;
+
+    private static string OwnerIdOf(FullPlaylist playlist) => playlist.Owner?.Id ?? string.Empty;
+
+    private static string? PlaylistImageOf(FullPlaylist playlist) => playlist.Images?.FirstOrDefault()?.Url;
+
+    private static int TrackCountOf(FullPlaylist playlist) => playlist.Tracks?.Total ?? 0;
 }
