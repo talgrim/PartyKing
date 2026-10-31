@@ -6,6 +6,7 @@ using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Domain.Entities.Games;
 using PartyKing.Infrastructure.Repositories;
+using PartyKing.Infrastructure.Results;
 
 namespace PartyKing.Application.Tests;
 
