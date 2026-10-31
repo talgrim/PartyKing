@@ -1,9 +1,6 @@
-using Microsoft.Extensions.Logging.Abstractions;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Games.Services.Resistance;
 using PartyKing.Application.Games.Services;
-using PartyKing.Application.Player.Services;
-using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Contract.V1.Games.Resistance;
 
