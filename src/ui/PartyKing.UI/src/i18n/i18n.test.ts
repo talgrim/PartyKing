@@ -8,9 +8,25 @@ const keysOf = (node: object, prefix = ''): string[] =>
     typeof value === 'object' && value !== null ? keysOf(value, `${prefix}${key}.`) : [`${prefix}${key}`],
   );
 
+// Polish has more plural forms (_few, _many) than English, so plural variants count as one key
+const PLURAL_SUFFIX = /_(zero|one|two|few|many|other)$/;
+const baseKeysOf = (node: object): string[] => [...new Set(keysOf(node).map((key) => key.replace(PLURAL_SUFFIX, '')))].sort();
+
 describe('i18n', () => {
   it('has the same keys in English and Polish', () => {
-    expect(keysOf(pl).sort()).toEqual(keysOf(en).sort());
+    expect(baseKeysOf(pl)).toEqual(baseKeysOf(en));
+  });
+
+  it('has the plural forms of each language', () => {
+    const pluralBases = (node: object, forms: string[]) =>
+      keysOf(node).filter((key) => key.endsWith('_one')).map((key) => key.replace(/_one$/, '')).flatMap((base) =>
+        forms.map((form) => `${base}_${form}`),
+      );
+    const has = (node: object) => new Set(keysOf(node));
+    const missing = (node: object, forms: string[]) => pluralBases(node, forms).filter((key) => !has(node).has(key));
+
+    expect(missing(en, ['one', 'other'])).toEqual([]);
+    expect(missing(pl, ['one', 'few', 'many', 'other'])).toEqual([]);
   });
 
   it('has no empty translations', () => {
