@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using ErrorOr;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Sessions.Services;
+using PartyKing.Application.Sessions;
 
 namespace PartyKing.Application.Tests;
 
@@ -22,7 +23,7 @@ public class SessionServiceTests
     [Fact]
     public async Task TheHost_CanRenameTheSession()
     {
-        var result = await _service.RenameAsync(_id, "New name", HostId, false, CancellationToken.None);
+        var result = await _service.RenameAsync(_id, "New name", new SessionCaller(HostId, false), CancellationToken.None);
 
         Assert.False(result.IsError);
         Assert.Equal("New name", _sessions.Renamed.Single().Name);
@@ -31,7 +32,7 @@ public class SessionServiceTests
     [Fact]
     public async Task RenamingTheSession_AsAGuest_IsForbiddenAndChangesNothing()
     {
-        var result = await _service.RenameAsync(_id, "New name", "someone-else", false, CancellationToken.None);
+        var result = await _service.RenameAsync(_id, "New name", new SessionCaller("someone-else", false), CancellationToken.None);
 
         Assert.Equal(ErrorType.Forbidden, result.FirstError.Type);
         Assert.Empty(_sessions.Renamed);
@@ -42,7 +43,7 @@ public class SessionServiceTests
     [InlineData("   ")]
     public async Task RenamingTheSession_ToABlankName_IsRejected(string? name)
     {
-        var result = await _service.RenameAsync(_id, name, HostId, false, CancellationToken.None);
+        var result = await _service.RenameAsync(_id, name, new SessionCaller(HostId, false), CancellationToken.None);
 
         Assert.Equal(ErrorType.Validation, result.FirstError.Type);
     }

@@ -1,10 +1,8 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using ErrorOr;
-using PartyKing.Application.Admin.Services;
-using PartyKing.Application.Player.Services;
 using PartyKing.Application.Queue.Services;
-using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
+using PartyKing.Application.Sessions;
 using PartyKing.Domain.Entities.Spotify;
 
 namespace PartyKing.Application.Tests;
@@ -41,7 +39,7 @@ public class FallbackPlaylistServiceTests
     [Fact]
     public async Task Set_AsTheHost_StoresThePlaylistAndFillsTheQueue()
     {
-        var result = await _service.SetAsync(_id, PlaylistLink, true, HostId, false, CancellationToken.None);
+        var result = await _service.SetAsync(_id, PlaylistLink, true, new SessionCaller(HostId, false), CancellationToken.None);
 
         Assert.False(result.IsError);
         Assert.Equal((_id, "37i9dQZF1DXcBWIGoYBM5M", "Party mix", true), Assert.Single(_sessions.FallbackPlaylistSet));
@@ -51,7 +49,7 @@ public class FallbackPlaylistServiceTests
     [Fact]
     public async Task Set_AsAnAdmin_Works()
     {
-        var result = await _service.SetAsync(_id, PlaylistLink, false, null, true, CancellationToken.None);
+        var result = await _service.SetAsync(_id, PlaylistLink, false, new SessionCaller(null, true), CancellationToken.None);
 
         Assert.False(result.IsError);
     }
@@ -59,7 +57,7 @@ public class FallbackPlaylistServiceTests
     [Fact]
     public async Task Set_AsAnyoneElse_IsForbidden()
     {
-        var result = await _service.SetAsync(_id, PlaylistLink, false, "someone", false, CancellationToken.None);
+        var result = await _service.SetAsync(_id, PlaylistLink, false, new SessionCaller("someone", false), CancellationToken.None);
 
         Assert.Equal(ErrorType.Forbidden, result.FirstError.Type);
         Assert.Empty(_sessions.FallbackPlaylistSet);
@@ -70,7 +68,7 @@ public class FallbackPlaylistServiceTests
     {
         _spotify.Playlist = new Playlist { Id = "37i9dQZF1DXcBWIGoYBM5M", Name = "Not mine", OwnerId = "spotify", TrackCount = 50 };
 
-        var result = await _service.SetAsync(_id, PlaylistLink, false, HostId, false, CancellationToken.None);
+        var result = await _service.SetAsync(_id, PlaylistLink, false, new SessionCaller(HostId, false), CancellationToken.None);
 
         Assert.Equal(ErrorType.Validation, result.FirstError.Type);
         Assert.Empty(_sessions.FallbackPlaylistSet);
@@ -81,7 +79,7 @@ public class FallbackPlaylistServiceTests
     {
         _spotify.Playlist = new Playlist { Id = "37i9dQZF1DXcBWIGoYBM5M", Name = "Admin's", OwnerId = "admin-spotify", TrackCount = 5 };
 
-        var result = await _service.SetAsync(_id, PlaylistLink, false, null, true, CancellationToken.None);
+        var result = await _service.SetAsync(_id, PlaylistLink, false, new SessionCaller(null, true), CancellationToken.None);
 
         Assert.Equal(ErrorType.Validation, result.FirstError.Type);
     }
@@ -91,7 +89,7 @@ public class FallbackPlaylistServiceTests
     {
         _spotify.Playlist = null;
 
-        var result = await _service.SetAsync(_id, PlaylistLink, false, HostId, false, CancellationToken.None);
+        var result = await _service.SetAsync(_id, PlaylistLink, false, new SessionCaller(HostId, false), CancellationToken.None);
 
         Assert.Equal(ErrorType.NotFound, result.FirstError.Type);
     }
@@ -101,7 +99,7 @@ public class FallbackPlaylistServiceTests
     {
         _spotify.Playlist = new Playlist { Id = "37i9dQZF1DXcBWIGoYBM5M", Name = "Empty", OwnerId = HostId, TrackCount = 0 };
 
-        var result = await _service.SetAsync(_id, PlaylistLink, false, HostId, false, CancellationToken.None);
+        var result = await _service.SetAsync(_id, PlaylistLink, false, new SessionCaller(HostId, false), CancellationToken.None);
 
         Assert.Equal(ErrorType.Validation, result.FirstError.Type);
     }
@@ -109,7 +107,7 @@ public class FallbackPlaylistServiceTests
     [Fact]
     public async Task Set_WithSomethingThatIsNotAPlaylistLink_IsRejected()
     {
-        var result = await _service.SetAsync(_id, "https://example.com", false, HostId, false, CancellationToken.None);
+        var result = await _service.SetAsync(_id, "https://example.com", false, new SessionCaller(HostId, false), CancellationToken.None);
 
         Assert.Equal(ErrorType.Validation, result.FirstError.Type);
     }
@@ -119,7 +117,7 @@ public class FallbackPlaylistServiceTests
     {
         _tokens.SessionToken = Error.Conflict(description: "The session has no host");
 
-        var result = await _service.SetAsync(_id, PlaylistLink, false, null, true, CancellationToken.None);
+        var result = await _service.SetAsync(_id, PlaylistLink, false, new SessionCaller(null, true), CancellationToken.None);
 
         Assert.Equal(ErrorType.Conflict, result.FirstError.Type);
     }
@@ -127,10 +125,10 @@ public class FallbackPlaylistServiceTests
     [Fact]
     public async Task Set_WithoutAPlaylist_ClearsTheSetting()
     {
-        await _service.SetAsync(_id, PlaylistLink, true, HostId, false, CancellationToken.None);
+        await _service.SetAsync(_id, PlaylistLink, true, new SessionCaller(HostId, false), CancellationToken.None);
         _status.SetError(_id, "old error");
 
-        var result = await _service.SetAsync(_id, "  ", false, HostId, false, CancellationToken.None);
+        var result = await _service.SetAsync(_id, "  ", false, new SessionCaller(HostId, false), CancellationToken.None);
 
         Assert.False(result.IsError);
         Assert.Equal((_id, (string?)null, (string?)null, false), _sessions.FallbackPlaylistSet.Last());

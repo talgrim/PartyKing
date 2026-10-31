@@ -3,9 +3,8 @@ using Microsoft.Extensions.Options;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Games.Services.NeverHaveIEver;
 using PartyKing.Application.Localization;
-using PartyKing.Application.Player.Services;
-using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
+using PartyKing.Application.Sessions;
 using PartyKing.Infrastructure.Llm;
 
 namespace PartyKing.Application.Tests;
@@ -34,12 +33,12 @@ public class NeverHaveIEverSuggestionServiceTests
 
     private Task<ErrorOr.ErrorOr<PartyKing.Contract.V1.Games.GameSuggestionsDto>> SuggestAsync(
         UiLanguage language = UiLanguage.Pl) =>
-        _service.SuggestAsync(_id, HostId, false, language, CancellationToken.None);
+        _service.SuggestAsync(_id, new SessionCaller(HostId, false), language, CancellationToken.None);
 
     [Fact]
     public async Task Guests_AreForbidden_AndTheModelIsNotAsked()
     {
-        var result = await _service.SuggestAsync(_id, "someone-else", false, UiLanguage.Pl, CancellationToken.None);
+        var result = await _service.SuggestAsync(_id, new SessionCaller("someone-else", false), UiLanguage.Pl, CancellationToken.None);
 
         Assert.Equal(ErrorOr.ErrorType.Forbidden, result.FirstError.Type);
         Assert.Equal(0, _chat.Calls);
@@ -131,7 +130,7 @@ public class NeverHaveIEverSuggestionServiceTests
         _chat.Failure = new OperationCanceledException(cancellation.Token);
 
         await Assert.ThrowsAsync<OperationCanceledException>(() =>
-            _service.SuggestAsync(_id, HostId, false, UiLanguage.Pl, cancellation.Token));
+            _service.SuggestAsync(_id, new SessionCaller(HostId, false), UiLanguage.Pl, cancellation.Token));
     }
 
     [Fact]

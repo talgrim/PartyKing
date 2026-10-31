@@ -1,6 +1,7 @@
 using ErrorOr;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Sessions.Services;
+using PartyKing.Application.Sessions;
 
 namespace PartyKing.Application.Tests;
 
@@ -82,7 +83,7 @@ public class SessionAccessServiceTests
         var session = (await _admin.CreateAsync("Party", "secret", CancellationToken.None)).Value;
         var oldStamp = (await _access.JoinAsync(session.Id, "secret", CancellationToken.None)).Value;
 
-        var changed = await _access.ChangePasswordAsync(session.Id, "new-secret", null, true, CancellationToken.None);
+        var changed = await _access.ChangePasswordAsync(session.Id, "new-secret", new SessionCaller(null, true), CancellationToken.None);
 
         Assert.False(changed.IsError);
         Assert.False(await _access.HasAccessAsync(session.Id, oldStamp, CancellationToken.None));
@@ -97,7 +98,7 @@ public class SessionAccessServiceTests
     {
         var session = (await _admin.CreateAsync("Party", "secret", CancellationToken.None)).Value;
 
-        var result = await _access.ChangePasswordAsync(session.Id, "abc", null, true, CancellationToken.None);
+        var result = await _access.ChangePasswordAsync(session.Id, "abc", new SessionCaller(null, true), CancellationToken.None);
 
         Assert.Equal(ErrorType.Validation, result.FirstError.Type);
     }
@@ -105,7 +106,7 @@ public class SessionAccessServiceTests
     [Fact]
     public async Task ChangingThePasswordOfAnUnknownSession_IsNotFound()
     {
-        var result = await _access.ChangePasswordAsync(Guid.NewGuid(), "secret", null, true, CancellationToken.None);
+        var result = await _access.ChangePasswordAsync(Guid.NewGuid(), "secret", new SessionCaller(null, true), CancellationToken.None);
 
         Assert.Equal(ErrorType.NotFound, result.FirstError.Type);
     }
@@ -115,7 +116,7 @@ public class SessionAccessServiceTests
     {
         var id = _sessions.AddSession("host-1", new PasswordHasher().Hash("secret")).Id;
 
-        var result = await _access.ChangePasswordAsync(id, "new-secret", "host-1", false, CancellationToken.None);
+        var result = await _access.ChangePasswordAsync(id, "new-secret", new SessionCaller("host-1", false), CancellationToken.None);
 
         Assert.False(result.IsError);
         Assert.True(await _access.HasAccessAsync(id, result.Value, CancellationToken.None));
@@ -126,7 +127,7 @@ public class SessionAccessServiceTests
     {
         var id = _sessions.AddSession("host-1", new PasswordHasher().Hash("secret")).Id;
 
-        var result = await _access.ChangePasswordAsync(id, "new-secret", null, false, CancellationToken.None);
+        var result = await _access.ChangePasswordAsync(id, "new-secret", new SessionCaller(null, false), CancellationToken.None);
 
         Assert.Equal(ErrorType.Forbidden, result.FirstError.Type);
         Assert.False((await _access.JoinAsync(id, "secret", CancellationToken.None)).IsError);

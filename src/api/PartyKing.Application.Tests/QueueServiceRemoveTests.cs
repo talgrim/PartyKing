@@ -1,6 +1,7 @@
 using ErrorOr;
 using Microsoft.Extensions.Logging.Abstractions;
 using PartyKing.Application.Queue.Services;
+using PartyKing.Application.Sessions;
 using PartyKing.Domain.Entities.Sessions;
 using PartyKing.Infrastructure.Results;
 
@@ -26,7 +27,7 @@ public class QueueServiceRemoveTests
     [Fact]
     public async Task Remove_ByTheHost_RemovesTheSong()
     {
-        var result = await _service.RemoveAsync(_session.Id, 4, HostId, false, CancellationToken.None);
+        var result = await _service.RemoveAsync(_session.Id, 4, new SessionCaller(HostId, false), CancellationToken.None);
 
         Assert.False(result.IsError);
         Assert.Equal((_session.Id, 4), Assert.Single(_queue.RemoveCalls));
@@ -36,7 +37,7 @@ public class QueueServiceRemoveTests
     [Fact]
     public async Task Remove_ByAnAdminWhoIsNotTheHost_RemovesTheSong()
     {
-        var result = await _service.RemoveAsync(_session.Id, 4, null, true, CancellationToken.None);
+        var result = await _service.RemoveAsync(_session.Id, 4, new SessionCaller(null, true), CancellationToken.None);
 
         Assert.False(result.IsError);
         Assert.Single(_queue.RemoveCalls);
@@ -45,7 +46,7 @@ public class QueueServiceRemoveTests
     [Fact]
     public async Task Remove_ByAnotherAccount_IsForbiddenAndRemovesNothing()
     {
-        var result = await _service.RemoveAsync(_session.Id, 4, "someone-else", false, CancellationToken.None);
+        var result = await _service.RemoveAsync(_session.Id, 4, new SessionCaller("someone-else", false), CancellationToken.None);
 
         Assert.Equal(ErrorType.Forbidden, result.FirstError.Type);
         Assert.Empty(_queue.RemoveCalls);
@@ -55,7 +56,7 @@ public class QueueServiceRemoveTests
     [Fact]
     public async Task Remove_ByAGuest_IsForbidden()
     {
-        var result = await _service.RemoveAsync(_session.Id, 4, null, false, CancellationToken.None);
+        var result = await _service.RemoveAsync(_session.Id, 4, new SessionCaller(null, false), CancellationToken.None);
 
         Assert.Equal(ErrorType.Forbidden, result.FirstError.Type);
         Assert.Empty(_queue.RemoveCalls);
@@ -64,7 +65,7 @@ public class QueueServiceRemoveTests
     [Fact]
     public async Task Remove_FromAMissingSession_IsNotFound()
     {
-        var result = await _service.RemoveAsync(Guid.NewGuid(), 4, HostId, true, CancellationToken.None);
+        var result = await _service.RemoveAsync(Guid.NewGuid(), 4, new SessionCaller(HostId, true), CancellationToken.None);
 
         Assert.Equal(ErrorType.NotFound, result.FirstError.Type);
         Assert.Empty(_queue.RemoveCalls);
@@ -75,7 +76,7 @@ public class QueueServiceRemoveTests
     {
         _queue.RemoveResult = QueueItemRemoval.NotFound;
 
-        var result = await _service.RemoveAsync(_session.Id, 4, HostId, false, CancellationToken.None);
+        var result = await _service.RemoveAsync(_session.Id, 4, new SessionCaller(HostId, false), CancellationToken.None);
 
         Assert.Equal(ErrorType.NotFound, result.FirstError.Type);
     }
@@ -85,7 +86,7 @@ public class QueueServiceRemoveTests
     {
         _queue.RemoveResult = QueueItemRemoval.NotQueued;
 
-        var result = await _service.RemoveAsync(_session.Id, 4, HostId, false, CancellationToken.None);
+        var result = await _service.RemoveAsync(_session.Id, 4, new SessionCaller(HostId, false), CancellationToken.None);
 
         Assert.Equal(ErrorType.Conflict, result.FirstError.Type);
     }

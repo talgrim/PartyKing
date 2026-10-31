@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using PartyKing.Application.Queue.Services;
+using PartyKing.Application.Sessions;
 using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Enums;
 using PartyKing.Infrastructure.Results;
@@ -36,7 +37,7 @@ public class QueueServiceFallbackTests
     [Fact]
     public async Task Remove_TopsUpTheQueue()
     {
-        await _service.RemoveAsync(_id, 5, HostId, false, CancellationToken.None);
+        await _service.RemoveAsync(_id, 5, new SessionCaller(HostId, false), CancellationToken.None);
 
         Assert.Equal(_id, Assert.Single(_filler.Ensured));
     }
@@ -46,7 +47,7 @@ public class QueueServiceFallbackTests
     {
         _queue.RemoveResult = QueueItemRemoval.NotQueued;
 
-        await _service.RemoveAsync(_id, 5, HostId, false, CancellationToken.None);
+        await _service.RemoveAsync(_id, 5, new SessionCaller(HostId, false), CancellationToken.None);
 
         Assert.Empty(_filler.Ensured);
     }

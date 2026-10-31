@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using PartyKing.API.Controllers.Games;
 using PartyKing.Application.Games.Services;
 using PartyKing.Application.Localization;
+using PartyKing.Application.Sessions;
 using PartyKing.Contract.V1.Games;
 using PartyKing.Domain.Entities.Games;
 using PartyKing.Infrastructure.Authorization;
@@ -64,7 +65,7 @@ public class AcceptLanguageTests
         public UiLanguage? LastLanguage { get; private set; }
 
         public Task<ErrorOr<IReadOnlyList<GameDto>>> ListAsync(
-            Guid sessionId, string? profileId, bool isAdmin, UiLanguage language, CancellationToken cancellationToken)
+            Guid sessionId, SessionCaller caller, UiLanguage language, CancellationToken cancellationToken)
         {
             LastLanguage = language;
             return Task.FromResult(ErrorOrFactory.From<IReadOnlyList<GameDto>>([]));
