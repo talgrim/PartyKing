@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { MissionBoardIcon, MissionResult } from './ResistanceIcons';
 import { ResistanceMissionResultDto, ResistancePlayerDto } from '@/service/endpoints/games/types';
 import { MissionBoardLayout } from './resistanceTeams';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   board: MissionBoardLayout;
@@ -17,10 +18,13 @@ type Props = {
 };
 
 /** The mission board of the current game with the result of every finished mission. */
-export const ResistanceMissionBoard = ({ board, className, currentMission = null, rejectedTeams = 0, missionResults = [], players = [] }: Props): ReactNode => (
+export const ResistanceMissionBoard = ({ board, className, currentMission = null, rejectedTeams = 0, missionResults = [], players = [] }: Props): ReactNode => {
+  const { t } = useTranslation();
+
+  return (
   <MissionBoardIcon
     className={className}
-    title="Mission board"
+    title={t('resistance.board.title')}
     teamSizes={board.teamSizes}
     results={[0, 1, 2, 3, 4].map((i): MissionResult => {
       const result = missionResults.find((x) => x.missionNumber === i + 1);
@@ -37,4 +41,5 @@ export const ResistanceMissionBoard = ({ board, className, currentMission = null
     fourthMissionNeedsTwoFails={board.fourthMissionNeedsTwoFails}
     dimmed={board.provisional}
   />
-);
+  );
+};

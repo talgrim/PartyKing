@@ -1,5 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { ResistancePlayerDto } from '@/service/endpoints/games/types';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   players: ResistancePlayerDto[];
@@ -9,10 +10,11 @@ type Props = {
 };
 
 /**
- * The leader's team selection. The picks stay on this device until "Zgłoś drużynę do głosowania", which sends them
+ * The leader's team selection. The picks stay on this device until "Submit the team for a vote", which sends them
  * and locks the team, so the leader can change their mind until then.
  */
 export const ResistanceTeamPicker = ({ players, size, onSubmit }: Props): ReactNode => {
+  const { t } = useTranslation();
   const [picked, setPicked] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -32,11 +34,11 @@ export const ResistanceTeamPicker = ({ players, size, onSubmit }: Props): ReactN
 
   return (
     <fieldset className="w-full flex flex-col gap-3 rounded-xl bg-slate-900 p-4 ring-1 ring-slate-700 shadow-lg">
-      <legend className="sr-only">Wybierz drużynę</legend>
+      <legend className="sr-only">{t('resistance.teamPicker.title')}</legend>
 
       <div className="flex items-baseline justify-between gap-2">
         <h2 className="text-lg font-semibold text-slate-100" aria-hidden="true">
-          Wybierz drużynę
+          {t('resistance.teamPicker.title')}
         </h2>
         <span
           className={`text-sm font-semibold tabular-nums ${full ? 'text-emerald-400' : 'text-slate-400'}`}
@@ -48,7 +50,7 @@ export const ResistanceTeamPicker = ({ players, size, onSubmit }: Props): ReactN
 
       <div
         role="progressbar"
-        aria-label="Wybrani gracze"
+        aria-label={t('resistance.teamPicker.picked')}
         aria-valuemin={0}
         aria-valuemax={size}
         aria-valuenow={picked.length}
@@ -106,7 +108,7 @@ export const ResistanceTeamPicker = ({ players, size, onSubmit }: Props): ReactN
         onClick={() => void submit()}
         className="mt-1 rounded-lg bg-emerald-500 px-4 py-3 font-semibold text-slate-900 shadow transition-colors hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
       >
-        Zgłoś drużynę do głosowania
+        {t('resistance.teamPicker.submit')}
       </button>
     </fieldset>
   );

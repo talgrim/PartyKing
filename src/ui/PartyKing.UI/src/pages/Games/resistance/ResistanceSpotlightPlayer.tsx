@@ -1,6 +1,7 @@
 import { ReactNode, useState } from 'react';
 import { ResistanceGameDto } from '@/service/endpoints/games/types';
 import { PLOT_CARDS } from './resistancePlotCards';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   game: ResistanceGameDto;
@@ -12,6 +13,7 @@ type Props = {
  * card openly. The card is announced before the target plays; one player is forced per mission.
  */
 export const ResistanceSpotlightPlayer = ({ game, onPlay }: Props): ReactNode => {
+  const { t } = useTranslation();
   const [target, setTarget] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const card = game.yourPlotCards.find((x) => x.type === 'InTheSpotlight');
@@ -42,7 +44,7 @@ export const ResistanceSpotlightPlayer = ({ game, onPlay }: Props): ReactNode =>
         <p className="font-medium text-slate-100">{name}</p>
         <p className="mb-1 text-sm text-slate-400">{effect}</p>
         <label htmlFor="spotlight-target" className="sr-only">
-          Kogo zmuszasz do jawnej karty misji
+          {t('resistance.spotlight.target')}
         </label>
         <select
           id="spotlight-target"
@@ -52,7 +54,7 @@ export const ResistanceSpotlightPlayer = ({ game, onPlay }: Props): ReactNode =>
           className="w-full rounded-lg bg-slate-800 px-3 py-2 text-slate-100 ring-1 ring-slate-700"
         >
           <option value="" disabled>
-            Wybierz gracza z drużyny
+            {t('resistance.spotlight.pick')}
           </option>
           {options.map((player) => (
             <option key={player.id} value={player.id}>
@@ -66,7 +68,7 @@ export const ResistanceSpotlightPlayer = ({ game, onPlay }: Props): ReactNode =>
           onClick={() => void play()}
           className="mt-2 w-full rounded-lg bg-emerald-500 px-4 py-2 font-semibold text-slate-900 transition-colors hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
         >
-          Zagraj kartę
+          {t('resistance.spotlight.play')}
         </button>
       </div>
     </section>

@@ -11,6 +11,7 @@ import { ResistanceCloseEye } from './ResistanceCloseEye';
 import { ResistanceLeaderWindow } from './ResistanceLeaderWindow';
 import { ResistanceSpotlightPlayer } from './ResistanceSpotlightPlayer';
 import { ResistanceTakeResponsibility } from './ResistanceTakeResponsibility';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   game: ResistanceGameDto;
@@ -42,6 +43,7 @@ type Props = {
 
 /** The view of a player: their secret role and, as the round goes, the team picker, the vote or the continue button. */
 export const ResistancePlayerView = ({ game, onSubmitTeam, onDealPlotCards, onPlayPlotCard, onTakeResponsibility, onTakeLead, onNoConfidence, onPeekMissionCard, onPassLeaderWindow, onConfirmPlotCard, onVote, onPlayMissionCard, onContinue }: Props): ReactNode => {
+  const { t } = useTranslation();
   const isPlayer = game.yourPlayerId != null;
   const leads = isPlayer && game.yourPlayerId === game.leaderPlayerId;
   const deals = leads && game.phase === 'DealingCards';
@@ -91,7 +93,7 @@ export const ResistancePlayerView = ({ game, onSubmitTeam, onDealPlotCards, onPl
           onClick={() => void onContinue()}
           className="w-full rounded-lg bg-emerald-500 px-4 py-3 font-semibold text-slate-900 shadow transition-colors hover:bg-emerald-400"
         >
-          Dalej
+          {t('resistance.next')}
         </button>
       )}
     </div>

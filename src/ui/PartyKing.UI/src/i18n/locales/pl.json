@@ -385,5 +385,385 @@
     "kickFailed": "Nie udało się wyrzucić gracza.",
     "nobody": "Nikt jeszcze nie dołączył.",
     "dragHint": "Przeciągnij imię, aby zmienić {{order}}."
+  },
+  "resistance": {
+    "youBadge": "Ty",
+    "leader": "Lider",
+    "playerFallback": "gracz",
+    "next": "Dalej",
+    "entry": {
+      "create": "Utwórz",
+      "resume": "Wznów",
+      "openForGuests": "Otwarta dla gości",
+      "createFailed": "Nie udało się utworzyć gry."
+    },
+    "inviteMessage": "Nowa gra w Resistance została uruchomiona. Czy chcesz dołączyć?",
+    "joinTitle": "Dołącz do gry w Resistance",
+    "orderLabel": "kolejność miejsc",
+    "roles": {
+      "spy": "Szpieg",
+      "resistance": "Ruch Oporu"
+    },
+    "roleCard": {
+      "hide": "Ukryj swoją rolę",
+      "show": "Pokaż swoją rolę",
+      "fellowSpies": "Twoi współszpiedzy",
+      "fellowSpiesList": "Współszpiedzy"
+    },
+    "missionCard": {
+      "success": "Sukces",
+      "fail": "Porażka"
+    },
+    "vote": {
+      "approve": "Zatwierdź",
+      "reject": "Odrzuć",
+      "for": "Za",
+      "against": "Przeciw"
+    },
+    "settings": {
+      "title": "Ustawienia gry",
+      "locked": "Ustawienia są zablokowane po rozpoczęciu gry",
+      "started": "Gra już się rozpoczęła, więc ustawień nie można zmienić.",
+      "plotCardsFailed": "Nie udało się zmienić ustawienia kart Intryg.",
+      "plotCards": {
+        "title": "Karty Intryg",
+        "description": "Dodatek, w którym Lider na początku każdej misji dobiera karty Intryg i rozdaje je innym graczom. Karty dają informacje o rolach albo zmieniają przebieg rundy: przejęcie przywództwa, unieważnienie głosowania, podgląd karty Misji.",
+        "toggle": "Włącz karty Intryg"
+      }
+    },
+    "controls": {
+      "label": "Sterowanie grą",
+      "show": "Sterowanie",
+      "openTv": "Otwórz widok na telewizor",
+      "restart": "Zagraj ponownie",
+      "end": "Zakończ grę",
+      "start": "Rozpocznij grę",
+      "startNeeds": "Potrzeba co najmniej {{min}} graczy",
+      "refreshRules": "Odśwież zasady",
+      "refreshRulesOpen": "Zasady można odświeżyć tylko przed otwarciem gry",
+      "refreshRulesHint": "Pobierz aktualną konfigurację zasad z serwera",
+      "open": "Otwórz grę"
+    },
+    "page": {
+      "backToGames": "Wróć do gier",
+      "joinAsPlayer": "Dołącz jako gracz",
+      "playerCount": "{{current}}/{{max}} graczy",
+      "rules": "Zasady",
+      "rulesTitle": "Zasady gry Resistance",
+      "endTitle": "Zakończyć grę?",
+      "endBody": "Gracze zostaną odesłani, a gry nie będzie można wznowić. Potem można utworzyć nową."
+    },
+    "errors": {
+      "open": "Nie udało się otworzyć gry.",
+      "refreshRules": "Nie udało się odświeżyć zasad.",
+      "start": "Nie udało się rozpocząć gry.",
+      "submitTeam": "Nie udało się zgłosić drużyny.",
+      "deal": "Nie udało się rozdać kart.",
+      "play": "Nie udało się zagrać karty.",
+      "take": "Nie udało się zabrać karty.",
+      "takeLead": "Nie udało się przejąć przywództwa.",
+      "peek": "Nie udało się podejrzeć karty.",
+      "confirmWindow": "Nie udało się potwierdzić.",
+      "confirmCard": "Nie udało się potwierdzić karty.",
+      "vote": "Nie udało się wysłać głosu.",
+      "missionCard": "Nie udało się zagrać karty misji.",
+      "next": "Nie udało się przejść dalej.",
+      "restart": "Nie udało się zagrać ponownie.",
+      "end": "Nie udało się zakończyć gry."
+    },
+    "viewSwitch": {
+      "label": "Widok",
+      "player": "Gracz",
+      "board": "Plansza"
+    },
+    "board": {
+      "title": "Plansza misji",
+      "onTeam": "W drużynie"
+    },
+    "teamInfo": {
+      "mission": "Misja {{n}} · ",
+      "succeeded": "udana",
+      "failed": "nieudana",
+      "team": "Drużyna",
+      "aria": "Drużyna misji {{n}}: {{names}}"
+    },
+    "marks": {
+      "opinionMaker": "Kreator opinii",
+      "plotCards": "Karty Intryg: {{count}}",
+      "playedCard": "Zagrał/a kartę",
+      "voted": "Zagłosował/a"
+    },
+    "missionCards": {
+      "title": "Karty misji"
+    },
+    "teamCards": {
+      "label": "Drużyna",
+      "title": "Drużyna na misję {{n}}"
+    },
+    "voteCards": {
+      "title": "Głosy"
+    },
+    "teamPicker": {
+      "title": "Wybierz drużynę",
+      "picked": "Wybrani gracze",
+      "submit": "Zgłoś drużynę do głosowania"
+    },
+    "votePanel": {
+      "label": "Głosowanie",
+      "title": "Głosowanie nad drużyną",
+      "makerFirst": "Najpierw głosuje kreator opinii: {{names}}.",
+      "makerLocked": "Twój głos jako kreatora opinii jest jawny i nie można go zmienić.",
+      "saved": "Twój głos jest zapisany. Możesz go zmienić, dopóki nie zagłosują wszyscy.",
+      "makerYou": "Jako kreator opinii głosujesz pierwszy, a twój głos jest jawny i ostateczny.",
+      "hidden": "Głosy są jawne dopiero wtedy, gdy zagłosują wszyscy."
+    },
+    "missionPanel": {
+      "label": "Misja",
+      "title": "Zagraj kartę misji",
+      "played": "Zagrano kartę: {{card}}. Czekamy na pozostałych członków drużyny.",
+      "hint": "Karta jest tajna, wszyscy zobaczą tylko liczbę kart Porażka. Zagranej karty nie można zmienić."
+    },
+    "plotWindow": {
+      "label": "Zagrywanie kart",
+      "question": "Czy zagrywasz kartę Intrygi?",
+      "confirmHint": "Potwierdź, że nie zagrywasz karty. Nie widać, kto ma jakie karty.",
+      "reject": "Odrzuć zatwierdzoną drużynę",
+      "takeLead": "Przejmij przywództwo",
+      "confirmed": "Potwierdzono",
+      "pass": "Nie zagrywam karty"
+    },
+    "closeEye": {
+      "seen": "{{name}} zagrał/a: {{card}}",
+      "target": "Której karcie Misji się przyglądasz",
+      "pick": "Wybierz gracza z drużyny",
+      "peek": "Podejrzyj kartę"
+    },
+    "dealer": {
+      "title": "Rozdaj karty Intryg",
+      "to": "Komu dajesz kartę „{{name}}”",
+      "pick": "Wybierz gracza",
+      "submit": "Rozdaj karty"
+    },
+    "hand": {
+      "title": "Twoje karty Intryg",
+      "inPlay": "W grze, widoczna dla wszystkich."
+    },
+    "immediate": {
+      "title": "Karty natychmiastowe",
+      "identityOf": "Karta Tożsamości gracza",
+      "seen": "Widziałem/am",
+      "target": "Na kogo zagrywasz kartę „{{name}}”",
+      "pick": "Wybierz gracza",
+      "play": "Zagraj kartę"
+    },
+    "spotlight": {
+      "target": "Kogo zmuszasz do jawnej karty misji",
+      "pick": "Wybierz gracza z drużyny",
+      "play": "Zagraj kartę"
+    },
+    "take": {
+      "target": "Któremu graczowi zabierasz kartę",
+      "pick": "Wybierz gracza",
+      "which": "Którą kartę zabierasz",
+      "opinionMaker": "Kreator opinii (widoczna karta)",
+      "random": "Losowa karta z ręki",
+      "submit": "Zabierz kartę"
+    },
+    "log": {
+      "title": "Zagrane karty Intryg",
+      "mission": "Misja {{n}}: ",
+      "pending": " (czeka na potwierdzenie)",
+      "OverheardConversation": "{{holder}} zagrał/a „{{name}}” i ogląda kartę Tożsamości gracza {{target}}",
+      "EstablishConfidence": "{{holder}} (przywódca) zagrał/a „{{name}}” i ujawnia swoją kartę Tożsamości graczowi {{target}}",
+      "OpenUp": "{{holder}} zagrał/a „{{name}}” i ujawnia swoją kartę Tożsamości graczowi {{target}}",
+      "TakeResponsibility": "{{holder}} zagrał/a „{{name}}” i zabiera kartę Intrygi graczowi {{target}}",
+      "KeepingCloseEye": "{{holder}} zagrał/a „{{name}}” i podgląda kartę Misji gracza {{target}}",
+      "StrongLeader": "{{holder}} zagrał/a „{{name}}” i przejmuje przywództwo od gracza {{target}}",
+      "NoConfidence": "{{holder}} zagrał/a „{{name}}”: drużyna wybrana przez gracza {{target}} zostaje odrzucona",
+      "default": "{{holder}} zagrał/a „{{name}}”"
+    },
+    "plot": {
+      "OverheardConversation": {
+        "name": "Jesteś naszym okiem i uchem",
+        "effect": "Zagraj natychmiast: obejrzyj kartę Tożsamości jednego z graczy siedzących obok ciebie."
+      },
+      "OpinionMaker": {
+        "name": "Liczymy się z twoim zdaniem",
+        "effect": "Działa do końca gry: wybierasz i ujawniasz kartę Głosowania przed pozostałymi."
+      },
+      "EstablishConfidence": {
+        "name": "To kwestia zaufania",
+        "effect": "Zagraj natychmiast: Przywódca ujawnia swoją kartę Tożsamości innemu graczowi."
+      },
+      "OpenUp": {
+        "name": "Tylko tobie zaufam",
+        "effect": "Zagraj natychmiast: ujawnij swoją kartę Tożsamości innemu graczowi (może to być Przywódca)."
+      },
+      "NoConfidence": {
+        "name": "Nie ufajcie mu",
+        "effect": "Jednorazowa: odrzuć zatwierdzoną drużynę, głosowanie liczy się jako nieudane."
+      },
+      "KeepingCloseEye": {
+        "name": "Mam cię na oku",
+        "effect": "Jednorazowa: po zagraniu kart Misji podejrzyj jedną zagraną kartę."
+      },
+      "StrongLeader": {
+        "name": "Charyzmatyczny Przywódca",
+        "effect": "Jednorazowa: przejmij Przywództwo, zanim Przywódca cokolwiek zrobi."
+      },
+      "InTheSpotlight": {
+        "name": "Pod obserwacją",
+        "effect": "Jednorazowa: zmuś innego gracza do zagrania karty Misji jawnie."
+      },
+      "TakeResponsibility": {
+        "name": "Przejmujesz odpowiedzialność",
+        "effect": "Jednorazowa: weź kartę Intrygi innego gracza."
+      }
+    },
+    "icons": {
+      "spy": "SZPIEG",
+      "resistance": "RUCH OPORU",
+      "approve": "ZATWIERDŹ",
+      "reject": "ODRZUĆ",
+      "success": "SUKCES",
+      "fail": "PORAŻKA",
+      "plot": "INTRYGA",
+      "mission": "MISJA {{n}}",
+      "twoFails": "2 PORAŻKI",
+      "rejectedTeams": "ODRZUCONE DRUŻYNY",
+      "closeEye1": "MAM CIĘ",
+      "closeEye2": "NA OKU",
+      "establish1": "ZDOBĄDŹ",
+      "establish2": "ZAUFANIE",
+      "strongLeader1": "SILNY",
+      "strongLeader2": "LIDER",
+      "overheard1": "PODSŁUCHANA",
+      "overheard2": "ROZMOWA",
+      "noConfidence1": "WOTUM",
+      "noConfidence2": "NIEUFNOŚCI",
+      "spotlight1": "W ŚWIETLE",
+      "spotlight2": "REFLEKTORÓW",
+      "opinionMaker1": "KREATOR",
+      "opinionMaker2": "OPINII",
+      "openUp1": "OTWÓRZ SIĘ",
+      "takeResponsibility1": "PRZEJMUJESZ",
+      "takeResponsibility2": "ODPOWIEDZIALNOŚĆ"
+    },
+    "rules": {
+      "goal": {
+        "title": "Cel gry",
+        "text": "Gracze są potajemnie podzieleni na Ruch Oporu i Szpiegów. Rozgrywa się maksymalnie 5 misji, a drużyna, która pierwsza zdobędzie 3 punkty, wygrywa. Szpiedzy znają się nawzajem, Ruch Oporu nie wie, kto jest szpiegiem."
+      },
+      "round": {
+        "title": "Przebieg misji",
+        "text": "Lider wskazuje drużynę o wymaganym rozmiarze (może wybrać siebie). Wszyscy dyskutują, a potem jednocześnie i jawnie głosują: Zatwierdź albo Odrzuć. Remis odrzuca drużynę, a przywództwo przechodzi dalej."
+      },
+      "mission": {
+        "title": "Wykonanie misji",
+        "text": "Każdy członek zatwierdzonej drużyny potajemnie gra kartę Sukces albo Porażka. Ruch Oporu musi zagrać Sukces, szpieg może zagrać obie. Misja kończy się porażką, jeśli padła choć jedna karta Porażka (w misji 4 przy 7 lub więcej graczach potrzebne są dwie)."
+      },
+      "plot": {
+        "title": "Karty Intryg (dodatek)",
+        "text": "Gdy host włączy dodatek przed otwarciem gry, Lider na początku każdej misji (nie po odrzuceniu drużyny) dobiera karty Intryg: 1 przy 5-6 graczach, 2 przy 7-8, 3 przy 9-10, i rozdaje je innym graczom (karta „To kwestia zaufania” zostaje u Lidera). Liczba kart w ręku każdego gracza jest jawna, same karty są tajne, a każde zagranie karty widzą wszyscy.",
+        "items": {
+          "makers": {
+            "name": "Kreator opinii",
+            "text": "trafia od razu na stół. Jego właściciel głosuje nad drużyną pierwszy, jawnie i bez zmiany; dwóch kreatorów głosuje jednocześnie."
+          },
+          "immediate": {
+            "name": "Jesteś naszym okiem i uchem, To kwestia zaufania, Tylko tobie zaufam",
+            "text": "zagrywa się od razu. Wskazany gracz (albo sąsiad) widzi kartę Tożsamości i potwierdza to przyciskiem."
+          },
+          "strongLeader": {
+            "name": "Charyzmatyczny Przywódca",
+            "text": "przejmuje przywództwo, zanim Lider cokolwiek zrobi."
+          },
+          "noConfidence": {
+            "name": "Nie ufajcie mu",
+            "text": "odrzuca zatwierdzoną drużynę; liczy się jak odrzucona drużyna."
+          },
+          "spotlight": {
+            "name": "Pod obserwacją",
+            "text": "zmusza członka drużyny do zagrania karty Misji jawnie."
+          },
+          "take": {
+            "name": "Przejmujesz odpowiedzialność",
+            "text": "zabiera kartę Intrygi innemu graczowi (widocznego kreatora opinii albo losową kartę z ręki)."
+          },
+          "closeEye": {
+            "name": "Mam cię na oku",
+            "text": "po misji (przed „Dalej”) pozwala podejrzeć kartę Misji innego gracza; każdą kartę może podejrzeć tylko jeden gracz."
+          }
+        },
+        "footer": "Gdy ktoś ma w ręku jakąkolwiek kartę (poza Kreatorem opinii), przed wyborem drużyny albo po zatwierdzeniu wszyscy potwierdzają, że nie zagrywają karty, więc nie widać, kto ją ma."
+      },
+      "end": {
+        "title": "Koniec gry",
+        "text": "Ruch Oporu wygrywa po 3 udanych misjach. Szpiedzy wygrywają po 3 nieudanych misjach albo gdy 5 drużyn z rzędu zostanie odrzuconych w jednej misji."
+      }
+    },
+    "phase": {
+      "youLead": "Ty jesteś liderem",
+      "leaderIs": "Liderem jest {{name}}",
+      "aPlayer": "jeden z graczy",
+      "firstMission": "pierwszą misję",
+      "missionN": "{{n}}. misję",
+      "tapCard": "Dotknij swojej karty, żeby poznać swoją rolę.",
+      "rejected": "Odrzucone drużyny z rzędu: {{count}}/{{max}}.",
+      "tally": "za: {{approve}}, przeciw: {{reject}}",
+      "score": "Ruch Oporu {{resistance}}, Szpiedzy {{spies}}",
+      "spiesWon": "Szpiedzy wygrali",
+      "resistanceWon": "Ruch Oporu wygrał",
+      "whyRejected": "{{max}} drużyn z rzędu zostało odrzuconych",
+      "whyFailed": "trzy misje się nie powiodły",
+      "whySucceeded": "trzy misje zakończyły się sukcesem",
+      "gameOver": "Koniec gry! {{winner}}: {{why}} ({{score}}). Wszystkie role zostały ujawnione.",
+      "dealYou": "rozdaj dobrane karty Intryg innym graczom",
+      "dealLeader": "rozdaje dobrane karty Intryg innym graczom",
+      "dealing": "{{who}} (korona): {{task}}. Potem wybierze drużynę na {{mission}}.",
+      "confirmedMine": "Twoje potwierdzenie jest zapisane.",
+      "confirmPrompt": "Potwierdź, że nie zagrywasz karty (albo zagraj ją).",
+      "leaderWindow": "{{who}} (korona), ale zanim cokolwiek zrobi, gracze decydują, czy zagrywają karty Intrygi. Potwierdzili: {{passed}}/{{count}}.{{mine}}",
+      "mustPlayOpen": "{{name}} musi zagrać kartę misji jawnie („Pod obserwacją”).",
+      "confidenceWindow": "Drużyna ({{names}}) została zatwierdzona ({{tally}}), ale zanim wyruszy, gracze decydują, czy zagrywają karty Intrygi. Potwierdzili: {{passed}}/{{count}}.{{open}}{{mine}}",
+      "waitingConfirm": "Czekamy na potwierdzenie: {{names}}.",
+      "resolving": "{{who}} (korona) rozdał/a karty Intryg. Gracze zagrywają karty natychmiastowe i potwierdzają, że zobaczyli kartę Tożsamości; potem drużynę wybierze lider.{{confirm}}",
+      "cardsPlayed": "Zagrano {{played}}/{{total}} kart.",
+      "failRule": "Misja kończy się porażką od {{count}} kart Porażka.",
+      "playYourCard": "Zagraj swoją kartę misji.",
+      "yourCardPlayed": "Twoja karta jest zagrana.",
+      "playedOpen": "{{name}} zagrał/a kartę jawnie: {{card}}.",
+      "playingMission": "Drużyna ({{names}}) została zatwierdzona ({{tally}}) i wykonuje {{mission}}. {{progress}}{{rule}}{{mine}}{{open}}",
+      "missionSucceeded": "Misja zakończyła się sukcesem",
+      "missionFailed": "Misja zakończyła się porażką (kart Porażka: {{count}})",
+      "peekWindow": "{{outcome}}. Wynik: {{score}}. Zanim lider przejdzie dalej, gracze decydują, czy zagrywają karty Intrygi. Potwierdzili: {{passed}}/{{count}}.{{mine}}",
+      "nextClick": "Kliknij „Dalej”",
+      "nextWait": "Lider lub host kliknie „Dalej”",
+      "failCardsNote": "(kart Porażka: {{count}})",
+      "missionResult": "{{outcome}}{{fails}}. Wynik: {{score}}. {{next}}, żeby zaczęła się kolejna misja.",
+      "voted": "Zagłosowało {{voted}}/{{count}}.",
+      "voteNow": "Zagłosuj: zatwierdź albo odrzuć drużynę.",
+      "voteChange": "Twój głos możesz zmienić, dopóki nie zagłosują wszyscy.",
+      "makerFirst": "Najpierw głosuje kreator opinii: {{names}}.",
+      "voting": "{{who}} (korona) zgłosił/a drużynę na {{mission}}: {{names}}. Teraz drużyna idzie pod głosowanie. {{progress}}{{order}}{{mine}}{{card}}",
+      "pickYou_one": "wybierz {{count}} osobę na {{mission}} i zgłoś ją do głosowania",
+      "pickYou_few": "wybierz {{count}} osoby na {{mission}} i zgłoś je do głosowania",
+      "pickYou_many": "wybierz {{count}} osób na {{mission}} i zgłoś je do głosowania",
+      "pickYou_other": "wybierz {{count}} osoby na {{mission}} i zgłoś je do głosowania",
+      "pickLeader_one": "wybiera {{count}} osobę na {{mission}}",
+      "pickLeader_few": "wybiera {{count}} osoby na {{mission}}",
+      "pickLeader_many": "wybiera {{count}} osób na {{mission}}",
+      "pickLeader_other": "wybiera {{count}} osoby na {{mission}}",
+      "rejectedPrev": "Poprzednia drużyna została odrzucona ({{tally}}). {{rejected}}{{who}} (korona): {{task}}. Omówcie to na żywo.{{card}}",
+      "started": "Gra się rozpoczęła, nowi gracze nie mogą już dołączyć. {{who}} (korona): {{task}}. Omówcie to na żywo.{{rejected}}{{card}}",
+      "needPlayers": "Potrzeba co najmniej {{min}} graczy.",
+      "closedAdmin": "Gra jest zamknięta. Otwórz ją dla gości, żeby gracze mogli dołączyć.{{need}}",
+      "closedGuest": "Gra jest zamknięta. Poczekaj, aż admin otworzy ją dla gości.{{need}}",
+      "waitingHost": "Czekamy na graczy",
+      "waitingGuest": "Czekamy na pozostałych graczy",
+      "notEnough": "{{waiting}}. Potrzeba co najmniej {{min}} graczy, brakuje jeszcze {{missing}}. Pokazane rozmiary drużyn dotyczą gry w {{min}} osób.",
+      "readyManager": "Jest wystarczająco graczy. Gdy wszyscy dołączą, kliknij „Rozpocznij grę” (po starcie nikt nie dołączy). Role zostaną rozdane losowo.",
+      "readyGuest": "Jest wystarczająco graczy. Czekamy, aż host lub admin rozpocznie grę."
+    }
   }
 }
