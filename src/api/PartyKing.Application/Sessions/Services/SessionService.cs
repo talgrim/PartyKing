@@ -50,17 +50,24 @@ internal class SessionService : ISessionService
         return session is null ? SessionErrors.NotFound() : session.ToDto();
     }
 
-    public async Task<ErrorOr<Success>> RenameAsync(
+    public Task<ErrorOr<Success>> RenameAsync(
         Guid id,
         string? name,
         SessionCaller caller,
         CancellationToken cancellationToken)
     {
-        if (await _authorizer.AuthorizeManagerAsync(id, caller, cancellationToken) is { IsError: true } denied)
-        {
-            return denied.Errors;
-        }
+        return _authorizer.RunAsManagerAsync(
+            id,
+            caller,
+            () => RenameCoreAsync(id, name, cancellationToken),
+            cancellationToken);
+    }
 
+    private async Task<ErrorOr<Success>> RenameCoreAsync(
+        Guid id,
+        string? name,
+        CancellationToken cancellationToken)
+    {
         if (string.IsNullOrWhiteSpace(name))
         {
             return Error.Validation(description: "The session name must not be empty");

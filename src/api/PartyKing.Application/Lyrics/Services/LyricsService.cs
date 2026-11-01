@@ -1,3 +1,4 @@
+using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Application.Ports;
 using PartyKing.Domain.Repositories;
 using ErrorOr;
@@ -91,18 +92,24 @@ internal class LyricsService : ILyricsService
             offsetMs);
     }
 
-    public async Task<ErrorOr<Success>> SetOffsetAsync(
+    public Task<ErrorOr<Success>> SetOffsetAsync(
         Guid sessionId,
         int offsetMs,
         SessionCaller caller,
         CancellationToken cancellationToken)
     {
-        var authorized = await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, caller, cancellationToken);
-        if (authorized.IsError)
-        {
-            return authorized.Errors;
-        }
+        return _sessionAuthorizer.RunAsManagerAsync(
+            sessionId,
+            caller,
+            () => SetOffsetCoreAsync(sessionId, offsetMs, cancellationToken),
+            cancellationToken);
+    }
 
+    private async Task<ErrorOr<Success>> SetOffsetCoreAsync(
+        Guid sessionId,
+        int offsetMs,
+        CancellationToken cancellationToken)
+    {
         if (Math.Abs((long)offsetMs) > MaxOffsetMs)
         {
             return Error.Validation(description: $"The offset must be within {MaxOffsetMs / 1000} seconds");

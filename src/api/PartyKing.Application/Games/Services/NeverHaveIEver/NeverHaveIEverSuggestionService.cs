@@ -1,3 +1,4 @@
+using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Application.Configuration;
 using ErrorOr;
 using Microsoft.Extensions.AI;
@@ -81,18 +82,24 @@ internal class NeverHaveIEverSuggestionService : INeverHaveIEverSuggestionServic
         _logger = logger;
     }
 
-    public async Task<ErrorOr<GameSuggestionsDto>> SuggestAsync(
+    public Task<ErrorOr<GameSuggestionsDto>> SuggestAsync(
         Guid sessionId,
         SessionCaller caller,
         UiLanguage language,
         CancellationToken cancellationToken)
     {
-        if (await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, caller, cancellationToken)
-            is { IsError: true } denied)
-        {
-            return denied.Errors;
-        }
+        return _sessionAuthorizer.RunAsManagerAsync(
+            sessionId,
+            caller,
+            () => SuggestCoreAsync(sessionId, language, cancellationToken),
+            cancellationToken);
+    }
 
+    private async Task<ErrorOr<GameSuggestionsDto>> SuggestCoreAsync(
+        Guid sessionId,
+        UiLanguage language,
+        CancellationToken cancellationToken)
+    {
         var texts = language == UiLanguage.Pl ? Polish : English;
         var suggestions = Parse(await AskAsync(texts, cancellationToken));
 

@@ -1,3 +1,4 @@
+using PartyKing.Application.Sessions.Helpers;
 using ErrorOr;
 using PartyKing.Application.Localization;
 using PartyKing.Application.Sessions.Services;
@@ -43,18 +44,21 @@ internal class GameService : IGameService
         _sessionAuthorizer = sessionAuthorizer;
     }
 
-    public async Task<ErrorOr<IReadOnlyList<GameDto>>> ListAsync(
+    public Task<ErrorOr<IReadOnlyList<GameDto>>> ListAsync(
         Guid sessionId,
         SessionCaller caller,
         UiLanguage language,
         CancellationToken cancellationToken)
     {
-        if (await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, caller, cancellationToken)
-            is { IsError: true } denied)
-        {
-            return denied.Errors;
-        }
+        return _sessionAuthorizer.RunAsManagerAsync(
+            sessionId,
+            caller,
+            () => ListCoreAsync(language),
+            cancellationToken);
+    }
 
-        return ErrorOrFactory.From(language == UiLanguage.Pl ? PolishGames : EnglishGames);
+    private static Task<ErrorOr<IReadOnlyList<GameDto>>> ListCoreAsync(UiLanguage language)
+    {
+        return Task.FromResult(ErrorOrFactory.From(language == UiLanguage.Pl ? PolishGames : EnglishGames));
     }
 }

@@ -58,19 +58,26 @@ internal class FallbackPlaylistService : IFallbackPlaylistService
         _statusStore = statusStore;
     }
 
-    public async Task<ErrorOr<Success>> SetAsync(
+    public Task<ErrorOr<Success>> SetAsync(
         Guid sessionId,
         string? playlist,
         bool shuffle,
         SessionCaller caller,
         CancellationToken cancellationToken)
     {
-        if (await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, caller, cancellationToken)
-            is { IsError: true } denied)
-        {
-            return denied.Errors;
-        }
+        return _sessionAuthorizer.RunAsManagerAsync(
+            sessionId,
+            caller,
+            () => SetCoreAsync(sessionId, playlist, shuffle, cancellationToken),
+            cancellationToken);
+    }
 
+    private async Task<ErrorOr<Success>> SetCoreAsync(
+        Guid sessionId,
+        string? playlist,
+        bool shuffle,
+        CancellationToken cancellationToken)
+    {
         var session = await _sessionsRepository.GetAsync(sessionId, cancellationToken);
         if (session is null)
         {

@@ -1,3 +1,4 @@
+using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Application.Configuration;
 using ErrorOr;
 using Microsoft.Extensions.AI;
@@ -88,19 +89,26 @@ internal class RingoRuleSuggestionService : IRingoRuleSuggestionService
         _logger = logger;
     }
 
-    public async Task<ErrorOr<GameSuggestionsDto>> SuggestAsync(
+    public Task<ErrorOr<GameSuggestionsDto>> SuggestAsync(
         Guid sessionId,
         IReadOnlyList<string>? previousRules,
         SessionCaller caller,
         UiLanguage language,
         CancellationToken cancellationToken)
     {
-        if (await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, caller, cancellationToken)
-            is { IsError: true } denied)
-        {
-            return denied.Errors;
-        }
+        return _sessionAuthorizer.RunAsManagerAsync(
+            sessionId,
+            caller,
+            () => SuggestCoreAsync(sessionId, previousRules, language, cancellationToken),
+            cancellationToken);
+    }
 
+    private async Task<ErrorOr<GameSuggestionsDto>> SuggestCoreAsync(
+        Guid sessionId,
+        IReadOnlyList<string>? previousRules,
+        UiLanguage language,
+        CancellationToken cancellationToken)
+    {
         // The list comes from the client and goes into the prompt, so it is bounded
         previousRules ??= [];
         if (previousRules.Count > MaxPreviousRules || previousRules.Any(rule => rule is null || rule.Length > MaxLength))
