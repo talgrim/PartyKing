@@ -13,14 +13,13 @@ public class QueueServiceRemoveTests
 
     private readonly FakeSessionsRepository _sessions = new();
     private readonly FakeQueueRepository _queue = new();
-    private readonly FakeQueueNotifier _notifier = new();
     private readonly QueueService _service;
     private readonly Session _session;
 
     public QueueServiceRemoveTests()
     {
         // Removing needs neither Spotify, YouTube nor host tokens
-        _service = new QueueService(_queue, _sessions, null!, null!, null!, _notifier, new FakeFallbackQueueFiller(), NullLogger<QueueService>.Instance);
+        _service = new QueueService(_queue, _sessions, null!, null!, null!, new FakeQueueAdvancer(), NullLogger<QueueService>.Instance);
         _session = _sessions.AddSession(HostId);
     }
 
@@ -31,7 +30,6 @@ public class QueueServiceRemoveTests
 
         Assert.False(result.IsError);
         Assert.Equal((_session.Id, 4), Assert.Single(_queue.RemoveCalls));
-        Assert.Equal((_session.Id, 4), Assert.Single(_notifier.SongRemoved));
     }
 
     [Fact]
@@ -50,7 +48,6 @@ public class QueueServiceRemoveTests
 
         Assert.Equal(ErrorType.Forbidden, result.FirstError.Type);
         Assert.Empty(_queue.RemoveCalls);
-        Assert.Empty(_notifier.SongRemoved);
     }
 
     [Fact]

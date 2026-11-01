@@ -19,6 +19,7 @@ public class QueueRepositoryTests : IAsyncLifetime
     private string ConnectionString => $"Data Source={Path.Combine(_directory, "PartyKing.db")}";
     private ServiceProvider _provider = null!;
     private readonly RepositoryMetrics _metrics = new();
+    private readonly RecordingDispatcher _dispatcher = new();
     private QueueRepository _repository = null!;
     private Guid _sessionId;
 
@@ -45,7 +46,8 @@ public class QueueRepositoryTests : IAsyncLifetime
         _repository = new QueueRepository(
             _provider.GetRequiredService<IDbContextFactory<ReaderDbContext>>(),
             writer,
-            _metrics);
+            _metrics,
+            _dispatcher);
     }
 
     public async Task DisposeAsync()
@@ -64,8 +66,8 @@ public class QueueRepositoryTests : IAsyncLifetime
         return item.Id;
     }
 
-    private Task<QueueItem?> AdvanceAsync(int? currentItemId) =>
-        _repository.AdvanceAsync(_sessionId, currentItemId, CancellationToken.None);
+    private async Task<QueueItem?> AdvanceAsync(int? currentItemId) =>
+        (await _repository.AdvanceAsync(_sessionId, currentItemId, CancellationToken.None)).Playing;
 
     private async Task<string[]> PendingTitlesAsync() =>
         (await _repository.GetPendingAsync(_sessionId, CancellationToken.None)).Select(x => x.Title).ToArray();

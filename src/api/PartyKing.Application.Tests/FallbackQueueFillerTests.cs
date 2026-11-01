@@ -15,7 +15,6 @@ public class FallbackQueueFillerTests
     private readonly FakeHostTokenProvider _tokens = new();
     private readonly FakePlaylistSpotifyClient _spotify = new();
     private readonly FallbackStatusStore _status = new(new FakePlayerNotifier(), NullLogger<FallbackStatusStore>.Instance);
-    private readonly FakeQueueNotifier _notifier = new();
     private readonly FallbackQueueFiller _filler;
     private readonly Session _session;
 
@@ -27,8 +26,7 @@ public class FallbackQueueFillerTests
             _spotify,
             _tokens,
             new PlaylistTrackCache(new FakeClock()),
-            _status,
-            _notifier);
+            _status);
         _session = _sessions.AddSession("host-1");
         _spotify.Tracks = [FakePlaylistSpotifyClient.Track("a"), FakePlaylistSpotifyClient.Track("b"), FakePlaylistSpotifyClient.Track("c")];
     }
@@ -67,7 +65,6 @@ public class FallbackQueueFillerTests
         Assert.True(added.IsFallback);
         Assert.Equal(QueueItemSource.Spotify, added.Source);
         Assert.Equal(2, _session.FallbackCursor);
-        Assert.True(Assert.Single(_notifier.SongAdded).Song.IsFallback);
     }
 
     [Fact]
@@ -162,7 +159,6 @@ public class FallbackQueueFillerTests
 
         Assert.Empty(_queue.Added);
         Assert.Equal(0, _session.FallbackCursor);
-        Assert.Empty(_notifier.SongAdded);
     }
 }
 

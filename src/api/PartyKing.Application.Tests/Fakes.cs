@@ -140,16 +140,25 @@ internal class FakeQueueRepository : IQueueRepository
     public QueueItem? Playing { get; set; }
     public List<(Guid SessionId, int? CurrentItemId)> AdvanceCalls { get; } = [];
     public QueueItem? AdvanceResult { get; set; }
+
+    /// <summary>False: the caller's view is outdated and the advance changes nothing.</summary>
+    public bool AdvanceMovesOn { get; set; } = true;
+
+    public Action? OnAdvance { get; set; }
     public List<(Guid SessionId, int ItemId)> RemoveCalls { get; } = [];
     public QueueItemRemoval RemoveResult { get; set; } = QueueItemRemoval.Removed;
 
     public Task<QueueItem?> GetPlayingAsync(Guid sessionId, CancellationToken cancellationToken) =>
         Task.FromResult(Playing);
 
-    public Task<QueueItem?> AdvanceAsync(Guid sessionId, int? currentItemId, CancellationToken cancellationToken)
+    public Task<QueueAdvanceResult> AdvanceAsync(Guid sessionId, int? currentItemId, CancellationToken cancellationToken)
     {
         AdvanceCalls.Add((sessionId, currentItemId));
-        return Task.FromResult(AdvanceResult);
+        OnAdvance?.Invoke();
+        return Task.FromResult(new QueueAdvanceResult(
+            AdvanceResult,
+            AdvanceMovesOn,
+            AdvanceMovesOn ? currentItemId : null));
     }
 
     public Task<QueueItemRemoval> RemoveAsync(Guid sessionId, int itemId, CancellationToken cancellationToken)
@@ -343,13 +352,27 @@ internal class FakeRingoNotifier : FakeGameLobbyNotifier, IRingoNotifier;
 
 internal class FakeResistanceNotifier : FakeGameLobbyNotifier, IResistanceNotifier;
 
+internal class FakeQueueAdvancer : IQueueAdvancer
+{
+    public List<(Guid SessionId, int? CurrentSongId)> Calls { get; } = [];
+    public ErrorOr<QueueItemDto> Result { get; set; } = Error.NotFound(description: "The queue is empty");
+
+    public Task<ErrorOr<QueueItemDto>> AdvanceAsync(Guid sessionId, int? currentSongId, CancellationToken cancellationToken)
+    {
+        Calls.Add((sessionId, currentSongId));
+        return Task.FromResult(Result);
+    }
+}
+
 internal class FakeFallbackQueueFiller : IFallbackQueueFiller
 {
     public List<Guid> Ensured { get; } = [];
+    public Action? OnEnsure { get; set; }
 
     public Task EnsureQueuedAsync(Guid sessionId, CancellationToken cancellationToken)
     {
         Ensured.Add(sessionId);
+        OnEnsure?.Invoke();
         return Task.CompletedTask;
     }
 }
