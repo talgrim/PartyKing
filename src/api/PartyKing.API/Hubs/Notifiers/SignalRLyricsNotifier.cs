@@ -6,7 +6,7 @@ namespace PartyKing.API.Hubs.Notifiers;
 
 internal sealed class SignalRLyricsNotifier : SessionGroupNotifier, ILyricsNotifier
 {
-    public SignalRLyricsNotifier(IHubContext<SessionHub> hub) : base(hub)
+    public SignalRLyricsNotifier(IHubContext<SessionHub> hub) : base(hub, SessionHubTopic.Music)
     {
     }
 

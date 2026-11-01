@@ -5,7 +5,7 @@ namespace PartyKing.API.Hubs.Notifiers;
 
 internal sealed class SignalRRingoNotifier : SessionGroupNotifier, IRingoNotifier
 {
-    public SignalRRingoNotifier(IHubContext<SessionHub> hub) : base(hub)
+    public SignalRRingoNotifier(IHubContext<SessionHub> hub) : base(hub, SessionHubTopic.Ringo)
     {
     }
 

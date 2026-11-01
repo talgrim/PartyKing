@@ -76,7 +76,7 @@ export const Resistance = (): ReactNode => {
   const [message, setMessage] = useState<string>();
 
   // The server pushes every change of the lobby (ResistanceChanged), so other devices stay current without polling
-  useSessionMusicHub(sessionId, game !== undefined);
+  useSessionMusicHub(sessionId, game !== undefined, undefined, ['resistance']);
 
   const canManage = isHost || isAdmin;
   const status = (error as { status?: number } | undefined)?.status;

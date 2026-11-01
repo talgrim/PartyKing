@@ -6,7 +6,7 @@ namespace PartyKing.API.Hubs.Notifiers;
 
 internal sealed class SignalRPlayerNotifier : SessionGroupNotifier, IPlayerNotifier
 {
-    public SignalRPlayerNotifier(IHubContext<SessionHub> hub) : base(hub)
+    public SignalRPlayerNotifier(IHubContext<SessionHub> hub) : base(hub, SessionHubTopic.Music)
     {
     }
 

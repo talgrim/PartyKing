@@ -8,7 +8,8 @@ namespace PartyKing.API.Hubs;
 
 /// <summary>
 /// Live music and slideshow updates for one unlocked session. Clients connect with <c>?sessionId=</c> and the
-/// session-access cookie; mutations stay on the REST controllers. The only hub methods tell the server that the
+/// session-access cookie, plus <c>&topics=</c> to receive only some pushes (see <see cref="SessionHubTopic"/>); mutations
+/// stay on the REST controllers. The only hub methods tell the server that the
 /// host or an admin displays the slideshow, so its timer runs.
 /// </summary>
 public class SessionHub : Hub
@@ -47,9 +48,19 @@ public class SessionHub : Hub
             return;
         }
 
+        if (!SessionHubTopics.TryParse(http.Request.Query["topics"], out var topics))
+        {
+            Context.Abort();
+            return;
+        }
+
         Context.Items[SessionIdItem] = sessionId;
 
-        await Groups.AddToGroupAsync(Context.ConnectionId, GroupName(sessionId), Context.ConnectionAborted);
+        foreach (var topic in topics)
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, GroupName(sessionId, topic), Context.ConnectionAborted);
+        }
+
         await base.OnConnectedAsync();
     }
 
@@ -82,5 +93,5 @@ public class SessionHub : Hub
         _slideshowService.Unwatch(Context.ConnectionId);
     }
 
-    internal static string GroupName(Guid sessionId) => $"session:{sessionId}";
+    internal static string GroupName(Guid sessionId, SessionHubTopic topic) => $"session:{sessionId}:{topic.ToString().ToLowerInvariant()}";
 }

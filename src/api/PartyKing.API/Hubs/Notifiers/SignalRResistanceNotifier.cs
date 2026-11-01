@@ -5,7 +5,7 @@ namespace PartyKing.API.Hubs.Notifiers;
 
 internal sealed class SignalRResistanceNotifier : SessionGroupNotifier, IResistanceNotifier
 {
-    public SignalRResistanceNotifier(IHubContext<SessionHub> hub) : base(hub)
+    public SignalRResistanceNotifier(IHubContext<SessionHub> hub) : base(hub, SessionHubTopic.Resistance)
     {
     }
 

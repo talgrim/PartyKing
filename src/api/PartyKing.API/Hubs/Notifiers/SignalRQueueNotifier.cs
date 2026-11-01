@@ -6,7 +6,7 @@ namespace PartyKing.API.Hubs.Notifiers;
 
 internal sealed class SignalRQueueNotifier : SessionGroupNotifier, IQueueNotifier
 {
-    public SignalRQueueNotifier(IHubContext<SessionHub> hub) : base(hub)
+    public SignalRQueueNotifier(IHubContext<SessionHub> hub) : base(hub, SessionHubTopic.Music)
     {
     }
 

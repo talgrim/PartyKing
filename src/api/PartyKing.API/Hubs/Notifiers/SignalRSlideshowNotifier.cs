@@ -5,7 +5,7 @@ namespace PartyKing.API.Hubs.Notifiers;
 
 internal sealed class SignalRSlideshowNotifier : SessionGroupNotifier, ISlideshowNotifier
 {
-    public SignalRSlideshowNotifier(IHubContext<SessionHub> hub) : base(hub)
+    public SignalRSlideshowNotifier(IHubContext<SessionHub> hub) : base(hub, SessionHubTopic.Slideshow)
     {
     }
 

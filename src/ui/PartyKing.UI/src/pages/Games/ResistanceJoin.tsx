@@ -17,6 +17,7 @@ export const ResistanceJoin = (): ReactNode => {
 
   return (
     <GameJoin
+      topic="resistance"
       sessionId={sessionId}
       title={t('resistance.joinTitle')}
       lobby={lobby}
