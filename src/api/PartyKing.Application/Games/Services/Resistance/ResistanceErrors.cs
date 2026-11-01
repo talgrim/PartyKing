@@ -44,6 +44,8 @@ internal static class ResistanceErrors
         ResistanceFailure.NotLeaderToPick => Error.Forbidden(
             "Resistance.NotLeader", "Only the mission leader picks the team."),
         ResistanceFailure.TeamSubmitted => Error.Conflict("Resistance.TeamSubmitted", "The team was already submitted."),
+        ResistanceFailure.NotSelectingTeam => Error.Conflict(
+            "Resistance.NotSelectingTeam", "The team can't be picked right now."),
         ResistanceFailure.CardsNotDealt => Error.Conflict(
             "Resistance.CardsNotDealt", "The leader has to hand out the plot cards first."),
         ResistanceFailure.WrongTeamSize => Error.Validation(

@@ -46,8 +46,8 @@ public interface IResistanceRoundService
         Guid sessionId, bool success, GameCaller caller, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Moves on after a rejected team or a finished mission (next leader, new team, next mission). The leader, the host
-    /// and admins may; Forbidden for other players, Conflict unless the votes rejected the team or the mission is over.
+    /// Moves on after a finished mission (next leader, next mission). The leader, the host and admins may; Forbidden
+    /// for other players, Conflict unless the mission is over. A rejected team needs no continue.
     /// </summary>
     Task<ErrorOr<ResistanceGameDto>> ContinueAsync(
         Guid sessionId, GameCaller caller, CancellationToken cancellationToken);

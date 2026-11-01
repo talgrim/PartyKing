@@ -68,8 +68,8 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
             return ResistanceOutcome.Failed(ResistanceFailure.RulesLocked, this);
         }
 
-        rules.PlotCardsEnabled = Rules.PlotCardsEnabled;
-        Rules = rules;
+        // A copy, so the caller's object is neither changed nor shared with the game
+        Rules = rules.Clone(Rules.PlotCardsEnabled);
 
         return ResistanceOutcome.Success(this);
     }
@@ -126,14 +126,9 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
     /// </summary>
     public ResistanceOutcome SelectTeam(Guid? callerPlayerId, IReadOnlyList<Guid> playerIds)
     {
-        if (!IsStarted)
+        if (Inactive() is { } inactive)
         {
-            return ResistanceOutcome.Failed(ResistanceFailure.NotStarted, this);
-        }
-
-        if (Phase == ResistancePhase.GameOver)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.GameOver, this);
+            return inactive;
         }
 
         if (callerPlayerId is null || callerPlayerId != LeaderPlayerId)
@@ -144,6 +139,12 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
         if (Phase is ResistancePhase.DealingCards or ResistancePhase.ResolvingCards)
         {
             return ResistanceOutcome.Failed(ResistanceFailure.CardsNotDealt, this);
+        }
+
+        if (Phase is ResistancePhase.LeaderWindow or ResistancePhase.VoteResult)
+        {
+            // No team has been picked in these phases, so "a team was already submitted" would be wrong
+            return ResistanceOutcome.Failed(ResistanceFailure.NotSelectingTeam, this);
         }
 
         if (Phase != ResistancePhase.SelectingTeam)
@@ -181,14 +182,9 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
     /// </summary>
     public ResistanceOutcome Vote(Guid? voterId, bool approve)
     {
-        if (!IsStarted)
+        if (Inactive() is { } inactive)
         {
-            return ResistanceOutcome.Failed(ResistanceFailure.NotStarted, this);
-        }
-
-        if (Phase == ResistancePhase.GameOver)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.GameOver, this);
+            return inactive;
         }
 
         var voter = Players.FirstOrDefault(x => x.PlayerId == voterId);
@@ -231,14 +227,9 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
     /// </summary>
     public ResistanceOutcome PlayMissionCard(Guid? callerPlayerId, bool success)
     {
-        if (!IsStarted)
+        if (Inactive() is { } inactive)
         {
-            return ResistanceOutcome.Failed(ResistanceFailure.NotStarted, this);
-        }
-
-        if (Phase == ResistancePhase.GameOver)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.GameOver, this);
+            return inactive;
         }
 
         var player = Players.FirstOrDefault(x => x.PlayerId == callerPlayerId);
@@ -277,19 +268,15 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
     }
 
     /// <summary>
-    /// Moves on after a rejected team or a finished mission: the next player leads, the team, the votes and the cards
-    /// are cleared (a finished mission also starts the next one). The leader or a manager may do it.
+    /// Moves on after a finished mission (only valid in <see cref="ResistancePhase.MissionResult"/>): the next player
+    /// leads, the team, the votes and the cards are cleared and the next mission starts. A rejected team needs no
+    /// "continue", the lead passes at once. The leader or a manager may do it.
     /// </summary>
     public ResistanceOutcome Continue(Guid? callerPlayerId, bool isManager)
     {
-        if (!IsStarted)
+        if (Inactive() is { } inactive)
         {
-            return ResistanceOutcome.Failed(ResistanceFailure.NotStarted, this);
-        }
-
-        if (Phase == ResistancePhase.GameOver)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.GameOver, this);
+            return inactive;
         }
 
         if (!isManager && (callerPlayerId is null || callerPlayerId != LeaderPlayerId))
@@ -316,13 +303,21 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
         }
 
         // Rules is a JSON column compared by reference, so assign a copy to have the change detected.
-        Rules = new ResistanceRules
-        {
-            PlayerCounts = Rules.PlayerCounts,
-            PlotDeck = Rules.PlotDeck,
-            PlotCardsEnabled = enabled,
-        };
+        Rules = Rules.Clone(enabled);
 
         return ResistanceOutcome.Success(this);
+    }
+
+    /// <summary>The failure of an action on a game that is not running (not started, or over), or null when it runs.</summary>
+    private ResistanceOutcome? Inactive()
+    {
+        if (!IsStarted)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotStarted, this);
+        }
+
+        return Phase == ResistancePhase.GameOver
+            ? ResistanceOutcome.Failed(ResistanceFailure.GameOver, this)
+            : null;
     }
 }

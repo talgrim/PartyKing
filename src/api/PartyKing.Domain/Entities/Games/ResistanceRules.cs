@@ -19,6 +19,18 @@ public class ResistanceRules
     /// <summary>How many copies of each plot card the deck holds (15 cards in all).</summary>
     public Dictionary<ResistancePlotCardType, int> PlotDeck { get; set; } = DefaultPlotDeck();
 
+    /// <summary>
+    /// A deep copy, so a game never shares dictionaries or arrays with the object it was built from. The result is
+    /// always a new instance, which the JSON column needs to detect a change. Every property must be copied here.
+    /// </summary>
+    public ResistanceRules Clone(bool? plotCardsEnabled = null) => new()
+    {
+        PlayerCounts = PlayerCounts.ToDictionary(
+            x => x.Key, x => new ResistanceCountRules(x.Value.Spies, [.. x.Value.TeamSizes], [.. x.Value.RequiredFails])),
+        PlotCardsEnabled = plotCardsEnabled ?? PlotCardsEnabled,
+        PlotDeck = new Dictionary<ResistancePlotCardType, int>(PlotDeck),
+    };
+
     /// <summary>A third of the players as spies, rounded up; the official team sizes; two fails on mission 4 from 7 players.</summary>
     public static ResistanceRules Default() => new()
     {
