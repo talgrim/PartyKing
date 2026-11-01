@@ -113,46 +113,4 @@ public class ResistanceErrorsTests
                 [ResistancePlayCardStatus.Done] = null,
             });
     }
-
-    [Fact]
-    public void MissionStatus_MapsToErrors()
-    {
-        AssertTable(
-            ResistanceErrors.From,
-            new Dictionary<ResistanceMissionStatus, Expected?>
-            {
-                [ResistanceMissionStatus.NoGame] = NoGame,
-                [ResistanceMissionStatus.NotStarted] = NotStarted,
-                [ResistanceMissionStatus.GameOver] = GameOver,
-                [ResistanceMissionStatus.NotPlayer] = new(
-                    ErrorType.Forbidden, "Resistance.NotPlayer", "Only the players of the game play the mission."),
-                [ResistanceMissionStatus.NotPlaying] = new(
-                    ErrorType.Conflict, "Resistance.NotPlayingMission", "No approved team is playing a mission."),
-                [ResistanceMissionStatus.NotOnTeam] = new(
-                    ErrorType.Forbidden, "Resistance.NotOnTeam", "Only the members of the team play the mission."),
-                [ResistanceMissionStatus.AlreadyPlayed] = new(
-                    ErrorType.Conflict, "Resistance.AlreadyPlayed", "You already played your card."),
-                [ResistanceMissionStatus.MustSucceed] = new(
-                    ErrorType.Forbidden, "Resistance.MustSucceed", "A member of the resistance can only play Success."),
-                [ResistanceMissionStatus.Played] = null,
-            });
-    }
-
-    [Fact]
-    public void ContinueStatus_MapsToErrors()
-    {
-        AssertTable(
-            ResistanceErrors.From,
-            new Dictionary<ResistanceContinueStatus, Expected?>
-            {
-                [ResistanceContinueStatus.NoGame] = NoGame,
-                [ResistanceContinueStatus.NotStarted] = NotStarted,
-                [ResistanceContinueStatus.GameOver] = GameOver,
-                [ResistanceContinueStatus.NotAllowed] = new(
-                    ErrorType.Forbidden, "Resistance.NotAllowed", "Only the leader, the host or an admin continues."),
-                [ResistanceContinueStatus.NothingToContinue] = new(
-                    ErrorType.Conflict, "Resistance.NothingToContinue", "There is no finished mission to move on from."),
-                [ResistanceContinueStatus.Continued] = null,
-            });
-    }
 }

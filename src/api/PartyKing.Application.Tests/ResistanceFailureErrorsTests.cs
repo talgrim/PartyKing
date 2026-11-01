@@ -47,6 +47,21 @@ public class ResistanceFailureErrorsTests
             ErrorType.Conflict, "Resistance.VoteLocked", "An Opinion Maker's vote can't be changed."),
         [ResistanceFailure.OpinionMakersFirst] = new(
             ErrorType.Conflict, "Resistance.OpinionMakersFirst", "The Opinion Makers vote first."),
+        [ResistanceFailure.NotPlayerToPlay] = new(
+            ErrorType.Forbidden, "Resistance.NotPlayer", "Only the players of the game play the mission."),
+        [ResistanceFailure.NoApprovedTeam] = new(
+            ErrorType.Conflict, "Resistance.NotPlayingMission", "No approved team is playing a mission."),
+        [ResistanceFailure.NotOnTeam] = new(
+            ErrorType.Forbidden, "Resistance.NotOnTeam", "Only the members of the team play the mission."),
+        [ResistanceFailure.AlreadyPlayed] = new(
+            ErrorType.Conflict, "Resistance.AlreadyPlayed", "You already played your card."),
+        [ResistanceFailure.MustSucceed] = new(
+            ErrorType.Forbidden, "Resistance.MustSucceed", "A member of the resistance can only play Success."),
+        [ResistanceFailure.NotAllowedToContinue] = new(
+            ErrorType.Forbidden, "Resistance.NotAllowed", "Only the leader, the host or an admin continues."),
+        [ResistanceFailure.NothingToContinue] = new(
+            ErrorType.Conflict, "Resistance.NothingToContinue", "There is no finished mission to move on from."),
+        [ResistanceFailure.GameOver] = new(ErrorType.Conflict, "Resistance.GameOver", "The game is over."),
     };
 
     [Fact]

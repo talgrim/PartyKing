@@ -139,31 +139,6 @@ public class ResistanceOutcomeErrorsTests
                 [ResistancePlayCardStatus.ChoiceRequired] = ResistanceFailure.ChoiceRequired,
                 [ResistancePlayCardStatus.Done] = null,
             });
-        Check<ResistanceMissionStatus>(
-            ResistanceErrors.From,
-            new()
-            {
-                [ResistanceMissionStatus.NoGame] = ResistanceFailure.NoGame,
-                [ResistanceMissionStatus.NotStarted] = ResistanceFailure.NotStarted,
-                [ResistanceMissionStatus.GameOver] = ResistanceFailure.GameOver,
-                [ResistanceMissionStatus.NotPlayer] = ResistanceFailure.NotPlayerToPlay,
-                [ResistanceMissionStatus.NotPlaying] = ResistanceFailure.NoApprovedTeam,
-                [ResistanceMissionStatus.NotOnTeam] = ResistanceFailure.NotOnTeam,
-                [ResistanceMissionStatus.AlreadyPlayed] = ResistanceFailure.AlreadyPlayed,
-                [ResistanceMissionStatus.MustSucceed] = ResistanceFailure.MustSucceed,
-                [ResistanceMissionStatus.Played] = null,
-            });
-        Check<ResistanceContinueStatus>(
-            ResistanceErrors.From,
-            new()
-            {
-                [ResistanceContinueStatus.NoGame] = ResistanceFailure.NoGame,
-                [ResistanceContinueStatus.NotStarted] = ResistanceFailure.NotStarted,
-                [ResistanceContinueStatus.GameOver] = ResistanceFailure.GameOver,
-                [ResistanceContinueStatus.NotAllowed] = ResistanceFailure.NotAllowedToContinue,
-                [ResistanceContinueStatus.NothingToContinue] = ResistanceFailure.NothingToContinue,
-                [ResistanceContinueStatus.Continued] = null,
-            });
 
         // No failure is left without a status it replaces
         Assert.Equal(Enum.GetValues<ResistanceFailure>().Order(), covered.Order());

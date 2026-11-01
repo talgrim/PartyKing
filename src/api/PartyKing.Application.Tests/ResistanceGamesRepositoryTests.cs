@@ -110,6 +110,26 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
             CancellationToken.None);
     }
 
+    private Task<ResistanceOutcome> PlayMissionCardAsync(Guid? player, bool success)
+    {
+        return _repository.UpdateAsync(
+            _sessionId,
+            "PlayMissionCardAsync",
+            ResistanceOutcome.NoGame,
+            game => game.PlayMissionCard(player, success),
+            CancellationToken.None);
+    }
+
+    private Task<ResistanceOutcome> ContinueAsync(Guid? caller, bool isManager)
+    {
+        return _repository.UpdateAsync(
+            _sessionId,
+            "ContinueAsync",
+            ResistanceOutcome.NoGame,
+            game => game.Continue(caller, isManager),
+            CancellationToken.None);
+    }
+
     private Task<ResistanceOutcome> StartAsync()
     {
         return _repository.UpdateAsync(
@@ -246,11 +266,11 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         var game = await StartGameWithTeamAsync(5);
         var notLeader = _players.First(x => x != game.LeaderPlayerId);
 
-        Assert.Equal(ResistanceContinueStatus.NothingToContinue, (await _repository.ContinueAsync(_sessionId, game.LeaderPlayerId, false, ct)).Status);
+        Assert.Equal(ResistanceFailure.NothingToContinue, (await ContinueAsync(game.LeaderPlayerId, false)).Failure);
         await VoteAsync(false, false, false, false, false);
-        Assert.Equal(ResistanceContinueStatus.NothingToContinue, (await _repository.ContinueAsync(_sessionId, null, true, ct)).Status);
+        Assert.Equal(ResistanceFailure.NothingToContinue, (await ContinueAsync(null, true)).Failure);
         notLeader = _players.First(x => x != (ReloadAsync().Result).LeaderPlayerId);
-        Assert.Equal(ResistanceContinueStatus.NotAllowed, (await _repository.ContinueAsync(_sessionId, notLeader, false, ct)).Status);
+        Assert.Equal(ResistanceFailure.NotAllowedToContinue, (await ContinueAsync(notLeader, false)).Failure);
     }
 
     [Fact]
@@ -259,9 +279,9 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         await StartGameWithTeamAsync(5);
         await VoteAsync(true, true, true, true, true);
 
-        var result = await _repository.ContinueAsync(_sessionId, null, isManager: true, CancellationToken.None);
+        var result = await ContinueAsync(null, isManager: true);
 
-        Assert.Equal(ResistanceContinueStatus.NothingToContinue, result.Status);
+        Assert.Equal(ResistanceFailure.NothingToContinue, result.Failure);
     }
 
     [Fact]
@@ -277,8 +297,8 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         foreach (var member in team)
         {
             var success = member.Role == ResistanceRole.Resistance;
-            var played = await _repository.PlayMissionCardAsync(_sessionId, member.PlayerId, success, ct);
-            Assert.Equal(ResistanceMissionStatus.Played, played.Status);
+            var played = await PlayMissionCardAsync(member.PlayerId, success);
+            Assert.Null(played.Failure);
         }
 
         var game = await ReloadAsync();
@@ -288,8 +308,8 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         Assert.Equal(spies == 0, result.Succeeded);
         Assert.Equal(spies, result.FailCount);
 
-        var next = await _repository.ContinueAsync(_sessionId, null, isManager: true, ct);
-        Assert.Equal(ResistanceContinueStatus.Continued, next.Status);
+        var next = await ContinueAsync(null, isManager: true);
+        Assert.Null(next.Failure);
         var after = await ReloadAsync();
         Assert.Equal(ResistancePhase.SelectingTeam, after.Phase);
         Assert.Equal(2, after.MissionNumber);
@@ -305,10 +325,10 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         await VoteAsync(true, true, true, true, true);
         foreach (var member in (await ReloadAsync()).Players.Where(x => x.IsOnTeam).ToList())
         {
-            await _repository.PlayMissionCardAsync(_sessionId, member.PlayerId, member.Role == ResistanceRole.Resistance, ct);
+            await PlayMissionCardAsync(member.PlayerId, member.Role == ResistanceRole.Resistance);
         }
 
-        await _repository.ContinueAsync(_sessionId, null, isManager: true, ct);
+        await ContinueAsync(null, isManager: true);
         Assert.Equal(ResistanceFailure.NotOver, (await RestartAsync()).Failure);
 
         for (var i = 1; i <= 5; i++)
@@ -394,7 +414,7 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         Assert.Equal(5, over.RejectedTeams);
         Assert.All(over.Players, x => Assert.NotNull(x.Vote));
         Assert.Equal(ResistanceFailure.GameOver, (await CastVoteAsync(_players[0], true)).Failure);
-        Assert.Equal(ResistanceContinueStatus.GameOver, (await _repository.ContinueAsync(_sessionId, null, true, ct)).Status);
+        Assert.Equal(ResistanceFailure.GameOver, (await ContinueAsync(null, true)).Failure);
         Assert.Equal(ResistanceFailure.GameOver, (await SelectTeamAsync(over.LeaderPlayerId, _players.Take(2).ToList())).Failure);
     }
 
@@ -404,7 +424,7 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         var ct = CancellationToken.None;
         await StartGameWithTeamAsync(5);
         await VoteAsync(false, false, false, false, false);
-        await _repository.ContinueAsync(_sessionId, null, true, ct);
+        await ContinueAsync(null, true);
         var game = await ReloadAsync();
         await SelectTeamAsync(game.LeaderPlayerId, _players.Take(2).ToList());
 
