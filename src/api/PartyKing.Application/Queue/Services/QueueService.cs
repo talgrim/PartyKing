@@ -49,7 +49,7 @@ internal class QueueService : IQueueService
     private readonly IYoutubeOEmbedClient _youtubeClient;
     private readonly IHostTokenProvider _hostTokenProvider;
     private readonly ISessionsRepository _sessionsRepository;
-    private readonly ISessionMusicNotifier _musicNotifier;
+    private readonly IQueueNotifier _musicNotifier;
     private readonly IFallbackQueueFiller _fallbackFiller;
     private readonly ILogger<QueueService> _logger;
 
@@ -59,7 +59,7 @@ internal class QueueService : IQueueService
         ISpotifyIntegrationClient spotifyClient,
         IYoutubeOEmbedClient youtubeClient,
         IHostTokenProvider hostTokenProvider,
-        ISessionMusicNotifier musicNotifier,
+        IQueueNotifier musicNotifier,
         IFallbackQueueFiller fallbackFiller,
         ILogger<QueueService> logger)
     {

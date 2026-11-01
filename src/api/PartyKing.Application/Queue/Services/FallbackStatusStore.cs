@@ -20,10 +20,10 @@ public interface IFallbackStatusStore
 public sealed class FallbackStatusStore : IFallbackStatusStore
 {
     private readonly ConcurrentDictionary<Guid, string> _errors = new();
-    private readonly ISessionMusicNotifier _notifier;
+    private readonly IPlayerNotifier _notifier;
     private readonly ILogger<FallbackStatusStore> _logger;
 
-    public FallbackStatusStore(ISessionMusicNotifier notifier, ILogger<FallbackStatusStore> logger)
+    public FallbackStatusStore(IPlayerNotifier notifier, ILogger<FallbackStatusStore> logger)
     {
         _notifier = notifier;
         _logger = logger;

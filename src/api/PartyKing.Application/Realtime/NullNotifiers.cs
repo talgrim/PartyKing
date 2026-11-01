@@ -4,8 +4,9 @@ using PartyKing.Contract.V1.Queue;
 
 namespace PartyKing.Application.Realtime;
 
-/// <summary>Used when no realtime transport is registered (e.g. unit tests that do not care about pushes).</summary>
-internal sealed class NullSessionMusicNotifier : ISessionMusicNotifier
+// Used when no realtime transport is registered (e.g. unit tests that do not care about pushes).
+
+internal sealed class NullQueueNotifier : IQueueNotifier
 {
     public Task SongAddedAsync(Guid sessionId, QueueItemDto song, CancellationToken cancellationToken)
     {
@@ -25,7 +26,10 @@ internal sealed class NullSessionMusicNotifier : ISessionMusicNotifier
     {
         return Task.CompletedTask;
     }
+}
 
+internal sealed class NullPlayerNotifier : IPlayerNotifier
+{
     public Task PlayerStateChangedAsync(
         Guid sessionId,
         PlayerStateChangedDto state,
@@ -46,7 +50,10 @@ internal sealed class NullSessionMusicNotifier : ISessionMusicNotifier
     {
         return Task.CompletedTask;
     }
+}
 
+internal sealed class NullLyricsNotifier : ILyricsNotifier
+{
     public Task LyricsOffsetChangedAsync(
         Guid sessionId,
         LyricsOffsetChangedDto offset,
@@ -54,28 +61,37 @@ internal sealed class NullSessionMusicNotifier : ISessionMusicNotifier
     {
         return Task.CompletedTask;
     }
+}
 
+internal sealed class NullSlideshowNotifier : ISlideshowNotifier
+{
     public Task SlideshowChangedAsync(Guid sessionId, CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }
+}
 
-    public Task RingoChangedAsync(Guid sessionId, CancellationToken cancellationToken)
+internal sealed class NullRingoNotifier : IRingoNotifier
+{
+    public Task OpenedAsync(Guid sessionId, CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }
 
-    public Task RingoOpenedAsync(Guid sessionId, CancellationToken cancellationToken)
+    public Task ChangedAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+}
+
+internal sealed class NullResistanceNotifier : IResistanceNotifier
+{
+    public Task OpenedAsync(Guid sessionId, CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }
 
-    public Task ResistanceChangedAsync(Guid sessionId, CancellationToken cancellationToken)
-    {
-        return Task.CompletedTask;
-    }
-
-    public Task ResistanceOpenedAsync(Guid sessionId, CancellationToken cancellationToken)
+    public Task ChangedAsync(Guid sessionId, CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }

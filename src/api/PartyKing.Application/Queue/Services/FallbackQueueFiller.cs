@@ -25,7 +25,7 @@ internal class FallbackQueueFiller : IFallbackQueueFiller
     private readonly IHostTokenProvider _hostTokenProvider;
     private readonly IPlaylistTrackCache _trackCache;
     private readonly IFallbackStatusStore _statusStore;
-    private readonly ISessionMusicNotifier _musicNotifier;
+    private readonly IQueueNotifier _musicNotifier;
 
     public FallbackQueueFiller(
         ISessionsRepository sessionsRepository,
@@ -34,7 +34,7 @@ internal class FallbackQueueFiller : IFallbackQueueFiller
         IHostTokenProvider hostTokenProvider,
         IPlaylistTrackCache trackCache,
         IFallbackStatusStore statusStore,
-        ISessionMusicNotifier musicNotifier)
+        IQueueNotifier musicNotifier)
     {
         _sessionsRepository = sessionsRepository;
         _queueRepository = queueRepository;

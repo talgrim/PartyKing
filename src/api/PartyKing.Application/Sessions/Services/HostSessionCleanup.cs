@@ -15,18 +15,18 @@ internal class HostSessionCleanup : IHostSessionCleanup
 {
     private readonly IPlayerStateStore _playerStateStore;
     private readonly IHostTokenProvider _hostTokenProvider;
-    private readonly ISessionMusicNotifier _musicNotifier;
+    private readonly IPlayerNotifier _playerNotifier;
     private readonly IPlayerConnectionWatchdog _connectionWatchdog;
 
     public HostSessionCleanup(
         IPlayerStateStore playerStateStore,
         IHostTokenProvider hostTokenProvider,
-        ISessionMusicNotifier musicNotifier,
+        IPlayerNotifier playerNotifier,
         IPlayerConnectionWatchdog connectionWatchdog)
     {
         _playerStateStore = playerStateStore;
         _hostTokenProvider = hostTokenProvider;
-        _musicNotifier = musicNotifier;
+        _playerNotifier = playerNotifier;
         _connectionWatchdog = connectionWatchdog;
     }
 
@@ -34,7 +34,7 @@ internal class HostSessionCleanup : IHostSessionCleanup
     {
         _playerStateStore.Remove(sessionId);
         _connectionWatchdog.Disarm(sessionId);
-        await _musicNotifier.PlayerStateChangedAsync(
+        await _playerNotifier.PlayerStateChangedAsync(
             sessionId,
             new PlayerStateChangedDto(SongId: null, Paused: false, PlayerConnected: false),
             cancellationToken);
