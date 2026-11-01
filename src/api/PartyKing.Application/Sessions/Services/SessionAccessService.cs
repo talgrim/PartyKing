@@ -97,11 +97,6 @@ internal class SessionAccessService : ISessionAccessService
         var passwordHash = _passwordHasher.Hash(password!, PasswordHasher.SessionIterations);
         var updated = await _sessionsRepository.UpdatePasswordHashAsync(id, passwordHash, cancellationToken);
 
-        if (updated)
-        {
-            _logger.LogInformation("Changed the password of session {SessionId}", id);
-        }
-
         return updated ? SessionAccessStamp.For(passwordHash) : SessionErrors.NotFound();
     }
 

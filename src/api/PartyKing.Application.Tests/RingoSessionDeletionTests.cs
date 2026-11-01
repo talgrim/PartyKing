@@ -42,7 +42,7 @@ public class RingoSessionDeletionTests : IAsyncLifetime
         }
 
         _ringo = new RingoGamesRepository(reader, _writer, _metrics, new NullDomainEventDispatcher());
-        _sessions = new SessionsRepository(reader, _writer);
+        _sessions = new SessionsRepository(reader, _writer, new NullDomainEventDispatcher());
     }
 
     public async Task DisposeAsync()

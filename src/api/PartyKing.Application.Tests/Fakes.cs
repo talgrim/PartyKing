@@ -2,6 +2,7 @@ using PartyKing.Domain.Repositories;
 using ErrorOr;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
+using PartyKing.Application.Events;
 using PartyKing.Application.Games.Services.Base;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Realtime;
@@ -16,6 +17,8 @@ using PartyKing.Contract.V1.Slideshow;
 using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Entities.Sessions;
 using PartyKing.Domain.Enums;
+using PartyKing.Domain.Events;
+using PartyKing.Domain.Events.Sessions;
 
 namespace PartyKing.Application.Tests;
 
@@ -29,6 +32,16 @@ internal class FakeClock : IDateTimeProvider
 internal class FakeSessionsRepository : ISessionsRepository
 {
     private readonly List<Session> _sessions = [];
+
+    /// <summary>Receives the events a change raised, like the real repository's dispatcher; none by default.</summary>
+    public IDomainEventDispatcher? Events { get; set; }
+
+    private Task DispatchAsync(IReadOnlyCollection<IDomainEvent> events)
+    {
+        return Events is null || events.Count == 0
+            ? Task.CompletedTask
+            : Events.DispatchAsync(events, CancellationToken.None);
+    }
 
     public Session AddSession(string? hostProfileId = null, string passwordHash = "hash")
     {
@@ -46,34 +59,37 @@ internal class FakeSessionsRepository : ISessionsRepository
         return Task.FromResult(true);
     }
 
-    public Task<bool> UpdatePasswordHashAsync(Guid id, string passwordHash, CancellationToken cancellationToken)
+    public async Task<bool> UpdatePasswordHashAsync(Guid id, string passwordHash, CancellationToken cancellationToken)
     {
         var session = _sessions.FirstOrDefault(x => x.Id == id);
         if (session is not null)
         {
-            session.PasswordHash = passwordHash;
+            session.ChangePassword(passwordHash);
+            await DispatchAsync(session.DrainEvents());
         }
 
-        return Task.FromResult(session is not null);
+        return session is not null;
     }
 
     public Task<IReadOnlyList<Session>> GetAllAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
     public List<(Guid Id, string Name)> Renamed { get; } = [];
 
-    public Task<bool> RenameAsync(Guid id, string name, CancellationToken cancellationToken)
+    public async Task<bool> RenameAsync(Guid id, string name, CancellationToken cancellationToken)
     {
         var session = _sessions.FirstOrDefault(x => x.Id == id);
         if (session is not null)
         {
-            Renamed.Add((id, name));
+            session.Rename(name);
+            Renamed.Add((id, session.Name));
+            await DispatchAsync(session.DrainEvents());
         }
 
-        return Task.FromResult(session is not null);
+        return session is not null;
     }
     public List<(Guid Id, string? PlaylistId, string? Name, bool Shuffle)> FallbackPlaylistSet { get; } = [];
     public List<(Guid Id, int Cursor)> FallbackCursorSet { get; } = [];
 
-    public Task<bool> SetFallbackPlaylistAsync(
+    public async Task<bool> SetFallbackPlaylistAsync(
         Guid id,
         string? playlistId,
         string? playlistName,
@@ -83,14 +99,20 @@ internal class FakeSessionsRepository : ISessionsRepository
         var session = _sessions.FirstOrDefault(x => x.Id == id);
         if (session is not null)
         {
-            session.FallbackPlaylistId = playlistId;
-            session.FallbackPlaylistName = playlistName;
-            session.FallbackShuffle = shuffle;
-            session.FallbackCursor = 0;
+            if (playlistId is null)
+            {
+                session.ClearFallbackPlaylist();
+            }
+            else
+            {
+                session.SetFallbackPlaylist(playlistId, playlistName, shuffle);
+            }
+
             FallbackPlaylistSet.Add((id, playlistId, playlistName, shuffle));
+            await DispatchAsync(session.DrainEvents());
         }
 
-        return Task.FromResult(session is not null);
+        return session is not null;
     }
 
     public Task<bool> SetFallbackCursorAsync(Guid id, int cursor, CancellationToken cancellationToken)
@@ -105,18 +127,30 @@ internal class FakeSessionsRepository : ISessionsRepository
         return Task.FromResult(session is not null);
     }
 
-    public Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken) =>
-        Task.FromResult(_sessions.RemoveAll(x => x.Id == id) > 0);
+    public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var session = _sessions.FirstOrDefault(x => x.Id == id);
+        if (session is null)
+        {
+            return false;
+        }
+
+        _sessions.Remove(session);
+        await DispatchAsync([new SessionDeleted(id, session.HostProfileId, session.FallbackPlaylistId)]);
+
+        return true;
+    }
     public Task<SessionClaimResult> TryClaimAsync(Guid id, string profileId, CancellationToken cancellationToken) => throw new NotSupportedException();
-    public Task<bool> ReleaseAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<bool> ReleaseAsync(Guid id, CancellationToken cancellationToken)
     {
         var session = _sessions.FirstOrDefault(x => x.Id == id);
         if (session is not null)
         {
-            session.HostProfileId = null;
+            session.Release();
+            await DispatchAsync(session.DrainEvents());
         }
 
-        return Task.FromResult(session is not null);
+        return session is not null;
     }
 }
 
@@ -373,6 +407,17 @@ internal class FakeFallbackQueueFiller : IFallbackQueueFiller
     {
         Ensured.Add(sessionId);
         OnEnsure?.Invoke();
+        return Task.CompletedTask;
+    }
+}
+
+internal sealed class FakeHostSessionCleanup : IHostSessionCleanup
+{
+    public List<(Guid SessionId, string? HostProfileId)> Forgotten { get; } = [];
+
+    public Task ForgetHostAsync(Guid sessionId, string? hostProfileId, CancellationToken cancellationToken)
+    {
+        Forgotten.Add((sessionId, hostProfileId));
         return Task.CompletedTask;
     }
 }

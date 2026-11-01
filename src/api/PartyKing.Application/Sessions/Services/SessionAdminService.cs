@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Mappings;
 using PartyKing.Application.Sessions.Helpers;
-using PartyKing.Application.Slideshow.Services;
 using PartyKing.Contract.V1.Sessions;
 using PartyKing.Domain.Entities.Sessions;
 
@@ -25,21 +24,15 @@ internal class SessionAdminService : ISessionAdminService
 
     private readonly ISessionsRepository _sessionsRepository;
     private readonly IPasswordHasher _passwordHasher;
-    private readonly ISlideshowService _slideshowService;
-    private readonly IHostSessionCleanup _hostCleanup;
     private readonly ILogger<SessionAdminService> _logger;
 
     public SessionAdminService(
         ISessionsRepository sessionsRepository,
         IPasswordHasher passwordHasher,
-        ISlideshowService slideshowService,
-        IHostSessionCleanup hostCleanup,
         ILogger<SessionAdminService> logger)
     {
         _sessionsRepository = sessionsRepository;
         _passwordHasher = passwordHasher;
-        _slideshowService = slideshowService;
-        _hostCleanup = hostCleanup;
         _logger = logger;
     }
 
@@ -48,9 +41,9 @@ internal class SessionAdminService : ISessionAdminService
         string? password,
         CancellationToken cancellationToken)
     {
-        if (name is { Length: > SessionNamePolicy.MaxLength })
+        if (SessionNamePolicy.Validate(name, allowBlank: true) is { } invalidName)
         {
-            return SessionNamePolicy.TooLong();
+            return invalidName;
         }
 
         if (SessionPasswordPolicy.Validate(password) is { } invalid)
@@ -76,38 +69,17 @@ internal class SessionAdminService : ISessionAdminService
 
     public async Task<ErrorOr<Success>> DeleteAsync(Guid id, CancellationToken cancellationToken)
     {
-        var hostProfileId = (await _sessionsRepository.GetAsync(id, cancellationToken))?.HostProfileId;
-
+        // The player, the host's token, the slideshow and the fallback playlist are cleaned up by the SessionDeleted handlers
         var deleted = await _sessionsRepository.DeleteAsync(id, cancellationToken);
 
-        if (!deleted)
-        {
-            return SessionErrors.NotFound();
-        }
-
-        await _hostCleanup.ForgetHostAsync(id, hostProfileId, cancellationToken);
-        _logger.LogInformation("Deleted session {SessionId}", id);
-
-        // The rows went with the cascade delete; the uploaded files are still on disk
-        await _slideshowService.DeleteSessionAsync(id);
-
-        return Result.Success;
+        return deleted ? Result.Success : SessionErrors.NotFound();
     }
 
     public async Task<ErrorOr<Success>> ReleaseAsync(Guid id, CancellationToken cancellationToken)
     {
-        var hostProfileId = (await _sessionsRepository.GetAsync(id, cancellationToken))?.HostProfileId;
-
+        // The player and the host's token are forgotten by the HostReleased handlers
         var released = await _sessionsRepository.ReleaseAsync(id, cancellationToken);
 
-        if (!released)
-        {
-            return SessionErrors.NotFound();
-        }
-
-        await _hostCleanup.ForgetHostAsync(id, hostProfileId, cancellationToken);
-        _logger.LogInformation("Released the host of session {SessionId}", id);
-
-        return Result.Success;
+        return released ? Result.Success : SessionErrors.NotFound();
     }
 }

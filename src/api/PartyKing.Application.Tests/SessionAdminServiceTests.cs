@@ -28,6 +28,37 @@ public class SessionAdminServiceTests
         Assert.Equal(ErrorType.Validation, result.FirstError.Type);
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task CreatingASession_WithoutAName_UsesTheDefaultName(string? name)
+    {
+        var result = await _service.CreateAsync(name, "secret", CancellationToken.None);
+
+        Assert.False(result.IsError);
+        Assert.Equal("New session", result.Value.Name);
+    }
+
+    [Fact]
+    public async Task CreatingASession_TrimsTheNameBeforeCheckingItsLength()
+    {
+        var name = $"  {new string('a', 60)}  ";
+
+        var result = await _service.CreateAsync(name, "secret", CancellationToken.None);
+
+        Assert.False(result.IsError);
+        Assert.Equal(new string('a', 60), result.Value.Name);
+    }
+
+    [Fact]
+    public async Task CreatingASession_WithAnOverlongName_IsRejected()
+    {
+        var result = await _service.CreateAsync(new string('a', 61), "secret", CancellationToken.None);
+
+        Assert.Equal(ErrorType.Validation, result.FirstError.Type);
+    }
+
     [Fact]
     public async Task CreatingASession_WithAnOverlongPassword_IsRejected()
     {

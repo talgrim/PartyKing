@@ -28,10 +28,11 @@ public class FallbackPlaylistServiceTests
             sessionAuthorizer,
             _sessions,
             _spotify,
-            _tokens,
-            _filler,
-            new PlaylistTrackCache(clock),
-            _status);
+            _tokens);
+        _sessions.Events = TestEvents.SessionDispatcher(
+            filler: _filler,
+            trackCache: new PlaylistTrackCache(clock),
+            statusStore: _status);
         _id = _sessions.AddSession(HostId).Id;
         _spotify.Playlist = new Playlist { Id = "37i9dQZF1DXcBWIGoYBM5M", Name = "Party mix", OwnerId = HostId, TrackCount = 12 };
     }
