@@ -107,20 +107,6 @@ public class ResistanceOutcomeErrorsTests
             }
         }
 
-        Check<ResistanceTeamStatus>(
-            x => ResistanceErrors.From(x, game),
-            new()
-            {
-                [ResistanceTeamStatus.NoGame] = ResistanceFailure.NoGame,
-                [ResistanceTeamStatus.NotStarted] = ResistanceFailure.NotStarted,
-                [ResistanceTeamStatus.GameOver] = ResistanceFailure.GameOver,
-                [ResistanceTeamStatus.NotLeader] = ResistanceFailure.NotLeaderToPick,
-                [ResistanceTeamStatus.AlreadySubmitted] = ResistanceFailure.TeamSubmitted,
-                [ResistanceTeamStatus.CardsNotDealt] = ResistanceFailure.CardsNotDealt,
-                [ResistanceTeamStatus.WrongSize] = ResistanceFailure.WrongTeamSize,
-                [ResistanceTeamStatus.UnknownPlayer] = ResistanceFailure.UnknownTeamPlayer,
-                [ResistanceTeamStatus.Selected] = null,
-            });
         Check<ResistanceDealStatus>(
             ResistanceErrors.From,
             new()

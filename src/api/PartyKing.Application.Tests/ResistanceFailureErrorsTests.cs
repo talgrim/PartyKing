@@ -30,6 +30,16 @@ public class ResistanceFailureErrorsTests
         [ResistanceFailure.NotEnoughPlayers] = new(
             ErrorType.Conflict, "Resistance.NotEnoughPlayers", "The game needs at least 5 players to start."),
         [ResistanceFailure.NotOver] = new(ErrorType.Conflict, "Resistance.NotOver", "The game is still being played."),
+        [ResistanceFailure.NotLeaderToPick] = new(
+            ErrorType.Forbidden, "Resistance.NotLeader", "Only the mission leader picks the team."),
+        [ResistanceFailure.TeamSubmitted] = new(
+            ErrorType.Conflict, "Resistance.TeamSubmitted", "The team was already submitted."),
+        [ResistanceFailure.CardsNotDealt] = new(
+            ErrorType.Conflict, "Resistance.CardsNotDealt", "The leader has to hand out the plot cards first."),
+        [ResistanceFailure.WrongTeamSize] = new(
+            ErrorType.Validation, "Resistance.WrongTeamSize", "The team needs exactly 2 different players."),
+        [ResistanceFailure.UnknownTeamPlayer] = new(
+            ErrorType.Validation, "Resistance.UnknownPlayer", "The team has a player who is not in the game."),
         [ResistanceFailure.NotPlayerToVote] = new(
             ErrorType.Forbidden, "Resistance.NotPlayer", "Only the players of the game vote."),
         [ResistanceFailure.NotVoting] = new(ErrorType.Conflict, "Resistance.NotVoting", "No team is up for a vote."),
@@ -42,7 +52,13 @@ public class ResistanceFailureErrorsTests
     [Fact]
     public void EachFailureOfTheTable_BecomesItsError()
     {
+        // Five players in the first mission, for the message of a wrong team size
         var game = new ResistanceGame();
+        for (var i = 0; i < 5; i++)
+        {
+            game.Players.Add(new ResistancePlayer { PlayerId = Guid.NewGuid(), Order = i });
+        }
+
 
         foreach (var (failure, expected) in Golden)
         {

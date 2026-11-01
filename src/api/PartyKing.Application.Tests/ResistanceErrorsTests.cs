@@ -52,41 +52,6 @@ public class ResistanceErrorsTests
         Assert.Equal("The session already has a Resistance game.", ResistanceErrors.AlreadyCreated.Description);
     }
 
-    [Theory]
-    [InlineData(5, 1, 2)]
-    [InlineData(6, 3, 4)]
-    [InlineData(10, 4, 5)]
-    public void TeamStatus_MapsToErrors(int playerCount, int mission, int teamSize)
-    {
-        var game = new ResistanceGame { MissionNumber = mission };
-        for (var i = 0; i < playerCount; i++)
-        {
-            game.Players.Add(new ResistancePlayer { PlayerId = Guid.NewGuid(), Order = i });
-        }
-
-        AssertTable(
-            status => ResistanceErrors.From(status, game),
-            new Dictionary<ResistanceTeamStatus, Expected?>
-            {
-                [ResistanceTeamStatus.NoGame] = NoGame,
-                [ResistanceTeamStatus.NotStarted] = NotStarted,
-                [ResistanceTeamStatus.GameOver] = GameOver,
-                [ResistanceTeamStatus.NotLeader] = new(
-                    ErrorType.Forbidden, "Resistance.NotLeader", "Only the mission leader picks the team."),
-                [ResistanceTeamStatus.AlreadySubmitted] = new(
-                    ErrorType.Conflict, "Resistance.TeamSubmitted", "The team was already submitted."),
-                [ResistanceTeamStatus.CardsNotDealt] = new(
-                    ErrorType.Conflict, "Resistance.CardsNotDealt", "The leader has to hand out the plot cards first."),
-                [ResistanceTeamStatus.WrongSize] = new(
-                    ErrorType.Validation,
-                    "Resistance.WrongTeamSize",
-                    $"The team needs exactly {teamSize} different players."),
-                [ResistanceTeamStatus.UnknownPlayer] = new(
-                    ErrorType.Validation, "Resistance.UnknownPlayer", "The team has a player who is not in the game."),
-                [ResistanceTeamStatus.Selected] = null,
-            });
-    }
-
     [Fact]
     public void DealStatus_MapsToErrors()
     {

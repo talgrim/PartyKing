@@ -114,6 +114,16 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
             CancellationToken.None);
     }
 
+    private Task<ResistanceOutcome> SelectTeamAsync(Guid? leader, IReadOnlyList<Guid> playerIds)
+    {
+        return _repository.UpdateAsync(
+            _sessionId,
+            "SelectTeamAsync",
+            ResistanceOutcome.NoGame,
+            game => game.SelectTeam(leader, playerIds),
+            CancellationToken.None);
+    }
+
     private Task<ResistanceOutcome> StartAsync()
     {
         return _repository.UpdateAsync(
@@ -203,7 +213,7 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         var ct = CancellationToken.None;
         var size = game.Rules.TeamSize(game.Players.Count, game.MissionNumber);
         var team = game.Players.OrderBy(x => x.Order).Take(size).Select(x => x.PlayerId).ToList();
-        Assert.Equal(ResistanceTeamStatus.Selected, (await _repository.SelectTeamAsync(_sessionId, game.LeaderPlayerId, team, ct)).Status);
+        Assert.Null((await SelectTeamAsync(game.LeaderPlayerId, team)).Failure);
         var makers = ResistanceRoles.OpinionMakerIds(game);
         foreach (var player in game.Players.OrderBy(x => makers.Contains(x.PlayerId) ? 0 : 1))
         {
@@ -253,9 +263,9 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         var game = await StartAsync(5, plotCards: true);
         var team = game.Players.Take(2).Select(x => x.PlayerId).ToList();
 
-        var early = await _repository.SelectTeamAsync(_sessionId, game.LeaderPlayerId, team, CancellationToken.None);
+        var early = await SelectTeamAsync(game.LeaderPlayerId, team);
 
-        Assert.Equal(ResistanceTeamStatus.CardsNotDealt, early.Status);
+        Assert.Equal(ResistanceFailure.CardsNotDealt, early.Failure);
     }
 
     [Fact]
@@ -447,7 +457,7 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         var other = game.Players.First(x => x.PlayerId != maker).PlayerId;
         var size = game.Rules.TeamSize(game.Players.Count, game.MissionNumber);
         var team = game.Players.OrderBy(x => x.Order).Take(size).Select(x => x.PlayerId).ToList();
-        await _repository.SelectTeamAsync(_sessionId, game.LeaderPlayerId, team, ct);
+        await SelectTeamAsync(game.LeaderPlayerId, team);
 
         Assert.Equal(ResistanceFailure.OpinionMakersFirst, (await CastVoteAsync(other, true)).Failure);
         Assert.Null((await CastVoteAsync(maker, false)).Failure);
@@ -471,7 +481,7 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         var other = game.Players.First(x => !makers.Contains(x.PlayerId)).PlayerId;
         var size = game.Rules.TeamSize(game.Players.Count, game.MissionNumber);
         var team = game.Players.OrderBy(x => x.Order).Take(size).Select(x => x.PlayerId).ToList();
-        await _repository.SelectTeamAsync(_sessionId, game.LeaderPlayerId, team, ct);
+        await SelectTeamAsync(game.LeaderPlayerId, team);
 
         await CastVoteAsync(makers[0], true);
         Assert.Equal(ResistanceFailure.OpinionMakersFirst, (await CastVoteAsync(other, true)).Failure);
@@ -512,8 +522,7 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
 
         var after = await ReloadAsync();
         Assert.Equal(ResistancePhase.ResolvingCards, after.Phase);
-        Assert.Equal(ResistanceTeamStatus.CardsNotDealt, (await _repository.SelectTeamAsync(
-            _sessionId, after.LeaderPlayerId, after.Players.Take(2).Select(x => x.PlayerId).ToList(), CancellationToken.None)).Status);
+        Assert.Equal(ResistanceFailure.CardsNotDealt, (await SelectTeamAsync(after.LeaderPlayerId, after.Players.Take(2).Select(x => x.PlayerId).ToList())).Failure);
     }
 
     [Fact]
@@ -894,7 +903,7 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         Assert.Equal([taker], ResistanceRoles.OpinionMakerIds(after));
 
         var team = after.Players.OrderBy(x => x.Order).Take(after.Rules.TeamSize(after.Players.Count, after.MissionNumber)).Select(x => x.PlayerId).ToList();
-        await _repository.SelectTeamAsync(_sessionId, after.LeaderPlayerId, team, ct);
+        await SelectTeamAsync(after.LeaderPlayerId, team);
 
         // The previous holder is an ordinary voter now and waits for the new one
         Assert.Equal(ResistanceFailure.OpinionMakersFirst, (await CastVoteAsync(target, true)).Failure);
@@ -943,7 +952,7 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         Assert.Equal(ResistancePlayCardStatus.InvalidTarget, (await _repository.TakeResponsibilityAsync(_sessionId, card.HolderPlayerId, card.CardId, Guid.NewGuid(), null, ct)).Status);
 
         var team = game.Players.OrderBy(x => x.Order).Take(game.Rules.TeamSize(5, 1)).Select(x => x.PlayerId).ToList();
-        await _repository.SelectTeamAsync(_sessionId, game.LeaderPlayerId, team, ct);
+        await SelectTeamAsync(game.LeaderPlayerId, team);
         var voting = await _repository.TakeResponsibilityAsync(_sessionId, card.HolderPlayerId, card.CardId, target, null, ct);
         Assert.Equal(ResistancePlayCardStatus.WrongPhase, voting.Status);
 

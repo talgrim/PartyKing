@@ -140,59 +140,6 @@ internal sealed class FakeResistanceGamesRepository : IResistanceGamesRepository
     public Task<bool> DeleteAsync(Guid sessionId, CancellationToken cancellationToken) =>
         Task.FromResult(_games.Remove(sessionId));
 
-    public Task<ResistanceTeamResult> SelectTeamAsync(
-        Guid sessionId, Guid? callerPlayerId, IReadOnlyList<Guid> playerIds, CancellationToken cancellationToken)
-    {
-        _games.TryGetValue(sessionId, out var game);
-        var status = ResistanceTeamStatus.Selected;
-        if (game is null)
-        {
-            status = ResistanceTeamStatus.NoGame;
-        }
-        else if (!game.IsStarted)
-        {
-            status = ResistanceTeamStatus.NotStarted;
-        }
-        else if (game.Phase == ResistancePhase.GameOver)
-        {
-            status = ResistanceTeamStatus.GameOver;
-        }
-        else if (callerPlayerId is null || callerPlayerId != game.LeaderPlayerId)
-        {
-            status = ResistanceTeamStatus.NotLeader;
-        }
-        else if (game.Phase == ResistancePhase.DealingCards)
-        {
-            status = ResistanceTeamStatus.CardsNotDealt;
-        }
-        else if (game.Phase != ResistancePhase.SelectingTeam)
-        {
-            status = ResistanceTeamStatus.AlreadySubmitted;
-        }
-        else if (playerIds.Count != game.Rules.TeamSize(game.Players.Count, game.MissionNumber)
-            || playerIds.Distinct().Count() != playerIds.Count)
-        {
-            status = ResistanceTeamStatus.WrongSize;
-        }
-        else if (playerIds.Any(id => game.Players.All(x => x.PlayerId != id)))
-        {
-            status = ResistanceTeamStatus.UnknownPlayer;
-        }
-        else
-        {
-            foreach (var player in game.Players)
-            {
-                player.IsOnTeam = playerIds.Contains(player.PlayerId);
-                player.Vote = null;
-                player.MissionCard = null;
-            }
-
-            game.Phase = ResistancePhase.Voting;
-        }
-
-        return Task.FromResult(new ResistanceTeamResult(status, game));
-    }
-
     /// <summary>What playing or confirming a plot card answers; the rules behind it are the repository's, tested there.</summary>
     public ResistancePlayCardStatus PlayCardStatus { get; set; } = ResistancePlayCardStatus.Done;
 
