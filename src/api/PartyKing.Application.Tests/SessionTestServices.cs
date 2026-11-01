@@ -30,15 +30,17 @@ internal static class SessionTestServices
         FakeHostTokenProvider? tokens = null,
         FakeSlideshowService? slideshows = null)
     {
-        return new SessionAdminService(
-            sessions,
-            new PasswordHasher(),
-            slideshows ?? new FakeSlideshowService(),
-            new HostSessionCleanup(
+        sessions.Events = TestEvents.SessionDispatcher(
+            cleanup: new HostSessionCleanup(
                 playerStates ?? new PlayerStateStore(new FakeClock()),
                 tokens ?? new FakeHostTokenProvider(),
                 new NullPlayerNotifier(),
                 new NullPlayerConnectionWatchdog()),
+            slideshow: slideshows ?? new FakeSlideshowService());
+
+        return new SessionAdminService(
+            sessions,
+            new PasswordHasher(),
             NullLogger<SessionAdminService>.Instance);
     }
 }

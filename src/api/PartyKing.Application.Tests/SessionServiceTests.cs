@@ -16,7 +16,7 @@ public class SessionServiceTests
 
     public SessionServiceTests()
     {
-        _service = new SessionService(_sessions, new SessionAuthorizer(_sessions), NullLogger<SessionService>.Instance);
+        _service = new SessionService(_sessions, new SessionAuthorizer(_sessions));
         _id = _sessions.AddSession(HostId, new PasswordHasher().Hash("secret")).Id;
     }
 
@@ -27,6 +27,24 @@ public class SessionServiceTests
 
         Assert.False(result.IsError);
         Assert.Equal("New name", _sessions.Renamed.Single().Name);
+    }
+
+    [Fact]
+    public async Task Renaming_TrimsTheNameBeforeCheckingItsLength()
+    {
+        var result = await _service.RenameAsync(_id, $"  {new string('a', 60)}  ", new SessionCaller(HostId, false), CancellationToken.None);
+
+        Assert.False(result.IsError);
+        Assert.Equal(new string('a', 60), _sessions.Renamed.Single().Name);
+    }
+
+    [Fact]
+    public async Task Renaming_ToAnOverlongName_IsRejectedAndChangesNothing()
+    {
+        var result = await _service.RenameAsync(_id, new string('a', 61), new SessionCaller(HostId, false), CancellationToken.None);
+
+        Assert.Equal(ErrorType.Validation, result.FirstError.Type);
+        Assert.Empty(_sessions.Renamed);
     }
 
     [Fact]
