@@ -265,6 +265,76 @@ public class LobbyGamesRepositoryUpdateTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ADeleteAndACreate_AlsoTakeTheSessionLock()
+    {
+        var waits = new List<(string Repository, string Operation, bool Acquired)>();
+        using var listener = ListenToWriteLockWaits(waits, "TryCreateAsync", "DeleteAsync");
+
+        await CreateGameAsync();
+        Assert.True(await _repository.DeleteAsync(_sessionId, CancellationToken.None));
+
+        Assert.Equal(["DeleteAsync", "TryCreateAsync"], waits.Select(x => x.Operation).Order());
+        Assert.All(waits, x => Assert.True(x.Acquired));
+    }
+
+    [Fact]
+    public async Task AGameDeletedWhileTheActionRuns_AnswersNoGameInsteadOfFailing()
+    {
+        await CreateGameAsync();
+        var noGame = new Outcome(false);
+
+        // The game goes away outside the repository's lock (the cascade of a deleted session does)
+        var result = await _repository.UpdateAsync(
+            _sessionId,
+            "TestAsync",
+            noGame,
+            game =>
+            {
+                game.PendingCardId = 7;
+                using var dbContext = _writer.CreateDbContext();
+                dbContext.RingoGames.Where(x => x.SessionId == _sessionId).ExecuteDelete();
+
+                return new Outcome(true);
+            },
+            CancellationToken.None);
+
+        Assert.Same(noGame, result);
+    }
+
+    [Fact]
+    public async Task AFailedSaveOfAnExistingGame_IsStillThrown()
+    {
+        await CreateGameAsync();
+
+        await Assert.ThrowsAnyAsync<DbUpdateException>(() => _repository.UpdateAsync(
+            _sessionId,
+            "TestAsync",
+            new Outcome(false),
+            game =>
+            {
+                game.Players.Add(new RingoPlayer { PlayerId = Guid.Empty, Name = null!, NormalizedName = null! });
+                return new Outcome(true);
+            },
+            CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task OnlyAUniqueConstraintFailure_IsAUniqueViolation()
+    {
+        await CreateGameAsync();
+        await using var dbContext = await _writer.CreateDbContextAsync();
+        dbContext.RingoGames.Add(new RingoGame { SessionId = _sessionId, Seed = 2, CreatedAt = DateTimeOffset.UtcNow });
+        var duplicate = await Assert.ThrowsAsync<DbUpdateException>(() => dbContext.SaveChangesAsync());
+
+        await using var orphanContext = await _writer.CreateDbContextAsync();
+        orphanContext.RingoGames.Add(new RingoGame { SessionId = Guid.NewGuid(), Seed = 3, CreatedAt = DateTimeOffset.UtcNow });
+        var orphan = await Assert.ThrowsAsync<DbUpdateException>(() => orphanContext.SaveChangesAsync());
+
+        Assert.True(duplicate.IsUniqueViolation());
+        Assert.False(orphan.IsUniqueViolation());
+    }
+
+    [Fact]
     public async Task ACancelledWaitForTheSessionLock_IsRecordedAsNotAcquired()
     {
         await CreateGameAsync();

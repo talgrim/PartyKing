@@ -692,12 +692,13 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         var game = await StartAsync(5, plotCards: true, onlyType: ResistancePlotCardType.OpenUp);
         var someone = game.Players.First(x => x.PlayerId != game.LeaderPlayerId).PlayerId;
 
-        Assert.Equal(ResistanceFailure.NotResolving, (await PlayPlotCardAsync(someone, 0, game.LeaderPlayerId!.Value)).Failure);
+        // A non-holder learns nothing about the card, not even through the phase check
+        Assert.Equal(ResistanceFailure.NotYourCard, (await PlayPlotCardAsync(someone, 0, game.LeaderPlayerId!.Value)).Failure);
         Assert.Equal(ResistanceFailure.NoGame, (await _repository.UpdateAsync(
             Guid.NewGuid(), "ConfirmPlotCardAsync", ResistanceOutcome.NoGame, g => g.ConfirmPlotCard(someone, 0), ct)).Failure);
 
         await DealOnlyAsync(game);
-        Assert.Equal(ResistanceFailure.UnknownCard, (await PlayPlotCardAsync(someone, 99, game.LeaderPlayerId!.Value)).Failure);
+        Assert.Equal(ResistanceFailure.NotYourCard, (await PlayPlotCardAsync(someone, 99, game.LeaderPlayerId!.Value)).Failure);
     }
 
     [Fact]
@@ -1078,7 +1079,7 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         var stranger = game.Players.First(x => x.PlayerId != card.HolderPlayerId).PlayerId;
 
         Assert.Equal(ResistanceFailure.NotYourCard, (await TakeLeadAsync(stranger, card.CardId)).Failure);
-        Assert.Equal(ResistanceFailure.UnknownCard, (await TakeLeadAsync(card.HolderPlayerId, 99)).Failure);
+        Assert.Equal(ResistanceFailure.NotYourCard, (await TakeLeadAsync(card.HolderPlayerId, 99)).Failure);
         Assert.Equal(ResistanceFailure.NotPlayerToConfirm, (await PassLeaderWindowAsync(Guid.NewGuid())).Failure);
 
         await TakeLeadAsync(card.HolderPlayerId, card.CardId);

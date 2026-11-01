@@ -154,6 +154,18 @@ public class RingoServiceTests
     }
 
     [Fact]
+    public async Task ContinuingWithNoCardPending_PushesNothing()
+    {
+        var ct = CancellationToken.None;
+        await _service.StartAsync(_id, new GameCaller(HostId, false), ct);
+        var pushes = _notifier.RingoChanges.Count;
+
+        Assert.False((await _service.ContinueAsync(_id, new GameCaller(HostId, false), ct)).IsError);
+
+        Assert.Equal(pushes, _notifier.RingoChanges.Count);
+    }
+
+    [Fact]
     public async Task EveryChange_IsPushedToTheSession()
     {
         var ct = CancellationToken.None;

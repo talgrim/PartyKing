@@ -96,12 +96,19 @@ public class ResistanceGameTeamTests
     [Theory]
     [InlineData(ResistancePhase.Voting)]
     [InlineData(ResistancePhase.PlayingMission)]
-    [InlineData(ResistancePhase.LeaderWindow)]
     public void AfterTheTeamWasSubmitted_AnotherOneIsRefused(ResistancePhase phase)
     {
         var game = StartedGame(phase: phase);
 
         Assert.Equal(ResistanceFailure.TeamSubmitted, game.SelectTeam(game.LeaderPlayerId, Ids(game, 2)).Failure);
+    }
+
+    [Fact]
+    public void InTheLeaderWindow_NoTeamExistsYet_SoTheRefusalDoesNotClaimOne()
+    {
+        var game = StartedGame(phase: ResistancePhase.LeaderWindow);
+
+        Assert.Equal(ResistanceFailure.NotSelectingTeam, game.SelectTeam(game.LeaderPlayerId, Ids(game, 2)).Failure);
     }
 
     [Fact]
