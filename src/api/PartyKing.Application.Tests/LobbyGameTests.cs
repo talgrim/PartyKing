@@ -160,6 +160,17 @@ public class LobbyGameTests
         Assert.Equal((0, 1), (a.Order, b.Order));
     }
 
+    [Fact]
+    public void NormalizedName_IsDerivedForAPlayerThatNeverJoined_UnlessOneWasStored()
+    {
+        Assert.Equal("OLA", Player("Ola").NormalizedName);
+        Assert.Equal("OLA (HOST)", Player("Ola", profileId: "spotify-ola").NormalizedName);
+
+        var stored = Player("Ola");
+        stored.NormalizedName = "STORED";
+        Assert.Equal("STORED", stored.NormalizedName);
+    }
+
     [Theory]
     [InlineData("", LobbyNameFailure.Empty)]
     [InlineData("abcdefghijklmnopqrstuvwxyz12345", LobbyNameFailure.TooLong)]
