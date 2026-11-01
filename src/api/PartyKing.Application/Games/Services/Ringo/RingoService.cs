@@ -4,7 +4,6 @@ using PartyKing.Application.System;
 using PartyKing.Contract.V1.Games.Ringo;
 using PartyKing.Domain.Entities.Games;
 using PartyKing.Infrastructure.Repositories;
-using PartyKing.Infrastructure.Results;
 
 
 namespace PartyKing.Application.Games.Services.Ringo;
@@ -170,24 +169,24 @@ internal class RingoService : IRingoService
         // Without players there is no name to record, so the role stands in
         var flippedBy = caller.IsAdmin ? "admin" : "guest";
         var turnOf = access.Value.IsManager ? null : caller.PlayerId;
-        var result = await _games.FlipAsync(sessionId, cardId, flippedBy, turnOf, _clock.UtcNow, cancellationToken);
-
-        switch (result.Status)
+        var outcome = await _games.UpdateAsync(
+            sessionId,
+            nameof(FlipAsync),
+            RingoOutcome.NoGame,
+            game => game.Flip(cardId, flippedBy, turnOf, _clock.UtcNow),
+            cancellationToken);
+        if (RingoErrors.From(outcome) is { } error)
         {
-            case RingoFlipStatus.NoGame:
-                return _lobby.NoGame;
-            case RingoFlipStatus.NotYourTurn:
-                return Error.Conflict("Ringo.NotYourTurn", "It is another player's turn.");
-            case RingoFlipStatus.GameOver:
-                return Error.Conflict("Ringo.GameOver", "The fourth king ended the game.");
-            case RingoFlipStatus.CardPending:
-                return Error.Conflict("Ringo.CardPending", "Continue past the flipped card before flipping another.");
-            case RingoFlipStatus.Flipped:
-                await _notifier.RingoChangedAsync(sessionId, cancellationToken);
-                break;
+            return error;
         }
 
-        return ToDto(result.Game!, caller);
+        // A card that was flipped already changes nothing, so there is nothing to tell the clients
+        if (outcome.Changed)
+        {
+            await _notifier.RingoChangedAsync(sessionId, cancellationToken);
+        }
+
+        return ToDto(outcome.Game!, caller);
     }
 
     public async Task<ErrorOr<RingoGameDto>> ContinueAsync(
@@ -200,20 +199,20 @@ internal class RingoService : IRingoService
         }
 
         var turnOf = access.Value.IsManager ? null : caller.PlayerId;
-        var result = await _games.ContinueAsync(sessionId, turnOf, cancellationToken);
-        if (result.Status == RingoContinueStatus.NoGame)
+        var outcome = await _games.UpdateAsync(
+            sessionId,
+            nameof(ContinueAsync),
+            RingoOutcome.NoGame,
+            game => game.Continue(turnOf),
+            cancellationToken);
+        if (RingoErrors.From(outcome) is { } error)
         {
-            return _lobby.NoGame;
-        }
-
-        if (result.Status == RingoContinueStatus.NotYourTurn)
-        {
-            return Error.Conflict("Ringo.NotYourTurn", "It is another player's turn.");
+            return error;
         }
 
         await _notifier.RingoChangedAsync(sessionId, cancellationToken);
 
-        return ToDto(result.Game!, caller);
+        return ToDto(outcome.Game!, caller);
     }
 
     public async Task<ErrorOr<Deleted>> EndAsync(
