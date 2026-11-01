@@ -31,7 +31,7 @@ public abstract class ResistanceServiceTestBase
         var gate = new ResistanceActionGate(lobby, _notifier);
         _lobbyService = new ResistanceLobbyService(lobby, gate, _games, clock, _notifier, _rules);
         _roundService = new ResistanceRoundService(gate, _games, clock);
-        _plotCardService = new ResistancePlotCardService(gate, _games);
+        _plotCardService = new ResistancePlotCardService(gate, _games, clock);
         _id = _sessions.AddSession(HostId, new PasswordHasher().Hash("secret")).Id;
     }
 

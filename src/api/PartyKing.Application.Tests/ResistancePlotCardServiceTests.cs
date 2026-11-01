@@ -37,9 +37,15 @@ public class ResistancePlotCardServiceTests : ResistanceServiceTestBase
         var before = _notifier.ResistanceChanges.Count;
         var dealt = await _plotCardService.DealPlotCardsAsync(_id, deal, leader, ct);
 
-        Assert.Equal(ResistancePhaseDto.SelectingTeam, dealt.Value.Phase);
+        // The deck is shuffled by the real Domain: an immediate card has to be played before the team is picked, and a
+        // dealt Opinion Maker lies face up instead of in a hand
+        var drawnType = drawn.Single().Type;
+        var immediate = drawnType is ResistancePlotCardTypeDto.OverheardConversation
+            or ResistancePlotCardTypeDto.EstablishConfidence
+            or ResistancePlotCardTypeDto.OpenUp;
+        Assert.Equal(immediate ? ResistancePhaseDto.ResolvingCards : ResistancePhaseDto.SelectingTeam, dealt.Value.Phase);
         Assert.Equal(before + 1, _notifier.ResistanceChanges.Count);
-        Assert.Equal(1, dealt.Value.PlotCardCounts.Sum(x => x.Count));
+        Assert.Equal(drawnType == ResistancePlotCardTypeDto.OpinionMaker ? 0 : 1, dealt.Value.PlotCardCounts.Sum(x => x.Count));
         Assert.Equal(deal.Count, (await _lobbyService.GetAsync(_id, receiver, ct)).Value.YourPlotCards.Count);
         foreach (var other in others.Skip(1))
         {
@@ -49,30 +55,6 @@ public class ResistancePlotCardServiceTests : ResistanceServiceTestBase
         Assert.Equal("Resistance.NotDealing", (await _plotCardService.DealPlotCardsAsync(_id, [], leader, ct)).FirstError.Code);
     }
 
-    [Theory]
-    [InlineData(ResistancePlayCardStatus.NoGame, "Resistance.NotFound")]
-    [InlineData(ResistancePlayCardStatus.NotStarted, "Resistance.NotStarted")]
-    [InlineData(ResistancePlayCardStatus.GameOver, "Resistance.GameOver")]
-    [InlineData(ResistancePlayCardStatus.NotResolving, "Resistance.NotResolving")]
-    [InlineData(ResistancePlayCardStatus.UnknownCard, "Resistance.UnknownCard")]
-    [InlineData(ResistancePlayCardStatus.NotAllowed, "Resistance.NotYourCard")]
-    [InlineData(ResistancePlayCardStatus.WrongState, "Resistance.CardState")]
-    [InlineData(ResistancePlayCardStatus.InvalidTarget, "Resistance.InvalidTarget")]
-    [InlineData(ResistancePlayCardStatus.WrongPhase, "Resistance.CardNotPlayableNow")]
-    [InlineData(ResistancePlayCardStatus.ChoiceRequired, "Resistance.ChoiceRequired")]
-    public async Task PlayingAndConfirmingAPlotCard_MapTheRepositoryStatusToAnError(ResistancePlayCardStatus status, string code)
-    {
-        var ct = CancellationToken.None;
-        var callers = await OpenGameAndJoinAsync(5);
-        await _roundService.StartAsync(_id, Host, ct);
-        _games.PlayCardStatus = status;
-
-        var played = await _plotCardService.PlayPlotCardAsync(_id, 0, callers[1].PlayerId!.Value, callers[0], ct);
-        var confirmed = await _plotCardService.ConfirmPlotCardAsync(_id, 0, callers[0], ct);
-
-        Assert.Equal(code, played.FirstError.Code);
-        Assert.Equal(code, confirmed.FirstError.Code);
-    }
 
     [Fact]
     public async Task APlayedPlotCard_IsLoggedForEveryoneButItsIdentityCardOnlyShowsToItsViewer()

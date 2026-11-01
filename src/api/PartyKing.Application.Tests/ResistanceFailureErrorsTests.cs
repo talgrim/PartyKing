@@ -6,8 +6,7 @@ namespace PartyKing.Application.Tests;
 
 /// <summary>
 /// The golden table by failure: the error (type, code and message) each <see cref="ResistanceFailure"/> becomes. The
-/// UI and the tests match on the codes. A failure joins the table when the action it belongs to has moved into the
-/// Domain, because its old status, which <see cref="ResistanceErrorsTests"/> pinned, is gone by then.
+/// UI and the tests match on the codes. Every failure is in the table.
 /// </summary>
 public class ResistanceFailureErrorsTests
 {
@@ -62,6 +61,41 @@ public class ResistanceFailureErrorsTests
         [ResistanceFailure.NothingToContinue] = new(
             ErrorType.Conflict, "Resistance.NothingToContinue", "There is no finished mission to move on from."),
         [ResistanceFailure.GameOver] = new(ErrorType.Conflict, "Resistance.GameOver", "The game is over."),
+        [ResistanceFailure.NoGame] = new(ErrorType.NotFound, "Resistance.NotFound", "The session has no Resistance game."),
+        [ResistanceFailure.NotLeaderToDeal] = new(
+            ErrorType.Forbidden, "Resistance.NotLeader", "Only the mission leader hands out the plot cards."),
+        [ResistanceFailure.NotDealing] = new(
+            ErrorType.Conflict, "Resistance.NotDealing", "There are no plot cards to hand out."),
+        [ResistanceFailure.UnknownDealCard] = new(
+            ErrorType.Validation,
+            "Resistance.UnknownCard",
+            "A card is not one the leader has to hand out, or is given twice."),
+        [ResistanceFailure.InvalidReceiver] = new(
+            ErrorType.Validation, "Resistance.InvalidReceiver", "Cards go to other players of the game."),
+        [ResistanceFailure.IncompleteDeal] = new(
+            ErrorType.Validation, "Resistance.IncompleteDeal", "Every drawn card has to be handed out."),
+        [ResistanceFailure.NotResolving] = new(
+            ErrorType.Conflict, "Resistance.NotResolving", "No plot cards are being played now."),
+        [ResistanceFailure.NotPlayingMission] = new(
+            ErrorType.Conflict, "Resistance.NotPlayingMission", "The mission cards are not being played now."),
+        [ResistanceFailure.UnknownCard] = new(
+            ErrorType.NotFound, "Resistance.UnknownCard", "There is no such card to play."),
+        [ResistanceFailure.NotYourCard] = new(
+            ErrorType.Forbidden, "Resistance.NotYourCard", "This is not your card to play or to confirm."),
+        [ResistanceFailure.CardState] = new(
+            ErrorType.Conflict, "Resistance.CardState", "The card was played already, or has not been played yet."),
+        [ResistanceFailure.InvalidTarget] = new(
+            ErrorType.Validation, "Resistance.InvalidTarget", "The card cannot be played on that player."),
+        [ResistanceFailure.CardNotPlayableNow] = new(
+            ErrorType.Conflict,
+            "Resistance.CardNotPlayableNow",
+            "That card can't be played in this step of the round."),
+        [ResistanceFailure.NotPlayerToConfirm] = new(
+            ErrorType.Forbidden, "Resistance.NotPlayer", "Only the players of the game confirm."),
+        [ResistanceFailure.ChoiceRequired] = new(
+            ErrorType.Validation,
+            "Resistance.ChoiceRequired",
+            "Say whether to take the Opinion Maker or a card from the hand."),
     };
 
     [Fact]
@@ -84,5 +118,11 @@ public class ResistanceFailureErrorsTests
             Assert.Equal(expected.Code, error.Value.Code);
             Assert.Equal(expected.Description, error.Value.Description);
         }
+    }
+
+    [Fact]
+    public void EveryFailure_IsInTheTable()
+    {
+        Assert.Equal(Enum.GetValues<ResistanceFailure>().Order(), Golden.Keys.Order());
     }
 }
