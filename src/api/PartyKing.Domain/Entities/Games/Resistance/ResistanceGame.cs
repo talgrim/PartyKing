@@ -1,4 +1,6 @@
 using PartyKing.Domain.Entities.Games.Base;
+using PartyKing.Domain.Events;
+using PartyKing.Domain.Events.Games.Resistance;
 
 namespace PartyKing.Domain.Entities.Games.Resistance;
 
@@ -70,6 +72,19 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
 
     protected override int PlayerLimit => MaxPlayers;
 
+    /// <summary>Lets <see cref="ResistanceRoles"/>, which does the transitions, raise events.</summary>
+    internal void Publish(IDomainEvent domainEvent)
+    {
+        Raise(domainEvent);
+    }
+
+    /// <summary>Hands the lead to the given player and says so.</summary>
+    internal void ChangeLeader(Guid? leaderPlayerId)
+    {
+        LeaderPlayerId = leaderPlayerId;
+        Raise(new ResistanceLeaderChanged(SessionId, leaderPlayerId));
+    }
+
     /// <summary>A started game locks its players.</summary>
     protected override bool IsLocked => IsStarted;
 
@@ -116,6 +131,7 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
 
         ResistanceRoles.Deal(this, random);
         StartedAt = startedAt;
+        Raise(new ResistanceStarted(SessionId));
 
         return ResistanceOutcome.Success(this);
     }
@@ -135,6 +151,7 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
 
         ResistanceRoles.Reset(this);
         StartedAt = null;
+        Raise(new ResistanceRestarted(SessionId));
 
         return ResistanceOutcome.Success(this);
     }
@@ -190,6 +207,7 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
         }
 
         Phase = ResistancePhase.Voting;
+        Raise(new ResistanceTeamSubmitted(SessionId, MissionNumber, LeaderPlayerId!.Value, playerIds.ToList()));
 
         return ResistanceOutcome.Success(this);
     }
@@ -231,6 +249,7 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
         }
 
         voter.Vote = approve;
+        Raise(new ResistanceVoteCast(SessionId, voter.PlayerId));
         if (Players.All(x => x.Vote is not null))
         {
             ResistanceRoles.ResolveVotes(this);
@@ -278,6 +297,7 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
         }
 
         player.MissionCard = success;
+        Raise(new ResistanceMissionCardPlayed(SessionId, player.PlayerId));
         if (ResistanceRoles.AllCardsPlayed(this))
         {
             ResistanceRoles.ResolveMission(this);

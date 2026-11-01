@@ -1,3 +1,5 @@
+using PartyKing.Domain.Events.Games.Resistance;
+
 namespace PartyKing.Domain.Entities.Games.Resistance;
 
 /// <summary>The plot cards add-on of <see cref="ResistanceGame"/>: dealing the cards, playing them and the windows around them.</summary>
@@ -285,7 +287,7 @@ public partial class ResistanceGame
         }
 
         MarkPlayed(card, LeaderPlayerId, playedAt, confirmed: true);
-        LeaderPlayerId = callerPlayerId;
+        ChangeLeader(callerPlayerId);
         ResistanceRoles.AfterWindow(this);
 
         return ResistanceOutcome.Success(this);
@@ -431,5 +433,6 @@ public partial class ResistanceGame
         card.PlayedAt = playedAt;
         card.PlayedInMission = MissionNumber;
         card.IsConfirmed = confirmed;
+        Raise(new ResistancePlotCardPlayed(SessionId, card.CardId, card.Type, card.HolderPlayerId, targetPlayerId));
     }
 }
