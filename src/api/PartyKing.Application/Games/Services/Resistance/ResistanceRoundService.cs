@@ -132,8 +132,12 @@ internal class ResistanceRoundService : IResistanceRoundService
         return _gate.RunAsPlayerAsync(
             sessionId,
             caller,
-            _ => _games.PlayMissionCardAsync(sessionId, caller.PlayerId, success, cancellationToken),
-            result => ResistanceErrors.From(result.Status),
+            _ => _games.UpdateAsync(
+                sessionId,
+                nameof(PlayMissionCardAsync),
+                ResistanceOutcome.NoGame,
+                game => game.PlayMissionCard(caller.PlayerId, success),
+                cancellationToken),
             cancellationToken);
     }
 
@@ -143,8 +147,12 @@ internal class ResistanceRoundService : IResistanceRoundService
         return _gate.RunAsPlayerAsync(
             sessionId,
             caller,
-            access => _games.ContinueAsync(sessionId, caller.PlayerId, access.IsManager, cancellationToken),
-            result => ResistanceErrors.From(result.Status),
+            access => _games.UpdateAsync(
+                sessionId,
+                nameof(ContinueAsync),
+                ResistanceOutcome.NoGame,
+                game => game.Continue(caller.PlayerId, access.IsManager),
+                cancellationToken),
             cancellationToken);
     }
 }

@@ -139,33 +139,4 @@ internal static class ResistanceErrors
             "Resistance.InvalidTarget", "The card cannot be played on that player."),
         _ => null,
     };
-
-    public static Error? From(ResistanceMissionStatus status) => status switch
-    {
-        ResistanceMissionStatus.NoGame => NoGame,
-        ResistanceMissionStatus.NotStarted => NotStarted,
-        ResistanceMissionStatus.GameOver => GameOver,
-        ResistanceMissionStatus.NotPlayer => Error.Forbidden(
-            "Resistance.NotPlayer", "Only the players of the game play the mission."),
-        ResistanceMissionStatus.NotPlaying => Error.Conflict(
-            "Resistance.NotPlayingMission", "No approved team is playing a mission."),
-        ResistanceMissionStatus.NotOnTeam => Error.Forbidden(
-            "Resistance.NotOnTeam", "Only the members of the team play the mission."),
-        ResistanceMissionStatus.AlreadyPlayed => Error.Conflict("Resistance.AlreadyPlayed", "You already played your card."),
-        ResistanceMissionStatus.MustSucceed => Error.Forbidden(
-            "Resistance.MustSucceed", "A member of the resistance can only play Success."),
-        _ => null,
-    };
-
-    public static Error? From(ResistanceContinueStatus status) => status switch
-    {
-        ResistanceContinueStatus.NoGame => NoGame,
-        ResistanceContinueStatus.NotStarted => NotStarted,
-        ResistanceContinueStatus.GameOver => GameOver,
-        ResistanceContinueStatus.NotAllowed => Error.Forbidden(
-            "Resistance.NotAllowed", "Only the leader, the host or an admin continues."),
-        ResistanceContinueStatus.NothingToContinue => Error.Conflict(
-            "Resistance.NothingToContinue", "There is no finished mission to move on from."),
-        _ => null,
-    };
 }

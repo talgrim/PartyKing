@@ -64,19 +64,4 @@ public interface IResistanceGamesRepository : ILobbyGamesRepository<ResistanceGa
     /// </summary>
     Task<ResistancePlayCardResult> ConfirmPlotCardAsync(
         Guid sessionId, Guid? callerPlayerId, int cardId, CancellationToken cancellationToken);
-
-    /// <summary>
-    /// A member of the approved team secretly plays a Success or Fail card; it can't be changed. The card that
-    /// completes the team is resolved in the same save: the mission fails when the Fail cards reach the rules'
-    /// requirement, and the third success or failure ends the game.
-    /// </summary>
-    Task<ResistanceMissionCardResult> PlayMissionCardAsync(
-        Guid sessionId, Guid? callerPlayerId, bool success, CancellationToken cancellationToken);
-
-    /// <summary>
-    /// Moves on after a rejected team or a finished mission: the next player leads, the team, the votes and the cards
-    /// are cleared (a finished mission also starts the next one). The leader or a manager may do it.
-    /// </summary>
-    Task<ResistanceContinueResult> ContinueAsync(
-        Guid sessionId, Guid? callerPlayerId, bool isManager, CancellationToken cancellationToken);
 }

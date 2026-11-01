@@ -224,6 +224,89 @@ public class ResistanceGame : LobbyGame<ResistancePlayer>
         return ResistanceOutcome.Success(this);
     }
 
+    /// <summary>
+    /// A member of the approved team secretly plays a Success or Fail card; it can't be changed. The card that
+    /// completes the team is resolved right away: the mission fails when the Fail cards reach the rules' requirement,
+    /// and the third success or failure ends the game.
+    /// </summary>
+    public ResistanceOutcome PlayMissionCard(Guid? callerPlayerId, bool success)
+    {
+        if (!IsStarted)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotStarted, this);
+        }
+
+        if (Phase == ResistancePhase.GameOver)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.GameOver, this);
+        }
+
+        var player = Players.FirstOrDefault(x => x.PlayerId == callerPlayerId);
+        if (player is null)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotPlayerToPlay, this);
+        }
+
+        if (Phase != ResistancePhase.PlayingMission)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NoApprovedTeam, this);
+        }
+
+        if (!player.IsOnTeam)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotOnTeam, this);
+        }
+
+        if (player.MissionCard is not null)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.AlreadyPlayed, this);
+        }
+
+        if (!success && player.Role == ResistanceRole.Resistance)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.MustSucceed, this);
+        }
+
+        player.MissionCard = success;
+        if (ResistanceRoles.AllCardsPlayed(this))
+        {
+            ResistanceRoles.ResolveMission(this);
+        }
+
+        return ResistanceOutcome.Success(this);
+    }
+
+    /// <summary>
+    /// Moves on after a rejected team or a finished mission: the next player leads, the team, the votes and the cards
+    /// are cleared (a finished mission also starts the next one). The leader or a manager may do it.
+    /// </summary>
+    public ResistanceOutcome Continue(Guid? callerPlayerId, bool isManager)
+    {
+        if (!IsStarted)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotStarted, this);
+        }
+
+        if (Phase == ResistancePhase.GameOver)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.GameOver, this);
+        }
+
+        if (!isManager && (callerPlayerId is null || callerPlayerId != LeaderPlayerId))
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotAllowedToContinue, this);
+        }
+
+        if (Phase != ResistancePhase.MissionResult)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NothingToContinue, this);
+        }
+
+        ResistanceRoles.PassLeadership(this);
+
+        return ResistanceOutcome.Success(this);
+    }
+
     /// <summary>Switches the plot cards add-on on or off in the rules. Allowed until the game starts, open or not.</summary>
     public ResistanceOutcome SetPlotCards(bool enabled)
     {
