@@ -10,6 +10,9 @@ namespace PartyKing.Domain.Events.Games.Resistance;
 /// </summary>
 public sealed record ResistanceChanged(Guid SessionId) : IDomainEvent;
 
+/// <summary>The host or an admin created the session's Resistance game, a lobby that is not open yet.</summary>
+public sealed record ResistanceCreated(Guid SessionId) : IDomainEvent;
+
 /// <summary>The roles were dealt and the first leader picked.</summary>
 public sealed record ResistanceStarted(Guid SessionId) : IDomainEvent;
 

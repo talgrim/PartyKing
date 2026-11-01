@@ -14,7 +14,8 @@ internal sealed class LobbyPushHandler :
     IDomainEventHandler<LobbyOpened>,
     IDomainEventHandler<LobbyPlayerJoined>,
     IDomainEventHandler<LobbyPlayerKicked>,
-    IDomainEventHandler<LobbyOrderChanged>
+    IDomainEventHandler<LobbyOrderChanged>,
+    IDomainEventHandler<LobbyGameEnded>
 {
     private readonly IRingoNotifier _ringo;
     private readonly IResistanceNotifier _resistance;
@@ -38,6 +39,11 @@ internal sealed class LobbyPushHandler :
     }
 
     public Task HandleAsync(LobbyPlayerKicked domainEvent, CancellationToken cancellationToken)
+    {
+        return NotifierOf(domainEvent.Kind).ChangedAsync(domainEvent.SessionId, cancellationToken);
+    }
+
+    public Task HandleAsync(LobbyGameEnded domainEvent, CancellationToken cancellationToken)
     {
         return NotifierOf(domainEvent.Kind).ChangedAsync(domainEvent.SessionId, cancellationToken);
     }

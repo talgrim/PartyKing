@@ -1,5 +1,8 @@
 namespace PartyKing.Domain.Events.Games.Ringo;
 
+/// <summary>The host or an admin started the session's Ringo game.</summary>
+public sealed record RingoStarted(Guid SessionId) : IDomainEvent;
+
 /// <summary>A card was turned over and is now the pending one. <c>FlippedBy</c> is the name recorded in the history.</summary>
 public sealed record RingoCardFlipped(Guid SessionId, int CardId, string FlippedBy) : IDomainEvent;
 

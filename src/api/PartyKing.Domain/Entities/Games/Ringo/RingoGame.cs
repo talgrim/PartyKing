@@ -13,7 +13,10 @@ public class RingoGame : LobbyGame<RingoPlayer>
 
     public static RingoGame Start(Guid sessionId, int seed, DateTimeOffset createdAt)
     {
-        return new RingoGame { SessionId = sessionId, Seed = seed, CreatedAt = createdAt };
+        var game = new RingoGame { SessionId = sessionId, Seed = seed, CreatedAt = createdAt };
+        game.Raise(new RingoStarted(sessionId));
+
+        return game;
     }
 
     public override GameKind Kind => GameKind.Ringo;

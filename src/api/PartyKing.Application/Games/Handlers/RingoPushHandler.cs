@@ -5,10 +5,11 @@ using PartyKing.Domain.Events.Games.Ringo;
 namespace PartyKing.Application.Games.Handlers;
 
 /// <summary>
-/// Tells the session's clients that the Ringo game changed: a card was flipped, or the pending card was dealt with and
+/// Tells the session's clients that the Ringo game changed: the game was started, a card was flipped, or the pending card was dealt with and
 /// the turn moved on. The game over event follows the flip it belongs to, so it needs no push of its own.
 /// </summary>
 internal sealed class RingoPushHandler :
+    IDomainEventHandler<RingoStarted>,
     IDomainEventHandler<RingoCardFlipped>,
     IDomainEventHandler<RingoTurnPassed>
 {
@@ -17,6 +18,11 @@ internal sealed class RingoPushHandler :
     public RingoPushHandler(IRingoNotifier notifier)
     {
         _notifier = notifier;
+    }
+
+    public Task HandleAsync(RingoStarted domainEvent, CancellationToken cancellationToken)
+    {
+        return _notifier.ChangedAsync(domainEvent.SessionId, cancellationToken);
     }
 
     public Task HandleAsync(RingoCardFlipped domainEvent, CancellationToken cancellationToken)

@@ -2,6 +2,9 @@ using PartyKing.Domain.Entities.Games.Base;
 
 namespace PartyKing.Domain.Events.Games.Base;
 
+/// <summary>The game of the session was ended and deleted, with its players.</summary>
+public sealed record LobbyGameEnded(Guid SessionId, GameKind Kind) : IDomainEvent;
+
 /// <summary>An admin opened the game to guests.</summary>
 public sealed record LobbyOpened(Guid SessionId, GameKind Kind) : IDomainEvent;
 

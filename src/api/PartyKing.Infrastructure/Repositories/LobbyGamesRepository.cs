@@ -1,5 +1,6 @@
 using PartyKing.Application.Events;
 using PartyKing.Domain.Events;
+using PartyKing.Domain.Events.Games.Base;
 using PartyKing.Domain.Repositories;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -48,6 +49,9 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
     protected abstract DbSet<TPlayer> PlayersOf(PartyKingDbContextBase dbContext);
 
     protected abstract DbSet<TGame> Table(PartyKingDbContextBase dbContext);
+
+    /// <summary>The game this repository stores; named by the event of an ended game.</summary>
+    protected abstract GameKind Kind { get; }
 
     /// <summary>
     /// Runs a write of the session's game, which loads it, changes it and saves it, while no other write of that
@@ -197,7 +201,7 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
         return await WriteAsync(
             game.SessionId,
             nameof(TryCreateAsync),
-            async _ =>
+            async events =>
             {
                 await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
 
@@ -211,6 +215,7 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
                 try
                 {
                     await SaveAsync(dbContext, cancellationToken);
+                    events.AddRange(game.DrainEvents());
                     return true;
                 }
                 catch (DbUpdateException ex) when (ex.IsUniqueViolation())
@@ -408,7 +413,7 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
         return await WriteAsync(
             sessionId,
             nameof(DeleteAsync),
-            async _ =>
+            async events =>
             {
                 await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
 
@@ -416,8 +421,15 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
                     .Where(x => x.SessionId == sessionId)
                     .ExecuteDeleteAsync(cancellationToken);
                 _reads.Clear();
+                if (deleted == 0)
+                {
+                    return false;
+                }
 
-                return deleted > 0;
+                // Nothing is loaded to raise it, so the repository names the ended game
+                events.Add(new LobbyGameEnded(sessionId, Kind));
+
+                return true;
             },
             cancellationToken);
     }

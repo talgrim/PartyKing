@@ -1,6 +1,7 @@
 using PartyKing.Application.Events;
 using PartyKing.Domain.Repositories;
 using Microsoft.EntityFrameworkCore;
+using PartyKing.Domain.Entities.Games.Base;
 using PartyKing.Domain.Entities.Games.Resistance;
 using PartyKing.Infrastructure.Metrics;
 using PartyKing.Persistence.Database;
@@ -28,6 +29,8 @@ internal class ResistanceGamesRepository
             .Include(x => x.PlotCards)
             .AsSplitQuery();
     }
+
+    protected override GameKind Kind => GameKind.Resistance;
 
     protected override DbSet<ResistanceGame> Table(PartyKingDbContextBase dbContext) => dbContext.ResistanceGames;
 

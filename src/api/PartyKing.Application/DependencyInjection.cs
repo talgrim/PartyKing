@@ -131,6 +131,7 @@ public static class DependencyInjection
         services.AddDomainEventHandler<LobbyPlayerJoined, LobbyPushHandler>();
         services.AddDomainEventHandler<LobbyPlayerKicked, LobbyPushHandler>();
         services.AddDomainEventHandler<LobbyOrderChanged, LobbyPushHandler>();
+        services.AddDomainEventHandler<LobbyGameEnded, LobbyPushHandler>();
         services.RegisterRingo();
         services.RegisterResistance(configuration);
         services.RegisterNeverHaveIEver();
@@ -138,6 +139,7 @@ public static class DependencyInjection
 
     private static void RegisterRingo(this IServiceCollection services)
     {
+        services.AddDomainEventHandler<RingoStarted, RingoPushHandler>();
         services.AddDomainEventHandler<RingoCardFlipped, RingoPushHandler>();
         services.AddDomainEventHandler<RingoTurnPassed, RingoPushHandler>();
         services.AddScoped<RingoGameLobby>();
@@ -147,6 +149,7 @@ public static class DependencyInjection
 
     private static void RegisterResistance(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddDomainEventHandler<ResistanceCreated, ResistancePushHandler>();
         services.AddDomainEventHandler<ResistanceChanged, ResistancePushHandler>();
         services.AddScoped<ResistanceGameLobby>();
         services.AddScoped<ResistanceActionGate>();

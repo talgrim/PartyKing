@@ -61,19 +61,16 @@ internal class RingoService : IRingoService
 
     private readonly IRingoGamesRepository _games;
     private readonly IDateTimeProvider _clock;
-    private readonly IRingoNotifier _notifier;
     private readonly RingoGameLobby _lobby;
 
     public RingoService(
         RingoGameLobby lobby,
         IRingoGamesRepository games,
-        IDateTimeProvider clock,
-        IRingoNotifier notifier)
+        IDateTimeProvider clock)
     {
         _lobby = lobby;
         _games = games;
         _clock = clock;
-        _notifier = notifier;
     }
 
     public async Task<ErrorOr<RingoGameDto>> GetAsync(
@@ -112,8 +109,6 @@ internal class RingoService : IRingoService
         {
             return Error.Conflict("Ringo.AlreadyStarted", "The session already has a Ringo game.");
         }
-
-        await _notifier.ChangedAsync(sessionId, cancellationToken);
 
         return ToDto(game, caller);
     }
@@ -215,8 +210,6 @@ internal class RingoService : IRingoService
         {
             return _lobby.NoGame;
         }
-
-        await _notifier.ChangedAsync(sessionId, cancellationToken);
 
         return Result.Deleted;
     }

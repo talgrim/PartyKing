@@ -18,7 +18,10 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
 
     public static ResistanceGame Create(Guid sessionId, DateTimeOffset createdAt, ResistanceRules rules)
     {
-        return new ResistanceGame { SessionId = sessionId, CreatedAt = createdAt, Rules = rules };
+        var game = new ResistanceGame { SessionId = sessionId, CreatedAt = createdAt, Rules = rules };
+        game.Raise(new ResistanceCreated(sessionId));
+
+        return game;
     }
 
     public override GameKind Kind => GameKind.Resistance;
