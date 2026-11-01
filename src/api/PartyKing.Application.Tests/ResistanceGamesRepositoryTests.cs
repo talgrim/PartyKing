@@ -377,4 +377,22 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         Assert.Equal(ResistanceTeamStatus.NotLeader, old.Status);
         Assert.Equal(ResistanceTeamStatus.Selected, current.Status);
     }
+
+    /// <summary>
+    /// A vote is saved together with the tally of the last one, with no concurrency token. Votes sent at the same time
+    /// can make the voters that finish together each see a missing vote, so the tally never runs. This pins the
+    /// invariant that must hold either way: every vote that was accepted is stored.
+    /// </summary>
+    [Fact]
+    public async Task ConcurrentVotes_AreAllStored()
+    {
+        await StartGameWithTeamAsync(5);
+
+        var statuses = await Task.WhenAll(_players.Select(player => Task.Run(
+            async () => (await _repository.VoteAsync(_sessionId, player, true, CancellationToken.None)).Status)));
+
+        var game = await ReloadAsync();
+        Assert.All(statuses, x => Assert.True(x is ResistanceVoteStatus.Voted or ResistanceVoteStatus.NotVoting));
+        Assert.All(game.Players, x => Assert.True(x.Vote));
+    }
 }
