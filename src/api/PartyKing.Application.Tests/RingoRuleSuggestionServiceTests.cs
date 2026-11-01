@@ -8,7 +8,6 @@ using PartyKing.Application.Localization;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Sessions;
 using PartyKing.Contract.V1.Games;
-using PartyKing.Infrastructure.Llm;
 
 namespace PartyKing.Application.Tests;
 

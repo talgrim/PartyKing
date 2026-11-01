@@ -4,7 +4,6 @@ using PartyKing.Application.Configuration;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Contract.V1.Slideshow;
 using PartyKing.Domain.Entities.Slideshow;
-using PartyKing.Infrastructure.Repositories;
 using PartyKing.Application.Ports;
 using PartyKing.Domain.Repositories;
 

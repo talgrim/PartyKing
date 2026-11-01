@@ -3,7 +3,6 @@ using System.Diagnostics.Metrics;
 using PartyKing.Domain.Entities.Spotify;
 using PartyKing.Domain.Results;
 using PartyKing.Infrastructure.Spotify.Metrics;
-using PartyKing.Infrastructure.Spotify.RestApi;
 
 namespace PartyKing.Api.Tests;
 

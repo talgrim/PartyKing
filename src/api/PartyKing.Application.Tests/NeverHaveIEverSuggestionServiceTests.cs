@@ -7,7 +7,6 @@ using PartyKing.Application.Games.Services.NeverHaveIEver;
 using PartyKing.Application.Localization;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Sessions;
-using PartyKing.Infrastructure.Llm;
 
 namespace PartyKing.Application.Tests;
 
