@@ -90,6 +90,16 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         }
     }
 
+    private Task<ResistanceOutcome> SetPlotCardsAsync(bool enabled)
+    {
+        return _repository.UpdateAsync(
+            _sessionId,
+            "SetPlotCardsAsync",
+            ResistanceOutcome.NoGame,
+            game => game.SetPlotCards(enabled),
+            CancellationToken.None);
+    }
+
     private async Task<ResistanceGame> ReloadAsync() => (await _repository.GetAsync(_sessionId, CancellationToken.None))!;
 
     [Fact]
@@ -303,7 +313,7 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         var ct = CancellationToken.None;
         await StartGameWithTeamAsync(5);
 
-        Assert.Equal(ResistanceRulesStatus.NotEditable, (await _repository.SetPlotCardsAsync(_sessionId, true, ct)).Status);
+        Assert.Equal(ResistanceFailure.PlotCardsLocked, (await SetPlotCardsAsync(true)).Failure);
 
         for (var i = 1; i <= 5; i++)
         {
@@ -315,7 +325,7 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
 
         await _repository.RestartAsync(_sessionId, ct);
 
-        Assert.Equal(ResistanceRulesStatus.Refreshed, (await _repository.SetPlotCardsAsync(_sessionId, true, ct)).Status);
+        Assert.Null((await SetPlotCardsAsync(true)).Failure);
         Assert.True((await ReloadAsync()).Rules.PlotCardsEnabled);
     }
 

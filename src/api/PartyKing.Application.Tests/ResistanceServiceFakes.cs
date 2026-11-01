@@ -36,43 +36,6 @@ internal sealed class FakeResistanceGamesRepository : IResistanceGamesRepository
         return Task.FromResult(_games.TryGetValue(sessionId, out var game) ? action(game) : noGame);
     }
 
-    public Task<ResistanceRulesResult> RefreshRulesAsync(
-        Guid sessionId, ResistanceRules rules, CancellationToken cancellationToken)
-    {
-        var game = _games.GetValueOrDefault(sessionId);
-        if (game is null)
-        {
-            return Task.FromResult(new ResistanceRulesResult(ResistanceRulesStatus.NoGame, null));
-        }
-
-        if (game.IsOpen || game.IsStarted)
-        {
-            return Task.FromResult(new ResistanceRulesResult(ResistanceRulesStatus.NotEditable, game));
-        }
-
-        rules.PlotCardsEnabled = game.Rules.PlotCardsEnabled;
-        game.Rules = rules;
-        return Task.FromResult(new ResistanceRulesResult(ResistanceRulesStatus.Refreshed, game));
-    }
-
-    public Task<ResistanceRulesResult> SetPlotCardsAsync(
-        Guid sessionId, bool enabled, CancellationToken cancellationToken)
-    {
-        var game = _games.GetValueOrDefault(sessionId);
-        if (game is null)
-        {
-            return Task.FromResult(new ResistanceRulesResult(ResistanceRulesStatus.NoGame, null));
-        }
-
-        if (game.IsStarted)
-        {
-            return Task.FromResult(new ResistanceRulesResult(ResistanceRulesStatus.NotEditable, game));
-        }
-
-        game.Rules.PlotCardsEnabled = enabled;
-        return Task.FromResult(new ResistanceRulesResult(ResistanceRulesStatus.Refreshed, game));
-    }
-
     public Task<ResistanceGame?> OpenAsync(Guid sessionId, CancellationToken cancellationToken)
     {
         var game = _games.GetValueOrDefault(sessionId);

@@ -13,9 +13,6 @@ namespace PartyKing.Application.Tests;
 /// </summary>
 public class ResistanceOutcomeErrorsTests
 {
-    private const string RefreshLockedMessage = "The rules can only be refreshed before the game is opened.";
-    private const string PlotCardsLockedMessage = "The plot cards can only be switched before the game starts.";
-
     private static ResistanceGame NewGame(int playerCount = 5, int mission = 1)
     {
         var game = new ResistanceGame { MissionNumber = mission };
@@ -90,7 +87,8 @@ public class ResistanceOutcomeErrorsTests
     public void TheStatusesOfTheRepositories_MapToTheSameErrorsThroughTheirFailures()
     {
         var game = NewGame();
-        var covered = new HashSet<ResistanceFailure>();
+        // The failures of migrated actions have no status left; the golden table pins them instead
+        var covered = ResistanceFailureErrorsTests.Golden.Keys.ToHashSet();
 
         void Check<TStatus>(Func<TStatus, Error?> old, Dictionary<TStatus, ResistanceFailure?> translation)
             where TStatus : struct, Enum
@@ -109,22 +107,6 @@ public class ResistanceOutcomeErrorsTests
             }
         }
 
-        Check<ResistanceRulesStatus>(
-            x => ResistanceErrors.From(x, RefreshLockedMessage),
-            new()
-            {
-                [ResistanceRulesStatus.NoGame] = ResistanceFailure.NoGame,
-                [ResistanceRulesStatus.NotEditable] = ResistanceFailure.RulesLocked,
-                [ResistanceRulesStatus.Refreshed] = null,
-            });
-        Check<ResistanceRulesStatus>(
-            x => ResistanceErrors.From(x, PlotCardsLockedMessage),
-            new()
-            {
-                [ResistanceRulesStatus.NoGame] = ResistanceFailure.NoGame,
-                [ResistanceRulesStatus.NotEditable] = ResistanceFailure.PlotCardsLocked,
-                [ResistanceRulesStatus.Refreshed] = null,
-            });
         Check<ResistanceStartStatus>(
             ResistanceErrors.From,
             new()

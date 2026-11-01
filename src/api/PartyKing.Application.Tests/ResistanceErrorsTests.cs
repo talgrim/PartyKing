@@ -53,19 +53,6 @@ public class ResistanceErrorsTests
     }
 
     [Fact]
-    public void RulesStatus_MapsToErrors()
-    {
-        AssertTable(
-            status => ResistanceErrors.From(status, "locked message"),
-            new Dictionary<ResistanceRulesStatus, Expected?>
-            {
-                [ResistanceRulesStatus.NoGame] = NoGame,
-                [ResistanceRulesStatus.NotEditable] = new(ErrorType.Conflict, "Resistance.RulesLocked", "locked message"),
-                [ResistanceRulesStatus.Refreshed] = null,
-            });
-    }
-
-    [Fact]
     public void StartStatus_MapsToErrors()
     {
         AssertTable(
