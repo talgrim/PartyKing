@@ -74,6 +74,102 @@ public class ResistanceGame : LobbyGame<ResistancePlayer>
         return ResistanceOutcome.Success(this);
     }
 
+    /// <summary>
+    /// Starts the open game: deals the roles and picks the first leader (see <see cref="ResistanceRoles"/>), which
+    /// locks the players.
+    /// </summary>
+    public ResistanceOutcome Start(DateTimeOffset startedAt, Random random)
+    {
+        if (IsStarted)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.AlreadyStarted, this);
+        }
+
+        if (!IsOpen)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotOpen, this);
+        }
+
+        if (Players.Count < MinPlayers)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotEnoughPlayers, this);
+        }
+
+        ResistanceRoles.Deal(this, random);
+        StartedAt = startedAt;
+
+        return ResistanceOutcome.Success(this);
+    }
+
+    /// <summary>Starts a finished game over with the same players: new roles and leader, mission 1, no results.</summary>
+    public ResistanceOutcome Restart()
+    {
+        if (!IsStarted)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotStarted, this);
+        }
+
+        if (Phase != ResistancePhase.GameOver)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotOver, this);
+        }
+
+        ResistanceRoles.Reset(this);
+        StartedAt = null;
+
+        return ResistanceOutcome.Success(this);
+    }
+
+    /// <summary>
+    /// A player votes on the submitted team (a repeated vote replaces the earlier one). The vote that completes the
+    /// round is tallied right away: a majority approves, otherwise (a tie too) the team is rejected, which counts
+    /// towards the five that make the spies win.
+    /// </summary>
+    public ResistanceOutcome Vote(Guid? voterId, bool approve)
+    {
+        if (!IsStarted)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotStarted, this);
+        }
+
+        if (Phase == ResistancePhase.GameOver)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.GameOver, this);
+        }
+
+        var voter = Players.FirstOrDefault(x => x.PlayerId == voterId);
+        if (voter is null)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotPlayerToVote, this);
+        }
+
+        if (Phase != ResistancePhase.Voting)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotVoting, this);
+        }
+
+        var opinionMakers = ResistanceRoles.OpinionMakerIds(this);
+        if (opinionMakers.Contains(voter.PlayerId))
+        {
+            if (voter.Vote is not null)
+            {
+                return ResistanceOutcome.Failed(ResistanceFailure.VoteLocked, this);
+            }
+        }
+        else if (opinionMakers.Any(id => Players.First(x => x.PlayerId == id).Vote is null))
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.OpinionMakersFirst, this);
+        }
+
+        voter.Vote = approve;
+        if (Players.All(x => x.Vote is not null))
+        {
+            ResistanceRoles.ResolveVotes(this);
+        }
+
+        return ResistanceOutcome.Success(this);
+    }
+
     /// <summary>Switches the plot cards add-on on or off in the rules. Allowed until the game starts, open or not.</summary>
     public ResistanceOutcome SetPlotCards(bool enabled)
     {

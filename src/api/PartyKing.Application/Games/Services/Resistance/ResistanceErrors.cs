@@ -98,25 +98,6 @@ internal static class ResistanceErrors
         _ => throw new ArgumentOutOfRangeException(nameof(failure), failure, "No error is defined for this failure."),
     };
 
-    public static Error? From(ResistanceStartStatus status) => status switch
-    {
-        ResistanceStartStatus.NoGame => NoGame,
-        ResistanceStartStatus.NotOpen => Error.Conflict("Resistance.NotOpen", "The game is not open to guests yet."),
-        ResistanceStartStatus.AlreadyStarted => Error.Conflict("Resistance.AlreadyStarted", "The game has already started."),
-        ResistanceStartStatus.NotEnoughPlayers => Error.Conflict(
-            "Resistance.NotEnoughPlayers",
-            $"The game needs at least {ResistanceGame.MinPlayers} players to start."),
-        _ => null,
-    };
-
-    public static Error? From(ResistanceRestartStatus status) => status switch
-    {
-        ResistanceRestartStatus.NoGame => NoGame,
-        ResistanceRestartStatus.NotStarted => NotStarted,
-        ResistanceRestartStatus.NotOver => Error.Conflict("Resistance.NotOver", "The game is still being played."),
-        _ => null,
-    };
-
     public static Error? From(ResistanceTeamStatus status, ResistanceGame? game) => status switch
     {
         ResistanceTeamStatus.NoGame => NoGame,
@@ -173,20 +154,6 @@ internal static class ResistanceErrors
             "Resistance.CardState", "The card was played already, or has not been played yet."),
         ResistancePlayCardStatus.InvalidTarget => Error.Validation(
             "Resistance.InvalidTarget", "The card cannot be played on that player."),
-        _ => null,
-    };
-
-    public static Error? From(ResistanceVoteStatus status) => status switch
-    {
-        ResistanceVoteStatus.NoGame => NoGame,
-        ResistanceVoteStatus.NotStarted => NotStarted,
-        ResistanceVoteStatus.GameOver => GameOver,
-        ResistanceVoteStatus.NotPlayer => Error.Forbidden("Resistance.NotPlayer", "Only the players of the game vote."),
-        ResistanceVoteStatus.NotVoting => Error.Conflict("Resistance.NotVoting", "No team is up for a vote."),
-        ResistanceVoteStatus.VoteLocked => Error.Conflict(
-            "Resistance.VoteLocked", "An Opinion Maker's vote can't be changed."),
-        ResistanceVoteStatus.OpinionMakersFirst => Error.Conflict(
-            "Resistance.OpinionMakersFirst", "The Opinion Makers vote first."),
         _ => null,
     };
 

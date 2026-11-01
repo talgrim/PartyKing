@@ -50,6 +50,32 @@ internal sealed class ResistanceActionGate
         return await FinishAsync(sessionId, caller, mapError(result), result.Game, cancellationToken);
     }
 
+    /// <summary>
+    /// <see cref="RunAsPlayerAsync{TResult}"/> for an action that answers with a <see cref="ResistanceOutcome"/>,
+    /// which names its own error.
+    /// </summary>
+    public async Task<ErrorOr<ResistanceGameDto>> RunAsPlayerAsync(
+        Guid sessionId,
+        GameCaller caller,
+        Func<ResistanceGameLobby.Access, Task<ResistanceOutcome>> call,
+        CancellationToken cancellationToken)
+    {
+        var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
+        if (access.IsError)
+        {
+            return access.Errors;
+        }
+
+        if (access.Value.Game is null)
+        {
+            return ResistanceErrors.NoGame;
+        }
+
+        var outcome = await call(access.Value);
+
+        return await FinishAsync(sessionId, caller, ResistanceErrors.From(outcome), outcome.Game, cancellationToken);
+    }
+
     /// <summary>For the host and admins only (<see cref="GameLobby{TGame,TPlayer}.AuthorizeAsync"/>).</summary>
     public async Task<ErrorOr<ResistanceGameDto>> RunAsManagerAsync<TResult>(
         Guid sessionId,

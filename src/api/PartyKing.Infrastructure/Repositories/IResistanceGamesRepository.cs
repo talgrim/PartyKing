@@ -6,15 +6,6 @@ namespace PartyKing.Infrastructure.Repositories;
 public interface IResistanceGamesRepository : ILobbyGamesRepository<ResistanceGame, ResistancePlayer>
 {
     /// <summary>
-    /// Starts the open game: deals the roles and picks the first leader (see <see cref="ResistanceRoles"/>), which
-    /// locks the players. Atomic with the players joining, so a join either makes it into the roles or is rejected.
-    /// </summary>
-    Task<ResistanceStartResult> StartAsync(Guid sessionId, DateTimeOffset startedAt, CancellationToken cancellationToken);
-
-    /// <summary>Starts a finished game over with the same players: new roles and leader, mission 1, no results.</summary>
-    Task<ResistanceRestartResult> RestartAsync(Guid sessionId, CancellationToken cancellationToken);
-
-    /// <summary>
     /// The leader submits the team of the current mission, which locks it. Checked and saved in one writer context,
     /// so it can't race another submission.
     /// </summary>
@@ -80,14 +71,6 @@ public interface IResistanceGamesRepository : ILobbyGamesRepository<ResistanceGa
     /// </summary>
     Task<ResistancePlayCardResult> ConfirmPlotCardAsync(
         Guid sessionId, Guid? callerPlayerId, int cardId, CancellationToken cancellationToken);
-
-    /// <summary>
-    /// A player votes on the submitted team (a repeated vote replaces the earlier one). The vote that completes the
-    /// round is tallied in the same save: a majority approves, otherwise (a tie too) the team is rejected, which
-    /// counts towards the five that make the spies win.
-    /// </summary>
-    Task<ResistanceVoteResult> VoteAsync(
-        Guid sessionId, Guid? callerPlayerId, bool approve, CancellationToken cancellationToken);
 
     /// <summary>
     /// A member of the approved team secretly plays a Success or Fail card; it can't be changed. The card that

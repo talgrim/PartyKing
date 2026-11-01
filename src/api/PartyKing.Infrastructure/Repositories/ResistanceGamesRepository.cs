@@ -34,67 +34,6 @@ internal class ResistanceGamesRepository
     protected override DbSet<ResistancePlayer> PlayersOf(PartyKingDbContextBase dbContext) =>
         dbContext.ResistancePlayers;
 
-    public async Task<ResistanceStartResult> StartAsync(
-        Guid sessionId, DateTimeOffset startedAt, CancellationToken cancellationToken)
-    {
-        await using var dbContext = await CreateWriterAsync(cancellationToken);
-
-        var game = await LoadAsync(dbContext, sessionId, cancellationToken);
-        if (game is null)
-        {
-            return new ResistanceStartResult(ResistanceStartStatus.NoGame, null);
-        }
-
-        if (game.IsStarted)
-        {
-            return new ResistanceStartResult(ResistanceStartStatus.AlreadyStarted, game);
-        }
-
-        if (!game.IsOpen)
-        {
-            return new ResistanceStartResult(ResistanceStartStatus.NotOpen, game);
-        }
-
-        if (game.Players.Count < ResistanceGame.MinPlayers)
-        {
-            return new ResistanceStartResult(ResistanceStartStatus.NotEnoughPlayers, game);
-        }
-
-        ResistanceRoles.Deal(game, Random.Shared);
-        game.StartedAt = startedAt;
-        await SaveAsync(dbContext, cancellationToken);
-
-        return new ResistanceStartResult(ResistanceStartStatus.Started, game);
-    }
-
-    public async Task<ResistanceRestartResult> RestartAsync(
-        Guid sessionId, CancellationToken cancellationToken)
-    {
-        await using var dbContext = await CreateWriterAsync(cancellationToken);
-
-        var game = await LoadAsync(dbContext, sessionId, cancellationToken);
-        if (game is null)
-        {
-            return new ResistanceRestartResult(ResistanceRestartStatus.NoGame, null);
-        }
-
-        if (!game.IsStarted)
-        {
-            return new ResistanceRestartResult(ResistanceRestartStatus.NotStarted, game);
-        }
-
-        if (game.Phase != ResistancePhase.GameOver)
-        {
-            return new ResistanceRestartResult(ResistanceRestartStatus.NotOver, game);
-        }
-
-        ResistanceRoles.Reset(game);
-        game.StartedAt = null;
-        await SaveAsync(dbContext, cancellationToken);
-
-        return new ResistanceRestartResult(ResistanceRestartStatus.Restarted, game);
-    }
-
     public async Task<ResistanceTeamResult> SelectTeamAsync(
         Guid sessionId, Guid? callerPlayerId, IReadOnlyList<Guid> playerIds, CancellationToken cancellationToken)
     {
@@ -658,62 +597,6 @@ internal class ResistanceGamesRepository
         return game.Phase == ResistancePhase.ResolvingCards
             ? (null, game)
             : (ResistancePlayCardStatus.NotResolving, game);
-    }
-
-    public async Task<ResistanceVoteResult> VoteAsync(
-        Guid sessionId, Guid? callerPlayerId, bool approve, CancellationToken cancellationToken)
-    {
-        await using var dbContext = await CreateWriterAsync(cancellationToken);
-
-        var game = await LoadAsync(dbContext, sessionId, cancellationToken);
-        if (game is null)
-        {
-            return new ResistanceVoteResult(ResistanceVoteStatus.NoGame, null);
-        }
-
-        if (!game.IsStarted)
-        {
-            return new ResistanceVoteResult(ResistanceVoteStatus.NotStarted, game);
-        }
-
-        if (game.Phase == ResistancePhase.GameOver)
-        {
-            return new ResistanceVoteResult(ResistanceVoteStatus.GameOver, game);
-        }
-
-        var voter = game.Players.FirstOrDefault(x => x.PlayerId == callerPlayerId);
-        if (voter is null)
-        {
-            return new ResistanceVoteResult(ResistanceVoteStatus.NotPlayer, game);
-        }
-
-        if (game.Phase != ResistancePhase.Voting)
-        {
-            return new ResistanceVoteResult(ResistanceVoteStatus.NotVoting, game);
-        }
-
-        var opinionMakers = ResistanceRoles.OpinionMakerIds(game);
-        if (opinionMakers.Contains(voter.PlayerId))
-        {
-            if (voter.Vote is not null)
-            {
-                return new ResistanceVoteResult(ResistanceVoteStatus.VoteLocked, game);
-            }
-        }
-        else if (opinionMakers.Any(id => game.Players.First(x => x.PlayerId == id).Vote is null))
-        {
-            return new ResistanceVoteResult(ResistanceVoteStatus.OpinionMakersFirst, game);
-        }
-
-        voter.Vote = approve;
-        if (game.Players.All(x => x.Vote is not null))
-        {
-            ResistanceRoles.ResolveVotes(game);
-        }
-
-        await SaveAsync(dbContext, cancellationToken);
-
-        return new ResistanceVoteResult(ResistanceVoteStatus.Voted, game);
     }
 
     public async Task<ResistanceMissionCardResult> PlayMissionCardAsync(

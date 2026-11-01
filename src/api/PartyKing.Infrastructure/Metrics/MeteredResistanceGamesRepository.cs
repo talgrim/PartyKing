@@ -61,31 +61,12 @@ internal sealed class MeteredResistanceGamesRepository
             () => _inner.DealPlotCardsAsync(sessionId, callerPlayerId, assignments, cancellationToken));
     }
 
-    public Task<ResistanceStartResult> StartAsync(
-        Guid sessionId, DateTimeOffset startedAt, CancellationToken cancellationToken)
-    {
-        return MeasureAsync(nameof(StartAsync), () => _inner.StartAsync(sessionId, startedAt, cancellationToken));
-    }
-
-    public Task<ResistanceRestartResult> RestartAsync(
-        Guid sessionId, CancellationToken cancellationToken)
-    {
-        return MeasureAsync(nameof(RestartAsync), () => _inner.RestartAsync(sessionId, cancellationToken));
-    }
-
     public Task<ResistanceTeamResult> SelectTeamAsync(
         Guid sessionId, Guid? callerPlayerId, IReadOnlyList<Guid> playerIds, CancellationToken cancellationToken)
     {
         return MeasureAsync(
             nameof(SelectTeamAsync),
             () => _inner.SelectTeamAsync(sessionId, callerPlayerId, playerIds, cancellationToken));
-    }
-
-    public Task<ResistanceVoteResult> VoteAsync(
-        Guid sessionId, Guid? callerPlayerId, bool approve, CancellationToken cancellationToken)
-    {
-        return MeasureAsync(
-            nameof(VoteAsync), () => _inner.VoteAsync(sessionId, callerPlayerId, approve, cancellationToken));
     }
 
     public Task<ResistanceMissionCardResult> PlayMissionCardAsync(
