@@ -102,8 +102,12 @@ internal class ResistanceRoundService : IResistanceRoundService
         return _gate.RunAsPlayerAsync(
             sessionId,
             caller,
-            _ => _games.SelectTeamAsync(sessionId, caller.PlayerId, playerIds ?? [], cancellationToken),
-            result => ResistanceErrors.From(result.Status, result.Game),
+            _ => _games.UpdateAsync(
+                sessionId,
+                nameof(SelectTeamAsync),
+                ResistanceOutcome.NoGame,
+                game => game.SelectTeam(caller.PlayerId, playerIds ?? []),
+                cancellationToken),
             cancellationToken);
     }
 

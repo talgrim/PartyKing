@@ -121,6 +121,60 @@ public class ResistanceGame : LobbyGame<ResistancePlayer>
     }
 
     /// <summary>
+    /// The leader submits the team of the current mission, which locks it and puts it to the vote: exactly the number
+    /// of different players the rules ask for.
+    /// </summary>
+    public ResistanceOutcome SelectTeam(Guid? callerPlayerId, IReadOnlyList<Guid> playerIds)
+    {
+        if (!IsStarted)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotStarted, this);
+        }
+
+        if (Phase == ResistancePhase.GameOver)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.GameOver, this);
+        }
+
+        if (callerPlayerId is null || callerPlayerId != LeaderPlayerId)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotLeaderToPick, this);
+        }
+
+        if (Phase is ResistancePhase.DealingCards or ResistancePhase.ResolvingCards)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.CardsNotDealt, this);
+        }
+
+        if (Phase != ResistancePhase.SelectingTeam)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.TeamSubmitted, this);
+        }
+
+        if (playerIds.Count != Rules.TeamSize(Players.Count, MissionNumber)
+            || playerIds.Distinct().Count() != playerIds.Count)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.WrongTeamSize, this);
+        }
+
+        if (playerIds.Any(id => Players.All(x => x.PlayerId != id)))
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.UnknownTeamPlayer, this);
+        }
+
+        foreach (var player in Players)
+        {
+            player.IsOnTeam = playerIds.Contains(player.PlayerId);
+            player.Vote = null;
+            player.MissionCard = null;
+        }
+
+        Phase = ResistancePhase.Voting;
+
+        return ResistanceOutcome.Success(this);
+    }
+
+    /// <summary>
     /// A player votes on the submitted team (a repeated vote replaces the earlier one). The vote that completes the
     /// round is tallied right away: a majority approves, otherwise (a tie too) the team is rejected, which counts
     /// towards the five that make the spies win.

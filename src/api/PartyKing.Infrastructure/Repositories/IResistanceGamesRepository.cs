@@ -6,13 +6,6 @@ namespace PartyKing.Infrastructure.Repositories;
 public interface IResistanceGamesRepository : ILobbyGamesRepository<ResistanceGame, ResistancePlayer>
 {
     /// <summary>
-    /// The leader submits the team of the current mission, which locks it. Checked and saved in one writer context,
-    /// so it can't race another submission.
-    /// </summary>
-    Task<ResistanceTeamResult> SelectTeamAsync(
-        Guid sessionId, Guid? callerPlayerId, IReadOnlyList<Guid> playerIds, CancellationToken cancellationToken);
-
-    /// <summary>
     /// The leader hands the cards drawn for this mission to the other players (every card but Establish Confidence,
     /// which the leader keeps), which moves the game on to picking the team. Checked and saved in one writer context.
     /// </summary>

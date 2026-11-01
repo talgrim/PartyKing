@@ -34,66 +34,6 @@ internal class ResistanceGamesRepository
     protected override DbSet<ResistancePlayer> PlayersOf(PartyKingDbContextBase dbContext) =>
         dbContext.ResistancePlayers;
 
-    public async Task<ResistanceTeamResult> SelectTeamAsync(
-        Guid sessionId, Guid? callerPlayerId, IReadOnlyList<Guid> playerIds, CancellationToken cancellationToken)
-    {
-        await using var dbContext = await CreateWriterAsync(cancellationToken);
-
-        var game = await LoadAsync(dbContext, sessionId, cancellationToken);
-        if (game is null)
-        {
-            return new ResistanceTeamResult(ResistanceTeamStatus.NoGame, null);
-        }
-
-        if (!game.IsStarted)
-        {
-            return new ResistanceTeamResult(ResistanceTeamStatus.NotStarted, game);
-        }
-
-        if (game.Phase == ResistancePhase.GameOver)
-        {
-            return new ResistanceTeamResult(ResistanceTeamStatus.GameOver, game);
-        }
-
-        if (callerPlayerId is null || callerPlayerId != game.LeaderPlayerId)
-        {
-            return new ResistanceTeamResult(ResistanceTeamStatus.NotLeader, game);
-        }
-
-        if (game.Phase is ResistancePhase.DealingCards or ResistancePhase.ResolvingCards)
-        {
-            return new ResistanceTeamResult(ResistanceTeamStatus.CardsNotDealt, game);
-        }
-
-        if (game.Phase != ResistancePhase.SelectingTeam)
-        {
-            return new ResistanceTeamResult(ResistanceTeamStatus.AlreadySubmitted, game);
-        }
-
-        if (playerIds.Count != game.Rules.TeamSize(game.Players.Count, game.MissionNumber)
-            || playerIds.Distinct().Count() != playerIds.Count)
-        {
-            return new ResistanceTeamResult(ResistanceTeamStatus.WrongSize, game);
-        }
-
-        if (playerIds.Any(id => game.Players.All(x => x.PlayerId != id)))
-        {
-            return new ResistanceTeamResult(ResistanceTeamStatus.UnknownPlayer, game);
-        }
-
-        foreach (var player in game.Players)
-        {
-            player.IsOnTeam = playerIds.Contains(player.PlayerId);
-            player.Vote = null;
-            player.MissionCard = null;
-        }
-
-        game.Phase = ResistancePhase.Voting;
-        await SaveAsync(dbContext, cancellationToken);
-
-        return new ResistanceTeamResult(ResistanceTeamStatus.Selected, game);
-    }
-
     public async Task<ResistanceDealResult> DealPlotCardsAsync(
         Guid sessionId, Guid? callerPlayerId, IReadOnlyList<PlotCardAssignment> assignments,
         CancellationToken cancellationToken)

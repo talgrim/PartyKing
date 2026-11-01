@@ -98,23 +98,6 @@ internal static class ResistanceErrors
         _ => throw new ArgumentOutOfRangeException(nameof(failure), failure, "No error is defined for this failure."),
     };
 
-    public static Error? From(ResistanceTeamStatus status, ResistanceGame? game) => status switch
-    {
-        ResistanceTeamStatus.NoGame => NoGame,
-        ResistanceTeamStatus.NotStarted => NotStarted,
-        ResistanceTeamStatus.GameOver => GameOver,
-        ResistanceTeamStatus.NotLeader => Error.Forbidden("Resistance.NotLeader", "Only the mission leader picks the team."),
-        ResistanceTeamStatus.AlreadySubmitted => Error.Conflict("Resistance.TeamSubmitted", "The team was already submitted."),
-        ResistanceTeamStatus.CardsNotDealt => Error.Conflict(
-            "Resistance.CardsNotDealt", "The leader has to hand out the plot cards first."),
-        ResistanceTeamStatus.WrongSize => Error.Validation(
-            "Resistance.WrongTeamSize",
-            $"The team needs exactly {game!.Rules.TeamSize(game.Players.Count, game.MissionNumber)} different players."),
-        ResistanceTeamStatus.UnknownPlayer => Error.Validation(
-            "Resistance.UnknownPlayer", "The team has a player who is not in the game."),
-        _ => null,
-    };
-
     public static Error? From(ResistanceDealStatus status) => status switch
     {
         ResistanceDealStatus.NoGame => NoGame,
