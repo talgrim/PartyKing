@@ -380,6 +380,7 @@ namespace PartyKing.Persistence.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("HostProfileId")
+                        .IsConcurrencyToken()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
