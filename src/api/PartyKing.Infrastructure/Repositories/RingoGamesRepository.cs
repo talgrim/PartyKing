@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using PartyKing.Domain.Entities.Games;
+using PartyKing.Infrastructure.Metrics;
 using PartyKing.Persistence.Database;
 
 namespace PartyKing.Infrastructure.Repositories;
@@ -8,8 +9,9 @@ internal class RingoGamesRepository : LobbyGamesRepository<RingoGame, RingoPlaye
 {
     public RingoGamesRepository(
         IDbContextFactory<ReaderDbContext> readerFactory,
-        IDbContextFactory<WriterDbContext> writerFactory)
-        : base(readerFactory, writerFactory)
+        IDbContextFactory<WriterDbContext> writerFactory,
+        RepositoryMetrics metrics)
+        : base(readerFactory, writerFactory, metrics)
     {
     }
 

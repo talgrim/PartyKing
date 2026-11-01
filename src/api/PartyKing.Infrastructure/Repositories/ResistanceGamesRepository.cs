@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using PartyKing.Domain.Entities.Games;
+using PartyKing.Infrastructure.Metrics;
 using PartyKing.Infrastructure.Results;
 using PartyKing.Persistence.Database;
 
@@ -10,8 +11,9 @@ internal class ResistanceGamesRepository
 {
     public ResistanceGamesRepository(
         IDbContextFactory<ReaderDbContext> readerFactory,
-        IDbContextFactory<WriterDbContext> writerFactory)
-        : base(readerFactory, writerFactory)
+        IDbContextFactory<WriterDbContext> writerFactory,
+        RepositoryMetrics metrics)
+        : base(readerFactory, writerFactory, metrics)
     {
     }
 
