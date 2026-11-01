@@ -23,8 +23,11 @@ internal static class TestEvents
         services.AddScoped<IDomainEventHandler<LobbyPlayerJoined>, LobbyPushHandler>();
         services.AddScoped<IDomainEventHandler<LobbyPlayerKicked>, LobbyPushHandler>();
         services.AddScoped<IDomainEventHandler<LobbyOrderChanged>, LobbyPushHandler>();
+        services.AddScoped<IDomainEventHandler<LobbyGameEnded>, LobbyPushHandler>();
+        services.AddScoped<IDomainEventHandler<RingoStarted>, RingoPushHandler>();
         services.AddScoped<IDomainEventHandler<RingoCardFlipped>, RingoPushHandler>();
         services.AddScoped<IDomainEventHandler<RingoTurnPassed>, RingoPushHandler>();
+        services.AddScoped<IDomainEventHandler<ResistanceCreated>, ResistancePushHandler>();
         services.AddScoped<IDomainEventHandler<ResistanceChanged>, ResistancePushHandler>();
 
         return new DomainEventDispatcher(

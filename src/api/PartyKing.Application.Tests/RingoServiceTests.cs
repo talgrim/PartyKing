@@ -1,4 +1,5 @@
 using PartyKing.Application.Events;
+using PartyKing.Domain.Events.Games.Base;
 using PartyKing.Domain.Repositories;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Games.Services.Base;
@@ -27,8 +28,7 @@ public class RingoServiceTests
         _service = new RingoService(
             new RingoGameLobby(sessionAuthorizer, _sessions, _games, clock),
             _games,
-            clock,
-            _notifier);
+            clock);
         _id = _sessions.AddSession(HostId, new PasswordHasher().Hash("secret")).Id;
     }
 
@@ -527,8 +527,17 @@ public class RingoServiceTests
         public Task<RingoGame?> GetAsync(Guid sessionId, CancellationToken cancellationToken) =>
             Task.FromResult(_games.GetValueOrDefault(sessionId));
 
-        public Task<bool> TryCreateAsync(RingoGame game, CancellationToken cancellationToken) =>
-            Task.FromResult(_games.TryAdd(game.SessionId, game));
+        public async Task<bool> TryCreateAsync(RingoGame game, CancellationToken cancellationToken)
+        {
+            if (!_games.TryAdd(game.SessionId, game))
+            {
+                return false;
+            }
+
+            await _dispatcher.DispatchAsync(game);
+
+            return true;
+        }
 
         public async Task<TResult> UpdateAsync<TResult>(
             Guid sessionId,
@@ -597,7 +606,16 @@ public class RingoServiceTests
             return new LobbyResult<RingoGame>(status, game);
         }
 
-        public Task<bool> DeleteAsync(Guid sessionId, CancellationToken cancellationToken) =>
-            Task.FromResult(_games.Remove(sessionId));
+        public async Task<bool> DeleteAsync(Guid sessionId, CancellationToken cancellationToken)
+        {
+            if (!_games.Remove(sessionId))
+            {
+                return false;
+            }
+
+            await _dispatcher.DispatchAsync([new LobbyGameEnded(sessionId, GameKind.Ringo)], cancellationToken);
+
+            return true;
+        }
     }
 }

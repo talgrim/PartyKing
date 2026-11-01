@@ -1,4 +1,5 @@
 using PartyKing.Application.Events;
+using PartyKing.Domain.Events.Games.Base;
 using PartyKing.Domain.Repositories;
 using PartyKing.Application.Games.Services.Resistance;
 using PartyKing.Domain.Entities.Games.Base;
@@ -29,8 +30,17 @@ internal sealed class FakeResistanceGamesRepository : IResistanceGamesRepository
     public Task<ResistanceGame?> GetAsync(Guid sessionId, CancellationToken cancellationToken) =>
         Task.FromResult(_games.GetValueOrDefault(sessionId));
 
-    public Task<bool> TryCreateAsync(ResistanceGame game, CancellationToken cancellationToken) =>
-        Task.FromResult(_games.TryAdd(game.SessionId, game));
+    public async Task<bool> TryCreateAsync(ResistanceGame game, CancellationToken cancellationToken)
+    {
+        if (!_games.TryAdd(game.SessionId, game))
+        {
+            return false;
+        }
+
+        await _dispatcher.DispatchAsync(game);
+
+        return true;
+    }
 
     public async Task<TResult> UpdateAsync<TResult>(
         Guid sessionId,
@@ -89,8 +99,17 @@ internal sealed class FakeResistanceGamesRepository : IResistanceGamesRepository
             : new LobbyResult<ResistanceGame>(LobbyStatus.NoGame, null);
     }
 
-    public Task<bool> DeleteAsync(Guid sessionId, CancellationToken cancellationToken) =>
-        Task.FromResult(_games.Remove(sessionId));
+    public async Task<bool> DeleteAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        if (!_games.Remove(sessionId))
+        {
+            return false;
+        }
+
+        await _dispatcher.DispatchAsync([new LobbyGameEnded(sessionId, GameKind.Resistance)], cancellationToken);
+
+        return true;
+    }
 
     private async Task<LobbyResult<ResistanceGame>> ResultAsync(LobbyStatus status, ResistanceGame game)
     {
