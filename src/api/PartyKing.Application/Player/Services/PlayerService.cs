@@ -44,9 +44,8 @@ internal class PlayerService : IPlayerService
     private readonly IQueueRepository _queueRepository;
     private readonly IPlayerStateStore _playerStateStore;
     private readonly IPlayerNotifier _playerNotifier;
-    private readonly IQueueNotifier _queueNotifier;
     private readonly IPlayerConnectionWatchdog _connectionWatchdog;
-    private readonly IFallbackQueueFiller _fallbackFiller;
+    private readonly IQueueAdvancer _queueAdvancer;
     private readonly IFallbackStatusStore _fallbackStatusStore;
     private readonly ILogger<PlayerService> _logger;
 
@@ -55,9 +54,8 @@ internal class PlayerService : IPlayerService
         IQueueRepository queueRepository,
         IPlayerStateStore playerStateStore,
         IPlayerNotifier playerNotifier,
-        IQueueNotifier queueNotifier,
         IPlayerConnectionWatchdog connectionWatchdog,
-        IFallbackQueueFiller fallbackFiller,
+        IQueueAdvancer queueAdvancer,
         IFallbackStatusStore fallbackStatusStore,
         ILogger<PlayerService> logger)
     {
@@ -65,9 +63,8 @@ internal class PlayerService : IPlayerService
         _queueRepository = queueRepository;
         _playerStateStore = playerStateStore;
         _playerNotifier = playerNotifier;
-        _queueNotifier = queueNotifier;
         _connectionWatchdog = connectionWatchdog;
-        _fallbackFiller = fallbackFiller;
+        _queueAdvancer = queueAdvancer;
         _fallbackStatusStore = fallbackStatusStore;
         _logger = logger;
     }
@@ -161,32 +158,8 @@ internal class PlayerService : IPlayerService
             return NoPlayerConnected();
         }
 
-        await _fallbackFiller.EnsureQueuedAsync(sessionId, cancellationToken);
-
-        var playingBefore = await _queueRepository.GetPlayingAsync(sessionId, cancellationToken);
-        var next = await _queueRepository.AdvanceAsync(sessionId, currentSongId, cancellationToken);
-
-        await _fallbackFiller.EnsureQueuedAsync(sessionId, cancellationToken);
-
-        if (playingBefore?.Id == currentSongId)
-        {
-            _logger.LogInformation(
-                "An admin skipped session {SessionId} from song {PreviousSongId} to {NextSongId}",
-                sessionId,
-                playingBefore?.Id,
-                next?.Id);
-            await _queueNotifier.QueueAdvancedAsync(
-                sessionId,
-                playingBefore?.Id,
-                next?.ToDto(),
-                cancellationToken);
-        }
-
-        return next is null
-            ? Error.NotFound(description: "The queue is empty")
-            : next.ToDto();
+        return await _queueAdvancer.AdvanceAsync(sessionId, currentSongId, cancellationToken);
     }
-
 
     private static Error NoPlayerConnected() =>
         Error.Conflict(description: "The host's player is not connected to this session");

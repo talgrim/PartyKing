@@ -1,3 +1,6 @@
+using PartyKing.Application.Events;
+using PartyKing.Domain.Events;
+using PartyKing.Domain.Events.Queue;
 using PartyKing.Domain.Repositories;
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +16,7 @@ internal class QueueRepository : IQueueRepository
     private readonly IDbContextFactory<ReaderDbContext> _readerDbContextFactory;
     private readonly IDbContextFactory<WriterDbContext> _writerDbContextFactory;
     private readonly RepositoryMetrics _metrics;
+    private readonly IDomainEventDispatcher _dispatcher;
 
     // A fixed set of locks, picked by session id, so memory stays bounded however many sessions come and go.
     // Two sessions sharing a lock only wait for each other briefly.
@@ -22,29 +26,31 @@ internal class QueueRepository : IQueueRepository
     public QueueRepository(
         IDbContextFactory<ReaderDbContext> readerDbContextFactory,
         IDbContextFactory<WriterDbContext> writerDbContextFactory,
-        RepositoryMetrics metrics)
+        RepositoryMetrics metrics,
+        IDomainEventDispatcher dispatcher)
     {
         _readerDbContextFactory = readerDbContextFactory;
         _writerDbContextFactory = writerDbContextFactory;
         _metrics = metrics;
+        _dispatcher = dispatcher;
     }
 
     public async Task<QueueItem> AddAsync(QueueItem item, CancellationToken cancellationToken)
     {
-        await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using (var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken))
+        {
+            await dbContext.QueueItems.AddAsync(item, cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
 
-        await dbContext.QueueItems.AddAsync(item, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await DispatchAsync([new SongQueued(item.SessionId, item)]);
 
         return item;
     }
 
-    public async Task<QueueItem?> AddIfNoneQueuedAsync(QueueItem item, CancellationToken cancellationToken)
+    public Task<QueueItem?> AddIfNoneQueuedAsync(QueueItem item, CancellationToken cancellationToken)
     {
-        var advanceLock = GetAdvanceLock(item.SessionId);
-
-        await WaitForAdvanceLockAsync(nameof(AddIfNoneQueuedAsync), advanceLock, cancellationToken);
-        try
+        return WriteAsync(item.SessionId, nameof(AddIfNoneQueuedAsync), async events =>
         {
             await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
 
@@ -59,12 +65,10 @@ internal class QueueRepository : IQueueRepository
             await dbContext.QueueItems.AddAsync(item, cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
 
+            events.Add(new SongQueued(item.SessionId, item));
+
             return item;
-        }
-        finally
-        {
-            advanceLock.Release();
-        }
+        }, cancellationToken);
     }
 
     public async Task<IReadOnlyList<QueueItem>> GetPendingAsync(Guid sessionId, CancellationToken cancellationToken)
@@ -89,15 +93,12 @@ internal class QueueRepository : IQueueRepository
             .FirstOrDefaultAsync(cancellationToken);
     }
 
-    public async Task<QueueItem?> AdvanceAsync(
+    public Task<QueueAdvanceResult> AdvanceAsync(
         Guid sessionId,
         int? currentItemId,
         CancellationToken cancellationToken)
     {
-        var advanceLock = GetAdvanceLock(sessionId);
-
-        await WaitForAdvanceLockAsync(nameof(AdvanceAsync), advanceLock, cancellationToken);
-        try
+        return WriteAsync(sessionId, nameof(AdvanceAsync), async events =>
         {
             await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
 
@@ -107,12 +108,12 @@ internal class QueueRepository : IQueueRepository
 
             if (playing.FirstOrDefault()?.Id != currentItemId)
             {
-                return playing.FirstOrDefault();
+                return new QueueAdvanceResult(playing.FirstOrDefault(), Advanced: false, PreviousSongId: null);
             }
 
             foreach (var item in playing)
             {
-                item.Status = QueueItemStatus.Played;
+                item.MarkPlayed();
             }
 
             var next = await dbContext.QueueItems
@@ -120,27 +121,19 @@ internal class QueueRepository : IQueueRepository
                 .OrderBy(x => x.Id)
                 .FirstOrDefaultAsync(cancellationToken);
 
-            if (next is not null)
-            {
-                next.Status = QueueItemStatus.Playing;
-            }
+            next?.StartPlaying();
 
             await dbContext.SaveChangesAsync(cancellationToken);
 
-            return next;
-        }
-        finally
-        {
-            advanceLock.Release();
-        }
+            events.Add(new QueueAdvanced(sessionId, currentItemId, next));
+
+            return new QueueAdvanceResult(next, Advanced: true, PreviousSongId: currentItemId);
+        }, cancellationToken);
     }
 
-    public async Task<QueueItemRemoval> RemoveAsync(Guid sessionId, int itemId, CancellationToken cancellationToken)
+    public Task<QueueItemRemoval> RemoveAsync(Guid sessionId, int itemId, CancellationToken cancellationToken)
     {
-        var advanceLock = GetAdvanceLock(sessionId);
-
-        await WaitForAdvanceLockAsync(nameof(RemoveAsync), advanceLock, cancellationToken);
-        try
+        return WriteAsync(sessionId, nameof(RemoveAsync), async events =>
         {
             await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
 
@@ -160,11 +153,48 @@ internal class QueueRepository : IQueueRepository
             dbContext.QueueItems.Remove(item);
             await dbContext.SaveChangesAsync(cancellationToken);
 
+            events.Add(new SongRemoved(sessionId, itemId));
+
             return QueueItemRemoval.Removed;
+        }, cancellationToken);
+    }
+
+    /// <summary>
+    /// Runs a write under the session's lock. The write adds the events of what it saved to the list it is given; they
+    /// are dispatched after the lock is released, so a handler may write to the same session again (the fallback
+    /// refill does), and with no cancellation: the change is committed whether or not the request is still wanted.
+    /// </summary>
+    private async Task<TResult> WriteAsync<TResult>(
+        Guid sessionId,
+        string operation,
+        Func<List<IDomainEvent>, Task<TResult>> write,
+        CancellationToken cancellationToken)
+    {
+        var advanceLock = GetAdvanceLock(sessionId);
+        await WaitForAdvanceLockAsync(operation, advanceLock, cancellationToken);
+
+        var events = new List<IDomainEvent>();
+        TResult result;
+
+        try
+        {
+            result = await write(events);
         }
         finally
         {
             advanceLock.Release();
+        }
+
+        await DispatchAsync(events);
+
+        return result;
+    }
+
+    private async Task DispatchAsync(IReadOnlyCollection<IDomainEvent> events)
+    {
+        if (events.Count > 0)
+        {
+            await _dispatcher.DispatchAsync(events, CancellationToken.None);
         }
     }
 

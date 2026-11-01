@@ -12,6 +12,7 @@ using PartyKing.Application.Games.Services.Resistance;
 using PartyKing.Application.Games.Services.Ringo;
 using PartyKing.Application.Lyrics.Services;
 using PartyKing.Application.Player.Services;
+using PartyKing.Application.Queue.Handlers;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
@@ -22,6 +23,7 @@ using PartyKing.Domain.Events;
 using PartyKing.Domain.Events.Games.Base;
 using PartyKing.Domain.Events.Games.Resistance;
 using PartyKing.Domain.Events.Games.Ringo;
+using PartyKing.Domain.Events.Queue;
 
 namespace PartyKing.Application;
 
@@ -170,6 +172,14 @@ public static class DependencyInjection
     {
         services.AddScoped<IQueueService, QueueService>();
         services.AddScoped<IFallbackQueueFiller, FallbackQueueFiller>();
+        services.AddScoped<IQueueAdvancer, QueueAdvancer>();
+
+        // Handlers run in registration order: the pushes first, then the refill whose own SongQueued push follows
+        services.AddDomainEventHandler<SongQueued, QueuePushHandler>();
+        services.AddDomainEventHandler<SongRemoved, QueuePushHandler>();
+        services.AddDomainEventHandler<QueueAdvanced, QueuePushHandler>();
+        services.AddDomainEventHandler<SongRemoved, FallbackRefillHandler>();
+        services.AddDomainEventHandler<QueueAdvanced, FallbackRefillHandler>();
         services.AddScoped<IFallbackPlaylistService, FallbackPlaylistService>();
         services.AddSingleton<IPlaylistTrackCache, PlaylistTrackCache>();
         services.AddSingleton<IFallbackStatusStore, FallbackStatusStore>();

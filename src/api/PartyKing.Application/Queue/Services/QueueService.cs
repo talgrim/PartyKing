@@ -49,8 +49,7 @@ internal class QueueService : IQueueService
     private readonly IYoutubeOEmbedClient _youtubeClient;
     private readonly IHostTokenProvider _hostTokenProvider;
     private readonly ISessionsRepository _sessionsRepository;
-    private readonly IQueueNotifier _musicNotifier;
-    private readonly IFallbackQueueFiller _fallbackFiller;
+    private readonly IQueueAdvancer _queueAdvancer;
     private readonly ILogger<QueueService> _logger;
 
     public QueueService(
@@ -59,8 +58,7 @@ internal class QueueService : IQueueService
         ISpotifyIntegrationClient spotifyClient,
         IYoutubeOEmbedClient youtubeClient,
         IHostTokenProvider hostTokenProvider,
-        IQueueNotifier musicNotifier,
-        IFallbackQueueFiller fallbackFiller,
+        IQueueAdvancer queueAdvancer,
         ILogger<QueueService> logger)
     {
         _queueRepository = queueRepository;
@@ -68,8 +66,7 @@ internal class QueueService : IQueueService
         _spotifyClient = spotifyClient;
         _youtubeClient = youtubeClient;
         _hostTokenProvider = hostTokenProvider;
-        _musicNotifier = musicNotifier;
-        _fallbackFiller = fallbackFiller;
+        _queueAdvancer = queueAdvancer;
         _logger = logger;
     }
 
@@ -106,7 +103,6 @@ internal class QueueService : IQueueService
         var saved = await _queueRepository.AddAsync(item.Value, cancellationToken);
         var dto = saved.ToDto();
         _logger.LogInformation("Queued song {SongId} ({Source}) in session {SessionId}", saved.Id, saved.Source, sessionId);
-        await _musicNotifier.SongAddedAsync(sessionId, dto, cancellationToken);
 
         return dto;
     }
@@ -142,7 +138,7 @@ internal class QueueService : IQueueService
             return Error.Forbidden(description: "Only the host of this session can advance its queue");
         }
 
-        return await AdvanceAndNotifyAsync(sessionId, currentSongId, cancellationToken);
+        return await _queueAdvancer.AdvanceAsync(sessionId, currentSongId, cancellationToken);
     }
 
     public async Task<ErrorOr<Success>> RemoveAsync(
@@ -167,10 +163,7 @@ internal class QueueService : IQueueService
         if (removal == QueueItemRemoval.Removed)
         {
             _logger.LogInformation("Removed song {SongId} from session {SessionId}", songId, sessionId);
-            await _musicNotifier.SongRemovedAsync(sessionId, songId, cancellationToken);
 
-            // Removing the song the fallback playlist queued must not leave "Up next" empty
-            await _fallbackFiller.EnsureQueuedAsync(sessionId, cancellationToken);
             return Result.Success;
         }
 
@@ -180,44 +173,6 @@ internal class QueueService : IQueueService
             _ => Error.NotFound(description: "The song was not found in the queue")
         };
     }
-
-    /// <summary>
-    /// Advances only when <paramref name="currentSongId"/> matches the song Playing now (same rule as the
-    /// repository). A real advance is pushed to listeners even when the queue then becomes empty.
-    /// </summary>
-    internal async Task<ErrorOr<QueueItemDto>> AdvanceAndNotifyAsync(
-        Guid sessionId,
-        int? currentSongId,
-        CancellationToken cancellationToken)
-    {
-        // An empty queue gets a playlist song first (a previous refill may have failed), so the advance finds one
-        await _fallbackFiller.EnsureQueuedAsync(sessionId, cancellationToken);
-
-        var playingBefore = await _queueRepository.GetPlayingAsync(sessionId, cancellationToken);
-        var next = await _queueRepository.AdvanceAsync(sessionId, currentSongId, cancellationToken);
-
-        // Queue the playlist song that follows the one now starting, behind whatever guests add meanwhile
-        await _fallbackFiller.EnsureQueuedAsync(sessionId, cancellationToken);
-
-        if (playingBefore?.Id == currentSongId)
-        {
-            _logger.LogInformation(
-                "Session {SessionId} advanced from song {PreviousSongId} to {NextSongId}",
-                sessionId,
-                playingBefore?.Id,
-                next?.Id);
-            await _musicNotifier.QueueAdvancedAsync(
-                sessionId,
-                playingBefore?.Id,
-                next?.ToDto(),
-                cancellationToken);
-        }
-
-        return next is null
-            ? Error.NotFound(description: "The queue is empty")
-            : next.ToDto();
-    }
-
 
     private async Task<ErrorOr<QueueItem>> CreateYoutubeItemAsync(
         Guid sessionId,

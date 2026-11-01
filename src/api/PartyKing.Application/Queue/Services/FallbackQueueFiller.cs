@@ -25,7 +25,6 @@ internal class FallbackQueueFiller : IFallbackQueueFiller
     private readonly IHostTokenProvider _hostTokenProvider;
     private readonly IPlaylistTrackCache _trackCache;
     private readonly IFallbackStatusStore _statusStore;
-    private readonly IQueueNotifier _musicNotifier;
 
     public FallbackQueueFiller(
         ISessionsRepository sessionsRepository,
@@ -33,8 +32,7 @@ internal class FallbackQueueFiller : IFallbackQueueFiller
         ISpotifyIntegrationClient spotifyClient,
         IHostTokenProvider hostTokenProvider,
         IPlaylistTrackCache trackCache,
-        IFallbackStatusStore statusStore,
-        IQueueNotifier musicNotifier)
+        IFallbackStatusStore statusStore)
     {
         _sessionsRepository = sessionsRepository;
         _queueRepository = queueRepository;
@@ -42,7 +40,6 @@ internal class FallbackQueueFiller : IFallbackQueueFiller
         _hostTokenProvider = hostTokenProvider;
         _trackCache = trackCache;
         _statusStore = statusStore;
-        _musicNotifier = musicNotifier;
     }
 
     public async Task EnsureQueuedAsync(Guid sessionId, CancellationToken cancellationToken)
@@ -83,8 +80,8 @@ internal class FallbackQueueFiller : IFallbackQueueFiller
             await _sessionsRepository.SetFallbackCursorAsync(sessionId, nextCursor, cancellationToken);
         }
 
+        // The repository raised SongQueued for it, which the push handler sends
         _statusStore.Clear(sessionId);
-        await _musicNotifier.SongAddedAsync(sessionId, added.ToDto(), cancellationToken);
     }
 
     /// <summary>The playlist's tracks, or an empty list after recording why they could not be read.</summary>
