@@ -68,7 +68,10 @@ internal class ResistancePlotCardService : IResistancePlotCardService
         Guid sessionId, IReadOnlyList<ResistancePlotCardAssignmentDto>? assignments, GameCaller caller,
         CancellationToken cancellationToken)
     {
-        var deal = (assignments ?? []).Select(x => new PlotCardAssignment(x.CardId, x.PlayerId)).ToList();
+        // A null element comes from client input; it names no card, so the deal answers UnknownDealCard
+        var deal = (assignments ?? [])
+            .Select(x => x is null ? new PlotCardAssignment(-1, Guid.Empty) : new PlotCardAssignment(x.CardId, x.PlayerId))
+            .ToList();
 
         return RunAsync(
             sessionId,

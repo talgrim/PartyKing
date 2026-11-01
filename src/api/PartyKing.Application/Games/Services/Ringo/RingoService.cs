@@ -210,7 +210,11 @@ internal class RingoService : IRingoService
             return error;
         }
 
-        await _notifier.RingoChangedAsync(sessionId, cancellationToken);
+        // Continuing with no card pending changes nothing, so there is nothing to tell the clients
+        if (outcome.Changed)
+        {
+            await _notifier.RingoChangedAsync(sessionId, cancellationToken);
+        }
 
         return ToDto(outcome.Game!, caller);
     }

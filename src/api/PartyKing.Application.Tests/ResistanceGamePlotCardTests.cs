@@ -157,7 +157,7 @@ public class ResistanceGamePlotCardTests
         Assert.Equal(ResistanceFailure.NotResolving, _game.PlayPlotCard(Leader.PlayerId, immediate.CardId, target, Now).Failure);
 
         _game.Phase = ResistancePhase.ResolvingCards;
-        Assert.Equal(ResistanceFailure.UnknownCard, _game.PlayPlotCard(Leader.PlayerId, 99, target, Now).Failure);
+        Assert.Equal(ResistanceFailure.NotYourCard, _game.PlayPlotCard(Leader.PlayerId, 99, target, Now).Failure);
         Assert.Equal(ResistanceFailure.NotPlayingMission, _game.PlayPlotCard(Leader.PlayerId, spotlight.CardId, target, Now).Failure);
 
         var notImmediate = AddCard(ResistancePlotCardType.NoConfidence, ResistancePlotCardLocation.Hand, Leader);

@@ -24,8 +24,11 @@ public class ResistanceGameRulesTests
         Assert.Null(outcome.Failure);
         Assert.True(outcome.Changed);
         Assert.Same(game, outcome.Game);
-        Assert.Same(fresh, game.Rules);
+        // The game keeps a copy: the caller's object is neither shared nor changed
+        Assert.NotSame(fresh, game.Rules);
+        Assert.False(fresh.PlotCardsEnabled);
         Assert.True(game.Rules.PlotCardsEnabled);
+        Assert.Equal(fresh.PlayerCounts.Keys, game.Rules.PlayerCounts.Keys);
     }
 
     [Fact]
@@ -63,8 +66,10 @@ public class ResistanceGameRulesTests
         Assert.True(outcome.Changed);
         Assert.True(game.Rules.PlotCardsEnabled);
         Assert.NotSame(rules, game.Rules);
-        Assert.Same(rules.PlayerCounts, game.Rules.PlayerCounts);
-        Assert.Same(rules.PlotDeck, game.Rules.PlotDeck);
+        Assert.False(rules.PlotCardsEnabled);
+        Assert.Equal(rules.PlayerCounts.Keys, game.Rules.PlayerCounts.Keys);
+        Assert.Equal(rules.PlotDeck, game.Rules.PlotDeck);
+        Assert.NotSame(rules.PlotDeck, game.Rules.PlotDeck);
     }
 
     [Fact]

@@ -112,18 +112,23 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
 
     /// <summary>
     /// Concurrent reads of one session share a single query: a push makes every client fetch the game at once, and
-    /// each query holds a thread while it waits for the database. A write drops the shared read, so a caller who
-    /// asks after a write finished never gets a result that started before it. The callers only read the result.
+    /// each query holds a thread while it waits for the database. A write drops the shared reads once it has
+    /// committed, so a caller who starts asking after a write returned never gets a result that started before it.
+    /// A caller that overlaps the commit itself may still join a read that began earlier. The callers only read
+    /// the result.
     /// </summary>
     public async Task<TGame?> GetAsync(Guid sessionId, CancellationToken cancellationToken)
     {
-        var read = _reads.GetOrAdd(sessionId, id => new Lazy<Task<TGame?>>(() => ReadSharedAsync(id)));
+        // The read knows its own entry, so when it ends it removes that entry and never a newer read's
+        Lazy<Task<TGame?>>? created = null;
+        created = new Lazy<Task<TGame?>>(() => ReadSharedAsync(sessionId, created!));
+        var read = _reads.GetOrAdd(sessionId, created);
 
         // The query is shared, so one caller's cancellation must not cancel it for the others
         return await read.Value.WaitAsync(cancellationToken);
     }
 
-    private async Task<TGame?> ReadSharedAsync(Guid sessionId)
+    private async Task<TGame?> ReadSharedAsync(Guid sessionId, Lazy<Task<TGame?>> self)
     {
         try
         {
@@ -135,7 +140,7 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
         }
         finally
         {
-            _reads.TryRemove(sessionId, out _);
+            _reads.TryRemove(new KeyValuePair<Guid, Lazy<Task<TGame?>>>(sessionId, self));
         }
     }
 
@@ -152,17 +157,13 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
         }
     }
 
-    public async Task<bool> TryCreateAsync(TGame game, CancellationToken cancellationToken)
+    /// <summary>
+    /// Saves what the write changed. When the save fails because the game was deleted meanwhile (a cascade delete of
+    /// the session does not take the write lock), returns false; any other failure is thrown.
+    /// </summary>
+    private async Task<bool> TrySaveAsync(
+        DbContext dbContext, Guid sessionId, CancellationToken cancellationToken)
     {
-        await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
-
-        if (await Table(dbContext).AnyAsync(x => x.SessionId == game.SessionId, cancellationToken))
-        {
-            return false;
-        }
-
-        Table(dbContext).Add(game);
-
         try
         {
             await SaveAsync(dbContext, cancellationToken);
@@ -170,9 +171,50 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
         }
         catch (DbUpdateException)
         {
-            // A concurrent start won the primary key
+            if (await GameExistsAsync(sessionId, cancellationToken))
+            {
+                throw;
+            }
+
             return false;
         }
+    }
+
+    private async Task<bool> GameExistsAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
+
+        return await Table(dbContext).AnyAsync(x => x.SessionId == sessionId, cancellationToken);
+    }
+
+    public async Task<bool> TryCreateAsync(TGame game, CancellationToken cancellationToken)
+    {
+        return await WriteAsync(
+            game.SessionId,
+            nameof(TryCreateAsync),
+            async () =>
+            {
+                await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
+
+                if (await Table(dbContext).AnyAsync(x => x.SessionId == game.SessionId, cancellationToken))
+                {
+                    return false;
+                }
+
+                Table(dbContext).Add(game);
+
+                try
+                {
+                    await SaveAsync(dbContext, cancellationToken);
+                    return true;
+                }
+                catch (DbUpdateException ex) when (ex.IsUniqueViolation())
+                {
+                    // A start from outside the lock won the primary key
+                    return false;
+                }
+            },
+            cancellationToken);
     }
 
     public async Task<TGame?> OpenAsync(Guid sessionId, CancellationToken cancellationToken)
@@ -188,7 +230,10 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
                 if (game is not null && !game.IsOpen)
                 {
                     game.IsOpen = true;
-                    await SaveAsync(dbContext, cancellationToken);
+                    if (!await TrySaveAsync(dbContext, sessionId, cancellationToken))
+                    {
+                        return null;
+                    }
                 }
 
                 return game;
@@ -241,10 +286,19 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
                 {
                     await SaveAsync(dbContext, cancellationToken);
                 }
+                catch (DbUpdateException ex) when (ex.IsUniqueViolation())
+                {
+                    // A join from outside the lock with the same name won the unique index
+                    return new LobbyResult<TGame>(LobbyStatus.NameTaken, game);
+                }
                 catch (DbUpdateException)
                 {
-                    // A concurrent join with the same name won the unique index
-                    return new LobbyResult<TGame>(LobbyStatus.NameTaken, game);
+                    if (await GameExistsAsync(sessionId, cancellationToken))
+                    {
+                        throw;
+                    }
+
+                    return new LobbyResult<TGame>(LobbyStatus.NoGame, null);
                 }
 
                 return new LobbyResult<TGame>(LobbyStatus.Done, game);
@@ -289,7 +343,10 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
                     player.Order = order++;
                 }
 
-                await SaveAsync(dbContext, cancellationToken);
+                if (!await TrySaveAsync(dbContext, sessionId, cancellationToken))
+                {
+                    return new LobbyResult<TGame>(LobbyStatus.NoGame, null);
+                }
 
                 return new LobbyResult<TGame>(LobbyStatus.Done, game);
             },
@@ -329,7 +386,10 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
                     player.Order = playerIds.ToList().IndexOf(player.PlayerId);
                 }
 
-                await SaveAsync(dbContext, cancellationToken);
+                if (!await TrySaveAsync(dbContext, sessionId, cancellationToken))
+                {
+                    return new LobbyResult<TGame>(LobbyStatus.NoGame, null);
+                }
 
                 return new LobbyResult<TGame>(LobbyStatus.Done, game);
             },
@@ -358,9 +418,9 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
                 }
 
                 var result = action(game);
-                if (result.Changed)
+                if (result.Changed && !await TrySaveAsync(dbContext, sessionId, cancellationToken))
                 {
-                    await SaveAsync(dbContext, cancellationToken);
+                    return noGame;
                 }
 
                 return result;
@@ -370,13 +430,20 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
 
     public async Task<bool> DeleteAsync(Guid sessionId, CancellationToken cancellationToken)
     {
-        await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
+        return await WriteAsync(
+            sessionId,
+            nameof(DeleteAsync),
+            async () =>
+            {
+                await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
 
-        var deleted = await Table(dbContext)
-            .Where(x => x.SessionId == sessionId)
-            .ExecuteDeleteAsync(cancellationToken);
-        _reads.Clear();
+                var deleted = await Table(dbContext)
+                    .Where(x => x.SessionId == sessionId)
+                    .ExecuteDeleteAsync(cancellationToken);
+                _reads.Clear();
 
-        return deleted > 0;
+                return deleted > 0;
+            },
+            cancellationToken);
     }
 }

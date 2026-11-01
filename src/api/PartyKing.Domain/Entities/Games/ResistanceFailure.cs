@@ -31,6 +31,9 @@ public enum ResistanceFailure
 
     TeamSubmitted,
 
+    /// <summary>No team can be picked now: the game waits in a window where nobody has picked a team yet.</summary>
+    NotSelectingTeam,
+
     /// <summary>The leader still has to hand out the plot cards.</summary>
     CardsNotDealt,
 

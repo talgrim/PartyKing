@@ -49,11 +49,5 @@ internal class ResistanceRulesProvider : IResistanceRulesProvider
         return rules;
     }
 
-    private static ResistanceRules Copy(ResistanceRules rules) => new()
-    {
-        PlayerCounts = rules.PlayerCounts.ToDictionary(
-            x => x.Key, x => new ResistanceCountRules(x.Value.Spies, [.. x.Value.TeamSizes], [.. x.Value.RequiredFails])),
-        PlotCardsEnabled = rules.PlotCardsEnabled,
-        PlotDeck = new Dictionary<ResistancePlotCardType, int>(rules.PlotDeck),
-    };
+    private static ResistanceRules Copy(ResistanceRules rules) => rules.Clone();
 }

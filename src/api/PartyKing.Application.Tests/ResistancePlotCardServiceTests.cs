@@ -30,6 +30,10 @@ public class ResistancePlotCardServiceTests : ResistanceServiceTestBase
 
         Assert.Equal("Resistance.CardsNotDealt", (await _roundService.SelectTeamAsync(_id, [leader.PlayerId!.Value], leader, ct)).FirstError.Code);
         Assert.Equal("Resistance.NotLeader", (await _plotCardService.DealPlotCardsAsync(_id, [], others[0], ct)).FirstError.Code);
+
+        // A null element is client input that names no card
+        var nullElement = await _plotCardService.DealPlotCardsAsync(_id, [null!], leader, ct);
+        Assert.Equal(ErrorOr.ErrorType.Validation, nullElement.FirstError.Type);
         Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _plotCardService.DealPlotCardsAsync(_id, [], Host, ct)).FirstError.Type);
 
         var receiver = others[0];

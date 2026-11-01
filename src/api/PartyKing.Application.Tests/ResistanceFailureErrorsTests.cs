@@ -33,6 +33,8 @@ public class ResistanceFailureErrorsTests
             ErrorType.Forbidden, "Resistance.NotLeader", "Only the mission leader picks the team."),
         [ResistanceFailure.TeamSubmitted] = new(
             ErrorType.Conflict, "Resistance.TeamSubmitted", "The team was already submitted."),
+        [ResistanceFailure.NotSelectingTeam] = new(
+            ErrorType.Conflict, "Resistance.NotSelectingTeam", "The team can't be picked right now."),
         [ResistanceFailure.CardsNotDealt] = new(
             ErrorType.Conflict, "Resistance.CardsNotDealt", "The leader has to hand out the plot cards first."),
         [ResistanceFailure.WrongTeamSize] = new(
