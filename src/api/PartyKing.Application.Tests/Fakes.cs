@@ -1,3 +1,4 @@
+using PartyKing.Domain.Repositories;
 using ErrorOr;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
@@ -14,8 +15,6 @@ using PartyKing.Contract.V1.Slideshow;
 using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Entities.Sessions;
 using PartyKing.Domain.Enums;
-using PartyKing.Infrastructure.Repositories;
-using PartyKing.Infrastructure.Results;
 
 namespace PartyKing.Application.Tests;
 

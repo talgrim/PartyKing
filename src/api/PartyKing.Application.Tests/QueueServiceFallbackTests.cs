@@ -3,7 +3,6 @@ using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Sessions;
 using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Enums;
-using PartyKing.Infrastructure.Results;
 
 namespace PartyKing.Application.Tests;
 

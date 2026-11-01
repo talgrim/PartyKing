@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Sessions;
 using PartyKing.Domain.Entities.Sessions;
-using PartyKing.Infrastructure.Results;
 
 namespace PartyKing.Application.Tests;
 

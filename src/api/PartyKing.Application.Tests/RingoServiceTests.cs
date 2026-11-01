@@ -1,10 +1,9 @@
+using PartyKing.Domain.Repositories;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Games.Services.Ringo;
 using PartyKing.Application.Games.Services;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Domain.Entities.Games;
-using PartyKing.Infrastructure.Repositories;
-using PartyKing.Infrastructure.Results;
 
 namespace PartyKing.Application.Tests;
 
