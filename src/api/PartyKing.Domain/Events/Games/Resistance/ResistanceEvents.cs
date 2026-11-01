@@ -4,6 +4,12 @@ namespace PartyKing.Domain.Events.Games.Resistance;
 
 // None of these carries a secret: who voted is public, how they voted is not, and a mission card is never named.
 
+/// <summary>
+/// An action on the game happened, whatever it was: a state change, a card, a rules switch. Raised on top of the action's
+/// own event, if it has one, for listeners that only need to know the game changed.
+/// </summary>
+public sealed record ResistanceChanged(Guid SessionId) : IDomainEvent;
+
 /// <summary>The roles were dealt and the first leader picked.</summary>
 public sealed record ResistanceStarted(Guid SessionId) : IDomainEvent;
 

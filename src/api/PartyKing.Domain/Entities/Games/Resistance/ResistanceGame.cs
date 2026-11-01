@@ -105,7 +105,7 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
         // A copy, so the caller's object is neither changed nor shared with the game
         Rules = rules.Clone(Rules.PlotCardsEnabled);
 
-        return ResistanceOutcome.Success(this);
+        return Succeeded();
     }
 
     /// <summary>
@@ -133,7 +133,7 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
         StartedAt = startedAt;
         Raise(new ResistanceStarted(SessionId));
 
-        return ResistanceOutcome.Success(this);
+        return Succeeded();
     }
 
     /// <summary>Starts a finished game over with the same players: new roles and leader, mission 1, no results.</summary>
@@ -153,7 +153,7 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
         StartedAt = null;
         Raise(new ResistanceRestarted(SessionId));
 
-        return ResistanceOutcome.Success(this);
+        return Succeeded();
     }
 
     /// <summary>
@@ -209,7 +209,7 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
         Phase = ResistancePhase.Voting;
         Raise(new ResistanceTeamSubmitted(SessionId, MissionNumber, LeaderPlayerId!.Value, playerIds.ToList()));
 
-        return ResistanceOutcome.Success(this);
+        return Succeeded();
     }
 
     /// <summary>
@@ -255,7 +255,7 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
             ResistanceRoles.ResolveVotes(this);
         }
 
-        return ResistanceOutcome.Success(this);
+        return Succeeded();
     }
 
     /// <summary>
@@ -303,7 +303,7 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
             ResistanceRoles.ResolveMission(this);
         }
 
-        return ResistanceOutcome.Success(this);
+        return Succeeded();
     }
 
     /// <summary>
@@ -330,7 +330,7 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
 
         ResistanceRoles.PassLeadership(this);
 
-        return ResistanceOutcome.Success(this);
+        return Succeeded();
     }
 
     /// <summary>Switches the plot cards add-on on or off in the rules. Allowed until the game starts, open or not.</summary>
@@ -343,6 +343,17 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
 
         // Rules is a JSON column compared by reference, so assign a copy to have the change detected.
         Rules = Rules.Clone(enabled);
+
+        return Succeeded();
+    }
+
+    /// <summary>
+    /// The outcome of an action that happened. Every one raises <see cref="ResistanceChanged"/>, so a listener that
+    /// only wants to know the game changed need not know each action's own event.
+    /// </summary>
+    private ResistanceOutcome Succeeded()
+    {
+        Raise(new ResistanceChanged(SessionId));
 
         return ResistanceOutcome.Success(this);
     }

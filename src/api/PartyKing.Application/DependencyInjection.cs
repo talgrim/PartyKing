@@ -20,6 +20,7 @@ using PartyKing.Application.Spotify.Services;
 using PartyKing.Application.System;
 using PartyKing.Domain.Events;
 using PartyKing.Domain.Events.Games.Base;
+using PartyKing.Domain.Events.Games.Resistance;
 using PartyKing.Domain.Events.Games.Ringo;
 
 namespace PartyKing.Application;
@@ -130,10 +131,23 @@ public static class DependencyInjection
         services.AddDomainEventHandler<LobbyPlayerJoined, LobbyPushHandler>();
         services.AddDomainEventHandler<LobbyPlayerKicked, LobbyPushHandler>();
         services.AddDomainEventHandler<LobbyOrderChanged, LobbyPushHandler>();
+        services.RegisterRingo();
+        services.RegisterResistance(configuration);
+        services.RegisterNeverHaveIEver();
+    }
+
+    private static void RegisterRingo(this IServiceCollection services)
+    {
         services.AddDomainEventHandler<RingoCardFlipped, RingoPushHandler>();
         services.AddDomainEventHandler<RingoTurnPassed, RingoPushHandler>();
         services.AddScoped<RingoGameLobby>();
         services.AddScoped<IRingoService, RingoService>();
+        services.AddScoped<IRingoRuleSuggestionService, RingoRuleSuggestionService>();
+    }
+
+    private static void RegisterResistance(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddDomainEventHandler<ResistanceChanged, ResistancePushHandler>();
         services.AddScoped<ResistanceGameLobby>();
         services.AddScoped<ResistanceActionGate>();
         services.AddScoped<IResistanceLobbyService, ResistanceLobbyService>();
@@ -142,8 +156,11 @@ public static class DependencyInjection
         services.AddSingleton<IResistanceRulesProvider, ResistanceRulesProvider>();
         services.AddSingleton<IValidateOptions<ResistanceConfiguration>, ResistanceConfigurationValidator>();
         services.Configure<ResistanceConfiguration>(configuration.GetSection(ResistanceConfiguration.SectionName));
+    }
+
+    private static void RegisterNeverHaveIEver(this IServiceCollection services)
+    {
         services.AddScoped<INeverHaveIEverSuggestionService, NeverHaveIEverSuggestionService>();
-        services.AddScoped<IRingoRuleSuggestionService, RingoRuleSuggestionService>();
     }
 
     private static void RegisterQueue(this IServiceCollection services)
