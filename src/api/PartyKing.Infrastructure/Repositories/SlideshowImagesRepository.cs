@@ -1,31 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PartyKing.Domain.Entities.Slideshow;
-using PartyKing.Infrastructure.Results;
+using PartyKing.Application.Ports;
+using PartyKing.Domain.Repositories;
 using PartyKing.Persistence.Database;
 
 namespace PartyKing.Infrastructure.Repositories;
 
-public interface ISlideshowImagesRepository
-{
-    Task InitializeAsync(string rootPath, string uploadedPath, CancellationToken cancellationToken);
-
-    /// <summary>The session's settings, or null when it never changed them.</summary>
-    Task<SlideshowSettings?> GetSettingsAsync(Guid sessionId, CancellationToken cancellationToken);
-    Task SaveSettingsAsync(SlideshowSettings settings, CancellationToken cancellationToken);
-    Task AddSlideshowImageAsync(SlideshowImageWriteModel slideshowImage, CancellationToken cancellationToken);
-    Task<SlideshowImageReadResult> GetSlideshowImageAsync(
-        Guid sessionId,
-        Guid? currentId,
-        SlideshowSettings settings,
-        CancellationToken cancellationToken);
-    Task DeleteImageAsync(SlideshowImageReadResult image, CancellationToken cancellationToken);
-
-    /// <summary>Removes the session's files; its database rows go with the session itself.</summary>
-    Task DeleteSessionFilesAsync(string sessionDirectory);
-}
-
-internal class SlideshowImagesRepository : ISlideshowImagesRepository
+internal class SlideshowImagesRepository : ISlideshowImagesRepository, ISlideshowSettingsRepository
 {
     // Uploads used to live under this folder, shared by all sessions
     private const string LegacyImagesDirectory = "SampleImages";

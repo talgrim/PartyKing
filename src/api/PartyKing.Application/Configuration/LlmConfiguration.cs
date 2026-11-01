@@ -1,4 +1,4 @@
-namespace PartyKing.Infrastructure.Llm;
+namespace PartyKing.Application.Configuration;
 
 /// <summary>
 /// Any OpenAI-compatible chat completions endpoint. The defaults point at Google's Gemini API (free tier), whose key

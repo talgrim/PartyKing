@@ -1,3 +1,4 @@
+using PartyKing.Application.Ports;
 using Microsoft.AspNetCore.SignalR;
 using PartyKing.API.Authentication;
 using PartyKing.Application.Sessions.Services;

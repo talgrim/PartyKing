@@ -1,3 +1,4 @@
+using PartyKing.Application.Ports;
 using PartyKing.Domain.Repositories;
 using ErrorOr;
 using PartyKing.Application.Queue.Helpers;
@@ -6,8 +7,6 @@ using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Sessions;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Contract.V1.Spotify;
-using PartyKing.Infrastructure.Spotify.RestApi;
-using SpotifyAPI.Web;
 
 namespace PartyKing.Application.Queue.Services;
 
@@ -151,7 +150,7 @@ internal class FallbackPlaylistService : IFallbackPlaylistService
                 .Select(x => new PlaylistDto($"spotify:playlist:{x.Id}", x.Name, x.ImageUrl, x.TrackCount))
                 .ToList();
         }
-        catch (APIException exception) when (exception.Response?.StatusCode is global::System.Net.HttpStatusCode.Forbidden)
+        catch (SpotifyApiException exception) when (exception.StatusCode is global::System.Net.HttpStatusCode.Forbidden)
         {
             // The host logged in before the playlist scope was requested
             return Error.Conflict(description: "Spotify did not allow reading your playlists. Log in as the host again");

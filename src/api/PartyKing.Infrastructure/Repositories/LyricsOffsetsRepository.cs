@@ -1,16 +1,9 @@
+using PartyKing.Application.Ports;
 using Microsoft.EntityFrameworkCore;
 using PartyKing.Domain.Entities.Lyrics;
 using PartyKing.Persistence.Database;
 
 namespace PartyKing.Infrastructure.Repositories;
-
-public interface ILyricsOffsetsRepository
-{
-    /// <summary>The saved offset of the song, or 0 when none was saved.</summary>
-    Task<int> GetAsync(string songUrl, CancellationToken cancellationToken);
-
-    Task SaveAsync(string songUrl, int offsetMs, CancellationToken cancellationToken);
-}
 
 internal class LyricsOffsetsRepository : ILyricsOffsetsRepository
 {

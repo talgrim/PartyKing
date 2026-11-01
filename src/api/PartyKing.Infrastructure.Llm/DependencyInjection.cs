@@ -1,3 +1,4 @@
+using PartyKing.Application.Configuration;
 using System.ClientModel;
 using System.ClientModel.Primitives;
 using Microsoft.Extensions.AI;

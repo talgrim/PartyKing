@@ -1,3 +1,4 @@
+using PartyKing.Application.Ports;
 using PartyKing.Domain.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,8 +39,15 @@ public static class DependencyInjection
     private static void RegisterRepositories(this IServiceCollection services)
     {
         services.AddSingleton<RepositoryMetrics>();
-        services.AddMetered<ISlideshowImagesRepository, SlideshowImagesRepository>(
-            (inner, metrics) => new MeteredSlideshowImagesRepository(inner, metrics));
+        services.AddSingleton<SlideshowImagesRepository>();
+        services.AddSingleton(provider => new MeteredSlideshowImagesRepository(
+            provider.GetRequiredService<SlideshowImagesRepository>(),
+            provider.GetRequiredService<SlideshowImagesRepository>(),
+            provider.GetRequiredService<RepositoryMetrics>()));
+        services.AddSingleton<ISlideshowImagesRepository>(
+            provider => provider.GetRequiredService<MeteredSlideshowImagesRepository>());
+        services.AddSingleton<ISlideshowSettingsRepository>(
+            provider => provider.GetRequiredService<MeteredSlideshowImagesRepository>());
         services.AddMetered<ISpotifyProfilesRepository, SpotifyProfilesRepository>(
             (inner, metrics) => new MeteredSpotifyProfilesRepository(inner, metrics));
         services.AddMetered<IQueueRepository, QueueRepository>(

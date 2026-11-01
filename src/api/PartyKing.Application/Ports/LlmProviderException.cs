@@ -1,4 +1,4 @@
-namespace PartyKing.Infrastructure.Llm;
+namespace PartyKing.Application.Ports;
 
 /// <summary>The LLM provider refused a request; <see cref="Status"/> is the HTTP status it answered with.</summary>
 public class LlmProviderException : InvalidOperationException

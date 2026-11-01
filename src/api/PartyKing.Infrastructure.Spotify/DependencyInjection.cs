@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using PartyKing.Application.Ports;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PartyKing.Application.Configuration;
 using PartyKing.Infrastructure.Spotify.Metrics;
@@ -16,7 +17,7 @@ public static class DependencyInjection
         services.AddSingleton<SpotifyClientMetrics>();
         services.AddScoped<SpotifyIntegrationClient>();
         services.AddScoped<ISpotifyIntegrationClient>(provider => new MeteredSpotifyIntegrationClient(
-            provider.GetRequiredService<SpotifyIntegrationClient>(),
+            new SpotifyApiExceptionClient(provider.GetRequiredService<SpotifyIntegrationClient>()),
             provider.GetRequiredService<SpotifyClientMetrics>()));
     }
 }

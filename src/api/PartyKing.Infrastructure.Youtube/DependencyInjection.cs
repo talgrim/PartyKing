@@ -1,3 +1,4 @@
+using PartyKing.Application.Ports;
 using Microsoft.Extensions.DependencyInjection;
 using PartyKing.Infrastructure.Youtube.RestApi;
 

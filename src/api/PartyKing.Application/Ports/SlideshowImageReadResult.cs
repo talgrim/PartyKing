@@ -1,6 +1,6 @@
 ﻿using PartyKing.Domain.Entities.Slideshow;
 
-namespace PartyKing.Infrastructure.Results;
+namespace PartyKing.Application.Ports;
 
 public record SlideshowImageReadResult(Guid? ImageId, SlideshowImageReadModel? Data)
 {

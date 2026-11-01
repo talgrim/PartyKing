@@ -1,3 +1,4 @@
+using PartyKing.Application.Ports;
 using PartyKing.Domain.Repositories;
 using System.Collections.Concurrent;
 using ErrorOr;
@@ -5,9 +6,6 @@ using Microsoft.Extensions.DependencyInjection;
 using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Application.System;
 using PartyKing.Domain.Results;
-using PartyKing.Infrastructure.Repositories;
-using PartyKing.Infrastructure.Spotify.RestApi;
-using SpotifyAPI.Web;
 
 namespace PartyKing.Application.Spotify.Services;
 
@@ -89,7 +87,7 @@ internal class HostTokenProvider : IHostTokenProvider
             {
                 result = await client.ReAuthenticateAsync(profile.Value.RefreshToken, cancellationToken);
             }
-            catch (APIException)
+            catch (SpotifyApiException)
             {
                 // The refresh token is dead, so there is nothing worth caching for this account
                 _tokens.TryRemove(profileId, out _);

@@ -1,3 +1,4 @@
+using PartyKing.Application.Configuration;
 using ErrorOr;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -6,7 +7,6 @@ using PartyKing.Application.Localization;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Sessions;
 using PartyKing.Contract.V1.Games;
-using PartyKing.Infrastructure.Llm;
 
 namespace PartyKing.Application.Games.Services.Ringo;
 

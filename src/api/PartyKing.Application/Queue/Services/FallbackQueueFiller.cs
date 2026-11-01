@@ -1,10 +1,9 @@
+using PartyKing.Application.Ports;
 using PartyKing.Domain.Repositories;
 using PartyKing.Application.Mappings;
 using PartyKing.Application.Realtime;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Domain.Entities.Spotify;
-using PartyKing.Infrastructure.Spotify.RestApi;
-using SpotifyAPI.Web;
 
 namespace PartyKing.Application.Queue.Services;
 
@@ -111,7 +110,7 @@ internal class FallbackQueueFiller : IFallbackQueueFiller
         {
             tracks = await _spotifyClient.GetPlaylistTracksAsync(token.Value, playlistId, cancellationToken);
         }
-        catch (Exception exception) when (exception is APIException or HttpRequestException)
+        catch (Exception exception) when (exception is SpotifyApiException or HttpRequestException)
         {
             _statusStore.SetError(sessionId, "Fallback playlist: Spotify could not provide the playlist's tracks");
             return [];
