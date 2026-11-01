@@ -73,7 +73,6 @@ public abstract class LobbyGame<TPlayer>
         }
 
         player.SessionId = SessionId;
-        player.NormalizedName = normalizedName;
         player.Order = Players.Count == 0 ? 0 : Players.Max(x => x.Order) + 1;
         Players.Add(player);
         OnPlayerJoined(player);
@@ -122,9 +121,15 @@ public abstract class LobbyGame<TPlayer>
             return LobbyStatus.OrderMismatch;
         }
 
+        var positions = new Dictionary<Guid, int>(playerIds.Count);
+        for (var position = 0; position < playerIds.Count; position++)
+        {
+            positions[playerIds[position]] = position;
+        }
+
         foreach (var player in Players)
         {
-            player.Order = playerIds.ToList().IndexOf(player.PlayerId);
+            player.Order = positions[player.PlayerId];
         }
 
         return LobbyStatus.Done;

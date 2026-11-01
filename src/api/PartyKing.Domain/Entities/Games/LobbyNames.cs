@@ -52,5 +52,8 @@ public static class LobbyNames
     }
 
     /// <summary>The upper-cased name that must be unique within a game.</summary>
-    public static string Normalize(string displayName) => displayName.ToUpperInvariant();
+    public static string Normalize(string? displayName)
+    {
+        return displayName?.ToUpperInvariant() ?? string.Empty;
+    }
 }

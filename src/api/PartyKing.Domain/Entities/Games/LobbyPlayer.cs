@@ -9,8 +9,18 @@ public abstract class LobbyPlayer
     /// <summary>The name shown to everyone, without the "(host)" suffix.</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Trimmed, upper-cased name that is unique within the game.</summary>
-    public string NormalizedName { get; set; } = string.Empty;
+    // Not named after the property on purpose: EF would pick a matching field and bypass the getter
+    private string? _normalized;
+
+    /// <summary>
+    /// The upper-cased display name, unique within the game. Derived from the name unless a stored value was set,
+    /// so a player that never went through <c>Join</c> still has one.
+    /// </summary>
+    public string NormalizedName
+    {
+        get { return _normalized ?? LobbyNames.Normalize(DisplayName); }
+        set { _normalized = value; }
+    }
 
     /// <summary>Position in the player order, from 0.</summary>
     public int Order { get; set; }
