@@ -50,6 +50,17 @@ internal abstract class MeteredLobbyGamesRepository<TGame, TPlayer> : MeteredRep
         return MeasureAsync(nameof(ReorderAsync), () => _inner.ReorderAsync(sessionId, playerIds, cancellationToken));
     }
 
+    public Task<TResult> UpdateAsync<TResult>(
+        Guid sessionId,
+        string operation,
+        TResult noGame,
+        Func<TGame, TResult> action,
+        CancellationToken cancellationToken)
+        where TResult : IGameUpdateResult
+    {
+        return MeasureAsync(operation, () => _inner.UpdateAsync(sessionId, operation, noGame, action, cancellationToken));
+    }
+
     public Task<bool> DeleteAsync(Guid sessionId, CancellationToken cancellationToken)
     {
         return MeasureAsync(nameof(DeleteAsync), () => _inner.DeleteAsync(sessionId, cancellationToken));

@@ -2,12 +2,12 @@ using ErrorOr;
 using PartyKing.Application.Mappings;
 using PartyKing.Application.Realtime;
 using PartyKing.Contract.V1.Games.Resistance;
-using PartyKing.Infrastructure.Results;
+using PartyKing.Domain.Entities.Games;
 
 namespace PartyKing.Application.Games.Services.Resistance;
 
 /// <summary>
-/// The frame every Resistance action shares: check who may act, call the repository, turn its status into an error,
+/// The frame every Resistance action shares: check who may act, run the action on the game, turn its outcome into an error,
 /// tell the session's clients and build the caller's view of the game.
 /// </summary>
 internal sealed class ResistanceActionGate
@@ -25,13 +25,11 @@ internal sealed class ResistanceActionGate
     /// For the host, admins and the players of the game (<see cref="GameLobby{TGame,TPlayer}.AccessAsync"/>); NotFound
     /// without a game. <paramref name="call"/> gets the access, for actions that treat managers differently.
     /// </summary>
-    public async Task<ErrorOr<ResistanceGameDto>> RunAsPlayerAsync<TResult>(
+    public async Task<ErrorOr<ResistanceGameDto>> RunAsPlayerAsync(
         Guid sessionId,
         GameCaller caller,
-        Func<ResistanceGameLobby.Access, Task<TResult>> call,
-        Func<TResult, Error?> mapError,
+        Func<ResistanceGameLobby.Access, Task<ResistanceOutcome>> call,
         CancellationToken cancellationToken)
-        where TResult : IResistanceResult
     {
         var access = await _lobby.AccessAsync(sessionId, caller, cancellationToken);
         if (access.IsError)
@@ -44,41 +42,42 @@ internal sealed class ResistanceActionGate
             return ResistanceErrors.NoGame;
         }
 
-        return await FinishAsync(sessionId, caller, await call(access.Value), mapError, cancellationToken);
+        var outcome = await call(access.Value);
+
+        return await FinishAsync(sessionId, caller, ResistanceErrors.From(outcome), outcome.Game, cancellationToken);
     }
 
     /// <summary>For the host and admins only (<see cref="GameLobby{TGame,TPlayer}.AuthorizeAsync"/>).</summary>
-    public async Task<ErrorOr<ResistanceGameDto>> RunAsManagerAsync<TResult>(
+    public async Task<ErrorOr<ResistanceGameDto>> RunAsManagerAsync(
         Guid sessionId,
         GameCaller caller,
-        Func<Task<TResult>> call,
-        Func<TResult, Error?> mapError,
+        Func<Task<ResistanceOutcome>> call,
         CancellationToken cancellationToken)
-        where TResult : IResistanceResult
     {
         if (await _lobby.AuthorizeAsync(sessionId, caller, cancellationToken) is { IsError: true } denied)
         {
             return denied.Errors;
         }
 
-        return await FinishAsync(sessionId, caller, await call(), mapError, cancellationToken);
+        var outcome = await call();
+
+        return await FinishAsync(sessionId, caller, ResistanceErrors.From(outcome), outcome.Game, cancellationToken);
     }
 
-    private async Task<ErrorOr<ResistanceGameDto>> FinishAsync<TResult>(
+    private async Task<ErrorOr<ResistanceGameDto>> FinishAsync(
         Guid sessionId,
         GameCaller caller,
-        TResult result,
-        Func<TResult, Error?> mapError,
+        Error? error,
+        ResistanceGame? game,
         CancellationToken cancellationToken)
-        where TResult : IResistanceResult
     {
-        if (mapError(result) is { } error)
+        if (error is { } failed)
         {
-            return error;
+            return failed;
         }
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
 
-        return ResistanceGameViewBuilder.Build(result.Game!, ResistanceGameLobby.PlayerOf(result.Game!, caller));
+        return ResistanceGameViewBuilder.Build(game!, ResistanceGameLobby.PlayerOf(game!, caller));
     }
 }

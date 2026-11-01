@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using PartyKing.Domain.Entities.Games;
+using PartyKing.Infrastructure.Metrics;
 using PartyKing.Infrastructure.Results;
 using PartyKing.Persistence.Database;
 
@@ -16,16 +18,23 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
 {
     private readonly IDbContextFactory<ReaderDbContext> _readerFactory;
     private readonly IDbContextFactory<WriterDbContext> _writerFactory;
+    private readonly RepositoryMetrics _metrics;
 
     // The read in flight per session, shared by every caller that asks for it meanwhile
     private readonly ConcurrentDictionary<Guid, Lazy<Task<TGame?>>> _reads = new();
 
+    // Writes of one session take turns (see WriteAsync); sessions share the locks by hash, as in QueueRepository
+    private readonly SemaphoreSlim[] _writeLocks =
+        Enumerable.Range(0, 64).Select(_ => new SemaphoreSlim(1, 1)).ToArray();
+
     protected LobbyGamesRepository(
         IDbContextFactory<ReaderDbContext> readerFactory,
-        IDbContextFactory<WriterDbContext> writerFactory)
+        IDbContextFactory<WriterDbContext> writerFactory,
+        RepositoryMetrics metrics)
     {
         _readerFactory = readerFactory;
         _writerFactory = writerFactory;
+        _metrics = metrics;
     }
 
     /// <summary>How many players may join.</summary>
@@ -49,6 +58,46 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
     /// <summary>Called while the player is still in the game, so a game can work out what follows their leaving.</summary>
     protected virtual void PlayerKicking(TGame game, TPlayer kicked)
     {
+    }
+
+    /// <summary>
+    /// Runs a write of the session's game, which loads it, changes it and saves it, while no other write of that
+    /// session runs. Without it two writes that load the game before either saves both act on a copy without the
+    /// other's change: the last two votes would each see a vote missing, and the round would never be counted. The
+    /// time spent waiting for the lock is recorded under <paramref name="operation"/>.
+    /// </summary>
+    protected async Task<TResult> WriteAsync<TResult>(
+        Guid sessionId, string operation, Func<Task<TResult>> write, CancellationToken cancellationToken)
+    {
+        var writeLock = _writeLocks[(uint)sessionId.GetHashCode() % (uint)_writeLocks.Length];
+        await WaitForWriteLockAsync(operation, writeLock, cancellationToken);
+
+        try
+        {
+            return await write();
+        }
+        finally
+        {
+            writeLock.Release();
+        }
+    }
+
+    private async Task WaitForWriteLockAsync(
+        string operation, SemaphoreSlim writeLock, CancellationToken cancellationToken)
+    {
+        var startTimestamp = Stopwatch.GetTimestamp();
+        var acquired = false;
+
+        try
+        {
+            await writeLock.WaitAsync(cancellationToken);
+            acquired = true;
+        }
+        finally
+        {
+            var waitMs = Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds;
+            _metrics.RecordGameWriteLockWait(GetType().Name, operation, waitMs, acquired);
+        }
     }
 
     protected async Task<WriterDbContext> CreateWriterAsync(CancellationToken cancellationToken)
@@ -128,135 +177,195 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
 
     public async Task<TGame?> OpenAsync(Guid sessionId, CancellationToken cancellationToken)
     {
-        await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
+        return await WriteAsync(
+            sessionId,
+            nameof(OpenAsync),
+            async () =>
+            {
+                await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
 
-        var game = await LoadAsync(dbContext, sessionId, cancellationToken);
-        if (game is not null && !game.IsOpen)
-        {
-            game.IsOpen = true;
-            await SaveAsync(dbContext, cancellationToken);
-        }
+                var game = await LoadAsync(dbContext, sessionId, cancellationToken);
+                if (game is not null && !game.IsOpen)
+                {
+                    game.IsOpen = true;
+                    await SaveAsync(dbContext, cancellationToken);
+                }
 
-        return game;
+                return game;
+            },
+            cancellationToken);
     }
 
     public async Task<LobbyResult<TGame>> JoinAsync(
         Guid sessionId, TPlayer player, CancellationToken cancellationToken)
     {
-        await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
+        return await WriteAsync(
+            sessionId,
+            nameof(JoinAsync),
+            async () =>
+            {
+                await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
 
-        var game = await LoadAsync(dbContext, sessionId, cancellationToken);
-        if (game is null)
-        {
-            return new LobbyResult<TGame>(LobbyStatus.NoGame, null);
-        }
+                var game = await LoadAsync(dbContext, sessionId, cancellationToken);
+                if (game is null)
+                {
+                    return new LobbyResult<TGame>(LobbyStatus.NoGame, null);
+                }
 
-        if (!game.IsOpen)
-        {
-            return new LobbyResult<TGame>(LobbyStatus.NotOpen, game);
-        }
+                if (!game.IsOpen)
+                {
+                    return new LobbyResult<TGame>(LobbyStatus.NotOpen, game);
+                }
 
-        if (IsLocked(game))
-        {
-            return new LobbyResult<TGame>(LobbyStatus.Started, game);
-        }
+                if (IsLocked(game))
+                {
+                    return new LobbyResult<TGame>(LobbyStatus.Started, game);
+                }
 
-        if (game.Players.Any(x => x.NormalizedName == player.NormalizedName))
-        {
-            return new LobbyResult<TGame>(LobbyStatus.NameTaken, game);
-        }
+                if (game.Players.Any(x => x.NormalizedName == player.NormalizedName))
+                {
+                    return new LobbyResult<TGame>(LobbyStatus.NameTaken, game);
+                }
 
-        if (game.Players.Count >= MaxPlayers)
-        {
-            return new LobbyResult<TGame>(LobbyStatus.Full, game);
-        }
+                if (game.Players.Count >= MaxPlayers)
+                {
+                    return new LobbyResult<TGame>(LobbyStatus.Full, game);
+                }
 
-        player.SessionId = sessionId;
-        player.Order = game.Players.Count == 0 ? 0 : game.Players.Max(x => x.Order) + 1;
-        game.Players.Add(player);
-        PlayerJoined(game, player);
+                player.SessionId = sessionId;
+                player.Order = game.Players.Count == 0 ? 0 : game.Players.Max(x => x.Order) + 1;
+                game.Players.Add(player);
+                PlayerJoined(game, player);
 
-        try
-        {
-            await SaveAsync(dbContext, cancellationToken);
-        }
-        catch (DbUpdateException)
-        {
-            // A concurrent join with the same name won the unique index
-            return new LobbyResult<TGame>(LobbyStatus.NameTaken, game);
-        }
+                try
+                {
+                    await SaveAsync(dbContext, cancellationToken);
+                }
+                catch (DbUpdateException)
+                {
+                    // A concurrent join with the same name won the unique index
+                    return new LobbyResult<TGame>(LobbyStatus.NameTaken, game);
+                }
 
-        return new LobbyResult<TGame>(LobbyStatus.Done, game);
+                return new LobbyResult<TGame>(LobbyStatus.Done, game);
+            },
+            cancellationToken);
     }
 
     public async Task<LobbyResult<TGame>> KickAsync(
         Guid sessionId, Guid playerId, CancellationToken cancellationToken)
     {
-        await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
+        return await WriteAsync(
+            sessionId,
+            nameof(KickAsync),
+            async () =>
+            {
+                await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
 
-        var game = await LoadAsync(dbContext, sessionId, cancellationToken);
-        if (game is null)
-        {
-            return new LobbyResult<TGame>(LobbyStatus.NoGame, null);
-        }
+                var game = await LoadAsync(dbContext, sessionId, cancellationToken);
+                if (game is null)
+                {
+                    return new LobbyResult<TGame>(LobbyStatus.NoGame, null);
+                }
 
-        if (IsLocked(game))
-        {
-            return new LobbyResult<TGame>(LobbyStatus.Started, game);
-        }
+                if (IsLocked(game))
+                {
+                    return new LobbyResult<TGame>(LobbyStatus.Started, game);
+                }
 
-        var kicked = game.Players.FirstOrDefault(x => x.PlayerId == playerId);
-        if (kicked is null)
-        {
-            return new LobbyResult<TGame>(LobbyStatus.NoPlayer, game);
-        }
+                var kicked = game.Players.FirstOrDefault(x => x.PlayerId == playerId);
+                if (kicked is null)
+                {
+                    return new LobbyResult<TGame>(LobbyStatus.NoPlayer, game);
+                }
 
-        PlayerKicking(game, kicked);
+                PlayerKicking(game, kicked);
 
-        PlayersOf(dbContext).Remove(kicked);
-        game.Players.Remove(kicked);
-        var order = 0;
-        foreach (var player in game.Players.OrderBy(x => x.Order))
-        {
-            player.Order = order++;
-        }
+                PlayersOf(dbContext).Remove(kicked);
+                game.Players.Remove(kicked);
+                var order = 0;
+                foreach (var player in game.Players.OrderBy(x => x.Order))
+                {
+                    player.Order = order++;
+                }
 
-        await SaveAsync(dbContext, cancellationToken);
+                await SaveAsync(dbContext, cancellationToken);
 
-        return new LobbyResult<TGame>(LobbyStatus.Done, game);
+                return new LobbyResult<TGame>(LobbyStatus.Done, game);
+            },
+            cancellationToken);
     }
 
     public async Task<LobbyResult<TGame>> ReorderAsync(
         Guid sessionId, IReadOnlyList<Guid> playerIds, CancellationToken cancellationToken)
     {
-        await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
+        return await WriteAsync(
+            sessionId,
+            nameof(ReorderAsync),
+            async () =>
+            {
+                await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
 
-        var game = await LoadAsync(dbContext, sessionId, cancellationToken);
-        if (game is null)
-        {
-            return new LobbyResult<TGame>(LobbyStatus.NoGame, null);
-        }
+                var game = await LoadAsync(dbContext, sessionId, cancellationToken);
+                if (game is null)
+                {
+                    return new LobbyResult<TGame>(LobbyStatus.NoGame, null);
+                }
 
-        if (IsLocked(game))
-        {
-            return new LobbyResult<TGame>(LobbyStatus.Started, game);
-        }
+                if (IsLocked(game))
+                {
+                    return new LobbyResult<TGame>(LobbyStatus.Started, game);
+                }
 
-        if (playerIds.Count != game.Players.Count
-            || playerIds.Distinct().Count() != playerIds.Count
-            || game.Players.Any(x => !playerIds.Contains(x.PlayerId)))
-        {
-            return new LobbyResult<TGame>(LobbyStatus.OrderMismatch, game);
-        }
+                if (playerIds.Count != game.Players.Count
+                    || playerIds.Distinct().Count() != playerIds.Count
+                    || game.Players.Any(x => !playerIds.Contains(x.PlayerId)))
+                {
+                    return new LobbyResult<TGame>(LobbyStatus.OrderMismatch, game);
+                }
 
-        foreach (var player in game.Players)
-        {
-            player.Order = playerIds.ToList().IndexOf(player.PlayerId);
-        }
+                foreach (var player in game.Players)
+                {
+                    player.Order = playerIds.ToList().IndexOf(player.PlayerId);
+                }
 
-        await SaveAsync(dbContext, cancellationToken);
+                await SaveAsync(dbContext, cancellationToken);
 
-        return new LobbyResult<TGame>(LobbyStatus.Done, game);
+                return new LobbyResult<TGame>(LobbyStatus.Done, game);
+            },
+            cancellationToken);
+    }
+
+    public async Task<TResult> UpdateAsync<TResult>(
+        Guid sessionId,
+        string operation,
+        TResult noGame,
+        Func<TGame, TResult> action,
+        CancellationToken cancellationToken)
+        where TResult : IGameUpdateResult
+    {
+        return await WriteAsync(
+            sessionId,
+            operation,
+            async () =>
+            {
+                await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
+
+                var game = await LoadAsync(dbContext, sessionId, cancellationToken);
+                if (game is null)
+                {
+                    return noGame;
+                }
+
+                var result = action(game);
+                if (result.Changed)
+                {
+                    await SaveAsync(dbContext, cancellationToken);
+                }
+
+                return result;
+            },
+            cancellationToken);
     }
 
     public async Task<bool> DeleteAsync(Guid sessionId, CancellationToken cancellationToken)

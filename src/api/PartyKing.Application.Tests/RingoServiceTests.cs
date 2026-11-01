@@ -510,6 +510,17 @@ public class RingoServiceTests
         public Task<bool> TryCreateAsync(RingoGame game, CancellationToken cancellationToken) =>
             Task.FromResult(_games.TryAdd(game.SessionId, game));
 
+        public Task<TResult> UpdateAsync<TResult>(
+            Guid sessionId,
+            string operation,
+            TResult noGame,
+            Func<RingoGame, TResult> action,
+            CancellationToken cancellationToken)
+            where TResult : IGameUpdateResult
+        {
+            return Task.FromResult(_games.TryGetValue(sessionId, out var game) ? action(game) : noGame);
+        }
+
         public Task<RingoGame?> OpenAsync(Guid sessionId, CancellationToken cancellationToken)
         {
             var game = _games.GetValueOrDefault(sessionId);
@@ -521,75 +532,6 @@ public class RingoServiceTests
             return Task.FromResult(game);
         }
 
-        public Task<RingoFlipResult> FlipAsync(
-            Guid sessionId,
-            int cardId,
-            string flippedBy,
-            Guid? turnOf,
-            DateTimeOffset flippedAt,
-            CancellationToken cancellationToken)
-        {
-            if (!_games.TryGetValue(sessionId, out var game))
-            {
-                return Task.FromResult(new RingoFlipResult(RingoFlipStatus.NoGame, null));
-            }
-
-            var current = RingoTurns.Current(game);
-            if (turnOf is not null && turnOf != current?.PlayerId)
-            {
-                return Task.FromResult(new RingoFlipResult(RingoFlipStatus.NotYourTurn, game));
-            }
-
-            if (game.Flips.Any(x => x.CardId == cardId))
-            {
-                return Task.FromResult(new RingoFlipResult(RingoFlipStatus.AlreadyFlipped, game));
-            }
-
-            if (game.IsOver)
-            {
-                return Task.FromResult(new RingoFlipResult(RingoFlipStatus.GameOver, game));
-            }
-
-            if (game.PendingCardId is not null)
-            {
-                return Task.FromResult(new RingoFlipResult(RingoFlipStatus.CardPending, game));
-            }
-
-            game.Flips.Add(new RingoFlip
-            {
-                SessionId = sessionId,
-                Order = game.Flips.Count,
-                CardId = cardId,
-                FlippedAt = flippedAt,
-                FlippedBy = current?.DisplayName ?? flippedBy,
-            });
-            game.PendingCardId = cardId;
-            game.CurrentPlayerId = current?.PlayerId;
-
-            return Task.FromResult(new RingoFlipResult(RingoFlipStatus.Flipped, game));
-        }
-
-        public Task<RingoContinueResult> ContinueAsync(
-            Guid sessionId, Guid? turnOf, CancellationToken cancellationToken)
-        {
-            if (!_games.TryGetValue(sessionId, out var game))
-            {
-                return Task.FromResult(new RingoContinueResult(RingoContinueStatus.NoGame, null));
-            }
-
-            if (turnOf is not null && turnOf != RingoTurns.Current(game)?.PlayerId)
-            {
-                return Task.FromResult(new RingoContinueResult(RingoContinueStatus.NotYourTurn, game));
-            }
-
-            if (game.PendingCardId is not null)
-            {
-                game.PendingCardId = null;
-                game.CurrentPlayerId = RingoTurns.Next(game)?.PlayerId;
-            }
-
-            return Task.FromResult(new RingoContinueResult(RingoContinueStatus.Continued, game));
-        }
 
         public Task<LobbyResult<RingoGame>> JoinAsync(
             Guid sessionId, RingoPlayer player, CancellationToken cancellationToken)

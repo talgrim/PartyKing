@@ -5,7 +5,7 @@ namespace PartyKing.Domain.Entities.Games;
 /// starts it once at least <see cref="MinPlayers"/> joined: that deals the roles (see <see cref="ResistanceRoles"/>),
 /// picks the first mission leader and locks the players.
 /// </summary>
-public class ResistanceGame : LobbyGame<ResistancePlayer>
+public partial class ResistanceGame : LobbyGame<ResistancePlayer>
 {
     public const int MinPlayers = 5;
     public const int MaxPlayers = 10;
@@ -56,4 +56,273 @@ public class ResistanceGame : LobbyGame<ResistancePlayer>
 
     /// <summary>The leader submitted a team for the current mission, which locks it (<see cref="ResistancePlayer.IsOnTeam"/>).</summary>
     public bool IsTeamSubmitted => Players.Any(x => x.IsOnTeam);
+
+    /// <summary>
+    /// Replaces the rules with the given ones, keeping whether the plot cards are on. Only while the game is still
+    /// closed and not started, so the players never see the numbers change under them.
+    /// </summary>
+    public ResistanceOutcome RefreshRules(ResistanceRules rules)
+    {
+        if (IsOpen || IsStarted)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.RulesLocked, this);
+        }
+
+        rules.PlotCardsEnabled = Rules.PlotCardsEnabled;
+        Rules = rules;
+
+        return ResistanceOutcome.Success(this);
+    }
+
+    /// <summary>
+    /// Starts the open game: deals the roles and picks the first leader (see <see cref="ResistanceRoles"/>), which
+    /// locks the players.
+    /// </summary>
+    public ResistanceOutcome Start(DateTimeOffset startedAt, Random random)
+    {
+        if (IsStarted)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.AlreadyStarted, this);
+        }
+
+        if (!IsOpen)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotOpen, this);
+        }
+
+        if (Players.Count < MinPlayers)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotEnoughPlayers, this);
+        }
+
+        ResistanceRoles.Deal(this, random);
+        StartedAt = startedAt;
+
+        return ResistanceOutcome.Success(this);
+    }
+
+    /// <summary>Starts a finished game over with the same players: new roles and leader, mission 1, no results.</summary>
+    public ResistanceOutcome Restart()
+    {
+        if (!IsStarted)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotStarted, this);
+        }
+
+        if (Phase != ResistancePhase.GameOver)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotOver, this);
+        }
+
+        ResistanceRoles.Reset(this);
+        StartedAt = null;
+
+        return ResistanceOutcome.Success(this);
+    }
+
+    /// <summary>
+    /// The leader submits the team of the current mission, which locks it and puts it to the vote: exactly the number
+    /// of different players the rules ask for.
+    /// </summary>
+    public ResistanceOutcome SelectTeam(Guid? callerPlayerId, IReadOnlyList<Guid> playerIds)
+    {
+        if (!IsStarted)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotStarted, this);
+        }
+
+        if (Phase == ResistancePhase.GameOver)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.GameOver, this);
+        }
+
+        if (callerPlayerId is null || callerPlayerId != LeaderPlayerId)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotLeaderToPick, this);
+        }
+
+        if (Phase is ResistancePhase.DealingCards or ResistancePhase.ResolvingCards)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.CardsNotDealt, this);
+        }
+
+        if (Phase != ResistancePhase.SelectingTeam)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.TeamSubmitted, this);
+        }
+
+        if (playerIds.Count != Rules.TeamSize(Players.Count, MissionNumber)
+            || playerIds.Distinct().Count() != playerIds.Count)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.WrongTeamSize, this);
+        }
+
+        if (playerIds.Any(id => Players.All(x => x.PlayerId != id)))
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.UnknownTeamPlayer, this);
+        }
+
+        foreach (var player in Players)
+        {
+            player.IsOnTeam = playerIds.Contains(player.PlayerId);
+            player.Vote = null;
+            player.MissionCard = null;
+        }
+
+        Phase = ResistancePhase.Voting;
+
+        return ResistanceOutcome.Success(this);
+    }
+
+    /// <summary>
+    /// A player votes on the submitted team (a repeated vote replaces the earlier one). The vote that completes the
+    /// round is tallied right away: a majority approves, otherwise (a tie too) the team is rejected, which counts
+    /// towards the five that make the spies win.
+    /// </summary>
+    public ResistanceOutcome Vote(Guid? voterId, bool approve)
+    {
+        if (!IsStarted)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotStarted, this);
+        }
+
+        if (Phase == ResistancePhase.GameOver)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.GameOver, this);
+        }
+
+        var voter = Players.FirstOrDefault(x => x.PlayerId == voterId);
+        if (voter is null)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotPlayerToVote, this);
+        }
+
+        if (Phase != ResistancePhase.Voting)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotVoting, this);
+        }
+
+        var opinionMakers = ResistanceRoles.OpinionMakerIds(this);
+        if (opinionMakers.Contains(voter.PlayerId))
+        {
+            if (voter.Vote is not null)
+            {
+                return ResistanceOutcome.Failed(ResistanceFailure.VoteLocked, this);
+            }
+        }
+        else if (opinionMakers.Any(id => Players.First(x => x.PlayerId == id).Vote is null))
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.OpinionMakersFirst, this);
+        }
+
+        voter.Vote = approve;
+        if (Players.All(x => x.Vote is not null))
+        {
+            ResistanceRoles.ResolveVotes(this);
+        }
+
+        return ResistanceOutcome.Success(this);
+    }
+
+    /// <summary>
+    /// A member of the approved team secretly plays a Success or Fail card; it can't be changed. The card that
+    /// completes the team is resolved right away: the mission fails when the Fail cards reach the rules' requirement,
+    /// and the third success or failure ends the game.
+    /// </summary>
+    public ResistanceOutcome PlayMissionCard(Guid? callerPlayerId, bool success)
+    {
+        if (!IsStarted)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotStarted, this);
+        }
+
+        if (Phase == ResistancePhase.GameOver)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.GameOver, this);
+        }
+
+        var player = Players.FirstOrDefault(x => x.PlayerId == callerPlayerId);
+        if (player is null)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotPlayerToPlay, this);
+        }
+
+        if (Phase != ResistancePhase.PlayingMission)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NoApprovedTeam, this);
+        }
+
+        if (!player.IsOnTeam)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotOnTeam, this);
+        }
+
+        if (player.MissionCard is not null)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.AlreadyPlayed, this);
+        }
+
+        if (!success && player.Role == ResistanceRole.Resistance)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.MustSucceed, this);
+        }
+
+        player.MissionCard = success;
+        if (ResistanceRoles.AllCardsPlayed(this))
+        {
+            ResistanceRoles.ResolveMission(this);
+        }
+
+        return ResistanceOutcome.Success(this);
+    }
+
+    /// <summary>
+    /// Moves on after a rejected team or a finished mission: the next player leads, the team, the votes and the cards
+    /// are cleared (a finished mission also starts the next one). The leader or a manager may do it.
+    /// </summary>
+    public ResistanceOutcome Continue(Guid? callerPlayerId, bool isManager)
+    {
+        if (!IsStarted)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotStarted, this);
+        }
+
+        if (Phase == ResistancePhase.GameOver)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.GameOver, this);
+        }
+
+        if (!isManager && (callerPlayerId is null || callerPlayerId != LeaderPlayerId))
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotAllowedToContinue, this);
+        }
+
+        if (Phase != ResistancePhase.MissionResult)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NothingToContinue, this);
+        }
+
+        ResistanceRoles.PassLeadership(this);
+
+        return ResistanceOutcome.Success(this);
+    }
+
+    /// <summary>Switches the plot cards add-on on or off in the rules. Allowed until the game starts, open or not.</summary>
+    public ResistanceOutcome SetPlotCards(bool enabled)
+    {
+        if (IsStarted)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.PlotCardsLocked, this);
+        }
+
+        // Rules is a JSON column compared by reference, so assign a copy to have the change detected.
+        Rules = new ResistanceRules
+        {
+            PlayerCounts = Rules.PlayerCounts,
+            PlotDeck = Rules.PlotDeck,
+            PlotCardsEnabled = enabled,
+        };
+
+        return ResistanceOutcome.Success(this);
+    }
 }

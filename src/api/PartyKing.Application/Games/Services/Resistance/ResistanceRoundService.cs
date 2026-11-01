@@ -1,6 +1,7 @@
 using ErrorOr;
 using PartyKing.Application.System;
 using PartyKing.Contract.V1.Games.Resistance;
+using PartyKing.Domain.Entities.Games;
 using PartyKing.Infrastructure.Repositories;
 
 namespace PartyKing.Application.Games.Services.Resistance;
@@ -71,8 +72,12 @@ internal class ResistanceRoundService : IResistanceRoundService
         return _gate.RunAsManagerAsync(
             sessionId,
             caller,
-            () => _games.StartAsync(sessionId, _clock.UtcNow, cancellationToken),
-            result => ResistanceErrors.From(result.Status),
+            () => _games.UpdateAsync(
+                sessionId,
+                nameof(StartAsync),
+                ResistanceOutcome.NoGame,
+                game => game.Start(_clock.UtcNow, Random.Shared),
+                cancellationToken),
             cancellationToken);
     }
 
@@ -82,8 +87,12 @@ internal class ResistanceRoundService : IResistanceRoundService
         return _gate.RunAsManagerAsync(
             sessionId,
             caller,
-            () => _games.RestartAsync(sessionId, cancellationToken),
-            result => ResistanceErrors.From(result.Status),
+            () => _games.UpdateAsync(
+                sessionId,
+                nameof(RestartAsync),
+                ResistanceOutcome.NoGame,
+                game => game.Restart(),
+                cancellationToken),
             cancellationToken);
     }
 
@@ -93,8 +102,12 @@ internal class ResistanceRoundService : IResistanceRoundService
         return _gate.RunAsPlayerAsync(
             sessionId,
             caller,
-            _ => _games.SelectTeamAsync(sessionId, caller.PlayerId, playerIds ?? [], cancellationToken),
-            result => ResistanceErrors.From(result.Status, result.Game),
+            _ => _games.UpdateAsync(
+                sessionId,
+                nameof(SelectTeamAsync),
+                ResistanceOutcome.NoGame,
+                game => game.SelectTeam(caller.PlayerId, playerIds ?? []),
+                cancellationToken),
             cancellationToken);
     }
 
@@ -104,8 +117,12 @@ internal class ResistanceRoundService : IResistanceRoundService
         return _gate.RunAsPlayerAsync(
             sessionId,
             caller,
-            _ => _games.VoteAsync(sessionId, caller.PlayerId, approve, cancellationToken),
-            result => ResistanceErrors.From(result.Status),
+            _ => _games.UpdateAsync(
+                sessionId,
+                nameof(VoteAsync),
+                ResistanceOutcome.NoGame,
+                game => game.Vote(caller.PlayerId, approve),
+                cancellationToken),
             cancellationToken);
     }
 
@@ -115,8 +132,12 @@ internal class ResistanceRoundService : IResistanceRoundService
         return _gate.RunAsPlayerAsync(
             sessionId,
             caller,
-            _ => _games.PlayMissionCardAsync(sessionId, caller.PlayerId, success, cancellationToken),
-            result => ResistanceErrors.From(result.Status),
+            _ => _games.UpdateAsync(
+                sessionId,
+                nameof(PlayMissionCardAsync),
+                ResistanceOutcome.NoGame,
+                game => game.PlayMissionCard(caller.PlayerId, success),
+                cancellationToken),
             cancellationToken);
     }
 
@@ -126,8 +147,12 @@ internal class ResistanceRoundService : IResistanceRoundService
         return _gate.RunAsPlayerAsync(
             sessionId,
             caller,
-            access => _games.ContinueAsync(sessionId, caller.PlayerId, access.IsManager, cancellationToken),
-            result => ResistanceErrors.From(result.Status),
+            access => _games.UpdateAsync(
+                sessionId,
+                nameof(ContinueAsync),
+                ResistanceOutcome.NoGame,
+                game => game.Continue(caller.PlayerId, access.IsManager),
+                cancellationToken),
             cancellationToken);
     }
 }
