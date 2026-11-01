@@ -1,3 +1,4 @@
+using PartyKing.Application.Events;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PartyKing.Domain.Entities.Games.Base;
@@ -48,7 +49,7 @@ public class RingoGamesRepositoryTests : IAsyncLifetime
 
         _repository = new RingoGamesRepository(
             _provider.GetRequiredService<IDbContextFactory<ReaderDbContext>>(),
-            _writer, _metrics);
+            _writer, _metrics, new NullDomainEventDispatcher());
     }
 
     public async Task DisposeAsync()

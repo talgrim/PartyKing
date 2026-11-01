@@ -1,20 +1,26 @@
+using PartyKing.Domain.Entities.Base;
+using PartyKing.Domain.Events.Games.Base;
+
 namespace PartyKing.Domain.Entities.Games.Base;
 
 /// <summary>
 /// A game of one session (at most one per kind) that guests join by name once an admin opens it. It owns the
 /// rules of its lobby: opening, joining, kicking and ordering the players.
 /// </summary>
-public abstract class LobbyGame<TPlayer>
+public abstract class LobbyGame<TPlayer> : AggregateRoot
     where TPlayer : LobbyPlayer
 {
-    public Guid SessionId { get; set; }
+    /// <summary>Which game this lobby belongs to; named by the lobby events.</summary>
+    public abstract GameKind Kind { get; }
 
-    public DateTimeOffset CreatedAt { get; set; }
+    public Guid SessionId { get; internal set; }
+
+    public DateTimeOffset CreatedAt { get; internal set; }
 
     /// <summary>Set by an admin once guests may join; it cannot be undone.</summary>
-    public bool IsOpen { get; set; }
+    public bool IsOpen { get; internal set; }
 
-    public List<TPlayer> Players { get; set; } = [];
+    public List<TPlayer> Players { get; internal set; } = [];
 
     /// <summary>How many players may join.</summary>
     protected virtual int PlayerLimit => int.MaxValue;
@@ -41,6 +47,7 @@ public abstract class LobbyGame<TPlayer>
         }
 
         IsOpen = true;
+        Raise(new LobbyOpened(SessionId, Kind));
 
         return true;
     }
@@ -76,6 +83,7 @@ public abstract class LobbyGame<TPlayer>
         player.Order = Players.Count == 0 ? 0 : Players.Max(x => x.Order) + 1;
         Players.Add(player);
         OnPlayerJoined(player);
+        Raise(new LobbyPlayerJoined(SessionId, Kind, player.PlayerId));
 
         return LobbyStatus.Done;
     }
@@ -102,6 +110,8 @@ public abstract class LobbyGame<TPlayer>
         {
             player.Order = order++;
         }
+
+        Raise(new LobbyPlayerKicked(SessionId, Kind, kicked.PlayerId));
 
         return (LobbyStatus.Done, kicked);
     }
@@ -131,6 +141,8 @@ public abstract class LobbyGame<TPlayer>
         {
             player.Order = positions[player.PlayerId];
         }
+
+        Raise(new LobbyOrderChanged(SessionId, Kind));
 
         return LobbyStatus.Done;
     }

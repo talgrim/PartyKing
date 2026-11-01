@@ -14,7 +14,7 @@ public abstract class ResistanceServiceTestBase
     private protected static readonly GameCaller Host = new(HostId, false);
 
     private protected readonly FakeSessionsRepository _sessions = new();
-    private protected readonly FakeResistanceGamesRepository _games = new();
+    private protected readonly FakeResistanceGamesRepository _games;
     private protected readonly FakeResistanceNotifier _notifier = new();
     private protected readonly FakeRulesProvider _rules = new();
     private protected readonly ResistanceLobbyService _lobbyService;
@@ -24,12 +24,13 @@ public abstract class ResistanceServiceTestBase
 
     private protected ResistanceServiceTestBase()
     {
+        _games = new FakeResistanceGamesRepository(TestEvents.Dispatcher(new FakeRingoNotifier(), _notifier));
         var clock = new FakeClock();
         var sessionAuthorizer = new SessionAuthorizer(_sessions);
         var lobby = new ResistanceGameLobby(
-            sessionAuthorizer, _sessions, _games, clock, _notifier);
-        var gate = new ResistanceActionGate(lobby, _notifier);
-        _lobbyService = new ResistanceLobbyService(lobby, gate, _games, clock, _notifier, _rules);
+            sessionAuthorizer, _sessions, _games, clock);
+        var gate = new ResistanceActionGate(lobby);
+        _lobbyService = new ResistanceLobbyService(lobby, gate, _games, clock, _rules);
         _roundService = new ResistanceRoundService(gate, _games, clock);
         _plotCardService = new ResistancePlotCardService(gate, _games, clock);
         _id = _sessions.AddSession(HostId, new PasswordHasher().Hash("secret")).Id;

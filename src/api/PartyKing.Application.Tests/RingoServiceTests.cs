@@ -1,3 +1,5 @@
+using PartyKing.Application.Events;
+using PartyKing.Domain.Events.Games.Base;
 using PartyKing.Domain.Repositories;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Games.Services.Base;
@@ -13,20 +15,20 @@ public class RingoServiceTests
     private const string HostId = "host-1";
 
     private readonly FakeSessionsRepository _sessions = new();
-    private readonly FakeRingoGamesRepository _games = new();
+    private readonly FakeRingoGamesRepository _games;
     private readonly FakeRingoNotifier _notifier = new();
     private readonly RingoService _service;
     private readonly Guid _id;
 
     public RingoServiceTests()
     {
+        _games = new FakeRingoGamesRepository(TestEvents.Dispatcher(_notifier, new FakeResistanceNotifier()));
         var clock = new FakeClock();
         var sessionAuthorizer = new SessionAuthorizer(_sessions);
         _service = new RingoService(
-            new RingoGameLobby(sessionAuthorizer, _sessions, _games, clock, _notifier),
+            new RingoGameLobby(sessionAuthorizer, _sessions, _games, clock),
             _games,
-            clock,
-            _notifier);
+            clock);
         _id = _sessions.AddSession(HostId, new PasswordHasher().Hash("secret")).Id;
     }
 
@@ -515,14 +517,29 @@ public class RingoServiceTests
     private sealed class FakeRingoGamesRepository : IRingoGamesRepository
     {
         private readonly Dictionary<Guid, RingoGame> _games = new();
+        private readonly IDomainEventDispatcher _dispatcher;
+
+        public FakeRingoGamesRepository(IDomainEventDispatcher dispatcher)
+        {
+            _dispatcher = dispatcher;
+        }
 
         public Task<RingoGame?> GetAsync(Guid sessionId, CancellationToken cancellationToken) =>
             Task.FromResult(_games.GetValueOrDefault(sessionId));
 
-        public Task<bool> TryCreateAsync(RingoGame game, CancellationToken cancellationToken) =>
-            Task.FromResult(_games.TryAdd(game.SessionId, game));
+        public async Task<bool> TryCreateAsync(RingoGame game, CancellationToken cancellationToken)
+        {
+            if (!_games.TryAdd(game.SessionId, game))
+            {
+                return false;
+            }
 
-        public Task<TResult> UpdateAsync<TResult>(
+            await _dispatcher.DispatchAsync(game);
+
+            return true;
+        }
+
+        public async Task<TResult> UpdateAsync<TResult>(
             Guid sessionId,
             string operation,
             TResult noGame,
@@ -530,41 +547,75 @@ public class RingoServiceTests
             CancellationToken cancellationToken)
             where TResult : IGameUpdateResult
         {
-            return Task.FromResult(_games.TryGetValue(sessionId, out var game) ? action(game) : noGame);
+            if (!_games.TryGetValue(sessionId, out var game))
+            {
+                return noGame;
+            }
+
+            var result = action(game);
+            if (result.Changed)
+            {
+                await _dispatcher.DispatchAsync(game);
+            }
+
+            return result;
         }
 
-        public Task<RingoGame?> OpenAsync(Guid sessionId, CancellationToken cancellationToken)
+        public async Task<RingoGame?> OpenAsync(Guid sessionId, CancellationToken cancellationToken)
         {
             var game = _games.GetValueOrDefault(sessionId);
-            game?.Open();
+            if (game?.Open() == true)
+            {
+                await _dispatcher.DispatchAsync(game);
+            }
 
-            return Task.FromResult(game);
+            return game;
         }
 
-        public Task<LobbyResult<RingoGame>> JoinAsync(
+        public async Task<LobbyResult<RingoGame>> JoinAsync(
             Guid sessionId, RingoPlayer player, CancellationToken cancellationToken)
         {
-            return Task.FromResult(_games.TryGetValue(sessionId, out var game)
-                ? new LobbyResult<RingoGame>(game.Join(player), game)
-                : new LobbyResult<RingoGame>(LobbyStatus.NoGame, null));
+            return _games.TryGetValue(sessionId, out var game)
+                ? await ResultAsync(game.Join(player), game)
+                : new LobbyResult<RingoGame>(LobbyStatus.NoGame, null);
         }
 
-        public Task<LobbyResult<RingoGame>> KickAsync(Guid sessionId, Guid playerId, CancellationToken cancellationToken)
+        public async Task<LobbyResult<RingoGame>> KickAsync(
+            Guid sessionId, Guid playerId, CancellationToken cancellationToken)
         {
-            return Task.FromResult(_games.TryGetValue(sessionId, out var game)
-                ? new LobbyResult<RingoGame>(game.Kick(playerId).Status, game)
-                : new LobbyResult<RingoGame>(LobbyStatus.NoGame, null));
+            return _games.TryGetValue(sessionId, out var game)
+                ? await ResultAsync(game.Kick(playerId).Status, game)
+                : new LobbyResult<RingoGame>(LobbyStatus.NoGame, null);
         }
 
-        public Task<LobbyResult<RingoGame>> ReorderAsync(
+        public async Task<LobbyResult<RingoGame>> ReorderAsync(
             Guid sessionId, IReadOnlyList<Guid> playerIds, CancellationToken cancellationToken)
         {
-            return Task.FromResult(_games.TryGetValue(sessionId, out var game)
-                ? new LobbyResult<RingoGame>(game.Reorder(playerIds), game)
-                : new LobbyResult<RingoGame>(LobbyStatus.NoGame, null));
+            return _games.TryGetValue(sessionId, out var game)
+                ? await ResultAsync(game.Reorder(playerIds), game)
+                : new LobbyResult<RingoGame>(LobbyStatus.NoGame, null);
         }
 
-        public Task<bool> DeleteAsync(Guid sessionId, CancellationToken cancellationToken) =>
-            Task.FromResult(_games.Remove(sessionId));
+        private async Task<LobbyResult<RingoGame>> ResultAsync(LobbyStatus status, RingoGame game)
+        {
+            if (status == LobbyStatus.Done)
+            {
+                await _dispatcher.DispatchAsync(game);
+            }
+
+            return new LobbyResult<RingoGame>(status, game);
+        }
+
+        public async Task<bool> DeleteAsync(Guid sessionId, CancellationToken cancellationToken)
+        {
+            if (!_games.Remove(sessionId))
+            {
+                return false;
+            }
+
+            await _dispatcher.DispatchAsync([new LobbyGameEnded(sessionId, GameKind.Ringo)], cancellationToken);
+
+            return true;
+        }
     }
 }

@@ -1,5 +1,7 @@
+using PartyKing.Application.Events;
 using PartyKing.Domain.Repositories;
 using Microsoft.EntityFrameworkCore;
+using PartyKing.Domain.Entities.Games.Base;
 using PartyKing.Domain.Entities.Games.Ringo;
 using PartyKing.Infrastructure.Metrics;
 using PartyKing.Persistence.Database;
@@ -11,8 +13,9 @@ internal class RingoGamesRepository : LobbyGamesRepository<RingoGame, RingoPlaye
     public RingoGamesRepository(
         IDbContextFactory<ReaderDbContext> readerFactory,
         IDbContextFactory<WriterDbContext> writerFactory,
-        RepositoryMetrics metrics)
-        : base(readerFactory, writerFactory, metrics)
+        RepositoryMetrics metrics,
+        IDomainEventDispatcher dispatcher)
+        : base(readerFactory, writerFactory, metrics, dispatcher)
     {
     }
 
@@ -20,6 +23,8 @@ internal class RingoGamesRepository : LobbyGamesRepository<RingoGame, RingoPlaye
     {
         return dbContext.RingoGames.Include(x => x.Flips).Include(x => x.Players);
     }
+
+    protected override GameKind Kind => GameKind.Ringo;
 
     protected override DbSet<RingoGame> Table(PartyKingDbContextBase dbContext) => dbContext.RingoGames;
 

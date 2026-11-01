@@ -1,19 +1,35 @@
 using PartyKing.Domain.Entities.Games.Base;
+using PartyKing.Domain.Events.Games.Ringo;
 
 namespace PartyKing.Domain.Entities.Games.Ringo;
 
 /// <summary>The Ringo game of one session (at most one): the seed of the card layout and the flipped cards in flip order.</summary>
 public class RingoGame : LobbyGame<RingoPlayer>
 {
-    public int Seed { get; set; }
+    // EF and the tests; a game is started through Start
+    internal RingoGame()
+    {
+    }
+
+    public static RingoGame Start(Guid sessionId, int seed, DateTimeOffset createdAt)
+    {
+        var game = new RingoGame { SessionId = sessionId, Seed = seed, CreatedAt = createdAt };
+        game.Raise(new RingoStarted(sessionId));
+
+        return game;
+    }
+
+    public override GameKind Kind => GameKind.Ringo;
+
+    public int Seed { get; internal set; }
 
     /// <summary>The last flipped card until the host or an admin continues; null when none awaits that.</summary>
-    public int? PendingCardId { get; set; }
+    public int? PendingCardId { get; internal set; }
 
     /// <summary>The player whose turn it is; null while nobody has joined.</summary>
-    public Guid? CurrentPlayerId { get; set; }
+    public Guid? CurrentPlayerId { get; internal set; }
 
-    public List<RingoFlip> Flips { get; set; } = [];
+    public List<RingoFlip> Flips { get; internal set; } = [];
 
     protected override void OnPlayerJoined(RingoPlayer player)
     {
@@ -58,16 +74,22 @@ public class RingoGame : LobbyGame<RingoPlayer>
             return RingoOutcome.Failed(RingoFailure.CardPending, this);
         }
 
+        var recordedName = current?.DisplayName ?? flippedBy;
         Flips.Add(new RingoFlip
         {
             SessionId = SessionId,
             Order = Flips.Count,
             CardId = cardId,
             FlippedAt = flippedAt,
-            FlippedBy = current?.DisplayName ?? flippedBy,
+            FlippedBy = recordedName,
         });
         PendingCardId = cardId;
         CurrentPlayerId = current?.PlayerId;
+        Raise(new RingoCardFlipped(SessionId, cardId, recordedName));
+        if (IsOver)
+        {
+            Raise(new RingoGameOver(SessionId, recordedName));
+        }
 
         return RingoOutcome.Done(this);
     }
@@ -90,6 +112,7 @@ public class RingoGame : LobbyGame<RingoPlayer>
 
         PendingCardId = null;
         CurrentPlayerId = RingoTurns.Next(this)?.PlayerId;
+        Raise(new RingoTurnPassed(SessionId, CurrentPlayerId));
 
         return RingoOutcome.Done(this);
     }

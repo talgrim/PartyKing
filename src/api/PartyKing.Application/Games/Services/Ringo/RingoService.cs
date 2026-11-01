@@ -61,19 +61,16 @@ internal class RingoService : IRingoService
 
     private readonly IRingoGamesRepository _games;
     private readonly IDateTimeProvider _clock;
-    private readonly IRingoNotifier _notifier;
     private readonly RingoGameLobby _lobby;
 
     public RingoService(
         RingoGameLobby lobby,
         IRingoGamesRepository games,
-        IDateTimeProvider clock,
-        IRingoNotifier notifier)
+        IDateTimeProvider clock)
     {
         _lobby = lobby;
         _games = games;
         _clock = clock;
-        _notifier = notifier;
     }
 
     public async Task<ErrorOr<RingoGameDto>> GetAsync(
@@ -106,19 +103,12 @@ internal class RingoService : IRingoService
             return denied.Errors;
         }
 
-        var game = new RingoGame
-        {
-            SessionId = sessionId,
-            Seed = Random.Shared.Next(),
-            CreatedAt = _clock.UtcNow,
-        };
+        var game = RingoGame.Start(sessionId, Random.Shared.Next(), _clock.UtcNow);
 
         if (!await _games.TryCreateAsync(game, cancellationToken))
         {
             return Error.Conflict("Ringo.AlreadyStarted", "The session already has a Ringo game.");
         }
-
-        await _notifier.ChangedAsync(sessionId, cancellationToken);
 
         return ToDto(game, caller);
     }
@@ -181,12 +171,6 @@ internal class RingoService : IRingoService
             return error;
         }
 
-        // A card that was flipped already changes nothing, so there is nothing to tell the clients
-        if (outcome.Changed)
-        {
-            await _notifier.ChangedAsync(sessionId, cancellationToken);
-        }
-
         return ToDto(outcome.Game!, caller);
     }
 
@@ -211,12 +195,6 @@ internal class RingoService : IRingoService
             return error;
         }
 
-        // Continuing with no card pending changes nothing, so there is nothing to tell the clients
-        if (outcome.Changed)
-        {
-            await _notifier.ChangedAsync(sessionId, cancellationToken);
-        }
-
         return ToDto(outcome.Game!, caller);
     }
 
@@ -232,8 +210,6 @@ internal class RingoService : IRingoService
         {
             return _lobby.NoGame;
         }
-
-        await _notifier.ChangedAsync(sessionId, cancellationToken);
 
         return Result.Deleted;
     }

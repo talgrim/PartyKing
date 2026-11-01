@@ -1,3 +1,5 @@
+using PartyKing.Domain.Events.Games.Resistance;
+
 namespace PartyKing.Domain.Entities.Games.Resistance;
 
 /// <summary>Dealing the roles (and plot cards) of a Resistance game and moving it from one step to the next.</summary>
@@ -10,8 +12,10 @@ public static class ResistanceRoles
     public const int MaxRejectedTeams = 5;
 
     /// <summary>A team is approved by a strict majority of all the players; a tie rejects it.</summary>
-    public static bool IsApproved(ResistanceGame game) =>
-        game.Players.Count(x => x.Vote == true) * 2 > game.Players.Count;
+    public static bool IsApproved(ResistanceGame game)
+    {
+        return game.Players.Count(x => x.Vote == true) * 2 > game.Players.Count;
+    }
 
     /// <summary>The player after the leader in seating order, wrapping around.</summary>
     public static Guid NextLeader(ResistanceGame game)
@@ -30,6 +34,7 @@ public static class ResistanceRoles
     {
         if (IsApproved(game))
         {
+            game.Publish(new ResistanceTeamApproved(game.SessionId, game.MissionNumber));
             if (HasPlayableCards(game))
             {
                 OpenWindow(game, ResistancePhase.ConfidenceWindow, beforeDraw: false);
@@ -53,25 +58,30 @@ public static class ResistanceRoles
     /// Whether <paramref name="target"/>'s mission card of the finished mission can be peeked at (in the peek window): it was played,
     /// is not the peeker's own and no Keeping a Close Eye looked at it yet.
     /// </summary>
-    public static bool CanPeek(ResistanceGame game, Guid peeker, Guid target) =>
-        game.Phase == ResistancePhase.PeekWindow
-        && target != peeker
-        && game.Players.Any(x => x.PlayerId == target && x.MissionCard is not null)
-        && !game.PlotCards.Any(x => x.Type == ResistancePlotCardType.KeepingCloseEye
-                                    && x.Location == ResistancePlotCardLocation.Played
-                                    && x.PlayedInMission == game.MissionNumber
-                                    && x.TargetPlayerId == target);
+    public static bool CanPeek(ResistanceGame game, Guid peeker, Guid target)
+    {
+        return game.Phase == ResistancePhase.PeekWindow
+               && target != peeker
+               && game.Players.Any(x => x.PlayerId == target && x.MissionCard is not null)
+               && !game.PlotCards.Any(x => x.Type == ResistancePlotCardType.KeepingCloseEye
+                                           && x.Location == ResistancePlotCardLocation.Played
+                                           && x.PlayedInMission == game.MissionNumber
+                                           && x.TargetPlayerId == target);
+    }
 
     /// <summary>The mission cards <paramref name="peeker"/> looked at this mission (player id, true = Success); private to them.</summary>
-    public static IEnumerable<(Guid PlayerId, bool Success)> PeekedCards(ResistanceGame game, Guid peeker) =>
-        game.Phase is not (ResistancePhase.PeekWindow or ResistancePhase.MissionResult)
+    public static IEnumerable<(Guid PlayerId, bool Success)> PeekedCards(ResistanceGame game, Guid peeker)
+    {
+        return game.Phase is not (ResistancePhase.PeekWindow or ResistancePhase.MissionResult)
             ? []
             : game.PlotCards
                 .Where(x => x.Type == ResistancePlotCardType.KeepingCloseEye
                             && x.Location == ResistancePlotCardLocation.Played
                             && x.PlayedInMission == game.MissionNumber
                             && x.HolderPlayerId == peeker && x.TargetPlayerId is not null)
-                .Select(x => (x.TargetPlayerId!.Value, game.Players.First(p => p.PlayerId == x.TargetPlayerId).MissionCard == true));
+                .Select(x => (x.TargetPlayerId!.Value,
+                    game.Players.First(p => p.PlayerId == x.TargetPlayerId).MissionCard == true));
+    }
 
     /// <summary>
     /// Counts the team as rejected (a vote, or a No Confidence cancelling the approval): the fifth ends the game, else
@@ -80,15 +90,17 @@ public static class ResistanceRoles
     public static void RejectTeam(ResistanceGame game)
     {
         game.RejectedTeams++;
+        game.Publish(new ResistanceTeamRejected(game.SessionId, game.MissionNumber, game.RejectedTeams));
         if (game.RejectedTeams >= MaxRejectedTeams)
         {
             game.Phase = ResistancePhase.GameOver;
             game.Winner = ResistanceRole.Spy;
+            game.Publish(new ResistanceGameOver(game.SessionId, ResistanceRole.Spy));
             return;
         }
 
         // The next leader picks at once; the votes stay (and are public) until that team is submitted
-        game.LeaderPlayerId = NextLeader(game);
+        game.ChangeLeader(NextLeader(game));
         game.Phase = ResistancePhase.SelectingTeam;
         foreach (var player in game.Players)
         {
@@ -106,10 +118,12 @@ public static class ResistanceRoles
     /// the cards are, so that the window itself never tells which card is out there (the hand sizes are public anyway).
     /// A face-up Opinion Maker is not a card to play.
     /// </summary>
-    public static bool HasPlayableCards(ResistanceGame game) =>
-        game.Rules.PlotCardsEnabled
-        && game.PlotCards.Any(x => x.Location == ResistancePlotCardLocation.Hand
-                                   && x.Type != ResistancePlotCardType.OpinionMaker);
+    public static bool HasPlayableCards(ResistanceGame game)
+    {
+        return game.Rules.PlotCardsEnabled
+               && game.PlotCards.Any(x => x.Location == ResistancePlotCardLocation.Hand
+                                          && x.Type != ResistancePlotCardType.OpinionMaker);
+    }
 
     private static void OpenWindow(ResistanceGame game, ResistancePhase phase, bool beforeDraw)
     {
@@ -160,7 +174,7 @@ public static class ResistanceRoles
     public static void PassLeadership(ResistanceGame game)
     {
         game.MissionNumber++;
-        game.LeaderPlayerId = NextLeader(game);
+        game.ChangeLeader(NextLeader(game));
         foreach (var player in game.Players)
         {
             player.IsOnTeam = false;
@@ -207,26 +221,36 @@ public static class ResistanceRoles
     }
 
     /// <summary>Whether the leader still has to hand the card out: it is drawn and is not Establish Confidence, which the leader plays on themselves.</summary>
-    public static bool NeedsDealing(ResistancePlotCard card) =>
-        card.Location == ResistancePlotCardLocation.Drawn && card.Type != ResistancePlotCardType.EstablishConfidence;
+    public static bool NeedsDealing(ResistancePlotCard card)
+    {
+        return card.Location == ResistancePlotCardLocation.Drawn &&
+               card.Type != ResistancePlotCardType.EstablishConfidence;
+    }
 
     /// <summary>The cards the leader hands out (see <see cref="NeedsDealing"/>).</summary>
-    public static IEnumerable<ResistancePlotCard> CardsToDeal(ResistanceGame game) =>
-        game.PlotCards.Where(NeedsDealing);
+    public static IEnumerable<ResistancePlotCard> CardsToDeal(ResistanceGame game)
+    {
+        return game.PlotCards.Where(NeedsDealing);
+    }
 
     /// <summary>
     /// A window in which every player confirms (or the holder of a card plays it) before the game goes on: the leader
     /// window, the confidence window and the peek window.
     /// </summary>
-    public static bool IsConfirmationWindow(ResistanceGame game) =>
-        game.Phase is ResistancePhase.LeaderWindow or ResistancePhase.ConfidenceWindow or ResistancePhase.PeekWindow;
+    public static bool IsConfirmationWindow(ResistanceGame game)
+    {
+        return game.Phase is ResistancePhase.LeaderWindow or ResistancePhase.ConfidenceWindow
+            or ResistancePhase.PeekWindow;
+    }
 
     /// <summary>
     /// Whether everybody's vote is public: all have voted and the vote is no longer on (also while the next leader
     /// picks after a rejection). While it is on, only who voted is known, not how.
     /// </summary>
-    public static bool VotesRevealed(ResistanceGame game) =>
-        game.Phase != ResistancePhase.Voting && game.Players.All(x => x.Vote is not null);
+    public static bool VotesRevealed(ResistanceGame game)
+    {
+        return game.Phase != ResistancePhase.Voting && game.Players.All(x => x.Vote is not null);
+    }
 
     /// <summary>
     /// Whether the votes of the Opinion Makers are public: there is one in play and every one of them has voted, which
@@ -241,47 +265,66 @@ public static class ResistanceRoles
     }
 
     /// <summary>Whether the card is played the moment it is dealt and needs its receiver to confirm what they saw.</summary>
-    public static bool IsImmediate(ResistancePlotCardType type) =>
-        type is ResistancePlotCardType.OverheardConversation
+    public static bool IsImmediate(ResistancePlotCardType type)
+    {
+        return type is ResistancePlotCardType.OverheardConversation
             or ResistancePlotCardType.EstablishConfidence
             or ResistancePlotCardType.OpenUp;
+    }
 
     /// <summary>The immediate cards in a hand that have not been played yet.</summary>
-    public static IEnumerable<ResistancePlotCard> UnplayedImmediateCards(ResistanceGame game) =>
-        game.PlotCards.Where(x => x.Location == ResistancePlotCardLocation.Hand && IsImmediate(x.Type));
+    public static IEnumerable<ResistancePlotCard> UnplayedImmediateCards(ResistanceGame game)
+    {
+        return game.PlotCards.Where(x => x.Location == ResistancePlotCardLocation.Hand && IsImmediate(x.Type));
+    }
 
     /// <summary>The played immediate cards whose receiver has not confirmed yet; other cards show nobody an identity card.</summary>
-    public static IEnumerable<ResistancePlotCard> UnconfirmedCards(ResistanceGame game) =>
-        game.PlotCards.Where(x => x.Location == ResistancePlotCardLocation.Played && IsImmediate(x.Type) && !x.IsConfirmed);
+    public static IEnumerable<ResistancePlotCard> UnconfirmedCards(ResistanceGame game)
+    {
+        return game.PlotCards.Where(x =>
+            x.Location == ResistancePlotCardLocation.Played && IsImmediate(x.Type) && !x.IsConfirmed);
+    }
 
     /// <summary>The player who sees the identity card an immediate card shows: the holder of Overheard Conversation, else the target.</summary>
-    public static Guid? Viewer(ResistancePlotCard card) =>
-        card.Type == ResistancePlotCardType.OverheardConversation ? card.HolderPlayerId : card.TargetPlayerId;
+    public static Guid? Viewer(ResistancePlotCard card)
+    {
+        return card.Type == ResistancePlotCardType.OverheardConversation ? card.HolderPlayerId : card.TargetPlayerId;
+    }
 
     /// <summary>The player whose identity card an immediate card shows: the target of Overheard Conversation, else the holder.</summary>
-    public static Guid? Revealed(ResistancePlotCard card) =>
-        card.Type == ResistancePlotCardType.OverheardConversation ? card.TargetPlayerId : card.HolderPlayerId;
+    public static Guid? Revealed(ResistancePlotCard card)
+    {
+        return card.Type == ResistancePlotCardType.OverheardConversation ? card.TargetPlayerId : card.HolderPlayerId;
+    }
 
     /// <summary>
     /// The team member who must play their mission card openly this mission (In the Spotlight), or null. The card
     /// stays in the log, so it only counts for the mission it was played in.
     /// </summary>
-    public static Guid? OpenMissionPlayerId(ResistanceGame game) =>
-        game.PlotCards
+    public static Guid? OpenMissionPlayerId(ResistanceGame game)
+    {
+        return game.PlotCards
             .Where(x => x.Type == ResistancePlotCardType.InTheSpotlight
                         && x.Location == ResistancePlotCardLocation.Played
                         && x.PlayedInMission == game.MissionNumber)
             .Select(x => x.TargetPlayerId)
             .FirstOrDefault();
+    }
 
     /// <summary>Whether In the Spotlight may force the target open: another player of the team who has not played yet.</summary>
-    public static bool CanBeForcedOpen(ResistanceGame game, Guid holderPlayerId, Guid targetPlayerId) =>
-        targetPlayerId != holderPlayerId
-        && game.Players.Any(x => x.PlayerId == targetPlayerId && x.IsOnTeam && x.MissionCard is null);
+    public static bool CanBeForcedOpen(ResistanceGame game, Guid holderPlayerId, Guid targetPlayerId)
+    {
+        return targetPlayerId != holderPlayerId
+               && game.Players.Any(x => x.PlayerId == targetPlayerId && x.IsOnTeam && x.MissionCard is null);
+    }
 
     /// <summary>After the cards are dealt: plays the immediate ones first, otherwise the leader picks the team.</summary>
-    public static void AfterDeal(ResistanceGame game) =>
-        game.Phase = UnplayedImmediateCards(game).Any() ? ResistancePhase.ResolvingCards : ResistancePhase.SelectingTeam;
+    public static void AfterDeal(ResistanceGame game)
+    {
+        game.Phase = UnplayedImmediateCards(game).Any()
+            ? ResistancePhase.ResolvingCards
+            : ResistancePhase.SelectingTeam;
+    }
 
     /// <summary>The players seated directly beside the player, the one before first, wrapping around the table.</summary>
     public static IReadOnlyList<Guid> Neighbours(ResistanceGame game, Guid playerId)
@@ -294,14 +337,16 @@ public static class ResistanceRoles
     }
 
     /// <summary>The players with an Opinion Maker in play: they reveal their vote before the others vote.</summary>
-    public static IReadOnlyList<Guid> OpinionMakerIds(ResistanceGame game) =>
-        game.PlotCards
+    public static IReadOnlyList<Guid> OpinionMakerIds(ResistanceGame game)
+    {
+        return game.PlotCards
             .Where(x => x.Location == ResistancePlotCardLocation.InPlay
                         && x.Type == ResistancePlotCardType.OpinionMaker
                         && x.HolderPlayerId is not null)
             .Select(x => x.HolderPlayerId!.Value)
             .Distinct()
             .ToList();
+    }
 
     /// <summary>
     /// Builds and shuffles the deck from the rules' composition, or clears it when the add-on is off. The deck holds at
@@ -344,8 +389,10 @@ public static class ResistanceRoles
     }
 
     /// <summary>Whether every member of the approved team has played a card.</summary>
-    public static bool AllCardsPlayed(ResistanceGame game) =>
-        game.Players.Where(x => x.IsOnTeam).All(x => x.MissionCard is not null);
+    public static bool AllCardsPlayed(ResistanceGame game)
+    {
+        return game.Players.Where(x => x.IsOnTeam).All(x => x.MissionCard is not null);
+    }
 
     /// <summary>
     /// Applies the complete set of cards: the mission fails when the Fail cards reach the rules' requirement, the
@@ -365,10 +412,12 @@ public static class ResistanceRoles
             TeamPlayerIds = game.Players.Where(x => x.IsOnTeam).OrderBy(x => x.Order).Select(x => x.PlayerId).ToList(),
         });
 
+        game.Publish(new ResistanceMissionCompleted(game.SessionId, game.MissionNumber, succeeded, fails));
         if (game.ResistanceScore >= MissionsToWin || game.SpyScore >= MissionsToWin)
         {
             game.Phase = ResistancePhase.GameOver;
             game.Winner = game.ResistanceScore >= MissionsToWin ? ResistanceRole.Resistance : ResistanceRole.Spy;
+            game.Publish(new ResistanceGameOver(game.SessionId, game.Winner.Value));
             return;
         }
 
@@ -414,7 +463,7 @@ public static class ResistanceRoles
             shuffled[i].Role = i < spies ? ResistanceRole.Spy : ResistanceRole.Resistance;
         }
 
-        game.LeaderPlayerId = game.Players[random.Next(game.Players.Count)].PlayerId;
+        game.ChangeLeader(game.Players[random.Next(game.Players.Count)].PlayerId);
         BuildPlotDeck(game, random);
         BeginMission(game);
     }

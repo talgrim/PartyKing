@@ -25,30 +25,30 @@ public enum ResistancePlotCardLocation
 /// <summary>One card of the plot cards add-on, built from <see cref="ResistanceRules.PlotDeck"/> when the game starts.</summary>
 public class ResistancePlotCard
 {
-    public Guid SessionId { get; set; }
+    public Guid SessionId { get; internal set; }
 
     /// <summary>Identifies the card within the game (0 to 14).</summary>
-    public int CardId { get; set; }
+    public int CardId { get; internal set; }
 
-    public ResistancePlotCardType Type { get; set; }
+    public ResistancePlotCardType Type { get; internal set; }
 
-    public ResistancePlotCardLocation Location { get; set; }
+    public ResistancePlotCardLocation Location { get; internal set; }
 
     /// <summary>The player holding the card while it is <see cref="ResistancePlotCardLocation.Drawn"/> or in a hand.</summary>
-    public Guid? HolderPlayerId { get; set; }
+    public Guid? HolderPlayerId { get; internal set; }
 
     /// <summary>The position in the shuffled deck; the lowest is drawn first.</summary>
-    public int DeckOrder { get; set; }
+    public int DeckOrder { get; internal set; }
 
     /// <summary>The player an immediate card was played on; null until it is played.</summary>
-    public Guid? TargetPlayerId { get; set; }
+    public Guid? TargetPlayerId { get; internal set; }
 
     /// <summary>When the card was played; orders the public log.</summary>
-    public DateTimeOffset? PlayedAt { get; set; }
+    public DateTimeOffset? PlayedAt { get; internal set; }
 
     /// <summary>The mission during which the card was played.</summary>
-    public int PlayedInMission { get; set; }
+    public int PlayedInMission { get; internal set; }
 
     /// <summary>Whether the player who saw the identity card has confirmed it.</summary>
-    public bool IsConfirmed { get; set; }
+    public bool IsConfirmed { get; internal set; }
 }

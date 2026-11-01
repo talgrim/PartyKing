@@ -14,12 +14,10 @@ namespace PartyKing.Application.Games.Services.Resistance;
 internal sealed class ResistanceActionGate
 {
     private readonly ResistanceGameLobby _lobby;
-    private readonly IResistanceNotifier _notifier;
 
-    public ResistanceActionGate(ResistanceGameLobby lobby, IResistanceNotifier notifier)
+    public ResistanceActionGate(ResistanceGameLobby lobby)
     {
         _lobby = lobby;
-        _notifier = notifier;
     }
 
     /// <summary>
@@ -76,8 +74,6 @@ internal sealed class ResistanceActionGate
         {
             return failed;
         }
-
-        await _notifier.ChangedAsync(sessionId, cancellationToken);
 
         return ResistanceGameViewBuilder.Build(game!, ResistanceGameLobby.PlayerOf(game!, caller));
     }

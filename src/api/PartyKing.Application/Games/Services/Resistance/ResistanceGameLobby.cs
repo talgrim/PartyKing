@@ -14,14 +14,12 @@ internal sealed class ResistanceGameLobby : GameLobby<ResistanceGame, Resistance
         ISessionAuthorizer sessionAuthorizer,
         ISessionsRepository sessions,
         IResistanceGamesRepository games,
-        IDateTimeProvider clock,
-        IResistanceNotifier notifier)
+        IDateTimeProvider clock)
         : base(
             sessionAuthorizer,
             sessions,
             games,
             clock,
-            notifier,
             new GameLobbyOptions(ResistanceErrors.GameName, ResistanceGame.MaxPlayers))
     {
     }

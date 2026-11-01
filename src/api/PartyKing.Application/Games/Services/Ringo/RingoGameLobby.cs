@@ -1,6 +1,5 @@
 using PartyKing.Domain.Repositories;
 using PartyKing.Application.Games.Services.Base;
-using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.System;
 using PartyKing.Domain.Entities.Games.Ringo;
@@ -14,9 +13,8 @@ internal sealed class RingoGameLobby : GameLobby<RingoGame, RingoPlayer>
         ISessionAuthorizer sessionAuthorizer,
         ISessionsRepository sessions,
         IRingoGamesRepository games,
-        IDateTimeProvider clock,
-        IRingoNotifier notifier)
-        : base(sessionAuthorizer, sessions, games, clock, notifier, new GameLobbyOptions("Ringo"))
+        IDateTimeProvider clock)
+        : base(sessionAuthorizer, sessions, games, clock, new GameLobbyOptions("Ringo"))
     {
     }
 }

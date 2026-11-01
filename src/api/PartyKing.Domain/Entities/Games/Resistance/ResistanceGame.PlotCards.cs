@@ -1,3 +1,5 @@
+using PartyKing.Domain.Events.Games.Resistance;
+
 namespace PartyKing.Domain.Entities.Games.Resistance;
 
 /// <summary>The plot cards add-on of <see cref="ResistanceGame"/>: dealing the cards, playing them and the windows around them.</summary>
@@ -59,7 +61,7 @@ public partial class ResistanceGame
 
         ResistanceRoles.AfterDeal(this);
 
-        return ResistanceOutcome.Success(this);
+        return Succeeded();
     }
 
     /// <summary>
@@ -126,7 +128,7 @@ public partial class ResistanceGame
 
         MarkPlayed(card, targetPlayerId, playedAt, confirmed: spotlight);
 
-        return ResistanceOutcome.Success(this);
+        return Succeeded();
     }
 
     /// <summary>
@@ -174,7 +176,7 @@ public partial class ResistanceGame
             Phase = ResistancePhase.SelectingTeam;
         }
 
-        return ResistanceOutcome.Success(this);
+        return Succeeded();
     }
 
     /// <summary>
@@ -241,7 +243,7 @@ public partial class ResistanceGame
 
         MarkPlayed(card, targetPlayerId, playedAt, confirmed: true);
 
-        return ResistanceOutcome.Success(this);
+        return Succeeded();
     }
 
     /// <summary>
@@ -285,10 +287,10 @@ public partial class ResistanceGame
         }
 
         MarkPlayed(card, LeaderPlayerId, playedAt, confirmed: true);
-        LeaderPlayerId = callerPlayerId;
+        ChangeLeader(callerPlayerId);
         ResistanceRoles.AfterWindow(this);
 
-        return ResistanceOutcome.Success(this);
+        return Succeeded();
     }
 
     /// <summary>
@@ -333,7 +335,7 @@ public partial class ResistanceGame
 
         MarkPlayed(card, targetPlayerId, playedAt, confirmed: true);
 
-        return ResistanceOutcome.Success(this);
+        return Succeeded();
     }
 
     /// <summary>
@@ -390,7 +392,7 @@ public partial class ResistanceGame
 
         ResistanceRoles.RejectTeam(this);
 
-        return ResistanceOutcome.Success(this);
+        return Succeeded();
     }
 
     /// <summary>
@@ -421,7 +423,7 @@ public partial class ResistanceGame
             ResistanceRoles.AfterWindow(this);
         }
 
-        return ResistanceOutcome.Success(this);
+        return Succeeded();
     }
 
     private void MarkPlayed(ResistancePlotCard card, Guid? targetPlayerId, DateTimeOffset playedAt, bool confirmed)
@@ -431,5 +433,6 @@ public partial class ResistanceGame
         card.PlayedAt = playedAt;
         card.PlayedInMission = MissionNumber;
         card.IsConfirmed = confirmed;
+        Raise(new ResistancePlotCardPlayed(SessionId, card.CardId, card.Type, card.HolderPlayerId, targetPlayerId));
     }
 }

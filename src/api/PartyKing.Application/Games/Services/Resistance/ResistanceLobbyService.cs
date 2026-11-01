@@ -68,7 +68,6 @@ internal class ResistanceLobbyService : IResistanceLobbyService
     private readonly ResistanceActionGate _gate;
     private readonly IResistanceGamesRepository _games;
     private readonly IDateTimeProvider _clock;
-    private readonly IResistanceNotifier _notifier;
     private readonly IResistanceRulesProvider _rulesProvider;
 
     public ResistanceLobbyService(
@@ -76,14 +75,12 @@ internal class ResistanceLobbyService : IResistanceLobbyService
         ResistanceActionGate gate,
         IResistanceGamesRepository games,
         IDateTimeProvider clock,
-        IResistanceNotifier notifier,
         IResistanceRulesProvider rulesProvider)
     {
         _lobby = lobby;
         _gate = gate;
         _games = games;
         _clock = clock;
-        _notifier = notifier;
         _rulesProvider = rulesProvider;
     }
 
@@ -132,13 +129,11 @@ internal class ResistanceLobbyService : IResistanceLobbyService
             return denied.Errors;
         }
 
-        var game = new ResistanceGame { SessionId = sessionId, CreatedAt = _clock.UtcNow, Rules = _rulesProvider.Current() };
+        var game = ResistanceGame.Create(sessionId, _clock.UtcNow, _rulesProvider.Current());
         if (!await _games.TryCreateAsync(game, cancellationToken))
         {
             return ResistanceErrors.AlreadyCreated;
         }
-
-        await _notifier.ChangedAsync(sessionId, cancellationToken);
 
         return View(game, caller);
     }
@@ -220,8 +215,6 @@ internal class ResistanceLobbyService : IResistanceLobbyService
         {
             return ResistanceErrors.NoGame;
         }
-
-        await _notifier.ChangedAsync(sessionId, cancellationToken);
 
         return Result.Deleted;
     }

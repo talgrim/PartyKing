@@ -3,26 +3,38 @@ using PartyKing.Domain.Entities.Games.Base;
 namespace PartyKing.Domain.Entities.Games.Resistance;
 
 /// <summary>A person who joined a Resistance game by name. The seating order is <see cref="LobbyPlayer.Order"/>.</summary>
-public class ResistancePlayer : LobbyPlayer
+public class ResistancePlayer : LobbyPlayer, ILobbyPlayerFactory<ResistancePlayer>
 {
+    internal ResistancePlayer()
+    {
+    }
+
+    public static ResistancePlayer Create(Guid playerId, string name, string? profileId, DateTimeOffset joinedAt)
+    {
+        var player = new ResistancePlayer();
+        player.Initialize(playerId, name, profileId, joinedAt);
+
+        return player;
+    }
+
     /// <summary>Null until the game is started.</summary>
-    public ResistanceRole? Role { get; set; }
+    public ResistanceRole? Role { get; internal set; }
 
     /// <summary>Whether the leader put the player on the team of the current mission.</summary>
-    public bool IsOnTeam { get; set; }
+    public bool IsOnTeam { get; internal set; }
 
     /// <summary>
     /// The player's vote on the submitted team (true approves); null until they voted. Kept after the reveal so
     /// everybody sees who voted how, and cleared when the next team is picked.
     /// </summary>
-    public bool? Vote { get; set; }
+    public bool? Vote { get; internal set; }
 
     /// <summary>
     /// The card the player secretly played on the approved team (true is Success, false is Fail); null until they
     /// played. Never sent to anyone else, and cleared when the next team is picked.
     /// </summary>
-    public bool? MissionCard { get; set; }
+    public bool? MissionCard { get; internal set; }
 
     /// <summary>Whether the player confirmed in the open <see cref="ResistancePhase.LeaderWindow"/> that they do not play a card.</summary>
-    public bool PassedLeaderWindow { get; set; }
+    public bool PassedLeaderWindow { get; internal set; }
 }
