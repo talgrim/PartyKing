@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using PartyKing.Application.Mappings;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Player.Services;
 using PartyKing.Application.Realtime;
@@ -18,7 +19,7 @@ public class PlayerServiceTests
     private readonly FakeSessionsRepository _sessions = new();
     private readonly FakeQueueRepository _queue = new();
     private readonly FakePlayerNotifier _notifier = new();
-    private readonly FakeQueueNotifier _queueNotifier = new();
+    private readonly FakeQueueAdvancer _advancer = new();
     private readonly PlayerStateStore _store;
     private readonly PlayerService _service;
     private readonly Session _session;
@@ -26,7 +27,7 @@ public class PlayerServiceTests
     public PlayerServiceTests()
     {
         _store = new PlayerStateStore(_clock);
-        _service = new PlayerService(_sessions, _queue, _store, _notifier, _queueNotifier, new NullPlayerConnectionWatchdog(), new FakeFallbackQueueFiller(), new FallbackStatusStore(_notifier, NullLogger<FallbackStatusStore>.Instance), NullLogger<PlayerService>.Instance);
+        _service = new PlayerService(_sessions, _queue, _store, _notifier, new NullPlayerConnectionWatchdog(), _advancer, new FallbackStatusStore(_notifier, NullLogger<FallbackStatusStore>.Instance), NullLogger<PlayerService>.Instance);
         _session = _sessions.AddSession(HostId);
     }
 
@@ -242,37 +243,37 @@ public class PlayerServiceTests
         var result = await _service.SkipAsync(_session.Id, 1, CancellationToken.None);
 
         Assert.Equal(ErrorOr.ErrorType.Conflict, result.FirstError.Type);
-        Assert.Empty(_queue.AdvanceCalls);
+        Assert.Empty(_advancer.Calls);
+    }
+
+    [Fact]
+    public async Task Skip_FromAMissingSession_IsNotFoundAndAdvancesNothing()
+    {
+        var result = await _service.SkipAsync(Guid.NewGuid(), 1, CancellationToken.None);
+
+        Assert.Equal(ErrorOr.ErrorType.NotFound, result.FirstError.Type);
+        Assert.Empty(_advancer.Calls);
     }
 
     [Fact]
     public async Task Skip_AdvancesFromTheSongTheAdminSaw()
     {
         _store.Report(_session.Id, 1, paused: false);
-        _queue.Playing = Item(1);
-        _queue.AdvanceResult = Item(2);
+        _advancer.Result = Item(2).ToDto();
 
         var result = await _service.SkipAsync(_session.Id, 1, CancellationToken.None);
 
         Assert.Equal(2, result.Value.Id);
-        Assert.Equal((_session.Id, (int?)1), Assert.Single(_queue.AdvanceCalls));
-        var advanced = Assert.Single(_queueNotifier.QueueAdvanced);
-        Assert.Equal(1, advanced.PreviousSongId);
-        Assert.Equal(2, advanced.NowPlaying?.Id);
+        Assert.Equal((_session.Id, (int?)1), Assert.Single(_advancer.Calls));
     }
 
     [Fact]
     public async Task Skip_PastTheLastSong_IsNotFound()
     {
         _store.Report(_session.Id, 1, paused: false);
-        _queue.Playing = Item(1);
-        _queue.AdvanceResult = null;
 
         var result = await _service.SkipAsync(_session.Id, 1, CancellationToken.None);
 
         Assert.Equal(ErrorOr.ErrorType.NotFound, result.FirstError.Type);
-        var advanced = Assert.Single(_queueNotifier.QueueAdvanced);
-        Assert.Equal(1, advanced.PreviousSongId);
-        Assert.Null(advanced.NowPlaying);
     }
 }
