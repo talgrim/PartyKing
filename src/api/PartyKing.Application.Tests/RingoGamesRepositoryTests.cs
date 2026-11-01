@@ -87,14 +87,20 @@ public class RingoGamesRepositoryTests : IAsyncLifetime
         return ids;
     }
 
-    private Task<RingoFlipResult> FlipAsync(int cardId, Guid? turnOf = null, string flippedBy = "admin")
+    private Task<RingoOutcome> FlipAsync(int cardId, Guid? turnOf = null, string flippedBy = "admin")
     {
-        return _repository.FlipAsync(_sessionId, cardId, flippedBy, turnOf, DateTimeOffset.UtcNow, CancellationToken.None);
+        return _repository.UpdateAsync(
+            _sessionId,
+            "FlipAsync",
+            RingoOutcome.NoGame,
+            game => game.Flip(cardId, flippedBy, turnOf, DateTimeOffset.UtcNow),
+            CancellationToken.None);
     }
 
-    private Task<RingoContinueResult> ContinueAsync(Guid? turnOf = null)
+    private Task<RingoOutcome> ContinueAsync(Guid? turnOf = null)
     {
-        return _repository.ContinueAsync(_sessionId, turnOf, CancellationToken.None);
+        return _repository.UpdateAsync(
+            _sessionId, "ContinueAsync", RingoOutcome.NoGame, game => game.Continue(turnOf), CancellationToken.None);
     }
 
     private async Task<RingoGame> ReloadAsync()
@@ -113,9 +119,9 @@ public class RingoGamesRepositoryTests : IAsyncLifetime
         var flip = await FlipAsync(3);
         var next = await ContinueAsync();
 
-        Assert.Equal(RingoFlipStatus.NoGame, flip.Status);
+        Assert.Equal(RingoFailure.NoGame, flip.Failure);
         Assert.Null(flip.Game);
-        Assert.Equal(RingoContinueStatus.NoGame, next.Status);
+        Assert.Equal(RingoFailure.NoGame, next.Failure);
         Assert.Null(next.Game);
     }
 
@@ -126,7 +132,7 @@ public class RingoGamesRepositoryTests : IAsyncLifetime
 
         var flip = await FlipAsync(5, flippedBy: "guest");
 
-        Assert.Equal(RingoFlipStatus.Flipped, flip.Status);
+        Assert.True(flip.Changed);
         var game = await ReloadAsync();
         Assert.Equal(5, game.PendingCardId);
         var recorded = Assert.Single(game.Flips);
@@ -143,7 +149,7 @@ public class RingoGamesRepositoryTests : IAsyncLifetime
 
         var flip = await FlipAsync(6);
 
-        Assert.Equal(RingoFlipStatus.CardPending, flip.Status);
+        Assert.Equal(RingoFailure.CardPending, flip.Failure);
         var game = await ReloadAsync();
         Assert.Equal(5, game.PendingCardId);
         Assert.Single(game.Flips);
@@ -157,7 +163,8 @@ public class RingoGamesRepositoryTests : IAsyncLifetime
 
         var flip = await FlipAsync(5);
 
-        Assert.Equal(RingoFlipStatus.AlreadyFlipped, flip.Status);
+        Assert.Null(flip.Failure);
+        Assert.False(flip.Changed);
         Assert.Single((await ReloadAsync()).Flips);
     }
 
@@ -167,7 +174,7 @@ public class RingoGamesRepositoryTests : IAsyncLifetime
         await CreateGameAsync();
         foreach (var king in Kings)
         {
-            Assert.Equal(RingoFlipStatus.Flipped, (await FlipAsync(king)).Status);
+            Assert.True((await FlipAsync(king)).Changed);
             if (king != Kings[^1])
             {
                 await ContinueAsync();
@@ -177,7 +184,7 @@ public class RingoGamesRepositoryTests : IAsyncLifetime
         await ContinueAsync();
         var flip = await FlipAsync(2);
 
-        Assert.Equal(RingoFlipStatus.GameOver, flip.Status);
+        Assert.Equal(RingoFailure.GameOver, flip.Failure);
         var game = await ReloadAsync();
         Assert.True(game.IsOver);
         Assert.Equal(4, game.Flips.Count);
@@ -191,7 +198,7 @@ public class RingoGamesRepositoryTests : IAsyncLifetime
 
         var wrongTurn = await FlipAsync(5, turnOf: players[1]);
 
-        Assert.Equal(RingoFlipStatus.NotYourTurn, wrongTurn.Status);
+        Assert.Equal(RingoFailure.NotYourTurn, wrongTurn.Failure);
     }
 
     [Fact]
@@ -201,7 +208,7 @@ public class RingoGamesRepositoryTests : IAsyncLifetime
 
         var flip = await FlipAsync(5, turnOf: players[0], flippedBy: "ignored");
 
-        Assert.Equal(RingoFlipStatus.Flipped, flip.Status);
+        Assert.True(flip.Changed);
         var game = await ReloadAsync();
         Assert.Equal("Ola", Assert.Single(game.Flips).FlippedBy);
         Assert.Equal(players[0], game.CurrentPlayerId);
@@ -214,7 +221,7 @@ public class RingoGamesRepositoryTests : IAsyncLifetime
 
         var flip = await FlipAsync(5, turnOf: null, flippedBy: "admin");
 
-        Assert.Equal(RingoFlipStatus.Flipped, flip.Status);
+        Assert.True(flip.Changed);
         Assert.Equal("Ola", Assert.Single((await ReloadAsync()).Flips).FlippedBy);
         Assert.Equal(players[0], (await ReloadAsync()).CurrentPlayerId);
     }
@@ -227,7 +234,7 @@ public class RingoGamesRepositoryTests : IAsyncLifetime
 
         var next = await ContinueAsync(turnOf: players[0]);
 
-        Assert.Equal(RingoContinueStatus.Continued, next.Status);
+        Assert.True(next.Changed);
         var game = await ReloadAsync();
         Assert.Null(game.PendingCardId);
         Assert.Equal(players[1], game.CurrentPlayerId);
@@ -254,7 +261,7 @@ public class RingoGamesRepositoryTests : IAsyncLifetime
 
         var next = await ContinueAsync(turnOf: players[1]);
 
-        Assert.Equal(RingoContinueStatus.NotYourTurn, next.Status);
+        Assert.Equal(RingoFailure.NotYourTurn, next.Failure);
         Assert.Equal(5, (await ReloadAsync()).PendingCardId);
     }
 
@@ -265,7 +272,8 @@ public class RingoGamesRepositoryTests : IAsyncLifetime
 
         var next = await ContinueAsync(turnOf: players[0]);
 
-        Assert.Equal(RingoContinueStatus.Continued, next.Status);
+        Assert.Null(next.Failure);
+        Assert.False(next.Changed);
         Assert.Equal(players[0], (await ReloadAsync()).CurrentPlayerId);
     }
 
@@ -284,33 +292,21 @@ public class RingoGamesRepositoryTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// There is no concurrency token, so two flips that load the game before either saves both pass the guards, and
-    /// the unique index on (session, order) is what stops the second one. Today that loser gets a
-    /// <see cref="DbUpdateException"/> instead of <see cref="RingoFlipStatus.CardPending"/>; this test pins what must
-    /// hold either way (one flip is stored and it is the pending card) and tolerates both outcomes of the loser.
+    /// Flips that load the game at the same moment must take turns: the loser of the race sees the pending card and
+    /// answers <see cref="RingoFailure.CardPending"/> instead of failing on the unique index of (session, order).
     /// </summary>
     [Fact]
-    public async Task ConcurrentFlips_StoreExactlyOneFlipAndMakeItPending()
+    public async Task ConcurrentFlips_StoreExactlyOneFlipAndTheOthersSeeThePendingCard()
     {
         await CreateGameAsync();
 
-        var outcomes = await Task.WhenAll(Enumerable.Range(0, 8).Select(card => Task.Run(async () =>
-        {
-            try
-            {
-                return (await FlipAsync(card)).Status;
-            }
-            catch (DbUpdateException)
-            {
-                return (RingoFlipStatus?)null;
-            }
-        })));
+        var outcomes = await Task.WhenAll(Enumerable.Range(0, 8).Select(card => Task.Run(() => FlipAsync(card))));
 
         var game = await ReloadAsync();
-        Assert.Equal(1, outcomes.Count(x => x == RingoFlipStatus.Flipped));
+        Assert.Equal(1, outcomes.Count(x => x.Changed));
         Assert.All(
-            outcomes.Where(x => x != RingoFlipStatus.Flipped),
-            x => Assert.True(x is null or RingoFlipStatus.CardPending));
+            outcomes.Where(x => !x.Changed),
+            x => Assert.Equal(RingoFailure.CardPending, x.Failure));
         Assert.Single(game.Flips);
         Assert.Equal(game.Flips[0].CardId, game.PendingCardId);
     }

@@ -63,10 +63,21 @@ public class RingoSessionDeletionTests : IAsyncLifetime
         Assert.Equal(LobbyStatus.Done, host.Status);
         Assert.Equal(LobbyStatus.Done, guest.Status);
 
-        var flip = await _ringo.FlipAsync(session.Id, 5, "admin", turnOf: null, DateTimeOffset.UtcNow, CancellationToken.None);
-        Assert.Equal(RingoFlipStatus.Flipped, flip.Status);
-        await _ringo.ContinueAsync(session.Id, turnOf: null, CancellationToken.None);
-        await _ringo.FlipAsync(session.Id, 12, "admin", turnOf: null, DateTimeOffset.UtcNow, CancellationToken.None);
+        var flip = await _ringo.UpdateAsync(
+            session.Id,
+            "FlipAsync",
+            RingoOutcome.NoGame,
+            game => game.Flip(5, "admin", null, DateTimeOffset.UtcNow),
+            CancellationToken.None);
+        Assert.True(flip.Changed);
+        await _ringo.UpdateAsync(
+            session.Id, "ContinueAsync", RingoOutcome.NoGame, game => game.Continue(null), CancellationToken.None);
+        await _ringo.UpdateAsync(
+            session.Id,
+            "FlipAsync",
+            RingoOutcome.NoGame,
+            game => game.Flip(12, "admin", null, DateTimeOffset.UtcNow),
+            CancellationToken.None);
 
         return session.Id;
     }
