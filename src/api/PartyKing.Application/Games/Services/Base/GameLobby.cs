@@ -25,7 +25,6 @@ internal class GameLobby<TGame, TPlayer>
     private readonly ISessionsRepository _sessions;
     private readonly ILobbyGamesRepository<TGame, TPlayer> _games;
     private readonly IDateTimeProvider _clock;
-    private readonly IGameLobbyNotifier _notifier;
     private readonly LobbyErrors _errors;
 
     public GameLobby(
@@ -33,14 +32,12 @@ internal class GameLobby<TGame, TPlayer>
         ISessionsRepository sessions,
         ILobbyGamesRepository<TGame, TPlayer> games,
         IDateTimeProvider clock,
-        IGameLobbyNotifier notifier,
         GameLobbyOptions options)
     {
         _sessionAuthorizer = sessionAuthorizer;
         _sessions = sessions;
         _games = games;
         _clock = clock;
-        _notifier = notifier;
         _errors = new LobbyErrors(options);
     }
 
@@ -113,9 +110,6 @@ internal class GameLobby<TGame, TPlayer>
             return NoGame;
         }
 
-        await _notifier.OpenedAsync(sessionId, cancellationToken);
-        await _notifier.ChangedAsync(sessionId, cancellationToken);
-
         return game;
     }
 
@@ -163,8 +157,6 @@ internal class GameLobby<TGame, TPlayer>
             return error;
         }
 
-        await _notifier.ChangedAsync(sessionId, cancellationToken);
-
         return player.PlayerId;
     }
 
@@ -182,8 +174,6 @@ internal class GameLobby<TGame, TPlayer>
         {
             return error;
         }
-
-        await _notifier.ChangedAsync(sessionId, cancellationToken);
 
         return result.Game!;
     }
@@ -207,8 +197,6 @@ internal class GameLobby<TGame, TPlayer>
         {
             return error;
         }
-
-        await _notifier.ChangedAsync(sessionId, cancellationToken);
 
         return result.Game!;
     }

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Configuration;
 using PartyKing.Application.Events;
+using PartyKing.Application.Games.Handlers;
 using PartyKing.Application.Games.Services.Base;
 using PartyKing.Application.Games.Services.NeverHaveIEver;
 using PartyKing.Application.Games.Services.Resistance;
@@ -18,6 +19,8 @@ using PartyKing.Application.Slideshow.Services;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Application.System;
 using PartyKing.Domain.Events;
+using PartyKing.Domain.Events.Games.Base;
+using PartyKing.Domain.Events.Games.Ringo;
 
 namespace PartyKing.Application;
 
@@ -123,6 +126,12 @@ public static class DependencyInjection
     private static void RegisterGames(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<IGameService, GameService>();
+        services.AddDomainEventHandler<LobbyOpened, LobbyPushHandler>();
+        services.AddDomainEventHandler<LobbyPlayerJoined, LobbyPushHandler>();
+        services.AddDomainEventHandler<LobbyPlayerKicked, LobbyPushHandler>();
+        services.AddDomainEventHandler<LobbyOrderChanged, LobbyPushHandler>();
+        services.AddDomainEventHandler<RingoCardFlipped, RingoPushHandler>();
+        services.AddDomainEventHandler<RingoTurnPassed, RingoPushHandler>();
         services.AddScoped<RingoGameLobby>();
         services.AddScoped<IRingoService, RingoService>();
         services.AddScoped<ResistanceGameLobby>();
