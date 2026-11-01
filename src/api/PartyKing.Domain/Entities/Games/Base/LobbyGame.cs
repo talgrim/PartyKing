@@ -1,10 +1,12 @@
+using PartyKing.Domain.Entities.Base;
+
 namespace PartyKing.Domain.Entities.Games.Base;
 
 /// <summary>
 /// A game of one session (at most one per kind) that guests join by name once an admin opens it. It owns the
 /// rules of its lobby: opening, joining, kicking and ordering the players.
 /// </summary>
-public abstract class LobbyGame<TPlayer>
+public abstract class LobbyGame<TPlayer> : AggregateRoot
     where TPlayer : LobbyPlayer
 {
     public Guid SessionId { get; internal set; }
