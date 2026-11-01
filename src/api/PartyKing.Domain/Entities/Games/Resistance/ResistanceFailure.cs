@@ -1,4 +1,4 @@
-namespace PartyKing.Domain.Entities.Games;
+namespace PartyKing.Domain.Entities.Games.Resistance;
 
 /// <summary>
 /// Why a Resistance action did not happen. One member per distinct answer the caller gets: two actions that refuse

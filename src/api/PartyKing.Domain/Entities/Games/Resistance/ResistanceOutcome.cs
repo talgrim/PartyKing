@@ -1,4 +1,6 @@
-namespace PartyKing.Domain.Entities.Games;
+using PartyKing.Domain.Entities.Games.Base;
+
+namespace PartyKing.Domain.Entities.Games.Resistance;
 
 /// <summary>
 /// What a Resistance action answers with: why it did not happen (null when it did) and the game it ran on, which is

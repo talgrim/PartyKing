@@ -1,4 +1,4 @@
-namespace PartyKing.Domain.Entities.Games;
+namespace PartyKing.Domain.Entities.Games.Ringo;
 
 /// <summary>Who plays when: the turn goes round the players in <see cref="RingoPlayer.Order"/>.</summary>
 public static class RingoTurns

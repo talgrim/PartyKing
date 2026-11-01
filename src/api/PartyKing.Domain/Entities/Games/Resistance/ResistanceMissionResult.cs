@@ -1,4 +1,4 @@
-namespace PartyKing.Domain.Entities.Games;
+namespace PartyKing.Domain.Entities.Games.Resistance;
 
 /// <summary>
 /// The public outcome of one finished mission: the team that went and the number of Fail cards, never who played

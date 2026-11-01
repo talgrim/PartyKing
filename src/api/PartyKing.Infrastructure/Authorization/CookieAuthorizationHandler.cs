@@ -1,7 +1,7 @@
 using PartyKing.Application.Ports;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
-using PartyKing.Domain.Entities.Games;
+using PartyKing.Domain.Entities.Games.Base;
 using PartyKing.Infrastructure.Authentication;
 
 namespace PartyKing.Infrastructure.Authorization;

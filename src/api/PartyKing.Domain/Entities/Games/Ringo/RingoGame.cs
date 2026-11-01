@@ -1,4 +1,6 @@
-namespace PartyKing.Domain.Entities.Games;
+using PartyKing.Domain.Entities.Games.Base;
+
+namespace PartyKing.Domain.Entities.Games.Ringo;
 
 /// <summary>The Ringo game of one session (at most one): the seed of the card layout and the flipped cards in flip order.</summary>
 public class RingoGame : LobbyGame<RingoPlayer>

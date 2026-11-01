@@ -1,4 +1,4 @@
-namespace PartyKing.Domain.Entities.Games;
+namespace PartyKing.Domain.Entities.Games.Resistance;
 
 /// <summary>The plot cards add-on of <see cref="ResistanceGame"/>: dealing the cards, playing them and the windows around them.</summary>
 public partial class ResistanceGame

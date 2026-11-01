@@ -1,4 +1,6 @@
-namespace PartyKing.Domain.Entities.Games;
+using PartyKing.Domain.Entities.Games.Base;
+
+namespace PartyKing.Domain.Entities.Games.Resistance;
 
 /// <summary>
 /// The Resistance game of one session (at most one). An admin opens it, guests join by name, and the host or an admin

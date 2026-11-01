@@ -1,4 +1,4 @@
-namespace PartyKing.Domain.Entities.Games;
+namespace PartyKing.Domain.Entities.Games.Base;
 
 /// <summary>Why a name typed by a guest is not accepted as a player name.</summary>
 public enum LobbyNameFailure

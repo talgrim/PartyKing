@@ -1,4 +1,4 @@
-namespace PartyKing.Domain.Entities.Games;
+namespace PartyKing.Domain.Entities.Games.Base;
 
 /// <summary>
 /// A game of one session (at most one per kind) that guests join by name once an admin opens it. It owns the

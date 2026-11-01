@@ -1,6 +1,6 @@
 using PartyKing.Application.Mappings;
 using PartyKing.Contract.V1.Games.Resistance;
-using PartyKing.Domain.Entities.Games;
+using PartyKing.Domain.Entities.Games.Resistance;
 
 namespace PartyKing.Application.Tests;
 

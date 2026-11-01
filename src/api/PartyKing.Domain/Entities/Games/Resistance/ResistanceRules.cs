@@ -1,4 +1,4 @@
-namespace PartyKing.Domain.Entities.Games;
+namespace PartyKing.Domain.Entities.Games.Resistance;
 
 /// <summary>The rules for one player count: spies, team size and fails needed for each of the five missions.</summary>
 public record ResistanceCountRules(int Spies, int[] TeamSizes, int[] RequiredFails);

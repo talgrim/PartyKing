@@ -1,4 +1,4 @@
-namespace PartyKing.Domain.Entities.Games;
+namespace PartyKing.Domain.Entities.Games.Ringo;
 
 /// <summary>Why a Ringo action did not happen. A card that is flipped already is not a failure, see <see cref="RingoOutcome"/>.</summary>
 public enum RingoFailure

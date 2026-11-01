@@ -1,4 +1,4 @@
-namespace PartyKing.Domain.Entities.Games;
+namespace PartyKing.Domain.Entities.Games.Base;
 
 /// <summary>A person who joined a game lobby by name. The turn order is <see cref="Order"/>.</summary>
 public abstract class LobbyPlayer

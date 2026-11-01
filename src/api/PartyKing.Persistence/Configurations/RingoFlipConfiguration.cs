@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using PartyKing.Domain.Entities.Games;
+using PartyKing.Domain.Entities.Games.Ringo;
 
 namespace PartyKing.Persistence.Configurations;
 

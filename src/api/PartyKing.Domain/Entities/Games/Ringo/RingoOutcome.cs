@@ -1,4 +1,6 @@
-namespace PartyKing.Domain.Entities.Games;
+using PartyKing.Domain.Entities.Games.Base;
+
+namespace PartyKing.Domain.Entities.Games.Ringo;
 
 /// <summary>
 /// What a Ringo action answers with: why it did not happen (null when it was accepted), the game it ran on (null only

@@ -1,4 +1,4 @@
-namespace PartyKing.Domain.Entities.Games;
+namespace PartyKing.Domain.Entities.Games.Resistance;
 
 /// <summary>Where a started Resistance game is in the round of the current mission.</summary>
 public enum ResistancePhase

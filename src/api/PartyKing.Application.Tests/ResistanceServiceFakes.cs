@@ -1,6 +1,7 @@
 using PartyKing.Domain.Repositories;
 using PartyKing.Application.Games.Services.Resistance;
-using PartyKing.Domain.Entities.Games;
+using PartyKing.Domain.Entities.Games.Base;
+using PartyKing.Domain.Entities.Games.Resistance;
 
 namespace PartyKing.Application.Tests;
 

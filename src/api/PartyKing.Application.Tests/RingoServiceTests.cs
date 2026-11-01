@@ -3,7 +3,8 @@ using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Games.Services.Base;
 using PartyKing.Application.Games.Services.Ringo;
 using PartyKing.Application.Sessions.Services;
-using PartyKing.Domain.Entities.Games;
+using PartyKing.Domain.Entities.Games.Base;
+using PartyKing.Domain.Entities.Games.Ringo;
 
 namespace PartyKing.Application.Tests;
 

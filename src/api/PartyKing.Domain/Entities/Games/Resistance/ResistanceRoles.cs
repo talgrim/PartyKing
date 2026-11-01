@@ -1,4 +1,4 @@
-namespace PartyKing.Domain.Entities.Games;
+namespace PartyKing.Domain.Entities.Games.Resistance;
 
 /// <summary>Dealing the roles (and plot cards) of a Resistance game and moving it from one step to the next.</summary>
 public static class ResistanceRoles

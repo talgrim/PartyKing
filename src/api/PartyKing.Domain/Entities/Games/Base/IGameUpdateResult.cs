@@ -1,4 +1,4 @@
-namespace PartyKing.Domain.Entities.Games;
+namespace PartyKing.Domain.Entities.Games.Base;
 
 /// <summary>
 /// What a game action reports back to the repository that ran it: whether it changed the game, so the repository

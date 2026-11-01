@@ -3,7 +3,7 @@ using PartyKing.Application.Games.Services.Base;
 using PartyKing.Application.Mappings;
 using PartyKing.Application.Realtime;
 using PartyKing.Contract.V1.Games.Resistance;
-using PartyKing.Domain.Entities.Games;
+using PartyKing.Domain.Entities.Games.Resistance;
 
 namespace PartyKing.Application.Games.Services.Resistance;
 

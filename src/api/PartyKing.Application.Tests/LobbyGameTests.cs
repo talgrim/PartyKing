@@ -1,4 +1,6 @@
-using PartyKing.Domain.Entities.Games;
+using PartyKing.Domain.Entities.Games.Base;
+using PartyKing.Domain.Entities.Games.Resistance;
+using PartyKing.Domain.Entities.Games.Ringo;
 
 namespace PartyKing.Application.Tests;
 

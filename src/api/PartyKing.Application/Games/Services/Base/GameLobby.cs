@@ -3,7 +3,7 @@ using ErrorOr;
 using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.System;
-using PartyKing.Domain.Entities.Games;
+using PartyKing.Domain.Entities.Games.Base;
 
 namespace PartyKing.Application.Games.Services.Base;
 

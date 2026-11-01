@@ -1,4 +1,4 @@
-namespace PartyKing.Domain.Entities.Games;
+namespace PartyKing.Domain.Entities.Games.Ringo;
 
 /// <summary>One flipped card of a Ringo game: who turned it and when.</summary>
 public class RingoFlip
