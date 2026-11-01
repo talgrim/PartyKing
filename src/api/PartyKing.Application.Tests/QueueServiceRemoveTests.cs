@@ -1,3 +1,4 @@
+using PartyKing.Domain.Entities.Queue;
 using ErrorOr;
 using Microsoft.Extensions.Logging.Abstractions;
 using PartyKing.Application.Queue.Services;
