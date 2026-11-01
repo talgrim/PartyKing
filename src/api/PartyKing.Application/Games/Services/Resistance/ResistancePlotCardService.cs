@@ -1,7 +1,8 @@
 using ErrorOr;
 using PartyKing.Contract.V1.Games.Resistance;
+using PartyKing.Application.System;
+using PartyKing.Domain.Entities.Games;
 using PartyKing.Infrastructure.Repositories;
-using PartyKing.Infrastructure.Results;
 
 namespace PartyKing.Application.Games.Services.Resistance;
 
@@ -53,26 +54,27 @@ internal class ResistancePlotCardService : IResistancePlotCardService
 {
     private readonly ResistanceActionGate _gate;
     private readonly IResistanceGamesRepository _games;
+    private readonly IDateTimeProvider _clock;
 
-    public ResistancePlotCardService(ResistanceActionGate gate, IResistanceGamesRepository games)
+    public ResistancePlotCardService(
+        ResistanceActionGate gate, IResistanceGamesRepository games, IDateTimeProvider clock)
     {
         _gate = gate;
         _games = games;
+        _clock = clock;
     }
 
     public Task<ErrorOr<ResistanceGameDto>> DealPlotCardsAsync(
         Guid sessionId, IReadOnlyList<ResistancePlotCardAssignmentDto>? assignments, GameCaller caller,
         CancellationToken cancellationToken)
     {
-        return _gate.RunAsPlayerAsync(
+        var deal = (assignments ?? []).Select(x => new PlotCardAssignment(x.CardId, x.PlayerId)).ToList();
+
+        return RunAsync(
             sessionId,
             caller,
-            _ => _games.DealPlotCardsAsync(
-                sessionId,
-                caller.PlayerId,
-                (assignments ?? []).Select(x => new PlotCardAssignment(x.CardId, x.PlayerId)).ToList(),
-                cancellationToken),
-            result => ResistanceErrors.From(result.Status),
+            nameof(DealPlotCardsAsync),
+            game => game.DealPlotCards(caller.PlayerId, deal),
             cancellationToken);
     }
 
@@ -82,7 +84,8 @@ internal class ResistancePlotCardService : IResistancePlotCardService
         return RunAsync(
             sessionId,
             caller,
-            () => _games.PlayPlotCardAsync(sessionId, caller.PlayerId, cardId, targetPlayerId, cancellationToken),
+            nameof(PlayPlotCardAsync),
+            game => game.PlayPlotCard(caller.PlayerId, cardId, targetPlayerId, _clock.UtcNow),
             cancellationToken);
     }
 
@@ -92,7 +95,8 @@ internal class ResistancePlotCardService : IResistancePlotCardService
         return RunAsync(
             sessionId,
             caller,
-            () => _games.ConfirmPlotCardAsync(sessionId, caller.PlayerId, cardId, cancellationToken),
+            nameof(ConfirmPlotCardAsync),
+            game => game.ConfirmPlotCard(caller.PlayerId, cardId),
             cancellationToken);
     }
 
@@ -103,8 +107,9 @@ internal class ResistancePlotCardService : IResistancePlotCardService
         return RunAsync(
             sessionId,
             caller,
-            () => _games.TakeResponsibilityAsync(
-                sessionId, caller.PlayerId, cardId, targetPlayerId, takeOpinionMaker, cancellationToken),
+            nameof(TakeResponsibilityAsync),
+            game => game.TakeResponsibility(
+                caller.PlayerId, cardId, targetPlayerId, takeOpinionMaker, _clock.UtcNow, Random.Shared),
             cancellationToken);
     }
 
@@ -114,7 +119,8 @@ internal class ResistancePlotCardService : IResistancePlotCardService
         return RunAsync(
             sessionId,
             caller,
-            () => _games.TakeLeadAsync(sessionId, caller.PlayerId, cardId, cancellationToken),
+            nameof(TakeLeadAsync),
+            game => game.TakeLead(caller.PlayerId, cardId, _clock.UtcNow),
             cancellationToken);
     }
 
@@ -124,7 +130,8 @@ internal class ResistancePlotCardService : IResistancePlotCardService
         return RunAsync(
             sessionId,
             caller,
-            () => _games.PeekMissionCardAsync(sessionId, caller.PlayerId, cardId, targetPlayerId, cancellationToken),
+            nameof(PeekMissionCardAsync),
+            game => game.PeekMissionCard(caller.PlayerId, cardId, targetPlayerId, _clock.UtcNow),
             cancellationToken);
     }
 
@@ -134,7 +141,8 @@ internal class ResistancePlotCardService : IResistancePlotCardService
         return RunAsync(
             sessionId,
             caller,
-            () => _games.PlayNoConfidenceAsync(sessionId, caller.PlayerId, cardId, cancellationToken),
+            nameof(PlayNoConfidenceAsync),
+            game => game.PlayNoConfidence(caller.PlayerId, cardId, _clock.UtcNow),
             cancellationToken);
     }
 
@@ -144,17 +152,22 @@ internal class ResistancePlotCardService : IResistancePlotCardService
         return RunAsync(
             sessionId,
             caller,
-            () => _games.PassLeaderWindowAsync(sessionId, caller.PlayerId, cancellationToken),
+            nameof(PassLeaderWindowAsync),
+            game => game.PassLeaderWindow(caller.PlayerId),
             cancellationToken);
     }
 
     private Task<ErrorOr<ResistanceGameDto>> RunAsync(
         Guid sessionId,
         GameCaller caller,
-        Func<Task<ResistancePlayCardResult>> call,
+        string operation,
+        Func<ResistanceGame, ResistanceOutcome> action,
         CancellationToken cancellationToken)
     {
         return _gate.RunAsPlayerAsync(
-            sessionId, caller, _ => call(), result => ResistanceErrors.From(result.Status), cancellationToken);
+            sessionId,
+            caller,
+            _ => _games.UpdateAsync(sessionId, operation, ResistanceOutcome.NoGame, action, cancellationToken),
+            cancellationToken);
     }
 }

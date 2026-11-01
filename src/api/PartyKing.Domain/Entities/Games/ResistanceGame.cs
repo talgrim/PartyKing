@@ -5,7 +5,7 @@ namespace PartyKing.Domain.Entities.Games;
 /// starts it once at least <see cref="MinPlayers"/> joined: that deals the roles (see <see cref="ResistanceRoles"/>),
 /// picks the first mission leader and locks the players.
 /// </summary>
-public class ResistanceGame : LobbyGame<ResistancePlayer>
+public partial class ResistanceGame : LobbyGame<ResistancePlayer>
 {
     public const int MinPlayers = 5;
     public const int MaxPlayers = 10;

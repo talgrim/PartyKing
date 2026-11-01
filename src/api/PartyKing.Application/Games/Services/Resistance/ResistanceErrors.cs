@@ -1,12 +1,11 @@
 using ErrorOr;
 using PartyKing.Domain.Entities.Games;
-using PartyKing.Infrastructure.Results;
 
 namespace PartyKing.Application.Games.Services.Resistance;
 
 /// <summary>
-/// The errors of the Resistance game: the ones every action shares, and one <c>From</c> overload per repository status
-/// that turns it into an error, or null when the status means the action succeeded. Codes are matched by the UI.
+/// The errors of the Resistance game: the ones every action shares, and the error each <see cref="ResistanceFailure"/>
+/// becomes. Codes are matched by the UI.
 /// </summary>
 internal static class ResistanceErrors
 {
@@ -96,47 +95,5 @@ internal static class ResistanceErrors
         ResistanceFailure.NothingToContinue => Error.Conflict(
             "Resistance.NothingToContinue", "There is no finished mission to move on from."),
         _ => throw new ArgumentOutOfRangeException(nameof(failure), failure, "No error is defined for this failure."),
-    };
-
-    public static Error? From(ResistanceDealStatus status) => status switch
-    {
-        ResistanceDealStatus.NoGame => NoGame,
-        ResistanceDealStatus.NotStarted => NotStarted,
-        ResistanceDealStatus.GameOver => GameOver,
-        ResistanceDealStatus.NotLeader => Error.Forbidden(
-            "Resistance.NotLeader", "Only the mission leader hands out the plot cards."),
-        ResistanceDealStatus.NotDealing => Error.Conflict("Resistance.NotDealing", "There are no plot cards to hand out."),
-        ResistanceDealStatus.UnknownCard => Error.Validation(
-            "Resistance.UnknownCard", "A card is not one the leader has to hand out, or is given twice."),
-        ResistanceDealStatus.InvalidReceiver => Error.Validation(
-            "Resistance.InvalidReceiver", "Cards go to other players of the game."),
-        ResistanceDealStatus.Incomplete => Error.Validation(
-            "Resistance.IncompleteDeal", "Every drawn card has to be handed out."),
-        _ => null,
-    };
-
-    public static Error? From(ResistancePlayCardStatus status) => status switch
-    {
-        ResistancePlayCardStatus.NoGame => NoGame,
-        ResistancePlayCardStatus.NotStarted => NotStarted,
-        ResistancePlayCardStatus.GameOver => GameOver,
-        ResistancePlayCardStatus.NotResolving => Error.Conflict(
-            "Resistance.NotResolving", "No plot cards are being played now."),
-        ResistancePlayCardStatus.NotPlayer => Error.Forbidden(
-            "Resistance.NotPlayer", "Only the players of the game confirm."),
-        ResistancePlayCardStatus.WrongPhase => Error.Conflict(
-            "Resistance.CardNotPlayableNow", "That card can't be played in this step of the round."),
-        ResistancePlayCardStatus.ChoiceRequired => Error.Validation(
-            "Resistance.ChoiceRequired", "Say whether to take the Opinion Maker or a card from the hand."),
-        ResistancePlayCardStatus.NotPlayingMission => Error.Conflict(
-            "Resistance.NotPlayingMission", "The mission cards are not being played now."),
-        ResistancePlayCardStatus.UnknownCard => Error.NotFound("Resistance.UnknownCard", "There is no such card to play."),
-        ResistancePlayCardStatus.NotAllowed => Error.Forbidden(
-            "Resistance.NotYourCard", "This is not your card to play or to confirm."),
-        ResistancePlayCardStatus.WrongState => Error.Conflict(
-            "Resistance.CardState", "The card was played already, or has not been played yet."),
-        ResistancePlayCardStatus.InvalidTarget => Error.Validation(
-            "Resistance.InvalidTarget", "The card cannot be played on that player."),
-        _ => null,
     };
 }
