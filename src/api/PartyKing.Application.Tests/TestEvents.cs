@@ -11,6 +11,26 @@ using PartyKing.Domain.Events.Games.Ringo;
 
 namespace PartyKing.Application.Tests;
 
+/// <summary>Records what it is given and can run code per event, to look at the world at the moment of dispatch.</summary>
+internal sealed class RecordingDispatcher : IDomainEventDispatcher
+{
+    public List<IDomainEvent> Events { get; } = [];
+
+    public Func<IDomainEvent, Task>? OnDispatch { get; set; }
+
+    public async Task DispatchAsync(IReadOnlyCollection<IDomainEvent> events, CancellationToken cancellationToken)
+    {
+        foreach (var domainEvent in events)
+        {
+            Events.Add(domainEvent);
+            if (OnDispatch is not null)
+            {
+                await OnDispatch(domainEvent);
+            }
+        }
+    }
+}
+
 internal static class TestEvents
 {
     /// <summary>The real dispatcher with the game push handlers, over the given notifiers: what the API wires up.</summary>
