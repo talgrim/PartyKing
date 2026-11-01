@@ -13,7 +13,7 @@ public class QueueServiceRemoveTests
 
     private readonly FakeSessionsRepository _sessions = new();
     private readonly FakeQueueRepository _queue = new();
-    private readonly FakeSessionMusicNotifier _notifier = new();
+    private readonly FakeQueueNotifier _notifier = new();
     private readonly QueueService _service;
     private readonly Session _session;
 

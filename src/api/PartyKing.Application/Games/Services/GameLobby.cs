@@ -7,16 +7,6 @@ using PartyKing.Domain.Entities.Games;
 
 namespace PartyKing.Application.Games.Services;
 
-/// <summary>Tells the session's clients that a game's lobby changed.</summary>
-internal interface IGameLobbyNotifier
-{
-    /// <summary>An admin opened the game; guests are asked whether to join.</summary>
-    Task OpenedAsync(Guid sessionId, CancellationToken cancellationToken);
-
-    /// <summary>Anything about the game changed; clients fetch it again.</summary>
-    Task ChangedAsync(Guid sessionId, CancellationToken cancellationToken);
-}
-
 /// <param name="Name">How the game is called, in errors ("Ringo"); also the prefix of their codes.</param>
 /// <param name="MaxPlayers">How many players may join.</param>
 internal record GameLobbyOptions(string Name, int MaxPlayers = int.MaxValue);

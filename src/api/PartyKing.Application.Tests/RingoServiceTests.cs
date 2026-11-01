@@ -13,7 +13,7 @@ public class RingoServiceTests
 
     private readonly FakeSessionsRepository _sessions = new();
     private readonly FakeRingoGamesRepository _games = new();
-    private readonly FakeSessionMusicNotifier _notifier = new();
+    private readonly FakeRingoNotifier _notifier = new();
     private readonly RingoService _service;
     private readonly Guid _id;
 
@@ -22,7 +22,7 @@ public class RingoServiceTests
         var clock = new FakeClock();
         var sessionAuthorizer = new SessionAuthorizer(_sessions);
         _service = new RingoService(
-            new RingoGameLobby(sessionAuthorizer, _sessions, _games, clock, new RingoLobbyNotifier(_notifier)),
+            new RingoGameLobby(sessionAuthorizer, _sessions, _games, clock, _notifier),
             _games,
             clock,
             _notifier);
@@ -157,11 +157,11 @@ public class RingoServiceTests
     {
         var ct = CancellationToken.None;
         await _service.StartAsync(_id, new GameCaller(HostId, false), ct);
-        var pushes = _notifier.RingoChanges.Count;
+        var pushes = _notifier.Changes.Count;
 
         Assert.False((await _service.ContinueAsync(_id, new GameCaller(HostId, false), ct)).IsError);
 
-        Assert.Equal(pushes, _notifier.RingoChanges.Count);
+        Assert.Equal(pushes, _notifier.Changes.Count);
     }
 
     [Fact]
@@ -176,7 +176,7 @@ public class RingoServiceTests
         await _service.ContinueAsync(_id, new GameCaller(HostId, false), ct);
         await _service.EndAsync(_id, new GameCaller(HostId, false), ct);
 
-        Assert.Equal(Enumerable.Repeat(_id, 4), _notifier.RingoChanges);
+        Assert.Equal(Enumerable.Repeat(_id, 4), _notifier.Changes);
     }
 
     [Theory]
@@ -249,7 +249,7 @@ public class RingoServiceTests
         Assert.Equal(ErrorOr.ErrorType.Forbidden, byHost.FirstError.Type);
         Assert.True(first.Value.IsOpen);
         Assert.True(again.Value.IsOpen);
-        Assert.Equal([_id], _notifier.RingoOpens);
+        Assert.Equal([_id], _notifier.Opens);
     }
 
     [Fact]

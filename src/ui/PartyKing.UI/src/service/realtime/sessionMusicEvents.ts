@@ -17,6 +17,14 @@ export const SESSION_MUSIC_EVENTS = {
   ResistanceOpened: 'ResistanceOpened',
 } as const;
 
+/**
+ * What a connection listens to; the server puts it in one group per topic, so a page gets only the pushes it asked
+ * for. `music` is the queue, the player, the fallback playlist status and the lyrics offsets.
+ */
+export const SESSION_HUB_TOPICS = ['music', 'slideshow', 'ringo', 'resistance'] as const;
+
+export type SessionHubTopic = (typeof SESSION_HUB_TOPICS)[number];
+
 /** Hub methods the client calls: tells the server this connection displays the slideshow (its timer runs only then). */
 export const SESSION_HUB_METHODS = {
   WatchSlideshow: 'WatchSlideshow',

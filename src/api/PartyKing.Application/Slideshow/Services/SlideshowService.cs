@@ -56,7 +56,7 @@ internal class SlideshowService : ISlideshowService
     private readonly SlideshowConfiguration _slideshowConfiguration;
     private readonly ISlideshowWatchers _watchers;
     private readonly ISlideshowScheduler _scheduler;
-    private readonly ISessionMusicNotifier _notifier;
+    private readonly ISlideshowNotifier _notifier;
 
     private readonly ConcurrentDictionary<Guid, SessionSlide> _slides = new();
 
@@ -68,7 +68,7 @@ internal class SlideshowService : ISlideshowService
         IOptions<SlideshowConfiguration> slideshowSettingsOptions,
         ISlideshowWatchers watchers,
         ISlideshowScheduler scheduler,
-        ISessionMusicNotifier notifier)
+        ISlideshowNotifier notifier)
     {
         _dateTimeProvider = dateTimeProvider;
         _imagesRepository = imagesRepository;

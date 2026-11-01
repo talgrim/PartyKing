@@ -5,6 +5,7 @@ import { i18n } from '@/i18n';
 import { sessionPath } from '@/router/constants';
 import { HTTP_STATUS_CODE } from '@/service/constants';
 import { useViewerRole } from '@/service/endpoints/sessions/useViewerRole';
+import { SessionHubTopic } from '@/service/realtime/sessionMusicEvents';
 import { useSessionMusicHub } from '@/service/realtime/useSessionMusicHub';
 import { useTranslation } from 'react-i18next';
 
@@ -78,6 +79,8 @@ const JoinForm = ({ title, isHost, isAdmin, kicked, join, onJoined }: FormProps)
 
 type Props = {
   sessionId: string;
+  /** The hub topic of the game, so only its pushes reach this page. */
+  topic: SessionHubTopic;
   title: string;
   lobby: { isOpen: boolean; isStarted?: boolean; joined: boolean } | undefined;
   error: unknown;
@@ -93,14 +96,14 @@ type Props = {
  * Where a guest (or the host or an admin) joins an open game by name; once joined it shows the board. A game that
  * does not exist or a locked session sends the caller back to the session page.
  */
-export const GameJoin = ({ sessionId, title, lobby, error, isLoading, join, onJoined, board }: Props): ReactNode => {
+export const GameJoin = ({ sessionId, topic, title, lobby, error, isLoading, join, onJoined, board }: Props): ReactNode => {
   const { t } = useTranslation();
   const { isHost, isAdmin } = useViewerRole(sessionId);
   const [wasJoined, setWasJoined] = useState(false);
   const joined = lobby?.joined === true;
 
   // The board opens its own hub connection; before that this page needs one to see the game open or a kick
-  useSessionMusicHub(sessionId, !joined);
+  useSessionMusicHub(sessionId, !joined, undefined, [topic]);
 
   const status = (error as { status?: number } | undefined)?.status;
   if (status === HTTP_STATUS_CODE.NOT_FOUND || status === HTTP_STATUS_CODE.UNAUTHORIZED) {

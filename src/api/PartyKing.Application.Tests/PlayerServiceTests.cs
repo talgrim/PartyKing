@@ -17,7 +17,8 @@ public class PlayerServiceTests
     private readonly FakeClock _clock = new();
     private readonly FakeSessionsRepository _sessions = new();
     private readonly FakeQueueRepository _queue = new();
-    private readonly FakeSessionMusicNotifier _notifier = new();
+    private readonly FakePlayerNotifier _notifier = new();
+    private readonly FakeQueueNotifier _queueNotifier = new();
     private readonly PlayerStateStore _store;
     private readonly PlayerService _service;
     private readonly Session _session;
@@ -25,7 +26,7 @@ public class PlayerServiceTests
     public PlayerServiceTests()
     {
         _store = new PlayerStateStore(_clock);
-        _service = new PlayerService(_sessions, _queue, _store, _notifier, new NullPlayerConnectionWatchdog(), new FakeFallbackQueueFiller(), new FallbackStatusStore(_notifier, NullLogger<FallbackStatusStore>.Instance), NullLogger<PlayerService>.Instance);
+        _service = new PlayerService(_sessions, _queue, _store, _notifier, _queueNotifier, new NullPlayerConnectionWatchdog(), new FakeFallbackQueueFiller(), new FallbackStatusStore(_notifier, NullLogger<FallbackStatusStore>.Instance), NullLogger<PlayerService>.Instance);
         _session = _sessions.AddSession(HostId);
     }
 
@@ -255,7 +256,7 @@ public class PlayerServiceTests
 
         Assert.Equal(2, result.Value.Id);
         Assert.Equal((_session.Id, (int?)1), Assert.Single(_queue.AdvanceCalls));
-        var advanced = Assert.Single(_notifier.QueueAdvanced);
+        var advanced = Assert.Single(_queueNotifier.QueueAdvanced);
         Assert.Equal(1, advanced.PreviousSongId);
         Assert.Equal(2, advanced.NowPlaying?.Id);
     }
@@ -270,7 +271,7 @@ public class PlayerServiceTests
         var result = await _service.SkipAsync(_session.Id, 1, CancellationToken.None);
 
         Assert.Equal(ErrorOr.ErrorType.NotFound, result.FirstError.Type);
-        var advanced = Assert.Single(_notifier.QueueAdvanced);
+        var advanced = Assert.Single(_queueNotifier.QueueAdvanced);
         Assert.Equal(1, advanced.PreviousSongId);
         Assert.Null(advanced.NowPlaying);
     }

@@ -7,7 +7,6 @@ using PartyKing.Domain.Entities.Lyrics;
 using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Enums;
 using PartyKing.Domain.Results;
-using PartyKing.Infrastructure.Repositories;
 
 namespace PartyKing.Application.Tests;
 
@@ -18,7 +17,7 @@ public class LyricsServiceTests
     private readonly FakeQueueRepository _queue = new();
     private readonly FakeLrclibClient _lrclib = new();
     private readonly FakeLyricsOffsetsRepository _offsets = new();
-    private readonly FakeSessionMusicNotifier _notifier = new();
+    private readonly FakeLyricsNotifier _notifier = new();
     private readonly LyricsService _service;
     private readonly Guid _sessionId;
 

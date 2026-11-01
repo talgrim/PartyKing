@@ -119,7 +119,7 @@ public class ResistanceLobbyServiceTests : ResistanceServiceTestBase
         Assert.False(created.Value.IsOpen);
         Assert.Empty(created.Value.Players);
         Assert.Equal("Resistance.AlreadyCreated", again.FirstError.Code);
-        Assert.Equal([_id], _notifier.ResistanceChanges);
+        Assert.Equal([_id], _notifier.Changes);
     }
 
     [Fact]
@@ -134,7 +134,7 @@ public class ResistanceLobbyServiceTests : ResistanceServiceTestBase
         Assert.Equal(ErrorOr.ErrorType.Forbidden, byHost.FirstError.Type);
         Assert.True(first.Value.IsOpen);
         Assert.True(second.Value.IsOpen);
-        Assert.Equal([_id], _notifier.ResistanceOpens);
+        Assert.Equal([_id], _notifier.Opens);
     }
 
     [Fact]
@@ -252,7 +252,7 @@ public class ResistanceLobbyServiceTests : ResistanceServiceTestBase
         await OpenGameAsync();
         var ola = await JoinAsync("Ola");
         var ala = await JoinAsync("Ala");
-        _notifier.ResistanceChanges.Clear();
+        _notifier.Changes.Clear();
 
         var reordered = await _lobbyService.ReorderAsync(_id, [ala.PlayerId!.Value, ola.PlayerId!.Value], Host, CancellationToken.None);
         var mismatch = await _lobbyService.ReorderAsync(_id, [ala.PlayerId.Value], Host, CancellationToken.None);
@@ -263,21 +263,21 @@ public class ResistanceLobbyServiceTests : ResistanceServiceTestBase
         Assert.Equal("Resistance.OrderMismatch", mismatch.FirstError.Code);
         Assert.Equal(["Ola"], kicked.Value.Players.Select(x => x.Name));
         Assert.Equal("Resistance.PlayerNotFound", missing.FirstError.Code);
-        Assert.Equal(2, _notifier.ResistanceChanges.Count);
+        Assert.Equal(2, _notifier.Changes.Count);
     }
 
     [Fact]
     public async Task Ending_DeletesTheGameAndIsPushed()
     {
         await _lobbyService.CreateAsync(_id, Host, CancellationToken.None);
-        _notifier.ResistanceChanges.Clear();
+        _notifier.Changes.Clear();
 
         var ended = await _lobbyService.EndAsync(_id, Host, CancellationToken.None);
         var again = await _lobbyService.EndAsync(_id, Host, CancellationToken.None);
 
         Assert.False(ended.IsError);
         Assert.Equal(ErrorOr.ErrorType.NotFound, again.FirstError.Type);
-        Assert.Equal([_id], _notifier.ResistanceChanges);
+        Assert.Equal([_id], _notifier.Changes);
     }
 
     [Fact]

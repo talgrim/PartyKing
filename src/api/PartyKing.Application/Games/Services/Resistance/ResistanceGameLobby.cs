@@ -1,4 +1,5 @@
 using PartyKing.Domain.Repositories;
+using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.System;
 using PartyKing.Domain.Entities.Games;
@@ -13,7 +14,7 @@ internal sealed class ResistanceGameLobby : GameLobby<ResistanceGame, Resistance
         ISessionsRepository sessions,
         IResistanceGamesRepository games,
         IDateTimeProvider clock,
-        ResistanceLobbyNotifier notifier)
+        IResistanceNotifier notifier)
         : base(
             sessionAuthorizer,
             sessions,

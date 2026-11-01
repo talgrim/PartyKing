@@ -68,8 +68,13 @@ public static class DependencyInjection
 
     private static void RegisterRealtime(this IServiceCollection services)
     {
-        // The API replaces the notifier with the SignalR implementation; tests keep the no-ops unless they inject a fake
-        services.TryAddSingleton<ISessionMusicNotifier, NullSessionMusicNotifier>();
+        // The API replaces the notifiers with the SignalR implementations; tests keep the no-ops unless they inject a fake
+        services.TryAddSingleton<IQueueNotifier, NullQueueNotifier>();
+        services.TryAddSingleton<IPlayerNotifier, NullPlayerNotifier>();
+        services.TryAddSingleton<ILyricsNotifier, NullLyricsNotifier>();
+        services.TryAddSingleton<ISlideshowNotifier, NullSlideshowNotifier>();
+        services.TryAddSingleton<IRingoNotifier, NullRingoNotifier>();
+        services.TryAddSingleton<IResistanceNotifier, NullResistanceNotifier>();
         services.TryAddSingleton<IPlayerConnectionWatchdog, PlayerConnectionWatchdog>();
     }
 
@@ -102,10 +107,8 @@ public static class DependencyInjection
     private static void RegisterGames(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<IGameService, GameService>();
-        services.AddSingleton<RingoLobbyNotifier>();
         services.AddScoped<RingoGameLobby>();
         services.AddScoped<IRingoService, RingoService>();
-        services.AddSingleton<ResistanceLobbyNotifier>();
         services.AddScoped<ResistanceGameLobby>();
         services.AddScoped<ResistanceActionGate>();
         services.AddScoped<IResistanceLobbyService, ResistanceLobbyService>();

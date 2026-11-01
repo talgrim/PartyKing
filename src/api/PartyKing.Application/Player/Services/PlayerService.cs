@@ -43,7 +43,8 @@ internal class PlayerService : IPlayerService
     private readonly ISessionsRepository _sessionsRepository;
     private readonly IQueueRepository _queueRepository;
     private readonly IPlayerStateStore _playerStateStore;
-    private readonly ISessionMusicNotifier _musicNotifier;
+    private readonly IPlayerNotifier _playerNotifier;
+    private readonly IQueueNotifier _queueNotifier;
     private readonly IPlayerConnectionWatchdog _connectionWatchdog;
     private readonly IFallbackQueueFiller _fallbackFiller;
     private readonly IFallbackStatusStore _fallbackStatusStore;
@@ -53,7 +54,8 @@ internal class PlayerService : IPlayerService
         ISessionsRepository sessionsRepository,
         IQueueRepository queueRepository,
         IPlayerStateStore playerStateStore,
-        ISessionMusicNotifier musicNotifier,
+        IPlayerNotifier playerNotifier,
+        IQueueNotifier queueNotifier,
         IPlayerConnectionWatchdog connectionWatchdog,
         IFallbackQueueFiller fallbackFiller,
         IFallbackStatusStore fallbackStatusStore,
@@ -62,7 +64,8 @@ internal class PlayerService : IPlayerService
         _sessionsRepository = sessionsRepository;
         _queueRepository = queueRepository;
         _playerStateStore = playerStateStore;
-        _musicNotifier = musicNotifier;
+        _playerNotifier = playerNotifier;
+        _queueNotifier = queueNotifier;
         _connectionWatchdog = connectionWatchdog;
         _fallbackFiller = fallbackFiller;
         _fallbackStatusStore = fallbackStatusStore;
@@ -111,7 +114,7 @@ internal class PlayerService : IPlayerService
         // A heartbeat that changes nothing stays between the host and the server
         if (report.Changed)
         {
-            await _musicNotifier.PlayerStateChangedAsync(
+            await _playerNotifier.PlayerStateChangedAsync(
                 sessionId,
                 new PlayerStateChangedDto(state.SongId, state.Paused, PlayerConnected: true, positionMs),
                 cancellationToken);
@@ -138,7 +141,7 @@ internal class PlayerService : IPlayerService
         _logger.LogInformation("Sent the {Command} command to the player of session {SessionId}", command, sessionId);
 
         // The next report would hand the command over too, but that can be ~10 s away
-        await _musicNotifier.PlayerCommandAsync(sessionId, new PlayerCommandDto(command), cancellationToken);
+        await _playerNotifier.PlayerCommandAsync(sessionId, new PlayerCommandDto(command), cancellationToken);
 
         return Result.Success;
     }
@@ -172,7 +175,7 @@ internal class PlayerService : IPlayerService
                 sessionId,
                 playingBefore?.Id,
                 next?.Id);
-            await _musicNotifier.QueueAdvancedAsync(
+            await _queueNotifier.QueueAdvancedAsync(
                 sessionId,
                 playingBefore?.Id,
                 next?.ToDto(),

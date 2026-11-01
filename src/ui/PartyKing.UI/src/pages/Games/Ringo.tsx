@@ -43,7 +43,7 @@ export const Ringo = (): ReactNode => {
   const [historyOpen, setHistoryOpen] = usePersistedFlag('partyking.ringoHistoryOpen', false);
 
   // The server pushes every change of the game (RingoChanged), so other devices stay current without polling
-  useSessionMusicHub(sessionId, game !== undefined);
+  useSessionMusicHub(sessionId, game !== undefined, undefined, ['ringo']);
 
   const ending = game && endingFlip(game.flips);
 

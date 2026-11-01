@@ -67,7 +67,7 @@ internal class ResistanceLobbyService : IResistanceLobbyService
     private readonly ResistanceActionGate _gate;
     private readonly IResistanceGamesRepository _games;
     private readonly IDateTimeProvider _clock;
-    private readonly ISessionMusicNotifier _notifier;
+    private readonly IResistanceNotifier _notifier;
     private readonly IResistanceRulesProvider _rulesProvider;
 
     public ResistanceLobbyService(
@@ -75,7 +75,7 @@ internal class ResistanceLobbyService : IResistanceLobbyService
         ResistanceActionGate gate,
         IResistanceGamesRepository games,
         IDateTimeProvider clock,
-        ISessionMusicNotifier notifier,
+        IResistanceNotifier notifier,
         IResistanceRulesProvider rulesProvider)
     {
         _lobby = lobby;
@@ -137,7 +137,7 @@ internal class ResistanceLobbyService : IResistanceLobbyService
             return ResistanceErrors.AlreadyCreated;
         }
 
-        await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
+        await _notifier.ChangedAsync(sessionId, cancellationToken);
 
         return View(game, caller);
     }
@@ -220,7 +220,7 @@ internal class ResistanceLobbyService : IResistanceLobbyService
             return ResistanceErrors.NoGame;
         }
 
-        await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
+        await _notifier.ChangedAsync(sessionId, cancellationToken);
 
         return Result.Deleted;
     }

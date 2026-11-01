@@ -60,14 +60,14 @@ internal class RingoService : IRingoService
 
     private readonly IRingoGamesRepository _games;
     private readonly IDateTimeProvider _clock;
-    private readonly ISessionMusicNotifier _notifier;
+    private readonly IRingoNotifier _notifier;
     private readonly RingoGameLobby _lobby;
 
     public RingoService(
         RingoGameLobby lobby,
         IRingoGamesRepository games,
         IDateTimeProvider clock,
-        ISessionMusicNotifier notifier)
+        IRingoNotifier notifier)
     {
         _lobby = lobby;
         _games = games;
@@ -117,7 +117,7 @@ internal class RingoService : IRingoService
             return Error.Conflict("Ringo.AlreadyStarted", "The session already has a Ringo game.");
         }
 
-        await _notifier.RingoChangedAsync(sessionId, cancellationToken);
+        await _notifier.ChangedAsync(sessionId, cancellationToken);
 
         return ToDto(game, caller);
     }
@@ -183,7 +183,7 @@ internal class RingoService : IRingoService
         // A card that was flipped already changes nothing, so there is nothing to tell the clients
         if (outcome.Changed)
         {
-            await _notifier.RingoChangedAsync(sessionId, cancellationToken);
+            await _notifier.ChangedAsync(sessionId, cancellationToken);
         }
 
         return ToDto(outcome.Game!, caller);
@@ -213,7 +213,7 @@ internal class RingoService : IRingoService
         // Continuing with no card pending changes nothing, so there is nothing to tell the clients
         if (outcome.Changed)
         {
-            await _notifier.RingoChangedAsync(sessionId, cancellationToken);
+            await _notifier.ChangedAsync(sessionId, cancellationToken);
         }
 
         return ToDto(outcome.Game!, caller);
@@ -232,7 +232,7 @@ internal class RingoService : IRingoService
             return _lobby.NoGame;
         }
 
-        await _notifier.RingoChangedAsync(sessionId, cancellationToken);
+        await _notifier.ChangedAsync(sessionId, cancellationToken);
 
         return Result.Deleted;
     }

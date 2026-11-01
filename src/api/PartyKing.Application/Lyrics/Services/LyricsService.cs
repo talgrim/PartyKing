@@ -41,7 +41,7 @@ internal class LyricsService : ILyricsService
     private readonly ILyricsCache _cache;
     private readonly ILyricsOffsetsRepository _offsetsRepository;
     private readonly ISessionAuthorizer _sessionAuthorizer;
-    private readonly ISessionMusicNotifier _notifier;
+    private readonly ILyricsNotifier _notifier;
 
     public LyricsService(
         IQueueRepository queueRepository,
@@ -49,7 +49,7 @@ internal class LyricsService : ILyricsService
         ILyricsCache cache,
         ILyricsOffsetsRepository offsetsRepository,
         ISessionAuthorizer sessionAuthorizer,
-        ISessionMusicNotifier notifier)
+        ILyricsNotifier notifier)
     {
         _queueRepository = queueRepository;
         _lrclibClient = lrclibClient;

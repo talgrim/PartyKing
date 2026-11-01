@@ -34,11 +34,11 @@ public class ResistanceRoundServiceTests : ResistanceServiceTestBase
     {
         await OpenGameAsync();
         await JoinPlayersAsync(5);
-        var before = _notifier.ResistanceChanges.Count;
+        var before = _notifier.Changes.Count;
 
         await _roundService.StartAsync(_id, Host, CancellationToken.None);
 
-        Assert.Equal(before + 1, _notifier.ResistanceChanges.Count);
+        Assert.Equal(before + 1, _notifier.Changes.Count);
     }
 
     [Theory]
@@ -126,7 +126,7 @@ public class ResistanceRoundServiceTests : ResistanceServiceTestBase
         var started = await _roundService.StartAsync(_id, Host, ct);
         var leader = callers.First(x => x.PlayerId == started.Value.LeaderPlayerId);
         var other = started.Value.Players.First(x => x.Id != leader.PlayerId).Id;
-        var before = _notifier.ResistanceChanges.Count;
+        var before = _notifier.Changes.Count;
 
         var result = await _roundService.SelectTeamAsync(_id, [leader.PlayerId!.Value, other], leader, ct);
 
@@ -134,7 +134,7 @@ public class ResistanceRoundServiceTests : ResistanceServiceTestBase
         Assert.Equal(2, result.Value.TeamPlayerIds.Count);
         Assert.Contains(leader.PlayerId!.Value, result.Value.TeamPlayerIds);
         Assert.Contains(other, result.Value.TeamPlayerIds);
-        Assert.Equal(before + 1, _notifier.ResistanceChanges.Count);
+        Assert.Equal(before + 1, _notifier.Changes.Count);
         Assert.Equal("Resistance.TeamSubmitted", (await _roundService.SelectTeamAsync(_id, [leader.PlayerId.Value, other], leader, ct)).FirstError.Code);
     }
 
@@ -183,7 +183,7 @@ public class ResistanceRoundServiceTests : ResistanceServiceTestBase
     {
         var ct = CancellationToken.None;
         var (callers, _) = await StartWithTeamAsync(5);
-        var before = _notifier.ResistanceChanges.Count;
+        var before = _notifier.Changes.Count;
 
         await _roundService.VoteAsync(_id, true, callers[0], ct);
         await _roundService.VoteAsync(_id, false, callers[1], ct);
@@ -192,7 +192,7 @@ public class ResistanceRoundServiceTests : ResistanceServiceTestBase
         var asOther = (await _lobbyService.GetAsync(_id, callers[2], ct)).Value;
         var asHost = (await _lobbyService.GetAsync(_id, Host, ct)).Value;
 
-        Assert.Equal(before + 2, _notifier.ResistanceChanges.Count);
+        Assert.Equal(before + 2, _notifier.Changes.Count);
         Assert.Equal(ResistancePhaseDto.Voting, asHost.Phase);
         Assert.True(asVoter.YourVote);
         Assert.Null(asOther.YourVote);
@@ -301,11 +301,11 @@ public class ResistanceRoundServiceTests : ResistanceServiceTestBase
     {
         var ct = CancellationToken.None;
         var mission = await StartMissionAsync(5, spiesOnTeam: 1);
-        var before = _notifier.ResistanceChanges.Count;
+        var before = _notifier.Changes.Count;
 
         await _roundService.PlayMissionCardAsync(_id, false, mission.Spies[0], ct);
 
-        Assert.Equal(before + 1, _notifier.ResistanceChanges.Count);
+        Assert.Equal(before + 1, _notifier.Changes.Count);
         var asSpy = (await _lobbyService.GetAsync(_id, mission.Spies[0], ct)).Value;
         var asOther = (await _lobbyService.GetAsync(_id, mission.Resistance[0], ct)).Value;
         var asHost = (await _lobbyService.GetAsync(_id, Host, ct)).Value;
@@ -572,7 +572,7 @@ public class ResistanceRoundServiceTests : ResistanceServiceTestBase
         var ct = CancellationToken.None;
         var callers = await EndGameAsync();
 
-        var before = _notifier.ResistanceChanges.Count;
+        var before = _notifier.Changes.Count;
         var restarted = await _roundService.RestartAsync(_id, Host, ct);
 
         Assert.False(restarted.IsError);
@@ -588,7 +588,7 @@ public class ResistanceRoundServiceTests : ResistanceServiceTestBase
         Assert.True(game.IsOpen);
         Assert.Null(game.LeaderPlayerId);
         Assert.All(callers, x => Assert.Null(_lobbyService.GetAsync(_id, x, ct).Result.Value.YourRole));
-        Assert.Equal(before + 1, _notifier.ResistanceChanges.Count);
+        Assert.Equal(before + 1, _notifier.Changes.Count);
     }
 
     [Fact]

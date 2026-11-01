@@ -17,6 +17,7 @@ export const RingoJoin = (): ReactNode => {
 
   return (
     <GameJoin
+      topic="ringo"
       sessionId={sessionId}
       title={t('ringo.joinTitle')}
       lobby={lobby}
