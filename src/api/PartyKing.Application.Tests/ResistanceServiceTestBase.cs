@@ -29,7 +29,7 @@ public abstract class ResistanceServiceTestBase
         var sessionAuthorizer = new SessionAuthorizer(_sessions);
         var lobby = new ResistanceGameLobby(
             sessionAuthorizer, _sessions, _games, clock);
-        var gate = new ResistanceActionGate(lobby, _notifier);
+        var gate = new ResistanceActionGate(lobby);
         _lobbyService = new ResistanceLobbyService(lobby, gate, _games, clock, _notifier, _rules);
         _roundService = new ResistanceRoundService(gate, _games, clock);
         _plotCardService = new ResistancePlotCardService(gate, _games, clock);

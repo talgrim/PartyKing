@@ -6,6 +6,7 @@ using PartyKing.Application.Realtime;
 using PartyKing.Domain.Entities.Base;
 using PartyKing.Domain.Events;
 using PartyKing.Domain.Events.Games.Base;
+using PartyKing.Domain.Events.Games.Resistance;
 using PartyKing.Domain.Events.Games.Ringo;
 
 namespace PartyKing.Application.Tests;
@@ -24,6 +25,7 @@ internal static class TestEvents
         services.AddScoped<IDomainEventHandler<LobbyOrderChanged>, LobbyPushHandler>();
         services.AddScoped<IDomainEventHandler<RingoCardFlipped>, RingoPushHandler>();
         services.AddScoped<IDomainEventHandler<RingoTurnPassed>, RingoPushHandler>();
+        services.AddScoped<IDomainEventHandler<ResistanceChanged>, ResistancePushHandler>();
 
         return new DomainEventDispatcher(
             services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),
