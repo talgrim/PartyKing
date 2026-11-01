@@ -1,4 +1,6 @@
 ﻿using System.Collections.Concurrent;
+using PartyKing.Application.Ports;
+using PartyKing.Domain.Repositories;
 using ErrorOr;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
@@ -9,8 +11,6 @@ using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Application.System;
 using PartyKing.Contract.V1.Slideshow;
 using PartyKing.Domain.Entities.Slideshow;
-using PartyKing.Infrastructure.Repositories;
-using PartyKing.Infrastructure.Results;
 
 namespace PartyKing.Application.Slideshow.Services;
 
@@ -51,6 +51,7 @@ internal class SlideshowService : ISlideshowService
 
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ISlideshowImagesRepository _imagesRepository;
+    private readonly ISlideshowSettingsRepository _settingsRepository;
     private readonly ISessionsRepository _sessionsRepository;
     private readonly SlideshowConfiguration _slideshowConfiguration;
     private readonly ISlideshowWatchers _watchers;
@@ -62,6 +63,7 @@ internal class SlideshowService : ISlideshowService
     public SlideshowService(
         IDateTimeProvider dateTimeProvider,
         ISlideshowImagesRepository imagesRepository,
+        ISlideshowSettingsRepository settingsRepository,
         ISessionsRepository sessionsRepository,
         IOptions<SlideshowConfiguration> slideshowSettingsOptions,
         ISlideshowWatchers watchers,
@@ -70,6 +72,7 @@ internal class SlideshowService : ISlideshowService
     {
         _dateTimeProvider = dateTimeProvider;
         _imagesRepository = imagesRepository;
+        _settingsRepository = settingsRepository;
         _sessionsRepository = sessionsRepository;
         _slideshowConfiguration = slideshowSettingsOptions.Value;
         _watchers = watchers;
@@ -112,7 +115,7 @@ internal class SlideshowService : ISlideshowService
             return SessionErrors.NotFound();
         }
 
-        await _imagesRepository.SaveSettingsAsync(
+        await _settingsRepository.SaveSettingsAsync(
             settings.ToDomain(sessionId, _slideshowConfiguration.SlideTime),
             cancellationToken);
 
@@ -346,7 +349,7 @@ internal class SlideshowService : ISlideshowService
 
     private async Task<SlideshowSettings> LoadSettingsAsync(Guid sessionId, CancellationToken cancellationToken)
     {
-        return await _imagesRepository.GetSettingsAsync(sessionId, cancellationToken)
+        return await _settingsRepository.GetSettingsAsync(sessionId, cancellationToken)
                ?? new SlideshowSettings
                {
                    SessionId = sessionId,

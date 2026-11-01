@@ -1,4 +1,4 @@
-namespace PartyKing.Infrastructure.Results;
+namespace PartyKing.Domain.Entities.Queue;
 
 public enum QueueItemRemoval
 {

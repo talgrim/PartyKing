@@ -9,7 +9,9 @@
     <ItemGroup>
         <PackageReference Include="ErrorOr" Version="2.0.1" />
         <PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="9.10.2" />
+        <PackageReference Include="Microsoft.AspNetCore.DataProtection.Abstractions" Version="9.0.8" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.10" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.10" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Abstractions" Version="2.3.0" />
         <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.10" />
         <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.10" />
@@ -23,11 +25,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\PartyKing.Contract\PartyKing.Contract.csproj" />
-      <ProjectReference Include="..\PartyKing.Infrastructure.Spotify\PartyKing.Infrastructure.Spotify.csproj" />
-      <ProjectReference Include="..\PartyKing.Infrastructure\PartyKing.Infrastructure.csproj" />
-      <ProjectReference Include="..\PartyKing.Infrastructure.Youtube\PartyKing.Infrastructure.Youtube.csproj" />
-      <ProjectReference Include="..\PartyKing.Infrastructure.Lyrics\PartyKing.Infrastructure.Lyrics.csproj" />
-      <ProjectReference Include="..\PartyKing.Infrastructure.Llm\PartyKing.Infrastructure.Llm.csproj" />
+      <ProjectReference Include="..\PartyKing.Domain\PartyKing.Domain.csproj" />
     </ItemGroup>
 
 </Project>

@@ -1,7 +1,6 @@
 using PartyKing.Domain.Entities.Games;
-using PartyKing.Infrastructure.Results;
 
-namespace PartyKing.Infrastructure.Repositories;
+namespace PartyKing.Domain.Repositories;
 
 /// <summary>What every game with a lobby (one game per session, opened by an admin, joined by name) stores.</summary>
 public interface ILobbyGamesRepository<TGame, TPlayer>

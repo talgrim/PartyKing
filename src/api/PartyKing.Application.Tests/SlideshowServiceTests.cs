@@ -4,8 +4,8 @@ using PartyKing.Application.Configuration;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Contract.V1.Slideshow;
 using PartyKing.Domain.Entities.Slideshow;
-using PartyKing.Infrastructure.Repositories;
-using PartyKing.Infrastructure.Results;
+using PartyKing.Application.Ports;
+using PartyKing.Domain.Repositories;
 
 namespace PartyKing.Application.Tests;
 
@@ -30,6 +30,7 @@ public class SlideshowServiceTests
         };
         _service = new SlideshowService(
             _clock,
+            _repository,
             _repository,
             _sessions,
             Options.Create(configuration),
@@ -418,7 +419,7 @@ public class SlideshowServiceTests
             target.WriteAsync(content, cancellationToken).AsTask();
     }
 
-    private class FakeSlideshowImagesRepository : ISlideshowImagesRepository
+    private class FakeSlideshowImagesRepository : ISlideshowImagesRepository, ISlideshowSettingsRepository
     {
         public Dictionary<Guid, SlideshowImageReadResult> NextImages { get; } = [];
         public Dictionary<Guid, SlideshowSettings> Settings { get; } = [];

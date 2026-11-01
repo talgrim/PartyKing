@@ -1,8 +1,8 @@
+using PartyKing.Domain.Repositories;
 using ErrorOr;
 using Microsoft.Extensions.Logging;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Sessions.Helpers;
-using PartyKing.Infrastructure.Repositories;
 
 namespace PartyKing.Application.Sessions.Services;
 
@@ -71,17 +71,24 @@ internal class SessionAccessService : ISessionAccessService
         return SessionAccessStamp.For(session.PasswordHash);
     }
 
-    public async Task<ErrorOr<string>> ChangePasswordAsync(
+    public Task<ErrorOr<string>> ChangePasswordAsync(
         Guid id,
         string? password,
         SessionCaller caller,
         CancellationToken cancellationToken)
     {
-        if (await _authorizer.AuthorizeManagerAsync(id, caller, cancellationToken) is { IsError: true } denied)
-        {
-            return denied.Errors;
-        }
+        return _authorizer.RunAsManagerAsync(
+            id,
+            caller,
+            () => ChangePasswordCoreAsync(id, password, cancellationToken),
+            cancellationToken);
+    }
 
+    private async Task<ErrorOr<string>> ChangePasswordCoreAsync(
+        Guid id,
+        string? password,
+        CancellationToken cancellationToken)
+    {
         if (SessionPasswordPolicy.Validate(password) is { } invalid)
         {
             return invalid;

@@ -1,4 +1,4 @@
-namespace PartyKing.Infrastructure.Results;
+namespace PartyKing.Domain.Entities.Games;
 
 public enum LobbyStatus
 {

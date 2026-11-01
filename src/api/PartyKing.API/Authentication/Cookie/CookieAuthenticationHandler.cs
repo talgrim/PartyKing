@@ -1,3 +1,4 @@
+using PartyKing.Application.Ports;
 using System.Diagnostics;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
@@ -6,7 +7,6 @@ using Microsoft.Extensions.Options;
 using PartyKing.API.Metrics;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Infrastructure.Authentication;
-using PartyKing.Infrastructure.Authorization;
 
 namespace PartyKing.API.Authentication.Cookie;
 

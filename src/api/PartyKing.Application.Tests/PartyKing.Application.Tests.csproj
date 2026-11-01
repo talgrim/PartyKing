@@ -20,6 +20,13 @@
 
     <ItemGroup>
         <ProjectReference Include="..\PartyKing.Application\PartyKing.Application.csproj" />
+      <ProjectReference Include="..\PartyKing.Domain\PartyKing.Domain.csproj" />
+      <ProjectReference Include="..\PartyKing.Infrastructure\PartyKing.Infrastructure.csproj" />
+      <ProjectReference Include="..\PartyKing.Infrastructure.Spotify\PartyKing.Infrastructure.Spotify.csproj" />
+      <ProjectReference Include="..\PartyKing.Infrastructure.Youtube\PartyKing.Infrastructure.Youtube.csproj" />
+      <ProjectReference Include="..\PartyKing.Infrastructure.Lyrics\PartyKing.Infrastructure.Lyrics.csproj" />
+      <ProjectReference Include="..\PartyKing.Infrastructure.Llm\PartyKing.Infrastructure.Llm.csproj" />
+      <ProjectReference Include="..\PartyKing.Persistence\PartyKing.Persistence.csproj" />
     </ItemGroup>
 
 </Project>

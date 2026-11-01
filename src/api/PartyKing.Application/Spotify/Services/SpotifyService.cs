@@ -1,3 +1,5 @@
+using PartyKing.Application.Ports;
+using PartyKing.Domain.Repositories;
 using ErrorOr;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -6,10 +8,6 @@ using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Contract.V1.Spotify;
 using PartyKing.Domain.Enums;
 using PartyKing.Domain.Results;
-using PartyKing.Infrastructure.Authorization;
-using PartyKing.Infrastructure.Repositories;
-using PartyKing.Infrastructure.Spotify.RestApi;
-using SpotifyAPI.Web;
 
 namespace PartyKing.Application.Spotify.Services;
 
@@ -91,7 +89,7 @@ internal class SpotifyService : ISpotifyService
         {
             result = await _spotifyClient.AuthenticateAsync(code, cancellationToken);
         }
-        catch (APIException)
+        catch (SpotifyApiException)
         {
             return Error.Unauthorized(description: "Spotify rejected the login. Start the login again");
         }

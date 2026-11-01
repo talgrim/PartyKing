@@ -1,3 +1,5 @@
+using PartyKing.Application.Ports;
+using PartyKing.Domain.Repositories;
 using ErrorOr;
 using Microsoft.Extensions.Logging;
 using PartyKing.Application.Mappings;
@@ -10,10 +12,6 @@ using PartyKing.Contract.V1.Queue;
 using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Enums;
 using PartyKing.Domain.Results;
-using PartyKing.Infrastructure.Repositories;
-using PartyKing.Infrastructure.Results;
-using PartyKing.Infrastructure.Spotify.RestApi;
-using PartyKing.Infrastructure.Youtube.RestApi;
 
 namespace PartyKing.Application.Queue.Services;
 

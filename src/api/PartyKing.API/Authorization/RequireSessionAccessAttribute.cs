@@ -1,9 +1,9 @@
+using PartyKing.Application.Ports;
 using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using PartyKing.API.Metrics;
 using PartyKing.Application.Sessions.Services;
-using PartyKing.Infrastructure.Authorization;
 
 namespace PartyKing.API.Authorization;
 

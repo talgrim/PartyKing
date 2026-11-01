@@ -1,10 +1,10 @@
+using PartyKing.Application.Ports;
 using Microsoft.Extensions.Logging.Abstractions;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Entities.Sessions;
 using PartyKing.Domain.Entities.Spotify;
 using PartyKing.Domain.Enums;
-using PartyKing.Infrastructure.Spotify.RestApi;
 
 namespace PartyKing.Application.Tests;
 

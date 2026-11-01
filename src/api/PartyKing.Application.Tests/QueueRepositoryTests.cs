@@ -6,7 +6,6 @@ using PartyKing.Domain.Entities.Sessions;
 using PartyKing.Domain.Enums;
 using PartyKing.Infrastructure.Metrics;
 using PartyKing.Infrastructure.Repositories;
-using PartyKing.Infrastructure.Results;
 using PartyKing.Persistence.Database;
 
 namespace PartyKing.Application.Tests;

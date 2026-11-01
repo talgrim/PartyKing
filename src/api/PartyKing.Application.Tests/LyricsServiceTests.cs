@@ -1,3 +1,4 @@
+using PartyKing.Application.Ports;
 using PartyKing.Application.Lyrics.Services;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Sessions;
@@ -6,7 +7,6 @@ using PartyKing.Domain.Entities.Lyrics;
 using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Enums;
 using PartyKing.Domain.Results;
-using PartyKing.Infrastructure.Lyrics.RestApi;
 using PartyKing.Infrastructure.Repositories;
 
 namespace PartyKing.Application.Tests;

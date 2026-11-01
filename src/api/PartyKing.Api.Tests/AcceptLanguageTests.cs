@@ -1,3 +1,4 @@
+using PartyKing.Application.Ports;
 using ErrorOr;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
@@ -9,7 +10,6 @@ using PartyKing.Application.Localization;
 using PartyKing.Application.Sessions;
 using PartyKing.Contract.V1.Games;
 using PartyKing.Domain.Entities.Games;
-using PartyKing.Infrastructure.Authorization;
 
 namespace PartyKing.Api.Tests;
 

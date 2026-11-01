@@ -1,3 +1,5 @@
+using PartyKing.Application.Ports;
+using PartyKing.Domain.Repositories;
 using ErrorOr;
 using PartyKing.Application.Queue.Helpers;
 using PartyKing.Application.Sessions.Helpers;
@@ -5,9 +7,6 @@ using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Sessions;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Contract.V1.Spotify;
-using PartyKing.Infrastructure.Repositories;
-using PartyKing.Infrastructure.Spotify.RestApi;
-using SpotifyAPI.Web;
 
 namespace PartyKing.Application.Queue.Services;
 
@@ -59,19 +58,26 @@ internal class FallbackPlaylistService : IFallbackPlaylistService
         _statusStore = statusStore;
     }
 
-    public async Task<ErrorOr<Success>> SetAsync(
+    public Task<ErrorOr<Success>> SetAsync(
         Guid sessionId,
         string? playlist,
         bool shuffle,
         SessionCaller caller,
         CancellationToken cancellationToken)
     {
-        if (await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, caller, cancellationToken)
-            is { IsError: true } denied)
-        {
-            return denied.Errors;
-        }
+        return _sessionAuthorizer.RunAsManagerAsync(
+            sessionId,
+            caller,
+            () => SetCoreAsync(sessionId, playlist, shuffle, cancellationToken),
+            cancellationToken);
+    }
 
+    private async Task<ErrorOr<Success>> SetCoreAsync(
+        Guid sessionId,
+        string? playlist,
+        bool shuffle,
+        CancellationToken cancellationToken)
+    {
         var session = await _sessionsRepository.GetAsync(sessionId, cancellationToken);
         if (session is null)
         {
@@ -151,7 +157,7 @@ internal class FallbackPlaylistService : IFallbackPlaylistService
                 .Select(x => new PlaylistDto($"spotify:playlist:{x.Id}", x.Name, x.ImageUrl, x.TrackCount))
                 .ToList();
         }
-        catch (APIException exception) when (exception.Response?.StatusCode is global::System.Net.HttpStatusCode.Forbidden)
+        catch (SpotifyApiException exception) when (exception.StatusCode is global::System.Net.HttpStatusCode.Forbidden)
         {
             // The host logged in before the playlist scope was requested
             return Error.Conflict(description: "Spotify did not allow reading your playlists. Log in as the host again");

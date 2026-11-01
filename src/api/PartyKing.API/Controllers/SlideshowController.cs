@@ -1,3 +1,4 @@
+using PartyKing.Application.Ports;
 using System.ComponentModel.DataAnnotations;
 using ErrorOr;
 using Microsoft.AspNetCore.Mvc;
@@ -7,7 +8,6 @@ using PartyKing.API.Authorization;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Contract.V1.Slideshow;
-using PartyKing.Infrastructure.Authorization;
 
 namespace PartyKing.API.Controllers;
 

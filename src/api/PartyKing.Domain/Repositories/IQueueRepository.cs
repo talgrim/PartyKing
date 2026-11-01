@@ -1,7 +1,6 @@
 using PartyKing.Domain.Entities.Queue;
-using PartyKing.Infrastructure.Results;
 
-namespace PartyKing.Infrastructure.Repositories;
+namespace PartyKing.Domain.Repositories;
 
 public interface IQueueRepository
 {

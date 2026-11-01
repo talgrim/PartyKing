@@ -1,8 +1,8 @@
+using PartyKing.Application.Ports;
 using Microsoft.AspNetCore.SignalR;
 using PartyKing.API.Authentication;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Slideshow.Services;
-using PartyKing.Infrastructure.Authorization;
 
 namespace PartyKing.API.Hubs;
 

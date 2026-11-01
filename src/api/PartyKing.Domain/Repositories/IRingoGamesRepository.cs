@@ -1,6 +1,6 @@
 using PartyKing.Domain.Entities.Games;
 
-namespace PartyKing.Infrastructure.Repositories;
+namespace PartyKing.Domain.Repositories;
 
 /// <summary>
 /// The Ringo game of a session. Its actions are Domain methods run through
