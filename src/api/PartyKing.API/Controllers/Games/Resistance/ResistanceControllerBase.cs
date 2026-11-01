@@ -1,6 +1,5 @@
 using PartyKing.Application.Ports;
 using PartyKing.Domain.Entities.Games;
-using PartyKing.Infrastructure.Authorization;
 
 namespace PartyKing.API.Controllers.Games.Resistance;
 

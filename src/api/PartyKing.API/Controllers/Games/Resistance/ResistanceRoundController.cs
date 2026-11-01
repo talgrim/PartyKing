@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using PartyKing.API.Authorization;
 using PartyKing.Application.Games.Services.Resistance;
 using PartyKing.Contract.V1.Games.Resistance;
-using PartyKing.Infrastructure.Authorization;
 
 namespace PartyKing.API.Controllers.Games.Resistance;
 

@@ -2,7 +2,6 @@ using PartyKing.Application.Ports;
 using Microsoft.AspNetCore.Authentication;
 using PartyKing.Application.Sessions;
 using PartyKing.Infrastructure.Authentication;
-using PartyKing.Infrastructure.Authorization;
 
 namespace PartyKing.API.Authentication;
 

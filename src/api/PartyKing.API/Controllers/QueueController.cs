@@ -4,7 +4,6 @@ using PartyKing.API.Authentication;
 using PartyKing.API.Authorization;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Contract.V1.Queue;
-using PartyKing.Infrastructure.Authorization;
 
 namespace PartyKing.API.Controllers;
 

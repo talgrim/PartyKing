@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 using PartyKing.API.Metrics;
 using PartyKing.Application.Admin.Services;
-using PartyKing.Infrastructure.Authorization;
 
 namespace PartyKing.API.Authentication.Cookie;
 

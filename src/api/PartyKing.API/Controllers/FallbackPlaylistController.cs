@@ -5,7 +5,6 @@ using PartyKing.API.Authorization;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Contract.V1.Sessions;
 using PartyKing.Contract.V1.Spotify;
-using PartyKing.Infrastructure.Authorization;
 
 namespace PartyKing.API.Controllers;
 

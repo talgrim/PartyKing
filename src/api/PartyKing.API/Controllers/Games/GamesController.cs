@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using PartyKing.API.Authorization;
 using PartyKing.Application.Games.Services;
 using PartyKing.Contract.V1.Games;
-using PartyKing.Infrastructure.Authorization;
 
 namespace PartyKing.API.Controllers.Games;
 

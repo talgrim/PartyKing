@@ -4,7 +4,6 @@ using PartyKing.API.Authentication;
 using PartyKing.API.Authorization;
 using PartyKing.Application.Lyrics.Services;
 using PartyKing.Contract.V1.Lyrics;
-using PartyKing.Infrastructure.Authorization;
 
 namespace PartyKing.API.Controllers;
 
