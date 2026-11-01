@@ -14,8 +14,8 @@ public class FallbackQueueFillerTests
     private readonly FakeQueueRepository _queue = new();
     private readonly FakeHostTokenProvider _tokens = new();
     private readonly FakePlaylistSpotifyClient _spotify = new();
-    private readonly FallbackStatusStore _status = new(new FakeSessionMusicNotifier(), NullLogger<FallbackStatusStore>.Instance);
-    private readonly FakeSessionMusicNotifier _notifier = new();
+    private readonly FallbackStatusStore _status = new(new FakePlayerNotifier(), NullLogger<FallbackStatusStore>.Instance);
+    private readonly FakeQueueNotifier _notifier = new();
     private readonly FallbackQueueFiller _filler;
     private readonly Session _session;
 

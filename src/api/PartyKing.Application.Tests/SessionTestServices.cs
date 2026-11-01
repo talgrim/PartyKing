@@ -37,7 +37,7 @@ internal static class SessionTestServices
             new HostSessionCleanup(
                 playerStates ?? new PlayerStateStore(new FakeClock()),
                 tokens ?? new FakeHostTokenProvider(),
-                new NullSessionMusicNotifier(),
+                new NullPlayerNotifier(),
                 new NullPlayerConnectionWatchdog()),
             NullLogger<SessionAdminService>.Instance);
     }

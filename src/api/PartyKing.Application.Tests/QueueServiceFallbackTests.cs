@@ -18,7 +18,7 @@ public class QueueServiceFallbackTests
 
     public QueueServiceFallbackTests()
     {
-        _service = new QueueService(_queue, _sessions, null!, null!, null!, new FakeSessionMusicNotifier(), _filler, NullLogger<QueueService>.Instance);
+        _service = new QueueService(_queue, _sessions, null!, null!, null!, new FakeQueueNotifier(), _filler, NullLogger<QueueService>.Instance);
         _id = _sessions.AddSession(HostId).Id;
     }
 

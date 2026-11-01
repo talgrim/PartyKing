@@ -15,7 +15,7 @@ public abstract class ResistanceServiceTestBase
 
     private protected readonly FakeSessionsRepository _sessions = new();
     private protected readonly FakeResistanceGamesRepository _games = new();
-    private protected readonly FakeSessionMusicNotifier _notifier = new();
+    private protected readonly FakeResistanceNotifier _notifier = new();
     private protected readonly FakeRulesProvider _rules = new();
     private protected readonly ResistanceLobbyService _lobbyService;
     private protected readonly ResistanceRoundService _roundService;
@@ -27,7 +27,7 @@ public abstract class ResistanceServiceTestBase
         var clock = new FakeClock();
         var sessionAuthorizer = new SessionAuthorizer(_sessions);
         var lobby = new ResistanceGameLobby(
-            sessionAuthorizer, _sessions, _games, clock, new ResistanceLobbyNotifier(_notifier));
+            sessionAuthorizer, _sessions, _games, clock, _notifier);
         var gate = new ResistanceActionGate(lobby, _notifier);
         _lobbyService = new ResistanceLobbyService(lobby, gate, _games, clock, _notifier, _rules);
         _roundService = new ResistanceRoundService(gate, _games, clock);

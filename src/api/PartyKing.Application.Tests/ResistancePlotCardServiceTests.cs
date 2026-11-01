@@ -37,7 +37,7 @@ public class ResistancePlotCardServiceTests : ResistanceServiceTestBase
 
         var receiver = others[0];
         var deal = drawn.Where(x => x.ToDeal).Select(x => new ResistancePlotCardAssignmentDto(x.Id, receiver.PlayerId!.Value)).ToList();
-        var before = _notifier.ResistanceChanges.Count;
+        var before = _notifier.Changes.Count;
         var dealt = await _plotCardService.DealPlotCardsAsync(_id, deal, leader, ct);
 
         // The deck is shuffled by the real Domain: an immediate card has to be played before the team is picked, and a
@@ -47,7 +47,7 @@ public class ResistancePlotCardServiceTests : ResistanceServiceTestBase
             or ResistancePlotCardTypeDto.EstablishConfidence
             or ResistancePlotCardTypeDto.OpenUp;
         Assert.Equal(immediate ? ResistancePhaseDto.ResolvingCards : ResistancePhaseDto.SelectingTeam, dealt.Value.Phase);
-        Assert.Equal(before + 1, _notifier.ResistanceChanges.Count);
+        Assert.Equal(before + 1, _notifier.Changes.Count);
         Assert.Equal(drawnType == ResistancePlotCardTypeDto.OpinionMaker ? 0 : 1, dealt.Value.PlotCardCounts.Sum(x => x.Count));
         Assert.Equal(deal.Count, (await _lobbyService.GetAsync(_id, receiver, ct)).Value.YourPlotCards.Count);
         foreach (var other in others.Skip(1))

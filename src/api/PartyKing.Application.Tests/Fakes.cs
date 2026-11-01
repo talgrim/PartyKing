@@ -2,6 +2,7 @@ using PartyKing.Domain.Repositories;
 using ErrorOr;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
+using PartyKing.Application.Games.Services;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
@@ -235,20 +236,11 @@ internal static class JoinTokens
         new JoinTokenProtector(new EphemeralDataProtectionProvider(), clock);
 }
 
-internal class FakeSessionMusicNotifier : ISessionMusicNotifier
+internal class FakeQueueNotifier : IQueueNotifier
 {
     public List<(Guid SessionId, QueueItemDto Song)> SongAdded { get; } = [];
     public List<(Guid SessionId, int SongId)> SongRemoved { get; } = [];
     public List<(Guid SessionId, int? PreviousSongId, QueueItemDto? NowPlaying)> QueueAdvanced { get; } = [];
-    public List<(Guid SessionId, PlayerStateChangedDto State)> PlayerStateChanged { get; } = [];
-    public List<(Guid SessionId, PlayerCommandDto Command)> PlayerCommands { get; } = [];
-    public List<(Guid SessionId, FallbackErrorDto Error)> FallbackErrors { get; } = [];
-    public List<(Guid SessionId, LyricsOffsetChangedDto Offset)> LyricsOffsetChanges { get; } = [];
-    public List<Guid> SlideshowChanges { get; } = [];
-    public List<Guid> RingoChanges { get; } = [];
-    public List<Guid> RingoOpens { get; } = [];
-    public List<Guid> ResistanceChanges { get; } = [];
-    public List<Guid> ResistanceOpens { get; } = [];
 
     public Task SongAddedAsync(Guid sessionId, QueueItemDto song, CancellationToken cancellationToken)
     {
@@ -271,6 +263,13 @@ internal class FakeSessionMusicNotifier : ISessionMusicNotifier
         QueueAdvanced.Add((sessionId, previousSongId, nowPlaying));
         return Task.CompletedTask;
     }
+}
+
+internal class FakePlayerNotifier : IPlayerNotifier
+{
+    public List<(Guid SessionId, PlayerStateChangedDto State)> PlayerStateChanged { get; } = [];
+    public List<(Guid SessionId, PlayerCommandDto Command)> PlayerCommands { get; } = [];
+    public List<(Guid SessionId, FallbackErrorDto Error)> FallbackErrors { get; } = [];
 
     public Task PlayerStateChangedAsync(
         Guid sessionId,
@@ -295,6 +294,11 @@ internal class FakeSessionMusicNotifier : ISessionMusicNotifier
         FallbackErrors.Add((sessionId, error));
         return Task.CompletedTask;
     }
+}
+
+internal class FakeLyricsNotifier : ILyricsNotifier
+{
+    public List<(Guid SessionId, LyricsOffsetChangedDto Offset)> LyricsOffsetChanges { get; } = [];
 
     public Task LyricsOffsetChangedAsync(
         Guid sessionId,
@@ -304,37 +308,40 @@ internal class FakeSessionMusicNotifier : ISessionMusicNotifier
         LyricsOffsetChanges.Add((sessionId, offset));
         return Task.CompletedTask;
     }
+}
+
+internal class FakeSlideshowNotifier : ISlideshowNotifier
+{
+    public List<Guid> SlideshowChanges { get; } = [];
 
     public Task SlideshowChangedAsync(Guid sessionId, CancellationToken cancellationToken)
     {
         SlideshowChanges.Add(sessionId);
         return Task.CompletedTask;
     }
+}
 
-    public Task RingoChangedAsync(Guid sessionId, CancellationToken cancellationToken)
+internal class FakeGameLobbyNotifier : IGameLobbyNotifier
+{
+    public List<Guid> Changes { get; } = [];
+    public List<Guid> Opens { get; } = [];
+
+    public Task OpenedAsync(Guid sessionId, CancellationToken cancellationToken)
     {
-        RingoChanges.Add(sessionId);
+        Opens.Add(sessionId);
         return Task.CompletedTask;
     }
 
-    public Task RingoOpenedAsync(Guid sessionId, CancellationToken cancellationToken)
+    public Task ChangedAsync(Guid sessionId, CancellationToken cancellationToken)
     {
-        RingoOpens.Add(sessionId);
-        return Task.CompletedTask;
-    }
-
-    public Task ResistanceChangedAsync(Guid sessionId, CancellationToken cancellationToken)
-    {
-        ResistanceChanges.Add(sessionId);
-        return Task.CompletedTask;
-    }
-
-    public Task ResistanceOpenedAsync(Guid sessionId, CancellationToken cancellationToken)
-    {
-        ResistanceOpens.Add(sessionId);
+        Changes.Add(sessionId);
         return Task.CompletedTask;
     }
 }
+
+internal class FakeRingoNotifier : FakeGameLobbyNotifier, IRingoNotifier;
+
+internal class FakeResistanceNotifier : FakeGameLobbyNotifier, IResistanceNotifier;
 
 internal class FakeFallbackQueueFiller : IFallbackQueueFiller
 {

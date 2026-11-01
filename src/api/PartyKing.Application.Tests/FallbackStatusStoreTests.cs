@@ -5,7 +5,7 @@ namespace PartyKing.Application.Tests;
 
 public class FallbackStatusStoreTests
 {
-    private readonly FakeSessionMusicNotifier _notifier = new();
+    private readonly FakePlayerNotifier _notifier = new();
     private readonly FallbackStatusStore _store;
     private readonly Guid _sessionId = Guid.NewGuid();
 

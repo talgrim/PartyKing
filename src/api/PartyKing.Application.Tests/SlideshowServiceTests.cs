@@ -17,7 +17,7 @@ public class SlideshowServiceTests
     private readonly FakeSlideshowImagesRepository _repository = new();
     private readonly FakeSessionsRepository _sessions = new();
     private readonly FakeSlideshowScheduler _scheduler = new();
-    private readonly FakeSessionMusicNotifier _notifier = new();
+    private readonly FakeSlideshowNotifier _notifier = new();
     private readonly SlideshowService _service;
     private readonly Guid _sessionId;
 
