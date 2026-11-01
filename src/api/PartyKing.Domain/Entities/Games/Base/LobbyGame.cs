@@ -7,14 +7,14 @@ namespace PartyKing.Domain.Entities.Games.Base;
 public abstract class LobbyGame<TPlayer>
     where TPlayer : LobbyPlayer
 {
-    public Guid SessionId { get; set; }
+    public Guid SessionId { get; internal set; }
 
-    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset CreatedAt { get; internal set; }
 
     /// <summary>Set by an admin once guests may join; it cannot be undone.</summary>
-    public bool IsOpen { get; set; }
+    public bool IsOpen { get; internal set; }
 
-    public List<TPlayer> Players { get; set; } = [];
+    public List<TPlayer> Players { get; internal set; } = [];
 
     /// <summary>How many players may join.</summary>
     protected virtual int PlayerLimit => int.MaxValue;

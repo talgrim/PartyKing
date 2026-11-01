@@ -132,7 +132,7 @@ internal class ResistanceLobbyService : IResistanceLobbyService
             return denied.Errors;
         }
 
-        var game = new ResistanceGame { SessionId = sessionId, CreatedAt = _clock.UtcNow, Rules = _rulesProvider.Current() };
+        var game = ResistanceGame.Create(sessionId, _clock.UtcNow, _rulesProvider.Current());
         if (!await _games.TryCreateAsync(game, cancellationToken))
         {
             return ResistanceErrors.AlreadyCreated;

@@ -7,16 +7,16 @@ namespace PartyKing.Domain.Entities.Games.Resistance;
 /// </summary>
 public class ResistanceMissionResult
 {
-    public Guid SessionId { get; set; }
+    public Guid SessionId { get; internal set; }
 
     /// <summary>1 to 5.</summary>
-    public int MissionNumber { get; set; }
+    public int MissionNumber { get; internal set; }
 
     /// <summary>The Fail cards played; the mission failed when they reached <see cref="ResistanceRules.RequiredFails"/>.</summary>
-    public int FailCount { get; set; }
+    public int FailCount { get; internal set; }
 
-    public bool Succeeded { get; set; }
+    public bool Succeeded { get; internal set; }
 
     /// <summary>The players on the mission's team, by <see cref="ResistancePlayer.Order"/>; empty for results recorded before the team was kept.</summary>
-    public List<Guid> TeamPlayerIds { get; set; } = [];
+    public List<Guid> TeamPlayerIds { get; internal set; } = [];
 }

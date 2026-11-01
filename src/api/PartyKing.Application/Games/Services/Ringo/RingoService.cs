@@ -106,12 +106,7 @@ internal class RingoService : IRingoService
             return denied.Errors;
         }
 
-        var game = new RingoGame
-        {
-            SessionId = sessionId,
-            Seed = Random.Shared.Next(),
-            CreatedAt = _clock.UtcNow,
-        };
+        var game = RingoGame.Start(sessionId, Random.Shared.Next(), _clock.UtcNow);
 
         if (!await _games.TryCreateAsync(game, cancellationToken))
         {

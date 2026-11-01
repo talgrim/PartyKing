@@ -9,44 +9,54 @@ namespace PartyKing.Domain.Entities.Games.Resistance;
 /// </summary>
 public partial class ResistanceGame : LobbyGame<ResistancePlayer>
 {
+    // EF and the tests; a game is made through Create
+    internal ResistanceGame()
+    {
+    }
+
+    public static ResistanceGame Create(Guid sessionId, DateTimeOffset createdAt, ResistanceRules rules)
+    {
+        return new ResistanceGame { SessionId = sessionId, CreatedAt = createdAt, Rules = rules };
+    }
+
     public const int MinPlayers = 5;
     public const int MaxPlayers = 10;
 
     /// <summary>Null while the game is still a lobby.</summary>
-    public DateTimeOffset? StartedAt { get; set; }
+    public DateTimeOffset? StartedAt { get; internal set; }
 
     /// <summary>The player leading the current mission; null until the game is started.</summary>
-    public Guid? LeaderPlayerId { get; set; }
+    public Guid? LeaderPlayerId { get; internal set; }
 
     /// <summary>The mission being played, from 1; the leader picks its team (see <see cref="ResistanceRules.TeamSize"/>).</summary>
-    public int MissionNumber { get; set; } = 1;
+    public int MissionNumber { get; internal set; } = 1;
 
     /// <summary>The step of the current round; <see cref="ResistancePhase.SelectingTeam"/> until the leader submits a team.</summary>
-    public ResistancePhase Phase { get; set; } = ResistancePhase.SelectingTeam;
+    public ResistancePhase Phase { get; internal set; } = ResistancePhase.SelectingTeam;
 
     /// <summary>
     /// While <see cref="ResistancePhase.LeaderWindow"/>: whether the leader still draws their plot cards once it ends
     /// (a new mission) or picks the team at once (after a rejected team).
     /// </summary>
-    public bool LeaderWindowBeforeDraw { get; set; }
+    public bool LeaderWindowBeforeDraw { get; internal set; }
 
     /// <summary>Teams rejected in a row during the current mission; five of them make the spies win.</summary>
-    public int RejectedTeams { get; set; }
+    public int RejectedTeams { get; internal set; }
 
     /// <summary>The winning side once <see cref="Phase"/> is <see cref="ResistancePhase.GameOver"/>.</summary>
-    public ResistanceRole? Winner { get; set; }
+    public ResistanceRole? Winner { get; internal set; }
 
     /// <summary>
     /// The numbers of this game (spies, team sizes, fails needed), copied from the server configuration when the game
     /// is created and refreshed on request until it is open.
     /// </summary>
-    public ResistanceRules Rules { get; set; } = ResistanceRules.Default();
+    public ResistanceRules Rules { get; internal set; } = ResistanceRules.Default();
 
     /// <summary>The outcomes of the missions finished so far, public.</summary>
-    public List<ResistanceMissionResult> MissionResults { get; set; } = [];
+    public List<ResistanceMissionResult> MissionResults { get; internal set; } = [];
 
     /// <summary>The plot cards of the add-on (deck, drawn and in hands); empty when the add-on is off.</summary>
-    public List<ResistancePlotCard> PlotCards { get; set; } = [];
+    public List<ResistancePlotCard> PlotCards { get; internal set; } = [];
 
     /// <summary>Successful missions so far; three of them win the game for the resistance.</summary>
     public int ResistanceScore => MissionResults.Count(x => x.Succeeded);

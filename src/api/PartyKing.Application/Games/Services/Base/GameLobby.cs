@@ -17,7 +17,7 @@ internal record GameLobbyOptions(string Name, int MaxPlayers = int.MaxValue);
 /// </summary>
 internal class GameLobby<TGame, TPlayer>
     where TGame : LobbyGame<TPlayer>
-    where TPlayer : LobbyPlayer, new()
+    where TPlayer : LobbyPlayer, ILobbyPlayerFactory<TPlayer>
 {
     public const string AdminName = "admin";
 
@@ -155,13 +155,7 @@ internal class GameLobby<TGame, TPlayer>
             return invalid;
         }
 
-        var player = new TPlayer
-        {
-            PlayerId = Guid.NewGuid(),
-            Name = playerName,
-            ProfileId = isHost ? caller.ProfileId : null,
-            JoinedAt = _clock.UtcNow,
-        };
+        var player = TPlayer.Create(Guid.NewGuid(), playerName, isHost ? caller.ProfileId : null, _clock.UtcNow);
 
         var result = await _games.JoinAsync(sessionId, player, cancellationToken);
         if (_errors.From(result.Status) is { } error)

@@ -5,15 +5,25 @@ namespace PartyKing.Domain.Entities.Games.Ringo;
 /// <summary>The Ringo game of one session (at most one): the seed of the card layout and the flipped cards in flip order.</summary>
 public class RingoGame : LobbyGame<RingoPlayer>
 {
-    public int Seed { get; set; }
+    // EF and the tests; a game is started through Start
+    internal RingoGame()
+    {
+    }
+
+    public static RingoGame Start(Guid sessionId, int seed, DateTimeOffset createdAt)
+    {
+        return new RingoGame { SessionId = sessionId, Seed = seed, CreatedAt = createdAt };
+    }
+
+    public int Seed { get; internal set; }
 
     /// <summary>The last flipped card until the host or an admin continues; null when none awaits that.</summary>
-    public int? PendingCardId { get; set; }
+    public int? PendingCardId { get; internal set; }
 
     /// <summary>The player whose turn it is; null while nobody has joined.</summary>
-    public Guid? CurrentPlayerId { get; set; }
+    public Guid? CurrentPlayerId { get; internal set; }
 
-    public List<RingoFlip> Flips { get; set; } = [];
+    public List<RingoFlip> Flips { get; internal set; } = [];
 
     protected override void OnPlayerJoined(RingoPlayer player)
     {
