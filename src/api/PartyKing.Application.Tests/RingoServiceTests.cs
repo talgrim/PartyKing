@@ -510,6 +510,17 @@ public class RingoServiceTests
         public Task<bool> TryCreateAsync(RingoGame game, CancellationToken cancellationToken) =>
             Task.FromResult(_games.TryAdd(game.SessionId, game));
 
+        public Task<TResult> UpdateAsync<TResult>(
+            Guid sessionId,
+            string operation,
+            TResult noGame,
+            Func<RingoGame, TResult> action,
+            CancellationToken cancellationToken)
+            where TResult : IGameUpdateResult
+        {
+            return Task.FromResult(_games.TryGetValue(sessionId, out var game) ? action(game) : noGame);
+        }
+
         public Task<RingoGame?> OpenAsync(Guid sessionId, CancellationToken cancellationToken)
         {
             var game = _games.GetValueOrDefault(sessionId);
