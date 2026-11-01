@@ -1,4 +1,5 @@
 using PartyKing.Domain.Entities.Base;
+using PartyKing.Domain.Events.Games.Base;
 
 namespace PartyKing.Domain.Entities.Games.Base;
 
@@ -9,6 +10,9 @@ namespace PartyKing.Domain.Entities.Games.Base;
 public abstract class LobbyGame<TPlayer> : AggregateRoot
     where TPlayer : LobbyPlayer
 {
+    /// <summary>Which game this lobby belongs to; named by the lobby events.</summary>
+    public abstract GameKind Kind { get; }
+
     public Guid SessionId { get; internal set; }
 
     public DateTimeOffset CreatedAt { get; internal set; }
@@ -43,6 +47,7 @@ public abstract class LobbyGame<TPlayer> : AggregateRoot
         }
 
         IsOpen = true;
+        Raise(new LobbyOpened(SessionId, Kind));
 
         return true;
     }
@@ -78,6 +83,7 @@ public abstract class LobbyGame<TPlayer> : AggregateRoot
         player.Order = Players.Count == 0 ? 0 : Players.Max(x => x.Order) + 1;
         Players.Add(player);
         OnPlayerJoined(player);
+        Raise(new LobbyPlayerJoined(SessionId, Kind, player.PlayerId));
 
         return LobbyStatus.Done;
     }
@@ -104,6 +110,8 @@ public abstract class LobbyGame<TPlayer> : AggregateRoot
         {
             player.Order = order++;
         }
+
+        Raise(new LobbyPlayerKicked(SessionId, Kind, kicked.PlayerId));
 
         return (LobbyStatus.Done, kicked);
     }
@@ -133,6 +141,8 @@ public abstract class LobbyGame<TPlayer> : AggregateRoot
         {
             player.Order = positions[player.PlayerId];
         }
+
+        Raise(new LobbyOrderChanged(SessionId, Kind));
 
         return LobbyStatus.Done;
     }

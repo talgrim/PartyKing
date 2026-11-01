@@ -19,6 +19,8 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
         return new ResistanceGame { SessionId = sessionId, CreatedAt = createdAt, Rules = rules };
     }
 
+    public override GameKind Kind => GameKind.Resistance;
+
     public const int MinPlayers = 5;
     public const int MaxPlayers = 10;
 

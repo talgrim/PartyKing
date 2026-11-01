@@ -15,6 +15,8 @@ public class RingoGame : LobbyGame<RingoPlayer>
         return new RingoGame { SessionId = sessionId, Seed = seed, CreatedAt = createdAt };
     }
 
+    public override GameKind Kind => GameKind.Ringo;
+
     public int Seed { get; internal set; }
 
     /// <summary>The last flipped card until the host or an admin continues; null when none awaits that.</summary>
