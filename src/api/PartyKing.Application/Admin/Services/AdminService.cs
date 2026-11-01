@@ -1,3 +1,4 @@
+using PartyKing.Domain.Repositories;
 using ErrorOr;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -5,7 +6,6 @@ using Microsoft.Extensions.Options;
 using PartyKing.Application.Configuration;
 using PartyKing.Domain.Entities.Auth;
 using PartyKing.Infrastructure.Authorization;
-using PartyKing.Infrastructure.Repositories;
 
 namespace PartyKing.Application.Admin.Services;
 

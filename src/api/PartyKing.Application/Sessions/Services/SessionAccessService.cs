@@ -1,8 +1,8 @@
+using PartyKing.Domain.Repositories;
 using ErrorOr;
 using Microsoft.Extensions.Logging;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Sessions.Helpers;
-using PartyKing.Infrastructure.Repositories;
 
 namespace PartyKing.Application.Sessions.Services;
 

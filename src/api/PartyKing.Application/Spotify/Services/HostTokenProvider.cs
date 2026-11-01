@@ -1,3 +1,4 @@
+using PartyKing.Domain.Repositories;
 using System.Collections.Concurrent;
 using ErrorOr;
 using Microsoft.Extensions.DependencyInjection;

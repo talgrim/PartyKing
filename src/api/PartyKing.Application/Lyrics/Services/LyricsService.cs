@@ -1,3 +1,4 @@
+using PartyKing.Domain.Repositories;
 using ErrorOr;
 using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;

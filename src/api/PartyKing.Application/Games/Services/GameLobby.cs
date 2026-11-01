@@ -1,10 +1,9 @@
+using PartyKing.Domain.Repositories;
 using ErrorOr;
 using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.System;
 using PartyKing.Domain.Entities.Games;
-using PartyKing.Infrastructure.Repositories;
-using PartyKing.Infrastructure.Results;
 
 namespace PartyKing.Application.Games.Services;
 

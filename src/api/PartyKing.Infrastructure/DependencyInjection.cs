@@ -1,3 +1,4 @@
+using PartyKing.Domain.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PartyKing.Infrastructure.Authorization;

@@ -1,3 +1,4 @@
+using PartyKing.Domain.Repositories;
 using Microsoft.EntityFrameworkCore;
 using PartyKing.Domain.Entities.Games;
 using PartyKing.Infrastructure.Metrics;

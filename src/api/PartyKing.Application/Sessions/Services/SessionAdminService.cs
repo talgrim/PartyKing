@@ -1,3 +1,4 @@
+using PartyKing.Domain.Repositories;
 using ErrorOr;
 using Microsoft.Extensions.Logging;
 using PartyKing.Application.Admin.Services;
@@ -6,7 +7,6 @@ using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Contract.V1.Sessions;
 using PartyKing.Domain.Entities.Sessions;
-using PartyKing.Infrastructure.Repositories;
 
 namespace PartyKing.Application.Sessions.Services;
 

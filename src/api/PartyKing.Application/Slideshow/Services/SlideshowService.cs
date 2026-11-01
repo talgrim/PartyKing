@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using PartyKing.Domain.Repositories;
 using ErrorOr;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;

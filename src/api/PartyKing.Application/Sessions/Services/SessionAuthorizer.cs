@@ -1,7 +1,7 @@
+using PartyKing.Domain.Repositories;
 using ErrorOr;
 using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Contract.V1.Sessions;
-using PartyKing.Infrastructure.Repositories;
 
 namespace PartyKing.Application.Sessions.Services;
 

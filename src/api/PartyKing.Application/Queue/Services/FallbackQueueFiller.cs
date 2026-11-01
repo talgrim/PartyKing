@@ -1,8 +1,8 @@
+using PartyKing.Domain.Repositories;
 using PartyKing.Application.Mappings;
 using PartyKing.Application.Realtime;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Domain.Entities.Spotify;
-using PartyKing.Infrastructure.Repositories;
 using PartyKing.Infrastructure.Spotify.RestApi;
 using SpotifyAPI.Web;
 
