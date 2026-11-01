@@ -23,6 +23,20 @@ public class ResistanceFailureErrorsTests
             ErrorType.Conflict,
             "Resistance.RulesLocked",
             "The plot cards can only be switched before the game starts."),
+        [ResistanceFailure.NotStarted] = new(ErrorType.Conflict, "Resistance.NotStarted", "The game has not started yet."),
+        [ResistanceFailure.NotOpen] = new(ErrorType.Conflict, "Resistance.NotOpen", "The game is not open to guests yet."),
+        [ResistanceFailure.AlreadyStarted] = new(
+            ErrorType.Conflict, "Resistance.AlreadyStarted", "The game has already started."),
+        [ResistanceFailure.NotEnoughPlayers] = new(
+            ErrorType.Conflict, "Resistance.NotEnoughPlayers", "The game needs at least 5 players to start."),
+        [ResistanceFailure.NotOver] = new(ErrorType.Conflict, "Resistance.NotOver", "The game is still being played."),
+        [ResistanceFailure.NotPlayerToVote] = new(
+            ErrorType.Forbidden, "Resistance.NotPlayer", "Only the players of the game vote."),
+        [ResistanceFailure.NotVoting] = new(ErrorType.Conflict, "Resistance.NotVoting", "No team is up for a vote."),
+        [ResistanceFailure.VoteLocked] = new(
+            ErrorType.Conflict, "Resistance.VoteLocked", "An Opinion Maker's vote can't be changed."),
+        [ResistanceFailure.OpinionMakersFirst] = new(
+            ErrorType.Conflict, "Resistance.OpinionMakersFirst", "The Opinion Makers vote first."),
     };
 
     [Fact]

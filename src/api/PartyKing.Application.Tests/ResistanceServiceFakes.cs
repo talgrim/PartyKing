@@ -140,62 +140,6 @@ internal sealed class FakeResistanceGamesRepository : IResistanceGamesRepository
     public Task<bool> DeleteAsync(Guid sessionId, CancellationToken cancellationToken) =>
         Task.FromResult(_games.Remove(sessionId));
 
-    public Task<ResistanceStartResult> StartAsync(
-        Guid sessionId, DateTimeOffset startedAt, CancellationToken cancellationToken)
-    {
-        var status = ResistanceStartStatus.Started;
-        _games.TryGetValue(sessionId, out var game);
-        if (game is null)
-        {
-            status = ResistanceStartStatus.NoGame;
-        }
-        else if (game.IsStarted)
-        {
-            status = ResistanceStartStatus.AlreadyStarted;
-        }
-        else if (!game.IsOpen)
-        {
-            status = ResistanceStartStatus.NotOpen;
-        }
-        else if (game.Players.Count < ResistanceGame.MinPlayers)
-        {
-            status = ResistanceStartStatus.NotEnoughPlayers;
-        }
-        else
-        {
-            ResistanceRoles.Deal(game, new Random(1));
-            game.StartedAt = startedAt;
-        }
-
-        return Task.FromResult(new ResistanceStartResult(status, game));
-    }
-
-    public Task<ResistanceRestartResult> RestartAsync(
-        Guid sessionId, CancellationToken cancellationToken)
-    {
-        var status = ResistanceRestartStatus.Restarted;
-        _games.TryGetValue(sessionId, out var game);
-        if (game is null)
-        {
-            status = ResistanceRestartStatus.NoGame;
-        }
-        else if (!game.IsStarted)
-        {
-            status = ResistanceRestartStatus.NotStarted;
-        }
-        else if (game.Phase != ResistancePhase.GameOver)
-        {
-            status = ResistanceRestartStatus.NotOver;
-        }
-        else
-        {
-            ResistanceRoles.Reset(game);
-            game.StartedAt = null;
-        }
-
-        return Task.FromResult(new ResistanceRestartResult(status, game));
-    }
-
     public Task<ResistanceTeamResult> SelectTeamAsync(
         Guid sessionId, Guid? callerPlayerId, IReadOnlyList<Guid> playerIds, CancellationToken cancellationToken)
     {
@@ -338,44 +282,6 @@ internal sealed class FakeResistanceGamesRepository : IResistanceGamesRepository
         }
 
         return Task.FromResult(new ResistanceDealResult(status, game));
-    }
-
-    public Task<ResistanceVoteResult> VoteAsync(
-        Guid sessionId, Guid? callerPlayerId, bool approve, CancellationToken cancellationToken)
-    {
-        _games.TryGetValue(sessionId, out var game);
-        var voter = game?.Players.FirstOrDefault(x => x.PlayerId == callerPlayerId);
-        var status = ResistanceVoteStatus.Voted;
-        if (game is null)
-        {
-            status = ResistanceVoteStatus.NoGame;
-        }
-        else if (!game.IsStarted)
-        {
-            status = ResistanceVoteStatus.NotStarted;
-        }
-        else if (game.Phase == ResistancePhase.GameOver)
-        {
-            status = ResistanceVoteStatus.GameOver;
-        }
-        else if (voter is null)
-        {
-            status = ResistanceVoteStatus.NotPlayer;
-        }
-        else if (game.Phase != ResistancePhase.Voting)
-        {
-            status = ResistanceVoteStatus.NotVoting;
-        }
-        else
-        {
-            voter.Vote = approve;
-            if (game.Players.All(x => x.Vote is not null))
-            {
-                ResistanceRoles.ResolveVotes(game);
-            }
-        }
-
-        return Task.FromResult(new ResistanceVoteResult(status, game));
     }
 
     public Task<ResistanceMissionCardResult> PlayMissionCardAsync(

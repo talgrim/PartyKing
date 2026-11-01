@@ -70,8 +70,8 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         }
 
         Assert.True(await _repository.TryCreateAsync(game, ct));
-        var started = await _repository.StartAsync(_sessionId, DateTimeOffset.UtcNow, ct);
-        Assert.Equal(ResistanceStartStatus.Started, started.Status);
+        var started = await StartAsync();
+        Assert.Null(started.Failure);
 
         _players = started.Game!.Players.OrderBy(x => x.Order).Select(x => x.PlayerId).ToList();
         var team = _players.Take(ResistanceRules.Default().TeamSize(playerCount, 1)).ToList();
@@ -85,9 +85,39 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
     {
         for (var i = 0; i < approvals.Length; i++)
         {
-            var result = await _repository.VoteAsync(_sessionId, _players[i], approvals[i], CancellationToken.None);
-            Assert.Equal(ResistanceVoteStatus.Voted, result.Status);
+            var result = await CastVoteAsync(_players[i], approvals[i]);
+            Assert.Null(result.Failure);
         }
+    }
+
+    private Task<ResistanceOutcome> CastVoteAsync(Guid? player, bool approve)
+    {
+        return _repository.UpdateAsync(
+            _sessionId,
+            "VoteAsync",
+            ResistanceOutcome.NoGame,
+            game => game.Vote(player, approve),
+            CancellationToken.None);
+    }
+
+    private Task<ResistanceOutcome> StartAsync()
+    {
+        return _repository.UpdateAsync(
+            _sessionId,
+            "StartAsync",
+            ResistanceOutcome.NoGame,
+            game => game.Start(DateTimeOffset.UtcNow, Random.Shared),
+            CancellationToken.None);
+    }
+
+    private Task<ResistanceOutcome> RestartAsync()
+    {
+        return _repository.UpdateAsync(
+            _sessionId,
+            "RestartAsync",
+            ResistanceOutcome.NoGame,
+            game => game.Restart(),
+            CancellationToken.None);
     }
 
     private Task<ResistanceOutcome> SetPlotCardsAsync(bool enabled)
@@ -132,9 +162,9 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         var ct = CancellationToken.None;
         await StartGameWithTeamAsync(5);
 
-        Assert.Equal(ResistanceVoteStatus.NotPlayer, (await _repository.VoteAsync(_sessionId, null, true, ct)).Status);
-        Assert.Equal(ResistanceVoteStatus.NotPlayer, (await _repository.VoteAsync(_sessionId, Guid.NewGuid(), true, ct)).Status);
-        Assert.Equal(ResistanceVoteStatus.NoGame, (await _repository.VoteAsync(Guid.NewGuid(), _players[0], true, ct)).Status);
+        Assert.Equal(ResistanceFailure.NotPlayerToVote, (await CastVoteAsync(null, true)).Failure);
+        Assert.Equal(ResistanceFailure.NotPlayerToVote, (await CastVoteAsync(Guid.NewGuid(), true)).Failure);
+        Assert.Equal(ResistanceFailure.NoGame, (await _repository.UpdateAsync(Guid.NewGuid(), "VoteAsync", ResistanceOutcome.NoGame, game => game.Vote(_players[0], true), ct)).Failure);
     }
 
     [Fact]
@@ -149,7 +179,7 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         Assert.Equal(0, game.RejectedTeams);
         Assert.Equal(2, game.Players.Count(x => x.IsOnTeam));
         Assert.All(game.Players, x => Assert.NotNull(x.Vote));
-        Assert.Equal(ResistanceVoteStatus.NotVoting, (await _repository.VoteAsync(_sessionId, _players[0], true, CancellationToken.None)).Status);
+        Assert.Equal(ResistanceFailure.NotVoting, (await CastVoteAsync(_players[0], true)).Failure);
     }
 
     [Fact]
@@ -269,7 +299,7 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         }
 
         await _repository.ContinueAsync(_sessionId, null, isManager: true, ct);
-        Assert.Equal(ResistanceRestartStatus.NotOver, (await _repository.RestartAsync(_sessionId, ct)).Status);
+        Assert.Equal(ResistanceFailure.NotOver, (await RestartAsync()).Failure);
 
         for (var i = 1; i <= 5; i++)
         {
@@ -280,9 +310,9 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         }
 
         Assert.Equal(ResistancePhase.GameOver, (await ReloadAsync()).Phase);
-        var result = await _repository.RestartAsync(_sessionId, ct);
+        var result = await RestartAsync();
 
-        Assert.Equal(ResistanceRestartStatus.Restarted, result.Status);
+        Assert.Null(result.Failure);
         var game = await ReloadAsync();
         Assert.Equal(ResistancePhase.SelectingTeam, game.Phase);
         Assert.Equal(1, game.MissionNumber);
@@ -301,9 +331,9 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         Assert.Null(game.StartedAt);
         Assert.True(game.IsOpen);
 
-        var started = await _repository.StartAsync(_sessionId, DateTimeOffset.UtcNow, ct);
+        var started = await StartAsync();
 
-        Assert.Equal(ResistanceStartStatus.Started, started.Status);
+        Assert.Null(started.Failure);
         Assert.Equal(2, (await ReloadAsync()).Players.Count(x => x.Role == ResistanceRole.Spy));
     }
 
@@ -323,7 +353,7 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
             await VoteAsync(false, false, false, false, false);
         }
 
-        await _repository.RestartAsync(_sessionId, ct);
+        await RestartAsync();
 
         Assert.Null((await SetPlotCardsAsync(true)).Failure);
         Assert.True((await ReloadAsync()).Rules.PlotCardsEnabled);
@@ -353,7 +383,7 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         Assert.Equal(ResistanceRole.Spy, over.Winner);
         Assert.Equal(5, over.RejectedTeams);
         Assert.All(over.Players, x => Assert.NotNull(x.Vote));
-        Assert.Equal(ResistanceVoteStatus.GameOver, (await _repository.VoteAsync(_sessionId, _players[0], true, ct)).Status);
+        Assert.Equal(ResistanceFailure.GameOver, (await CastVoteAsync(_players[0], true)).Failure);
         Assert.Equal(ResistanceContinueStatus.GameOver, (await _repository.ContinueAsync(_sessionId, null, true, ct)).Status);
         Assert.Equal(ResistanceTeamStatus.GameOver, (await _repository.SelectTeamAsync(_sessionId, over.LeaderPlayerId, _players.Take(2).ToList(), ct)).Status);
     }
@@ -399,10 +429,40 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         await StartGameWithTeamAsync(5);
 
         var statuses = await Task.WhenAll(_players.Select(player => Task.Run(
-            async () => (await _repository.VoteAsync(_sessionId, player, true, CancellationToken.None)).Status)));
+            async () => (await CastVoteAsync(player, true)).Failure)));
 
         var game = await ReloadAsync();
-        Assert.All(statuses, x => Assert.True(x is ResistanceVoteStatus.Voted or ResistanceVoteStatus.NotVoting));
+        Assert.All(statuses, x => Assert.True(x is null or ResistanceFailure.NotVoting));
         Assert.All(game.Players, x => Assert.True(x.Vote));
+    }
+
+    private async Task NewSessionAsync(string code)
+    {
+        await using var dbContext = await _provider.GetRequiredService<IDbContextFactory<WriterDbContext>>().CreateDbContextAsync();
+        var session = new Session(code, "Party", "hash");
+        dbContext.Sessions.Add(session);
+        await dbContext.SaveChangesAsync();
+        _sessionId = session.Id;
+    }
+
+    /// <summary>
+    /// The vote that completes the round tallies it. Votes that land together must not each see a missing one, or the
+    /// game would sit in voting with everybody's vote cast. Several games, so a rare interleaving shows up.
+    /// </summary>
+    [Fact]
+    public async Task ConcurrentVotes_AlwaysTallyTheRound()
+    {
+        for (var round = 0; round < 30; round++)
+        {
+            await NewSessionAsync($"R{round:D5}");
+            await StartGameWithTeamAsync(5);
+
+            await Task.WhenAll(_players.Select(player => Task.Run(
+                () => CastVoteAsync(player, true))));
+
+            var game = await ReloadAsync();
+            Assert.True(game.Phase != ResistancePhase.Voting, $"The round {round} was never tallied");
+            Assert.All(game.Players, x => Assert.True(x.Vote));
+        }
     }
 }

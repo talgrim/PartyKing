@@ -52,36 +52,6 @@ public class ResistanceErrorsTests
         Assert.Equal("The session already has a Resistance game.", ResistanceErrors.AlreadyCreated.Description);
     }
 
-    [Fact]
-    public void StartStatus_MapsToErrors()
-    {
-        AssertTable(
-            ResistanceErrors.From,
-            new Dictionary<ResistanceStartStatus, Expected?>
-            {
-                [ResistanceStartStatus.NoGame] = NoGame,
-                [ResistanceStartStatus.NotOpen] = new(ErrorType.Conflict, "Resistance.NotOpen", "The game is not open to guests yet."),
-                [ResistanceStartStatus.AlreadyStarted] = new(ErrorType.Conflict, "Resistance.AlreadyStarted", "The game has already started."),
-                [ResistanceStartStatus.NotEnoughPlayers] = new(
-                    ErrorType.Conflict, "Resistance.NotEnoughPlayers", "The game needs at least 5 players to start."),
-                [ResistanceStartStatus.Started] = null,
-            });
-    }
-
-    [Fact]
-    public void RestartStatus_MapsToErrors()
-    {
-        AssertTable(
-            ResistanceErrors.From,
-            new Dictionary<ResistanceRestartStatus, Expected?>
-            {
-                [ResistanceRestartStatus.NoGame] = NoGame,
-                [ResistanceRestartStatus.NotStarted] = NotStarted,
-                [ResistanceRestartStatus.NotOver] = new(ErrorType.Conflict, "Resistance.NotOver", "The game is still being played."),
-                [ResistanceRestartStatus.Restarted] = null,
-            });
-    }
-
     [Theory]
     [InlineData(5, 1, 2)]
     [InlineData(6, 3, 4)]
@@ -176,27 +146,6 @@ public class ResistanceErrorsTests
                     "Resistance.ChoiceRequired",
                     "Say whether to take the Opinion Maker or a card from the hand."),
                 [ResistancePlayCardStatus.Done] = null,
-            });
-    }
-
-    [Fact]
-    public void VoteStatus_MapsToErrors()
-    {
-        AssertTable(
-            ResistanceErrors.From,
-            new Dictionary<ResistanceVoteStatus, Expected?>
-            {
-                [ResistanceVoteStatus.NoGame] = NoGame,
-                [ResistanceVoteStatus.NotStarted] = NotStarted,
-                [ResistanceVoteStatus.GameOver] = GameOver,
-                [ResistanceVoteStatus.NotPlayer] = new(
-                    ErrorType.Forbidden, "Resistance.NotPlayer", "Only the players of the game vote."),
-                [ResistanceVoteStatus.NotVoting] = new(ErrorType.Conflict, "Resistance.NotVoting", "No team is up for a vote."),
-                [ResistanceVoteStatus.VoteLocked] = new(
-                    ErrorType.Conflict, "Resistance.VoteLocked", "An Opinion Maker's vote can't be changed."),
-                [ResistanceVoteStatus.OpinionMakersFirst] = new(
-                    ErrorType.Conflict, "Resistance.OpinionMakersFirst", "The Opinion Makers vote first."),
-                [ResistanceVoteStatus.Voted] = null,
             });
     }
 

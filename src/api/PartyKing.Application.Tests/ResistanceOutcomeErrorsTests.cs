@@ -107,25 +107,6 @@ public class ResistanceOutcomeErrorsTests
             }
         }
 
-        Check<ResistanceStartStatus>(
-            ResistanceErrors.From,
-            new()
-            {
-                [ResistanceStartStatus.NoGame] = ResistanceFailure.NoGame,
-                [ResistanceStartStatus.NotOpen] = ResistanceFailure.NotOpen,
-                [ResistanceStartStatus.AlreadyStarted] = ResistanceFailure.AlreadyStarted,
-                [ResistanceStartStatus.NotEnoughPlayers] = ResistanceFailure.NotEnoughPlayers,
-                [ResistanceStartStatus.Started] = null,
-            });
-        Check<ResistanceRestartStatus>(
-            ResistanceErrors.From,
-            new()
-            {
-                [ResistanceRestartStatus.NoGame] = ResistanceFailure.NoGame,
-                [ResistanceRestartStatus.NotStarted] = ResistanceFailure.NotStarted,
-                [ResistanceRestartStatus.NotOver] = ResistanceFailure.NotOver,
-                [ResistanceRestartStatus.Restarted] = null,
-            });
         Check<ResistanceTeamStatus>(
             x => ResistanceErrors.From(x, game),
             new()
@@ -171,19 +152,6 @@ public class ResistanceOutcomeErrorsTests
                 [ResistancePlayCardStatus.NotPlayer] = ResistanceFailure.NotPlayerToConfirm,
                 [ResistancePlayCardStatus.ChoiceRequired] = ResistanceFailure.ChoiceRequired,
                 [ResistancePlayCardStatus.Done] = null,
-            });
-        Check<ResistanceVoteStatus>(
-            ResistanceErrors.From,
-            new()
-            {
-                [ResistanceVoteStatus.NoGame] = ResistanceFailure.NoGame,
-                [ResistanceVoteStatus.NotStarted] = ResistanceFailure.NotStarted,
-                [ResistanceVoteStatus.GameOver] = ResistanceFailure.GameOver,
-                [ResistanceVoteStatus.NotPlayer] = ResistanceFailure.NotPlayerToVote,
-                [ResistanceVoteStatus.NotVoting] = ResistanceFailure.NotVoting,
-                [ResistanceVoteStatus.VoteLocked] = ResistanceFailure.VoteLocked,
-                [ResistanceVoteStatus.OpinionMakersFirst] = ResistanceFailure.OpinionMakersFirst,
-                [ResistanceVoteStatus.Voted] = null,
             });
         Check<ResistanceMissionStatus>(
             ResistanceErrors.From,
