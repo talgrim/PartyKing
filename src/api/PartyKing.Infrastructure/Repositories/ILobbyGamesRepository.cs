@@ -26,6 +26,19 @@ public interface ILobbyGamesRepository<TGame, TPlayer>
     Task<LobbyResult<TGame>> ReorderAsync(
         Guid sessionId, IReadOnlyList<Guid> playerIds, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Runs a game action on the session's game, loaded with everything it needs, and saves the changes when the
+    /// result says it <see cref="IGameUpdateResult.Changed"/> something. Returns <paramref name="noGame"/> without
+    /// running the action when the session has no game. <paramref name="operation"/> names the action in the metrics.
+    /// </summary>
+    Task<TResult> UpdateAsync<TResult>(
+        Guid sessionId,
+        string operation,
+        TResult noGame,
+        Func<TGame, TResult> action,
+        CancellationToken cancellationToken)
+        where TResult : IGameUpdateResult;
+
     /// <summary>Deletes the session's game; false when there was none.</summary>
     Task<bool> DeleteAsync(Guid sessionId, CancellationToken cancellationToken);
 }

@@ -259,6 +259,31 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
         return new LobbyResult<TGame>(LobbyStatus.Done, game);
     }
 
+    public async Task<TResult> UpdateAsync<TResult>(
+        Guid sessionId,
+        string operation,
+        TResult noGame,
+        Func<TGame, TResult> action,
+        CancellationToken cancellationToken)
+        where TResult : IGameUpdateResult
+    {
+        await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
+
+        var game = await LoadAsync(dbContext, sessionId, cancellationToken);
+        if (game is null)
+        {
+            return noGame;
+        }
+
+        var result = action(game);
+        if (result.Changed)
+        {
+            await SaveAsync(dbContext, cancellationToken);
+        }
+
+        return result;
+    }
+
     public async Task<bool> DeleteAsync(Guid sessionId, CancellationToken cancellationToken)
     {
         await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
