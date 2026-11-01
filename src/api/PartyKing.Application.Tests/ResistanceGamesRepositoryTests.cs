@@ -1,3 +1,4 @@
+using PartyKing.Application.Events;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PartyKing.Domain.Entities.Games.Resistance;
@@ -44,7 +45,7 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
 
         _repository = new ResistanceGamesRepository(
             _provider.GetRequiredService<IDbContextFactory<ReaderDbContext>>(),
-            writer, _metrics);
+            writer, _metrics, new NullDomainEventDispatcher());
     }
 
     public async Task DisposeAsync()

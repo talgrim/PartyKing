@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Configuration;
+using PartyKing.Application.Events;
 using PartyKing.Application.Games.Services.Base;
 using PartyKing.Application.Games.Services.NeverHaveIEver;
 using PartyKing.Application.Games.Services.Resistance;
@@ -16,6 +17,7 @@ using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Application.System;
+using PartyKing.Domain.Events;
 
 namespace PartyKing.Application;
 
@@ -25,6 +27,7 @@ public static class DependencyInjection
     {
         services.RegisterSystem();
         services.RegisterRealtime();
+        services.RegisterDomainEvents();
         services.RegisterSlideshow(configuration);
         services.RegisterSpotify();
         services.RegisterQueue();
@@ -64,6 +67,19 @@ public static class DependencyInjection
     private static void RegisterSystem(this IServiceCollection services)
     {
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
+    }
+
+    private static void RegisterDomainEvents(this IServiceCollection services)
+    {
+        services.AddSingleton<IDomainEventDispatcher, DomainEventDispatcher>();
+    }
+
+    /// <summary>Registers a handler of <typeparamref name="TEvent"/>; an event may have any number of them.</summary>
+    private static void AddDomainEventHandler<TEvent, THandler>(this IServiceCollection services)
+        where TEvent : IDomainEvent
+        where THandler : class, IDomainEventHandler<TEvent>
+    {
+        services.AddScoped<IDomainEventHandler<TEvent>, THandler>();
     }
 
     private static void RegisterRealtime(this IServiceCollection services)

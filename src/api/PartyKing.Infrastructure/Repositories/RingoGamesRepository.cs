@@ -1,3 +1,4 @@
+using PartyKing.Application.Events;
 using PartyKing.Domain.Repositories;
 using Microsoft.EntityFrameworkCore;
 using PartyKing.Domain.Entities.Games.Ringo;
@@ -11,8 +12,9 @@ internal class RingoGamesRepository : LobbyGamesRepository<RingoGame, RingoPlaye
     public RingoGamesRepository(
         IDbContextFactory<ReaderDbContext> readerFactory,
         IDbContextFactory<WriterDbContext> writerFactory,
-        RepositoryMetrics metrics)
-        : base(readerFactory, writerFactory, metrics)
+        RepositoryMetrics metrics,
+        IDomainEventDispatcher dispatcher)
+        : base(readerFactory, writerFactory, metrics, dispatcher)
     {
     }
 

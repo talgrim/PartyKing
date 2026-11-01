@@ -1,3 +1,4 @@
+using PartyKing.Application.Events;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PartyKing.Domain.Entities.Games.Base;
@@ -40,7 +41,7 @@ public class RingoSessionDeletionTests : IAsyncLifetime
             await dbContext.Database.MigrateAsync();
         }
 
-        _ringo = new RingoGamesRepository(reader, _writer, _metrics);
+        _ringo = new RingoGamesRepository(reader, _writer, _metrics, new NullDomainEventDispatcher());
         _sessions = new SessionsRepository(reader, _writer);
     }
 

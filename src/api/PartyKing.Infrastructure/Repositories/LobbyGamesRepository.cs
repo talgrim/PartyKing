@@ -1,3 +1,5 @@
+using PartyKing.Application.Events;
+using PartyKing.Domain.Events;
 using PartyKing.Domain.Repositories;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -19,6 +21,7 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
     private readonly IDbContextFactory<ReaderDbContext> _readerFactory;
     private readonly IDbContextFactory<WriterDbContext> _writerFactory;
     private readonly RepositoryMetrics _metrics;
+    private readonly IDomainEventDispatcher _dispatcher;
 
     // The read in flight per session, shared by every caller that asks for it meanwhile
     private readonly ConcurrentDictionary<Guid, Lazy<Task<TGame?>>> _reads = new();
@@ -30,11 +33,13 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
     protected LobbyGamesRepository(
         IDbContextFactory<ReaderDbContext> readerFactory,
         IDbContextFactory<WriterDbContext> writerFactory,
-        RepositoryMetrics metrics)
+        RepositoryMetrics metrics,
+        IDomainEventDispatcher dispatcher)
     {
         _readerFactory = readerFactory;
         _writerFactory = writerFactory;
         _metrics = metrics;
+        _dispatcher = dispatcher;
     }
 
     /// <summary>The game's table with everything the game needs loaded, including its players.</summary>
@@ -49,21 +54,37 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
     /// session runs. Without it two writes that load the game before either saves both act on a copy without the
     /// other's change: the last two votes would each see a vote missing, and the round would never be counted. The
     /// time spent waiting for the lock is recorded under <paramref name="operation"/>.
+    /// The write adds the events of the game it saved to the list it is given. They are dispatched after the lock is
+    /// released, so a handler may write to the same session again, and with no cancellation: the change is committed
+    /// whether or not the request is still wanted, and its listeners have to hear of it.
     /// </summary>
     protected async Task<TResult> WriteAsync<TResult>(
-        Guid sessionId, string operation, Func<Task<TResult>> write, CancellationToken cancellationToken)
+        Guid sessionId,
+        string operation,
+        Func<List<IDomainEvent>, Task<TResult>> write,
+        CancellationToken cancellationToken)
     {
         var writeLock = _writeLocks[(uint)sessionId.GetHashCode() % (uint)_writeLocks.Length];
         await WaitForWriteLockAsync(operation, writeLock, cancellationToken);
 
+        var events = new List<IDomainEvent>();
+        TResult result;
+
         try
         {
-            return await write();
+            result = await write(events);
         }
         finally
         {
             writeLock.Release();
         }
+
+        if (events.Count > 0)
+        {
+            await _dispatcher.DispatchAsync(events, CancellationToken.None);
+        }
+
+        return result;
     }
 
     private async Task WaitForWriteLockAsync(
@@ -176,7 +197,7 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
         return await WriteAsync(
             game.SessionId,
             nameof(TryCreateAsync),
-            async () =>
+            async _ =>
             {
                 await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
 
@@ -206,7 +227,7 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
         return await WriteAsync(
             sessionId,
             nameof(OpenAsync),
-            async () =>
+            async events =>
             {
                 await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
 
@@ -217,6 +238,8 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
                     {
                         return null;
                     }
+
+                    events.AddRange(game.DrainEvents());
                 }
 
                 return game;
@@ -230,7 +253,7 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
         return await WriteAsync(
             sessionId,
             nameof(JoinAsync),
-            async () =>
+            async events =>
             {
                 await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
 
@@ -265,6 +288,8 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
                     return new LobbyResult<TGame>(LobbyStatus.NoGame, null);
                 }
 
+                events.AddRange(game.DrainEvents());
+
                 return new LobbyResult<TGame>(LobbyStatus.Done, game);
             },
             cancellationToken);
@@ -276,7 +301,7 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
         return await WriteAsync(
             sessionId,
             nameof(KickAsync),
-            async () =>
+            async events =>
             {
                 await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
 
@@ -300,6 +325,8 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
                     return new LobbyResult<TGame>(LobbyStatus.NoGame, null);
                 }
 
+                events.AddRange(game.DrainEvents());
+
                 return new LobbyResult<TGame>(LobbyStatus.Done, game);
             },
             cancellationToken);
@@ -311,7 +338,7 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
         return await WriteAsync(
             sessionId,
             nameof(ReorderAsync),
-            async () =>
+            async events =>
             {
                 await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
 
@@ -332,6 +359,8 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
                     return new LobbyResult<TGame>(LobbyStatus.NoGame, null);
                 }
 
+                events.AddRange(game.DrainEvents());
+
                 return new LobbyResult<TGame>(LobbyStatus.Done, game);
             },
             cancellationToken);
@@ -348,7 +377,7 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
         return await WriteAsync(
             sessionId,
             operation,
-            async () =>
+            async events =>
             {
                 await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
 
@@ -364,6 +393,11 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
                     return noGame;
                 }
 
+                if (result.Changed)
+                {
+                    events.AddRange(game.DrainEvents());
+                }
+
                 return result;
             },
             cancellationToken);
@@ -374,7 +408,7 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
         return await WriteAsync(
             sessionId,
             nameof(DeleteAsync),
-            async () =>
+            async _ =>
             {
                 await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
 
