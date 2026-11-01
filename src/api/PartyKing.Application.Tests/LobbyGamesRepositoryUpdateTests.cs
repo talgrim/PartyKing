@@ -15,6 +15,7 @@ namespace PartyKing.Application.Tests;
 /// </summary>
 public class LobbyGamesRepositoryUpdateTests : IAsyncLifetime
 {
+    private readonly RepositoryMetrics _metrics = new();
     private sealed record Outcome(bool Changed, int? SeenCardId = null) : IGameUpdateResult;
 
     private readonly string _directory = Path.Combine(Path.GetTempPath(), $"partyking-tests-{Guid.NewGuid():N}");
@@ -46,11 +47,12 @@ public class LobbyGamesRepositoryUpdateTests : IAsyncLifetime
 
         _repository = new RingoGamesRepository(
             _provider.GetRequiredService<IDbContextFactory<ReaderDbContext>>(),
-            _writer);
+            _writer, _metrics);
     }
 
     public async Task DisposeAsync()
     {
+        _metrics.Dispose();
         await _provider.DisposeAsync();
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
         Directory.Delete(_directory, recursive: true);
@@ -203,5 +205,95 @@ public class LobbyGamesRepositoryUpdateTests : IAsyncLifetime
         Assert.Equal("RingoGamesRepository", tags["repository"]);
         Assert.Equal("FlipAsync", tags["operation"]);
         Assert.Equal(RepositoryMetrics.SuccessOutcome, tags["outcome"]);
+    }
+
+    /// <summary>
+    /// Collects the write lock waits of this test's repository for the operations named <paramref name="operations"/>;
+    /// tests of other classes run in parallel and record the same instrument.
+    /// </summary>
+    private MeterListener ListenToWriteLockWaits(
+        ICollection<(string Repository, string Operation, bool Acquired)> waits, params string[] operations)
+    {
+        var listener = new MeterListener();
+        listener.InstrumentPublished = (instrument, l) =>
+        {
+            if (instrument.Name == RepositoryMetrics.GameWriteLockWaitInstrumentName
+                && ReferenceEquals(instrument.Meter.Scope, _metrics))
+            {
+                l.EnableMeasurementEvents(instrument);
+            }
+        };
+        listener.SetMeasurementEventCallback<double>((_, _, tags, _) =>
+        {
+            var tagMap = tags.ToArray().ToDictionary(t => t.Key, t => t.Value);
+            var operation = (string)tagMap["operation"]!;
+            if (operations.Contains(operation))
+            {
+                lock (waits)
+                {
+                    waits.Add(((string)tagMap["repository"]!, operation, (bool)tagMap["acquired"]!));
+                }
+            }
+        });
+        listener.Start();
+
+        return listener;
+    }
+
+    [Fact]
+    public async Task EveryWrite_RecordsItsWaitForTheSessionLock()
+    {
+        await CreateGameAsync();
+        var waits = new List<(string Repository, string Operation, bool Acquired)>();
+        var operations = new[] { "OpenAsync", "JoinAsync", "KickAsync", "ReorderAsync", nameof(EveryWrite_RecordsItsWaitForTheSessionLock) };
+        using var listener = ListenToWriteLockWaits(waits, operations);
+        var player = new RingoPlayer { PlayerId = Guid.NewGuid(), Name = "Ola", NormalizedName = "OLA", JoinedAt = DateTimeOffset.UtcNow };
+
+        await _repository.OpenAsync(_sessionId, CancellationToken.None);
+        await _repository.JoinAsync(_sessionId, player, CancellationToken.None);
+        await _repository.ReorderAsync(_sessionId, [player.PlayerId], CancellationToken.None);
+        await _repository.KickAsync(_sessionId, player.PlayerId, CancellationToken.None);
+        await _repository.UpdateAsync(
+            _sessionId,
+            nameof(EveryWrite_RecordsItsWaitForTheSessionLock),
+            new Outcome(false),
+            _ => new Outcome(false),
+            CancellationToken.None);
+
+        Assert.Equal(operations.Order(), waits.Select(x => x.Operation).Order());
+        Assert.All(waits, x => Assert.Equal(("RingoGamesRepository", true), (x.Repository, x.Acquired)));
+    }
+
+    [Fact]
+    public async Task ACancelledWaitForTheSessionLock_IsRecordedAsNotAcquired()
+    {
+        await CreateGameAsync();
+        var waits = new List<(string Repository, string Operation, bool Acquired)>();
+        const string holder = "LockHolder";
+        const string waiter = "LockWaiter";
+        using var listener = ListenToWriteLockWaits(waits, holder, waiter);
+        using var holding = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        var first = Task.Run(() => _repository.UpdateAsync(
+            _sessionId,
+            holder,
+            new Outcome(false),
+            _ =>
+            {
+                holding.Set();
+                release.Wait();
+                return new Outcome(false);
+            },
+            CancellationToken.None));
+        Assert.True(holding.Wait(TimeSpan.FromSeconds(10)));
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => _repository.UpdateAsync(
+            _sessionId, waiter, new Outcome(false), _ => new Outcome(false), cancellation.Token));
+        release.Set();
+        await first;
+
+        Assert.Contains((("RingoGamesRepository"), waiter, false), waits);
+        Assert.Contains(("RingoGamesRepository", holder, true), waits);
     }
 }

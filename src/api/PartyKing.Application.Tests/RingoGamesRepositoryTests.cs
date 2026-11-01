@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PartyKing.Domain.Entities.Games;
 using PartyKing.Domain.Entities.Sessions;
+using PartyKing.Infrastructure.Metrics;
 using PartyKing.Infrastructure.Repositories;
 using PartyKing.Infrastructure.Results;
 using PartyKing.Persistence.Database;
@@ -14,6 +15,7 @@ namespace PartyKing.Application.Tests;
 /// </summary>
 public class RingoGamesRepositoryTests : IAsyncLifetime
 {
+    private readonly RepositoryMetrics _metrics = new();
     // Card ids run by suit, 13 ranks each, 2 to ace: the king is the rank at index 11
     private static readonly int[] Kings = [11, 24, 37, 50];
 
@@ -46,11 +48,12 @@ public class RingoGamesRepositoryTests : IAsyncLifetime
 
         _repository = new RingoGamesRepository(
             _provider.GetRequiredService<IDbContextFactory<ReaderDbContext>>(),
-            _writer);
+            _writer, _metrics);
     }
 
     public async Task DisposeAsync()
     {
+        _metrics.Dispose();
         await _provider.DisposeAsync();
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
         Directory.Delete(_directory, recursive: true);

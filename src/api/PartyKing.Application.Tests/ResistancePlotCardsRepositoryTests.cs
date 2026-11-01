@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PartyKing.Domain.Entities.Games;
 using PartyKing.Domain.Entities.Sessions;
+using PartyKing.Infrastructure.Metrics;
 using PartyKing.Infrastructure.Repositories;
 using PartyKing.Infrastructure.Results;
 using PartyKing.Persistence.Database;
@@ -11,6 +12,7 @@ namespace PartyKing.Application.Tests;
 /// <summary>The plot cards add-on against a real SQLite file: the deck rows, drawing, dealing and the restart.</summary>
 public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
 {
+    private readonly RepositoryMetrics _metrics = new();
     private readonly string _directory = Path.Combine(Path.GetTempPath(), $"partyking-tests-{Guid.NewGuid():N}");
     private string ConnectionString => $"Data Source={Path.Combine(_directory, "PartyKing.db")}";
     private ServiceProvider _provider = null!;
@@ -40,11 +42,12 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
 
         _repository = new ResistanceGamesRepository(
             _provider.GetRequiredService<IDbContextFactory<ReaderDbContext>>(),
-            _writer);
+            _writer, _metrics);
     }
 
     public async Task DisposeAsync()
     {
+        _metrics.Dispose();
         await _provider.DisposeAsync();
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
         Directory.Delete(_directory, recursive: true);
