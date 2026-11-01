@@ -1,3 +1,4 @@
+using PartyKing.Application.Events;
 using PartyKing.Domain.Repositories;
 using PartyKing.Application.Games.Services.Resistance;
 using PartyKing.Domain.Entities.Games.Base;
@@ -18,6 +19,12 @@ internal sealed class FakeRulesProvider : IResistanceRulesProvider
 internal sealed class FakeResistanceGamesRepository : IResistanceGamesRepository
 {
     private readonly Dictionary<Guid, ResistanceGame> _games = [];
+    private readonly IDomainEventDispatcher _dispatcher;
+
+    public FakeResistanceGamesRepository(IDomainEventDispatcher dispatcher)
+    {
+        _dispatcher = dispatcher;
+    }
 
     public Task<ResistanceGame?> GetAsync(Guid sessionId, CancellationToken cancellationToken) =>
         Task.FromResult(_games.GetValueOrDefault(sessionId));
@@ -25,7 +32,7 @@ internal sealed class FakeResistanceGamesRepository : IResistanceGamesRepository
     public Task<bool> TryCreateAsync(ResistanceGame game, CancellationToken cancellationToken) =>
         Task.FromResult(_games.TryAdd(game.SessionId, game));
 
-    public Task<TResult> UpdateAsync<TResult>(
+    public async Task<TResult> UpdateAsync<TResult>(
         Guid sessionId,
         string operation,
         TResult noGame,
@@ -33,44 +40,65 @@ internal sealed class FakeResistanceGamesRepository : IResistanceGamesRepository
         CancellationToken cancellationToken)
         where TResult : IGameUpdateResult
     {
-        return Task.FromResult(_games.TryGetValue(sessionId, out var game) ? action(game) : noGame);
+        if (!_games.TryGetValue(sessionId, out var game))
+        {
+            return noGame;
+        }
+
+        var result = action(game);
+        if (result.Changed)
+        {
+            await _dispatcher.DispatchAsync(game);
+        }
+
+        return result;
     }
 
-    public Task<ResistanceGame?> OpenAsync(Guid sessionId, CancellationToken cancellationToken)
+    public async Task<ResistanceGame?> OpenAsync(Guid sessionId, CancellationToken cancellationToken)
     {
         var game = _games.GetValueOrDefault(sessionId);
-        game?.Open();
+        if (game?.Open() == true)
+        {
+            await _dispatcher.DispatchAsync(game);
+        }
 
-        return Task.FromResult(game);
+        return game;
     }
 
-    public Task<LobbyResult<ResistanceGame>> JoinAsync(
+    public async Task<LobbyResult<ResistanceGame>> JoinAsync(
         Guid sessionId, ResistancePlayer player, CancellationToken cancellationToken)
     {
         return _games.TryGetValue(sessionId, out var game)
-            ? Result(game.Join(player), game)
-            : Result(LobbyStatus.NoGame, null);
+            ? await ResultAsync(game.Join(player), game)
+            : new LobbyResult<ResistanceGame>(LobbyStatus.NoGame, null);
     }
 
-    public Task<LobbyResult<ResistanceGame>> KickAsync(
+    public async Task<LobbyResult<ResistanceGame>> KickAsync(
         Guid sessionId, Guid playerId, CancellationToken cancellationToken)
     {
         return _games.TryGetValue(sessionId, out var game)
-            ? Result(game.Kick(playerId).Status, game)
-            : Result(LobbyStatus.NoGame, null);
+            ? await ResultAsync(game.Kick(playerId).Status, game)
+            : new LobbyResult<ResistanceGame>(LobbyStatus.NoGame, null);
     }
 
-    public Task<LobbyResult<ResistanceGame>> ReorderAsync(
+    public async Task<LobbyResult<ResistanceGame>> ReorderAsync(
         Guid sessionId, IReadOnlyList<Guid> playerIds, CancellationToken cancellationToken)
     {
         return _games.TryGetValue(sessionId, out var game)
-            ? Result(game.Reorder(playerIds), game)
-            : Result(LobbyStatus.NoGame, null);
+            ? await ResultAsync(game.Reorder(playerIds), game)
+            : new LobbyResult<ResistanceGame>(LobbyStatus.NoGame, null);
     }
 
     public Task<bool> DeleteAsync(Guid sessionId, CancellationToken cancellationToken) =>
         Task.FromResult(_games.Remove(sessionId));
 
-    private static Task<LobbyResult<ResistanceGame>> Result(LobbyStatus status, ResistanceGame? game) =>
-        Task.FromResult(new LobbyResult<ResistanceGame>(status, game));
+    private async Task<LobbyResult<ResistanceGame>> ResultAsync(LobbyStatus status, ResistanceGame game)
+    {
+        if (status == LobbyStatus.Done)
+        {
+            await _dispatcher.DispatchAsync(game);
+        }
+
+        return new LobbyResult<ResistanceGame>(status, game);
+    }
 }
