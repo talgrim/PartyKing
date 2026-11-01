@@ -34,57 +34,6 @@ internal class ResistanceGamesRepository
     protected override DbSet<ResistancePlayer> PlayersOf(PartyKingDbContextBase dbContext) =>
         dbContext.ResistancePlayers;
 
-    public async Task<ResistanceRulesResult> RefreshRulesAsync(
-        Guid sessionId, ResistanceRules rules, CancellationToken cancellationToken)
-    {
-        await using var dbContext = await CreateWriterAsync(cancellationToken);
-
-        var game = await LoadAsync(dbContext, sessionId, cancellationToken);
-        if (game is null)
-        {
-            return new ResistanceRulesResult(ResistanceRulesStatus.NoGame, null);
-        }
-
-        if (game.IsOpen || game.IsStarted)
-        {
-            return new ResistanceRulesResult(ResistanceRulesStatus.NotEditable, game);
-        }
-
-        rules.PlotCardsEnabled = game.Rules.PlotCardsEnabled;
-        game.Rules = rules;
-        await SaveAsync(dbContext, cancellationToken);
-
-        return new ResistanceRulesResult(ResistanceRulesStatus.Refreshed, game);
-    }
-
-    public async Task<ResistanceRulesResult> SetPlotCardsAsync(
-        Guid sessionId, bool enabled, CancellationToken cancellationToken)
-    {
-        await using var dbContext = await CreateWriterAsync(cancellationToken);
-
-        var game = await LoadAsync(dbContext, sessionId, cancellationToken);
-        if (game is null)
-        {
-            return new ResistanceRulesResult(ResistanceRulesStatus.NoGame, null);
-        }
-
-        if (game.IsStarted)
-        {
-            return new ResistanceRulesResult(ResistanceRulesStatus.NotEditable, game);
-        }
-
-        // Rules is a JSON column compared by reference, so assign a copy to have the change detected.
-        game.Rules = new ResistanceRules
-        {
-            PlayerCounts = game.Rules.PlayerCounts,
-            PlotDeck = game.Rules.PlotDeck,
-            PlotCardsEnabled = enabled,
-        };
-        await SaveAsync(dbContext, cancellationToken);
-
-        return new ResistanceRulesResult(ResistanceRulesStatus.Refreshed, game);
-    }
-
     public async Task<ResistanceStartResult> StartAsync(
         Guid sessionId, DateTimeOffset startedAt, CancellationToken cancellationToken)
     {

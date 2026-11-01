@@ -148,9 +148,17 @@ internal class ResistanceLobbyService : IResistanceLobbyService
         return _gate.RunAsManagerAsync(
             sessionId,
             caller,
-            () => _games.RefreshRulesAsync(sessionId, _rulesProvider.Current(), cancellationToken),
-            result => ResistanceErrors.From(
-                result.Status, "The rules can only be refreshed before the game is opened."),
+            () =>
+            {
+                var rules = _rulesProvider.Current();
+
+                return _games.UpdateAsync(
+                    sessionId,
+                    nameof(RefreshRulesAsync),
+                    ResistanceOutcome.NoGame,
+                    game => game.RefreshRules(rules),
+                    cancellationToken);
+            },
             cancellationToken);
     }
 
@@ -160,9 +168,12 @@ internal class ResistanceLobbyService : IResistanceLobbyService
         return _gate.RunAsManagerAsync(
             sessionId,
             caller,
-            () => _games.SetPlotCardsAsync(sessionId, enabled, cancellationToken),
-            result => ResistanceErrors.From(
-                result.Status, "The plot cards can only be switched before the game starts."),
+            () => _games.UpdateAsync(
+                sessionId,
+                nameof(SetPlotCardsAsync),
+                ResistanceOutcome.NoGame,
+                game => game.SetPlotCards(enabled),
+                cancellationToken),
             cancellationToken);
     }
 

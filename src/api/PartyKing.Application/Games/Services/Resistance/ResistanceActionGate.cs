@@ -2,6 +2,7 @@ using ErrorOr;
 using PartyKing.Application.Mappings;
 using PartyKing.Application.Realtime;
 using PartyKing.Contract.V1.Games.Resistance;
+using PartyKing.Domain.Entities.Games;
 using PartyKing.Infrastructure.Results;
 
 namespace PartyKing.Application.Games.Services.Resistance;
@@ -44,7 +45,9 @@ internal sealed class ResistanceActionGate
             return ResistanceErrors.NoGame;
         }
 
-        return await FinishAsync(sessionId, caller, await call(access.Value), mapError, cancellationToken);
+        var result = await call(access.Value);
+
+        return await FinishAsync(sessionId, caller, mapError(result), result.Game, cancellationToken);
     }
 
     /// <summary>For the host and admins only (<see cref="GameLobby{TGame,TPlayer}.AuthorizeAsync"/>).</summary>
@@ -61,24 +64,45 @@ internal sealed class ResistanceActionGate
             return denied.Errors;
         }
 
-        return await FinishAsync(sessionId, caller, await call(), mapError, cancellationToken);
+        var result = await call();
+
+        return await FinishAsync(sessionId, caller, mapError(result), result.Game, cancellationToken);
     }
 
-    private async Task<ErrorOr<ResistanceGameDto>> FinishAsync<TResult>(
+    /// <summary>
+    /// <see cref="RunAsManagerAsync{TResult}"/> for an action that answers with a <see cref="ResistanceOutcome"/>,
+    /// which names its own error.
+    /// </summary>
+    public async Task<ErrorOr<ResistanceGameDto>> RunAsManagerAsync(
         Guid sessionId,
         GameCaller caller,
-        TResult result,
-        Func<TResult, Error?> mapError,
+        Func<Task<ResistanceOutcome>> call,
         CancellationToken cancellationToken)
-        where TResult : IResistanceResult
     {
-        if (mapError(result) is { } error)
+        if (await _lobby.AuthorizeAsync(sessionId, caller, cancellationToken) is { IsError: true } denied)
         {
-            return error;
+            return denied.Errors;
+        }
+
+        var outcome = await call();
+
+        return await FinishAsync(sessionId, caller, ResistanceErrors.From(outcome), outcome.Game, cancellationToken);
+    }
+
+    private async Task<ErrorOr<ResistanceGameDto>> FinishAsync(
+        Guid sessionId,
+        GameCaller caller,
+        Error? error,
+        ResistanceGame? game,
+        CancellationToken cancellationToken)
+    {
+        if (error is { } failed)
+        {
+            return failed;
         }
 
         await _notifier.ResistanceChangedAsync(sessionId, cancellationToken);
 
-        return ResistanceGameViewBuilder.Build(result.Game!, ResistanceGameLobby.PlayerOf(result.Game!, caller));
+        return ResistanceGameViewBuilder.Build(game!, ResistanceGameLobby.PlayerOf(game!, caller));
     }
 }

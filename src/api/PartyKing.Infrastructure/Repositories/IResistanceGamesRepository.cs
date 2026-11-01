@@ -6,19 +6,6 @@ namespace PartyKing.Infrastructure.Repositories;
 public interface IResistanceGamesRepository : ILobbyGamesRepository<ResistanceGame, ResistancePlayer>
 {
     /// <summary>
-    /// Replaces the game's rules with the given ones. Only while the game is still closed and not started, so the
-    /// players never see the numbers change under them.
-    /// </summary>
-    Task<ResistanceRulesResult> RefreshRulesAsync(
-        Guid sessionId, ResistanceRules rules, CancellationToken cancellationToken);
-
-    /// <summary>
-    /// Switches the plot cards add-on on or off in the game's rules. Only while the game is still closed and not
-    /// started, like <see cref="RefreshRulesAsync"/>.
-    /// </summary>
-    Task<ResistanceRulesResult> SetPlotCardsAsync(Guid sessionId, bool enabled, CancellationToken cancellationToken);
-
-    /// <summary>
     /// Starts the open game: deals the roles and picks the first leader (see <see cref="ResistanceRoles"/>), which
     /// locks the players. Atomic with the players joining, so a join either makes it into the roles or is rejected.
     /// </summary>

@@ -98,13 +98,6 @@ internal static class ResistanceErrors
         _ => throw new ArgumentOutOfRangeException(nameof(failure), failure, "No error is defined for this failure."),
     };
 
-    public static Error? From(ResistanceRulesStatus status, string lockedMessage) => status switch
-    {
-        ResistanceRulesStatus.NoGame => NoGame,
-        ResistanceRulesStatus.NotEditable => Error.Conflict("Resistance.RulesLocked", lockedMessage),
-        _ => null,
-    };
-
     public static Error? From(ResistanceStartStatus status) => status switch
     {
         ResistanceStartStatus.NoGame => NoGame,

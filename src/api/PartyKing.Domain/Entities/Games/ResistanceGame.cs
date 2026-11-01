@@ -56,4 +56,40 @@ public class ResistanceGame : LobbyGame<ResistancePlayer>
 
     /// <summary>The leader submitted a team for the current mission, which locks it (<see cref="ResistancePlayer.IsOnTeam"/>).</summary>
     public bool IsTeamSubmitted => Players.Any(x => x.IsOnTeam);
+
+    /// <summary>
+    /// Replaces the rules with the given ones, keeping whether the plot cards are on. Only while the game is still
+    /// closed and not started, so the players never see the numbers change under them.
+    /// </summary>
+    public ResistanceOutcome RefreshRules(ResistanceRules rules)
+    {
+        if (IsOpen || IsStarted)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.RulesLocked, this);
+        }
+
+        rules.PlotCardsEnabled = Rules.PlotCardsEnabled;
+        Rules = rules;
+
+        return ResistanceOutcome.Success(this);
+    }
+
+    /// <summary>Switches the plot cards add-on on or off in the rules. Allowed until the game starts, open or not.</summary>
+    public ResistanceOutcome SetPlotCards(bool enabled)
+    {
+        if (IsStarted)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.PlotCardsLocked, this);
+        }
+
+        // Rules is a JSON column compared by reference, so assign a copy to have the change detected.
+        Rules = new ResistanceRules
+        {
+            PlayerCounts = Rules.PlayerCounts,
+            PlotDeck = Rules.PlotDeck,
+            PlotCardsEnabled = enabled,
+        };
+
+        return ResistanceOutcome.Success(this);
+    }
 }
