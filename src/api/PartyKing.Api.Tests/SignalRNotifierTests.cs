@@ -14,6 +14,8 @@ public class SignalRNotifierTests
     private readonly Guid _sessionId = Guid.NewGuid();
     private readonly RecordingHubContext _hub = new();
 
+    private string Group(SessionHubTopic topic) => SessionHub.GroupName(_sessionId, topic);
+
     [Fact]
     public async Task QueueNotifier_PushesEachEventToTheSessionGroup()
     {
@@ -27,7 +29,7 @@ public class SignalRNotifierTests
         Assert.Equal(
             [SessionMusicHubEvents.SongAdded, SessionMusicHubEvents.SongRemoved, SessionMusicHubEvents.QueueAdvanced],
             _hub.Sent.Select(x => x.Method));
-        Assert.All(_hub.Sent, x => Assert.Equal(SessionHub.GroupName(_sessionId), x.Group));
+        Assert.All(_hub.Sent, x => Assert.Equal(Group(SessionHubTopic.Music), x.Group));
         Assert.Same(song, _hub.Sent[0].Args.Single());
         Assert.Equal(3, Assert.IsType<QueueItemRemovedDto>(_hub.Sent[1].Args.Single()).SongId);
         var advanced = Assert.IsType<QueueAdvancedDto>(_hub.Sent[2].Args.Single());
@@ -48,9 +50,9 @@ public class SignalRNotifierTests
 
         Assert.Equal(
             [
-                (SessionHub.GroupName(_sessionId), SessionMusicHubEvents.PlayerStateChanged, (object)state),
-                (SessionHub.GroupName(_sessionId), SessionMusicHubEvents.PlayerCommand, command),
-                (SessionHub.GroupName(_sessionId), SessionMusicHubEvents.FallbackErrorChanged, error)
+                (Group(SessionHubTopic.Music), SessionMusicHubEvents.PlayerStateChanged, (object)state),
+                (Group(SessionHubTopic.Music), SessionMusicHubEvents.PlayerCommand, command),
+                (Group(SessionHubTopic.Music), SessionMusicHubEvents.FallbackErrorChanged, error)
             ],
             _hub.Sent.Select(x => (x.Group, x.Method, x.Args.Single())));
     }
@@ -63,7 +65,7 @@ public class SignalRNotifierTests
         await new SignalRLyricsNotifier(_hub).LyricsOffsetChangedAsync(_sessionId, offset, default);
 
         var sent = Assert.Single(_hub.Sent);
-        Assert.Equal((SessionHub.GroupName(_sessionId), SessionMusicHubEvents.LyricsOffsetChanged), (sent.Group, sent.Method));
+        Assert.Equal((Group(SessionHubTopic.Music), SessionMusicHubEvents.LyricsOffsetChanged), (sent.Group, sent.Method));
         Assert.Same(offset, sent.Args.Single());
     }
 
@@ -73,7 +75,7 @@ public class SignalRNotifierTests
         await new SignalRSlideshowNotifier(_hub).SlideshowChangedAsync(_sessionId, default);
 
         var sent = Assert.Single(_hub.Sent);
-        Assert.Equal((SessionHub.GroupName(_sessionId), SessionMusicHubEvents.SlideChanged), (sent.Group, sent.Method));
+        Assert.Equal((Group(SessionHubTopic.Slideshow), SessionMusicHubEvents.SlideChanged), (sent.Group, sent.Method));
         Assert.Empty(sent.Args);
     }
 
@@ -86,7 +88,7 @@ public class SignalRNotifierTests
         await notifier.ChangedAsync(_sessionId, default);
 
         Assert.Equal([SessionMusicHubEvents.RingoOpened, SessionMusicHubEvents.RingoChanged], _hub.Sent.Select(x => x.Method));
-        Assert.All(_hub.Sent, x => Assert.Equal(SessionHub.GroupName(_sessionId), x.Group));
+        Assert.All(_hub.Sent, x => Assert.Equal(Group(SessionHubTopic.Ringo), x.Group));
         Assert.All(_hub.Sent, x => Assert.Empty(x.Args));
     }
 
@@ -101,8 +103,29 @@ public class SignalRNotifierTests
         Assert.Equal(
             [SessionMusicHubEvents.ResistanceOpened, SessionMusicHubEvents.ResistanceChanged],
             _hub.Sent.Select(x => x.Method));
-        Assert.All(_hub.Sent, x => Assert.Equal(SessionHub.GroupName(_sessionId), x.Group));
+        Assert.All(_hub.Sent, x => Assert.Equal(Group(SessionHubTopic.Resistance), x.Group));
         Assert.All(_hub.Sent, x => Assert.Empty(x.Args));
+    }
+
+    [Theory]
+    [InlineData(null, "Music,Slideshow,Ringo,Resistance")]
+    [InlineData("", "Music,Slideshow,Ringo,Resistance")]
+    [InlineData("ringo", "Ringo")]
+    [InlineData("Music, resistance,music", "Music,Resistance")]
+    public void Topics_AreParsedFromTheQuery(string? value, string expected)
+    {
+        Assert.True(SessionHubTopics.TryParse(value, out var topics));
+        Assert.Equal(expected, string.Join(",", topics));
+    }
+
+    [Theory]
+    [InlineData("chess")]
+    [InlineData("music,chess")]
+    [InlineData("42")]
+    [InlineData(",")]
+    public void Topics_RejectUnknownNames(string value)
+    {
+        Assert.False(SessionHubTopics.TryParse(value, out _));
     }
 
     [Fact]
