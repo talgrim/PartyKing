@@ -15,6 +15,7 @@ using PartyKing.Application.Player.Services;
 using PartyKing.Application.Queue.Handlers;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Realtime;
+using PartyKing.Application.Sessions.Handlers;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Application.Spotify.Services;
@@ -24,6 +25,7 @@ using PartyKing.Domain.Events.Games.Base;
 using PartyKing.Domain.Events.Games.Resistance;
 using PartyKing.Domain.Events.Games.Ringo;
 using PartyKing.Domain.Events.Queue;
+using PartyKing.Domain.Events.Sessions;
 
 namespace PartyKing.Application;
 
@@ -61,6 +63,19 @@ public static class DependencyInjection
         services.AddScoped<ISessionAccessService, SessionAccessService>();
         services.AddScoped<ISessionJoinTokenService, SessionJoinTokenService>();
         services.AddScoped<IHostSessionCleanup, HostSessionCleanup>();
+
+        // Handlers run in registration order; the cleanup comes before the log line of the same event
+        services.AddDomainEventHandler<HostReleased, HostCleanupHandler>();
+        services.AddDomainEventHandler<SessionDeleted, HostCleanupHandler>();
+        services.AddDomainEventHandler<SessionDeleted, SlideshowCleanupHandler>();
+        services.AddDomainEventHandler<FallbackPlaylistChanged, FallbackPlaylistHandler>();
+        services.AddDomainEventHandler<FallbackPlaylistCleared, FallbackPlaylistHandler>();
+        services.AddDomainEventHandler<SessionDeleted, FallbackPlaylistHandler>();
+        services.AddDomainEventHandler<SessionRenamed, SessionLogHandler>();
+        services.AddDomainEventHandler<SessionPasswordChanged, SessionLogHandler>();
+        services.AddDomainEventHandler<HostClaimed, SessionLogHandler>();
+        services.AddDomainEventHandler<HostReleased, SessionLogHandler>();
+        services.AddDomainEventHandler<SessionDeleted, SessionLogHandler>();
     }
 
     private static void RegisterAdmin(this IServiceCollection services, IConfiguration configuration)

@@ -36,26 +36,17 @@ internal class FallbackPlaylistService : IFallbackPlaylistService
     private readonly ISessionsRepository _sessionsRepository;
     private readonly ISpotifyIntegrationClient _spotifyClient;
     private readonly IHostTokenProvider _hostTokenProvider;
-    private readonly IFallbackQueueFiller _filler;
-    private readonly IPlaylistTrackCache _trackCache;
-    private readonly IFallbackStatusStore _statusStore;
 
     public FallbackPlaylistService(
         ISessionAuthorizer sessionAuthorizer,
         ISessionsRepository sessionsRepository,
         ISpotifyIntegrationClient spotifyClient,
-        IHostTokenProvider hostTokenProvider,
-        IFallbackQueueFiller filler,
-        IPlaylistTrackCache trackCache,
-        IFallbackStatusStore statusStore)
+        IHostTokenProvider hostTokenProvider)
     {
         _sessionAuthorizer = sessionAuthorizer;
         _sessionsRepository = sessionsRepository;
         _spotifyClient = spotifyClient;
         _hostTokenProvider = hostTokenProvider;
-        _filler = filler;
-        _trackCache = trackCache;
-        _statusStore = statusStore;
     }
 
     public Task<ErrorOr<Success>> SetAsync(
@@ -86,7 +77,7 @@ internal class FallbackPlaylistService : IFallbackPlaylistService
 
         if (string.IsNullOrWhiteSpace(playlist))
         {
-            return await ClearAsync(session.Id, session.FallbackPlaylistId, cancellationToken);
+            return await ClearAsync(session.Id, cancellationToken);
         }
 
         var playlistId = PlaylistInputParser.Parse(playlist);
@@ -117,11 +108,8 @@ internal class FallbackPlaylistService : IFallbackPlaylistService
             return Error.Validation(description: "The playlist is empty");
         }
 
+        // The cached tracks, the old error and the first song are the FallbackPlaylistChanged handler's job
         await _sessionsRepository.SetFallbackPlaylistAsync(sessionId, found.Id, found.Name, shuffle, cancellationToken);
-        _trackCache.Remove(found.Id);
-        _statusStore.Clear(sessionId);
-
-        await _filler.EnsureQueuedAsync(sessionId, cancellationToken);
 
         return Result.Success;
     }
@@ -164,15 +152,10 @@ internal class FallbackPlaylistService : IFallbackPlaylistService
         }
     }
 
-    private async Task<ErrorOr<Success>> ClearAsync(Guid sessionId, string? playlistId, CancellationToken cancellationToken)
+    private async Task<ErrorOr<Success>> ClearAsync(Guid sessionId, CancellationToken cancellationToken)
     {
+        // The FallbackPlaylistCleared handler drops the cached tracks and the error
         await _sessionsRepository.SetFallbackPlaylistAsync(sessionId, null, null, false, cancellationToken);
-        _statusStore.Clear(sessionId);
-
-        if (playlistId is not null)
-        {
-            _trackCache.Remove(playlistId);
-        }
 
         return Result.Success;
     }

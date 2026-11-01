@@ -1,6 +1,5 @@
 using PartyKing.Domain.Repositories;
 using ErrorOr;
-using Microsoft.Extensions.Logging;
 using PartyKing.Application.Mappings;
 using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Contract.V1.Sessions;
@@ -24,16 +23,13 @@ internal class SessionService : ISessionService
 {
     private readonly ISessionsRepository _sessionsRepository;
     private readonly ISessionAuthorizer _authorizer;
-    private readonly ILogger<SessionService> _logger;
 
     public SessionService(
         ISessionsRepository sessionsRepository,
-        ISessionAuthorizer authorizer,
-        ILogger<SessionService> logger)
+        ISessionAuthorizer authorizer)
     {
         _sessionsRepository = sessionsRepository;
         _authorizer = authorizer;
-        _logger = logger;
     }
 
     public async Task<IReadOnlyList<SessionDto>> GetAllAsync(CancellationToken cancellationToken)
@@ -68,22 +64,12 @@ internal class SessionService : ISessionService
         string? name,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(name))
+        if (SessionNamePolicy.Validate(name, allowBlank: false) is { } invalid)
         {
-            return Error.Validation(description: "The session name must not be empty");
+            return invalid;
         }
 
-        if (name.Trim().Length > SessionNamePolicy.MaxLength)
-        {
-            return SessionNamePolicy.TooLong();
-        }
-
-        var renamed = await _sessionsRepository.RenameAsync(id, name.Trim(), cancellationToken);
-
-        if (renamed)
-        {
-            _logger.LogInformation("Renamed session {SessionId}", id);
-        }
+        var renamed = await _sessionsRepository.RenameAsync(id, name!, cancellationToken);
 
         return renamed ? Result.Success : SessionErrors.NotFound();
     }
