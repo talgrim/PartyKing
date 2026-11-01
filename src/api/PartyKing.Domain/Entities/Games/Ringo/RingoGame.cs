@@ -1,4 +1,5 @@
 using PartyKing.Domain.Entities.Games.Base;
+using PartyKing.Domain.Events.Games.Ringo;
 
 namespace PartyKing.Domain.Entities.Games.Ringo;
 
@@ -70,16 +71,22 @@ public class RingoGame : LobbyGame<RingoPlayer>
             return RingoOutcome.Failed(RingoFailure.CardPending, this);
         }
 
+        var recordedName = current?.DisplayName ?? flippedBy;
         Flips.Add(new RingoFlip
         {
             SessionId = SessionId,
             Order = Flips.Count,
             CardId = cardId,
             FlippedAt = flippedAt,
-            FlippedBy = current?.DisplayName ?? flippedBy,
+            FlippedBy = recordedName,
         });
         PendingCardId = cardId;
         CurrentPlayerId = current?.PlayerId;
+        Raise(new RingoCardFlipped(SessionId, cardId, recordedName));
+        if (IsOver)
+        {
+            Raise(new RingoGameOver(SessionId, recordedName));
+        }
 
         return RingoOutcome.Done(this);
     }
@@ -102,6 +109,7 @@ public class RingoGame : LobbyGame<RingoPlayer>
 
         PendingCardId = null;
         CurrentPlayerId = RingoTurns.Next(this)?.PlayerId;
+        Raise(new RingoTurnPassed(SessionId, CurrentPlayerId));
 
         return RingoOutcome.Done(this);
     }
