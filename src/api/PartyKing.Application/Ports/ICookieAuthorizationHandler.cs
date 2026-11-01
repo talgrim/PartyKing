@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Http;
-using PartyKing.Domain.Entities.Games;
+using PartyKing.Domain.Entities.Games.Base;
 
 namespace PartyKing.Application.Ports;
 

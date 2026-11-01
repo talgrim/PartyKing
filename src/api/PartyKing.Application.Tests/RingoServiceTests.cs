@@ -1,9 +1,10 @@
 using PartyKing.Domain.Repositories;
 using PartyKing.Application.Admin.Services;
+using PartyKing.Application.Games.Services.Base;
 using PartyKing.Application.Games.Services.Ringo;
-using PartyKing.Application.Games.Services;
 using PartyKing.Application.Sessions.Services;
-using PartyKing.Domain.Entities.Games;
+using PartyKing.Domain.Entities.Games.Base;
+using PartyKing.Domain.Entities.Games.Ringo;
 
 namespace PartyKing.Application.Tests;
 
@@ -535,89 +536,32 @@ public class RingoServiceTests
         public Task<RingoGame?> OpenAsync(Guid sessionId, CancellationToken cancellationToken)
         {
             var game = _games.GetValueOrDefault(sessionId);
-            if (game is not null)
-            {
-                game.IsOpen = true;
-            }
+            game?.Open();
 
             return Task.FromResult(game);
         }
 
-
         public Task<LobbyResult<RingoGame>> JoinAsync(
             Guid sessionId, RingoPlayer player, CancellationToken cancellationToken)
         {
-            if (!_games.TryGetValue(sessionId, out var game))
-            {
-                return Task.FromResult(new LobbyResult<RingoGame>(LobbyStatus.NoGame, null));
-            }
-
-            if (!game.IsOpen)
-            {
-                return Task.FromResult(new LobbyResult<RingoGame>(LobbyStatus.NotOpen, game));
-            }
-
-            if (game.Players.Any(x => x.NormalizedName == player.NormalizedName))
-            {
-                return Task.FromResult(new LobbyResult<RingoGame>(LobbyStatus.NameTaken, game));
-            }
-
-            player.SessionId = sessionId;
-            player.Order = game.Players.Count;
-            game.Players.Add(player);
-            game.CurrentPlayerId ??= player.PlayerId;
-
-            return Task.FromResult(new LobbyResult<RingoGame>(LobbyStatus.Done, game));
+            return Task.FromResult(_games.TryGetValue(sessionId, out var game)
+                ? new LobbyResult<RingoGame>(game.Join(player), game)
+                : new LobbyResult<RingoGame>(LobbyStatus.NoGame, null));
         }
 
         public Task<LobbyResult<RingoGame>> KickAsync(Guid sessionId, Guid playerId, CancellationToken cancellationToken)
         {
-            if (!_games.TryGetValue(sessionId, out var game))
-            {
-                return Task.FromResult(new LobbyResult<RingoGame>(LobbyStatus.NoGame, null));
-            }
-
-            var kicked = game.Players.FirstOrDefault(x => x.PlayerId == playerId);
-            if (kicked is null)
-            {
-                return Task.FromResult(new LobbyResult<RingoGame>(LobbyStatus.NoPlayer, game));
-            }
-
-            var wasCurrent = RingoTurns.Current(game)?.PlayerId == playerId;
-            var next = RingoTurns.AfterRemoving(game, kicked, wasCurrent);
-            game.Players.Remove(kicked);
-            var order = 0;
-            foreach (var player in game.Players.OrderBy(x => x.Order))
-            {
-                player.Order = order++;
-            }
-
-            game.CurrentPlayerId = next?.PlayerId;
-
-            return Task.FromResult(new LobbyResult<RingoGame>(LobbyStatus.Done, game));
+            return Task.FromResult(_games.TryGetValue(sessionId, out var game)
+                ? new LobbyResult<RingoGame>(game.Kick(playerId).Status, game)
+                : new LobbyResult<RingoGame>(LobbyStatus.NoGame, null));
         }
 
         public Task<LobbyResult<RingoGame>> ReorderAsync(
             Guid sessionId, IReadOnlyList<Guid> playerIds, CancellationToken cancellationToken)
         {
-            if (!_games.TryGetValue(sessionId, out var game))
-            {
-                return Task.FromResult(new LobbyResult<RingoGame>(LobbyStatus.NoGame, null));
-            }
-
-            if (playerIds.Count != game.Players.Count
-                || playerIds.Distinct().Count() != playerIds.Count
-                || game.Players.Any(x => !playerIds.Contains(x.PlayerId)))
-            {
-                return Task.FromResult(new LobbyResult<RingoGame>(LobbyStatus.OrderMismatch, game));
-            }
-
-            foreach (var player in game.Players)
-            {
-                player.Order = playerIds.ToList().IndexOf(player.PlayerId);
-            }
-
-            return Task.FromResult(new LobbyResult<RingoGame>(LobbyStatus.Done, game));
+            return Task.FromResult(_games.TryGetValue(sessionId, out var game)
+                ? new LobbyResult<RingoGame>(game.Reorder(playerIds), game)
+                : new LobbyResult<RingoGame>(LobbyStatus.NoGame, null));
         }
 
         public Task<bool> DeleteAsync(Guid sessionId, CancellationToken cancellationToken) =>

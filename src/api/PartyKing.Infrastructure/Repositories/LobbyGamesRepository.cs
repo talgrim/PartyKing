@@ -2,15 +2,15 @@ using PartyKing.Domain.Repositories;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
-using PartyKing.Domain.Entities.Games;
+using PartyKing.Domain.Entities.Games.Base;
 using PartyKing.Infrastructure.Metrics;
 using PartyKing.Persistence.Database;
 
 namespace PartyKing.Infrastructure.Repositories;
 
 /// <summary>
-/// The EF Core part every lobby game shares: reading, creating, opening and deleting the game and the
-/// join/kick/reorder of its players. A game adds its own state through the hooks.
+/// The EF Core part every lobby game shares: loading, locking, saving and deleting the game. The rules of the
+/// lobby (open, join, kick, reorder) are the game's own, see <see cref="LobbyGame{TPlayer}"/>.
 /// </summary>
 internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesRepository<TGame, TPlayer>
     where TGame : LobbyGame<TPlayer>
@@ -37,28 +37,12 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
         _metrics = metrics;
     }
 
-    /// <summary>How many players may join.</summary>
-    protected virtual int MaxPlayers => int.MaxValue;
-
-    /// <summary>Whether the game's players are locked, so nobody joins, leaves or moves.</summary>
-    protected virtual bool IsLocked(TGame game) => false;
-
     /// <summary>The game's table with everything the game needs loaded, including its players.</summary>
     protected abstract IQueryable<TGame> Games(PartyKingDbContextBase dbContext);
 
     protected abstract DbSet<TPlayer> PlayersOf(PartyKingDbContextBase dbContext);
 
     protected abstract DbSet<TGame> Table(PartyKingDbContextBase dbContext);
-
-    /// <summary>Called after the player was added to the game, before it is saved.</summary>
-    protected virtual void PlayerJoined(TGame game, TPlayer player)
-    {
-    }
-
-    /// <summary>Called while the player is still in the game, so a game can work out what follows their leaving.</summary>
-    protected virtual void PlayerKicking(TGame game, TPlayer kicked)
-    {
-    }
 
     /// <summary>
     /// Runs a write of the session's game, which loads it, changes it and saves it, while no other write of that
@@ -227,9 +211,8 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
                 await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
 
                 var game = await LoadAsync(dbContext, sessionId, cancellationToken);
-                if (game is not null && !game.IsOpen)
+                if (game is not null && game.Open())
                 {
-                    game.IsOpen = true;
                     if (!await TrySaveAsync(dbContext, sessionId, cancellationToken))
                     {
                         return null;
@@ -257,30 +240,11 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
                     return new LobbyResult<TGame>(LobbyStatus.NoGame, null);
                 }
 
-                if (!game.IsOpen)
+                var status = game.Join(player);
+                if (status != LobbyStatus.Done)
                 {
-                    return new LobbyResult<TGame>(LobbyStatus.NotOpen, game);
+                    return new LobbyResult<TGame>(status, game);
                 }
-
-                if (IsLocked(game))
-                {
-                    return new LobbyResult<TGame>(LobbyStatus.Started, game);
-                }
-
-                if (game.Players.Any(x => x.NormalizedName == player.NormalizedName))
-                {
-                    return new LobbyResult<TGame>(LobbyStatus.NameTaken, game);
-                }
-
-                if (game.Players.Count >= MaxPlayers)
-                {
-                    return new LobbyResult<TGame>(LobbyStatus.Full, game);
-                }
-
-                player.SessionId = sessionId;
-                player.Order = game.Players.Count == 0 ? 0 : game.Players.Max(x => x.Order) + 1;
-                game.Players.Add(player);
-                PlayerJoined(game, player);
 
                 try
                 {
@@ -322,26 +286,14 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
                     return new LobbyResult<TGame>(LobbyStatus.NoGame, null);
                 }
 
-                if (IsLocked(game))
+                var (status, kicked) = game.Kick(playerId);
+                if (status != LobbyStatus.Done)
                 {
-                    return new LobbyResult<TGame>(LobbyStatus.Started, game);
+                    return new LobbyResult<TGame>(status, game);
                 }
 
-                var kicked = game.Players.FirstOrDefault(x => x.PlayerId == playerId);
-                if (kicked is null)
-                {
-                    return new LobbyResult<TGame>(LobbyStatus.NoPlayer, game);
-                }
-
-                PlayerKicking(game, kicked);
-
-                PlayersOf(dbContext).Remove(kicked);
-                game.Players.Remove(kicked);
-                var order = 0;
-                foreach (var player in game.Players.OrderBy(x => x.Order))
-                {
-                    player.Order = order++;
-                }
+                // The player left the game's list; the row has to go too
+                PlayersOf(dbContext).Remove(kicked!);
 
                 if (!await TrySaveAsync(dbContext, sessionId, cancellationToken))
                 {
@@ -369,21 +321,10 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
                     return new LobbyResult<TGame>(LobbyStatus.NoGame, null);
                 }
 
-                if (IsLocked(game))
+                var status = game.Reorder(playerIds);
+                if (status != LobbyStatus.Done)
                 {
-                    return new LobbyResult<TGame>(LobbyStatus.Started, game);
-                }
-
-                if (playerIds.Count != game.Players.Count
-                    || playerIds.Distinct().Count() != playerIds.Count
-                    || game.Players.Any(x => !playerIds.Contains(x.PlayerId)))
-                {
-                    return new LobbyResult<TGame>(LobbyStatus.OrderMismatch, game);
-                }
-
-                foreach (var player in game.Players)
-                {
-                    player.Order = playerIds.ToList().IndexOf(player.PlayerId);
+                    return new LobbyResult<TGame>(status, game);
                 }
 
                 if (!await TrySaveAsync(dbContext, sessionId, cancellationToken))

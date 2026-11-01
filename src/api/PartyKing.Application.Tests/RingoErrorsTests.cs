@@ -1,6 +1,6 @@
 using ErrorOr;
 using PartyKing.Application.Games.Services.Ringo;
-using PartyKing.Domain.Entities.Games;
+using PartyKing.Domain.Entities.Games.Ringo;
 
 namespace PartyKing.Application.Tests;
 

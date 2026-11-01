@@ -2,7 +2,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using PartyKing.Domain.Entities.Auth;
-using PartyKing.Domain.Entities.Games;
+using PartyKing.Domain.Entities.Games.Resistance;
+using PartyKing.Domain.Entities.Games.Ringo;
 using PartyKing.Domain.Entities.Lyrics;
 using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Entities.Sessions;

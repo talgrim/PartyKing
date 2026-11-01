@@ -1,5 +1,6 @@
 using PartyKing.Domain.Repositories;
-using PartyKing.Domain.Entities.Games;
+using PartyKing.Domain.Entities.Games.Base;
+using PartyKing.Domain.Entities.Games.Ringo;
 using PartyKing.Infrastructure.Repositories;
 
 namespace PartyKing.Infrastructure.Metrics;

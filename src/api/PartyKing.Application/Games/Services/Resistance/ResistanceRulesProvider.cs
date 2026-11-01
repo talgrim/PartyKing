@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Options;
 using PartyKing.Application.Configuration;
-using PartyKing.Domain.Entities.Games;
+using PartyKing.Domain.Entities.Games.Resistance;
 
 namespace PartyKing.Application.Games.Services.Resistance;
 

@@ -1,8 +1,9 @@
 using PartyKing.Domain.Repositories;
 using ErrorOr;
+using PartyKing.Application.Games.Services.Base;
 using PartyKing.Application.System;
 using PartyKing.Contract.V1.Games.Resistance;
-using PartyKing.Domain.Entities.Games;
+using PartyKing.Domain.Entities.Games.Resistance;
 
 namespace PartyKing.Application.Games.Services.Resistance;
 

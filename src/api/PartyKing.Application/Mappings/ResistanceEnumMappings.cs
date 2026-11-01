@@ -1,5 +1,5 @@
 using PartyKing.Contract.V1.Games.Resistance;
-using PartyKing.Domain.Entities.Games;
+using PartyKing.Domain.Entities.Games.Resistance;
 using Riok.Mapperly.Abstractions;
 
 namespace PartyKing.Application.Mappings;

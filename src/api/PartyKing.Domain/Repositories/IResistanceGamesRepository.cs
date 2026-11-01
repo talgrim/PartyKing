@@ -1,4 +1,4 @@
-using PartyKing.Domain.Entities.Games;
+using PartyKing.Domain.Entities.Games.Resistance;
 
 namespace PartyKing.Domain.Repositories;
 

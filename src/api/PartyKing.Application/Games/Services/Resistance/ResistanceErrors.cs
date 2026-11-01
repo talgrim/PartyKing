@@ -1,5 +1,5 @@
 using ErrorOr;
-using PartyKing.Domain.Entities.Games;
+using PartyKing.Domain.Entities.Games.Resistance;
 
 namespace PartyKing.Application.Games.Services.Resistance;
 

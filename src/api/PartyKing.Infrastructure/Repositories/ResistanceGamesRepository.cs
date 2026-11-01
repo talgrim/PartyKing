@@ -1,6 +1,6 @@
 using PartyKing.Domain.Repositories;
 using Microsoft.EntityFrameworkCore;
-using PartyKing.Domain.Entities.Games;
+using PartyKing.Domain.Entities.Games.Resistance;
 using PartyKing.Infrastructure.Metrics;
 using PartyKing.Persistence.Database;
 
@@ -16,10 +16,6 @@ internal class ResistanceGamesRepository
         : base(readerFactory, writerFactory, metrics)
     {
     }
-
-    protected override int MaxPlayers => ResistanceGame.MaxPlayers;
-
-    protected override bool IsLocked(ResistanceGame game) => game.IsStarted;
 
     protected override IQueryable<ResistanceGame> Games(PartyKingDbContextBase dbContext)
     {
