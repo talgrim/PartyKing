@@ -1,3 +1,4 @@
+using PartyKing.Application.Ports;
 using ErrorOr;
 using Microsoft.Extensions.DependencyInjection;
 using PartyKing.Application.Spotify.Services;
