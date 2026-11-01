@@ -12,6 +12,7 @@ namespace PartyKing.Infrastructure.Repositories;
 internal class SessionsRepository : ISessionsRepository
 {
     private const int SqliteConstraintErrorCode = 19;
+    private const int MaxUpdateAttempts = 3;
 
     private readonly IDbContextFactory<ReaderDbContext> _readerDbContextFactory;
     private readonly IDbContextFactory<WriterDbContext> _writerDbContextFactory;
@@ -202,33 +203,38 @@ internal class SessionsRepository : ISessionsRepository
     /// <summary>
     /// Loads the session, runs a Domain action on it, saves, and hands the events it raised to the dispatcher once the
     /// change is committed. Returns false when the session does not exist (also when it vanished under the save).
+    /// The host is a concurrency token: when a claim or release changes it between the load and the save, the save
+    /// matches no row, so the action runs again on a fresh load instead of overwriting the newer host.
     /// </summary>
     private async Task<bool> UpdateAsync(Guid id, Action<Session> action, CancellationToken cancellationToken)
     {
-        await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
-
-        var session = await dbContext.Sessions.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-
-        if (session is null)
+        for (var attempt = 1; ; attempt++)
         {
-            return false;
+            await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
+
+            var session = await dbContext.Sessions.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
+            if (session is null)
+            {
+                return false;
+            }
+
+            action(session);
+
+            try
+            {
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateConcurrencyException) when (attempt < MaxUpdateAttempts)
+            {
+                // Deleted (the next load answers false) or the host changed: try again on fresh data
+                continue;
+            }
+
+            // CancellationToken.None: the change is committed, an aborted request must not drop the cleanup
+            await _dispatcher.DispatchAsync(session.DrainEvents(), CancellationToken.None);
+
+            return true;
         }
-
-        action(session);
-
-        try
-        {
-            await dbContext.SaveChangesAsync(cancellationToken);
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            // Deleted between the load and the save
-            return false;
-        }
-
-        // CancellationToken.None: the change is committed, an aborted request must not drop the cleanup
-        await _dispatcher.DispatchAsync(session.DrainEvents(), CancellationToken.None);
-
-        return true;
     }
 }
