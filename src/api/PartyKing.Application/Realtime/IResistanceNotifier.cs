@@ -1,4 +1,4 @@
-using PartyKing.Application.Games.Services;
+using PartyKing.Application.Games.Services.Base;
 
 namespace PartyKing.Application.Realtime;
 

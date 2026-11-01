@@ -1,6 +1,6 @@
 using PartyKing.Application.Ports;
 using PartyKing.API.Authentication;
-using PartyKing.Application.Games.Services;
+using PartyKing.Application.Games.Services.Base;
 using PartyKing.Domain.Entities.Games;
 
 namespace PartyKing.API.Controllers.Games;

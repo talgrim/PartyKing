@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using PartyKing.API.Controllers.Games;
-using PartyKing.Application.Games.Services;
+using PartyKing.Application.Games.Services.Base;
 using PartyKing.Application.Localization;
 using PartyKing.Application.Sessions;
 using PartyKing.Contract.V1.Games;

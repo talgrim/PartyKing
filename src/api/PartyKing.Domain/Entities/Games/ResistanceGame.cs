@@ -54,6 +54,11 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
 
     public bool IsStarted => StartedAt is not null;
 
+    protected override int PlayerLimit => MaxPlayers;
+
+    /// <summary>A started game locks its players.</summary>
+    protected override bool IsLocked => IsStarted;
+
     /// <summary>The leader submitted a team for the current mission, which locks it (<see cref="ResistancePlayer.IsOnTeam"/>).</summary>
     public bool IsTeamSubmitted => Players.Any(x => x.IsOnTeam);
 

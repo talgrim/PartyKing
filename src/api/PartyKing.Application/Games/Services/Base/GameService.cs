@@ -5,7 +5,7 @@ using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Sessions;
 using PartyKing.Contract.V1.Games;
 
-namespace PartyKing.Application.Games.Services;
+namespace PartyKing.Application.Games.Services.Base;
 
 public interface IGameService
 {

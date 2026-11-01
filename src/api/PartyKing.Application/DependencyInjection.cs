@@ -7,7 +7,7 @@ using PartyKing.Application.Configuration;
 using PartyKing.Application.Games.Services.NeverHaveIEver;
 using PartyKing.Application.Games.Services.Resistance;
 using PartyKing.Application.Games.Services.Ringo;
-using PartyKing.Application.Games.Services;
+using PartyKing.Application.Games.Services.Base;
 using PartyKing.Application.Lyrics.Services;
 using PartyKing.Application.Player.Services;
 using PartyKing.Application.Queue.Services;

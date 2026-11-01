@@ -17,10 +17,6 @@ internal class ResistanceGamesRepository
     {
     }
 
-    protected override int MaxPlayers => ResistanceGame.MaxPlayers;
-
-    protected override bool IsLocked(ResistanceGame game) => game.IsStarted;
-
     protected override IQueryable<ResistanceGame> Games(PartyKingDbContextBase dbContext)
     {
         // Split, so the three collections don't multiply into players x results x cards rows

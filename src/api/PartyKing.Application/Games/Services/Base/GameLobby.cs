@@ -5,7 +5,7 @@ using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.System;
 using PartyKing.Domain.Entities.Games;
 
-namespace PartyKing.Application.Games.Services;
+namespace PartyKing.Application.Games.Services.Base;
 
 /// <param name="Name">How the game is called, in errors ("Ringo"); also the prefix of their codes.</param>
 /// <param name="MaxPlayers">How many players may join.</param>
@@ -26,7 +26,7 @@ internal class GameLobby<TGame, TPlayer>
     private readonly ILobbyGamesRepository<TGame, TPlayer> _games;
     private readonly IDateTimeProvider _clock;
     private readonly IGameLobbyNotifier _notifier;
-    private readonly GameLobbyOptions _options;
+    private readonly LobbyErrors _errors;
 
     public GameLobby(
         ISessionAuthorizer sessionAuthorizer,
@@ -41,13 +41,10 @@ internal class GameLobby<TGame, TPlayer>
         _games = games;
         _clock = clock;
         _notifier = notifier;
-        _options = options;
+        _errors = new LobbyErrors(options);
     }
 
-    public Error NoGame => Error.NotFound($"{_options.Name}.NotFound", $"The session has no {_options.Name} game.");
-
-    private Error StartedError =>
-        Error.Conflict($"{_options.Name}.Started", "The game has started, its players can no longer change.");
+    public Error NoGame => _errors.NoGame;
 
     /// <summary>Host or admin; Forbidden or NotFound otherwise.</summary>
     public Task<ErrorOr<Success>> AuthorizeAsync(
@@ -96,7 +93,7 @@ internal class GameLobby<TGame, TPlayer>
     {
         if (!caller.IsAdmin)
         {
-            return Error.Forbidden($"{_options.Name}.AdminOnly", "Only an admin can open the game to guests.");
+            return _errors.AdminOnly;
         }
 
         var existing = await _games.GetAsync(sessionId, cancellationToken);
@@ -134,7 +131,7 @@ internal class GameLobby<TGame, TPlayer>
         var session = await _sessions.GetAsync(sessionId, cancellationToken);
         if (session is null)
         {
-            return Error.NotFound($"{_options.Name}.SessionNotFound", "The session was not found.");
+            return _errors.SessionNotFound;
         }
 
         var game = await _games.GetAsync(sessionId, cancellationToken);
@@ -165,22 +162,11 @@ internal class GameLobby<TGame, TPlayer>
             ProfileId = isHost ? caller.ProfileId : null,
             JoinedAt = _clock.UtcNow,
         };
-        player.NormalizedName = player.DisplayName.ToUpperInvariant();
 
         var result = await _games.JoinAsync(sessionId, player, cancellationToken);
-        switch (result.Status)
+        if (_errors.From(result.Status) is { } error)
         {
-            case LobbyStatus.NoGame:
-                return NoGame;
-            case LobbyStatus.NotOpen:
-                return Error.Conflict($"{_options.Name}.NotOpen", "The game is not open to guests.");
-            case LobbyStatus.Started:
-                return StartedError;
-            case LobbyStatus.NameTaken:
-                return Error.Conflict($"{_options.Name}.NameTaken", "Another player already uses this name.");
-            case LobbyStatus.Full:
-                return Error.Conflict(
-                    $"{_options.Name}.Full", $"The game already has {_options.MaxPlayers} players.");
+            return error;
         }
 
         await _notifier.ChangedAsync(sessionId, cancellationToken);
@@ -198,19 +184,9 @@ internal class GameLobby<TGame, TPlayer>
         }
 
         var result = await _games.KickAsync(sessionId, playerId, cancellationToken);
-        if (result.Status == LobbyStatus.NoGame)
+        if (_errors.From(result.Status) is { } error)
         {
-            return NoGame;
-        }
-
-        if (result.Status == LobbyStatus.Started)
-        {
-            return StartedError;
-        }
-
-        if (result.Status == LobbyStatus.NoPlayer)
-        {
-            return Error.NotFound($"{_options.Name}.PlayerNotFound", "The game has no such player.");
+            return error;
         }
 
         await _notifier.ChangedAsync(sessionId, cancellationToken);
@@ -229,23 +205,13 @@ internal class GameLobby<TGame, TPlayer>
 
         if (playerIds is null)
         {
-            return Error.Validation($"{_options.Name}.InvalidOrder", "The player ids are required.");
+            return _errors.InvalidOrder;
         }
 
         var result = await _games.ReorderAsync(sessionId, playerIds, cancellationToken);
-        if (result.Status == LobbyStatus.NoGame)
+        if (_errors.From(result.Status) is { } error)
         {
-            return NoGame;
-        }
-
-        if (result.Status == LobbyStatus.Started)
-        {
-            return StartedError;
-        }
-
-        if (result.Status == LobbyStatus.OrderMismatch)
-        {
-            return Error.Conflict($"{_options.Name}.OrderMismatch", "The players changed, try again.");
+            return error;
         }
 
         await _notifier.ChangedAsync(sessionId, cancellationToken);
@@ -255,42 +221,6 @@ internal class GameLobby<TGame, TPlayer>
 
     private Error? ValidateName(string name)
     {
-        if (name.Length == 0)
-        {
-            return Error.Validation($"{_options.Name}.InvalidName", "The name must not be empty.");
-        }
-
-        if (name.Length > LobbyNames.MaxLength)
-        {
-            return Error.Validation(
-                $"{_options.Name}.InvalidName", $"The name must be at most {LobbyNames.MaxLength} characters.");
-        }
-
-        // The suffix is how everyone recognizes the host, so a guest can't spell it
-        if (name.EndsWith(LobbyPlayer.HostSuffix.Trim(), StringComparison.OrdinalIgnoreCase))
-        {
-            return Error.Validation($"{_options.Name}.InvalidName", "The name must not end with (host).");
-        }
-
-        return null;
-    }
-}
-
-internal static class LobbyNames
-{
-    public const int MaxLength = 30;
-
-    private const string FallbackHostName = "Host";
-
-    /// <summary>The first word of the Spotify display name (all of it when it has no spaces).</summary>
-    public static string HostName(string? displayName)
-    {
-        var first = displayName?.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-        if (first is null)
-        {
-            return FallbackHostName;
-        }
-
-        return first.Length > MaxLength ? first[..MaxLength] : first;
+        return LobbyNames.Validate(name) is { } failure ? _errors.From(failure) : null;
     }
 }

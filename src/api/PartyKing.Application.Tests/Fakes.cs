@@ -2,7 +2,7 @@ using PartyKing.Domain.Repositories;
 using ErrorOr;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
-using PartyKing.Application.Games.Services;
+using PartyKing.Application.Games.Services.Base;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;

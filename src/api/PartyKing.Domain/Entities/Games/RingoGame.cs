@@ -13,6 +13,17 @@ public class RingoGame : LobbyGame<RingoPlayer>
 
     public List<RingoFlip> Flips { get; set; } = [];
 
+    protected override void OnPlayerJoined(RingoPlayer player)
+    {
+        CurrentPlayerId ??= player.PlayerId;
+    }
+
+    protected override void OnPlayerKicking(RingoPlayer kicked)
+    {
+        var wasCurrent = RingoTurns.Current(this)?.PlayerId == kicked.PlayerId;
+        CurrentPlayerId = RingoTurns.AfterRemoving(this, kicked, wasCurrent)?.PlayerId;
+    }
+
     /// <summary>The fourth king ends the game: nothing can be flipped any more.</summary>
     public bool IsOver => Flips.Count(x => x.CardId % 13 == KingRankIndex) >= KingsToEnd;
 

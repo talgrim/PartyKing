@@ -1,5 +1,5 @@
 using ErrorOr;
-using PartyKing.Application.Games.Services;
+using PartyKing.Application.Games.Services.Base;
 using PartyKing.Contract.V1.Games.Resistance;
 using PartyKing.Domain.Entities.Games;
 

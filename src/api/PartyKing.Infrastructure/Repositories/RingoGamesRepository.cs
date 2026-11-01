@@ -24,15 +24,4 @@ internal class RingoGamesRepository : LobbyGamesRepository<RingoGame, RingoPlaye
     protected override DbSet<RingoGame> Table(PartyKingDbContextBase dbContext) => dbContext.RingoGames;
 
     protected override DbSet<RingoPlayer> PlayersOf(PartyKingDbContextBase dbContext) => dbContext.RingoPlayers;
-
-    protected override void PlayerJoined(RingoGame game, RingoPlayer player)
-    {
-        game.CurrentPlayerId ??= player.PlayerId;
-    }
-
-    protected override void PlayerKicking(RingoGame game, RingoPlayer kicked)
-    {
-        var wasCurrent = RingoTurns.Current(game)?.PlayerId == kicked.PlayerId;
-        game.CurrentPlayerId = RingoTurns.AfterRemoving(game, kicked, wasCurrent)?.PlayerId;
-    }
 }

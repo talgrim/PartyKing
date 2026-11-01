@@ -1,6 +1,6 @@
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Games.Services.Resistance;
-using PartyKing.Application.Games.Services;
+using PartyKing.Application.Games.Services.Base;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Contract.V1.Games.Resistance;
 

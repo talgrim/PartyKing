@@ -1,7 +1,7 @@
 using PartyKing.Application.Ports;
 using Microsoft.AspNetCore.Mvc;
 using PartyKing.API.Authorization;
-using PartyKing.Application.Games.Services;
+using PartyKing.Application.Games.Services.Base;
 using PartyKing.Contract.V1.Games;
 
 namespace PartyKing.API.Controllers.Games;

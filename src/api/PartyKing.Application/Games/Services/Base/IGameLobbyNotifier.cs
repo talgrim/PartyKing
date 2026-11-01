@@ -1,4 +1,4 @@
-namespace PartyKing.Application.Games.Services;
+namespace PartyKing.Application.Games.Services.Base;
 
 /// <summary>Tells the session's clients that a game's lobby changed.</summary>
 public interface IGameLobbyNotifier
