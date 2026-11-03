@@ -120,6 +120,7 @@ public static class DependencyInjection
         services.AddSingleton<ISlideshowWatchers, SlideshowWatchers>();
         services.AddSingleton<ISlideshowScheduler, SlideshowScheduler>();
         services.AddSingleton<ISlideshowService, SlideshowService>();
+        services.AddScoped<ISlideshowArchiveService, SlideshowArchiveService>();
         services.Configure<SlideshowConfiguration>(configuration.GetSection(SlideshowConfiguration.SectionName));
     }
 

@@ -73,6 +73,15 @@ builder.Services.AddRateLimiter(options =>
                 PermitLimit = 10,
                 Window = TimeSpan.FromMinutes(1)
             }));
+    // Every request writes a zip of all the session's photos to disk
+    options.AddPolicy(SlideshowController.ArchiveRateLimitPolicy, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1)
+            }));
     // Several guests can share one Wi-Fi (one IP), so the limit is generous
     options.AddPolicy(SlideshowController.UploadRateLimitPolicy, context =>
         RateLimitPartition.GetFixedWindowLimiter(

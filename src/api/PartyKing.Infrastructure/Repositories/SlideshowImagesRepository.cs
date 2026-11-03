@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PartyKing.Domain.Entities.Slideshow;
@@ -11,6 +12,9 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository, ISlidesho
 {
     // Uploads used to live under this folder, shared by all sessions
     private const string LegacyImagesDirectory = "SampleImages";
+
+    // Archives are built here and deleted once the download ends; leftovers of a crashed process are swept at startup
+    private static readonly string ArchiveDirectory = Path.Combine(Path.GetTempPath(), "partyking-archives");
 
     private readonly IDbContextFactory<ReaderDbContext> _readerFactory;
     private readonly IDbContextFactory<WriterDbContext> _writerFactory;
@@ -40,6 +44,11 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository, ISlidesho
         if (Directory.Exists(legacyDirectory))
         {
             DeleteDirectoryQuietly(legacyDirectory);
+        }
+
+        if (Directory.Exists(ArchiveDirectory))
+        {
+            DeleteDirectoryQuietly(ArchiveDirectory);
         }
 
         _logger.LogInformation("Initialized slideshow. Root path: {Root}, Uploads path: {Uploads}", rootPath, uploadedPath);
@@ -125,6 +134,98 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository, ISlidesho
         }
 
         await context.SaveChangesAsync(cancellationToken);
+    }
+
+    public int CountSessionPhotos(string sessionDirectory)
+    {
+        var directory = Path.Combine(_rootPath, sessionDirectory);
+
+        return Directory.Exists(directory) ? Directory.EnumerateFiles(directory).Count() : 0;
+    }
+
+    public async Task<string?> CreateSessionArchiveAsync(string sessionDirectory, CancellationToken cancellationToken)
+    {
+        var directory = Path.Combine(_rootPath, sessionDirectory);
+        if (!Directory.Exists(directory))
+        {
+            return null;
+        }
+
+        // File names are GUIDv7, so the name order is the upload order
+        var files = Directory.EnumerateFiles(directory)
+            .OrderBy(Path.GetFileName, StringComparer.Ordinal)
+            .ToList();
+        if (files.Count == 0)
+        {
+            return null;
+        }
+
+        Directory.CreateDirectory(ArchiveDirectory);
+        var archivePath = Path.Combine(ArchiveDirectory, $"{Guid.NewGuid():N}.zip");
+        var digits = Math.Max(3, files.Count.ToString().Length);
+        var written = 0;
+
+        try
+        {
+            await using var target = new FileStream(
+                archivePath,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: 81920,
+                useAsync: true);
+            using var archive = new ZipArchive(target, ZipArchiveMode.Create);
+
+            for (var i = 0; i < files.Count; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                FileStream source;
+                try
+                {
+                    source = new FileStream(
+                        files[i],
+                        FileMode.Open,
+                        FileAccess.Read,
+                        FileShare.ReadWrite | FileShare.Delete,
+                        bufferSize: 81920,
+                        useAsync: true);
+                }
+                catch (FileNotFoundException)
+                {
+                    // A DeleteAfterPresentation photo was rotated out after the listing
+                    continue;
+                }
+
+                await using (source)
+                {
+                    var entryName = $"{(++written).ToString().PadLeft(digits, '0')}{Path.GetExtension(files[i])}";
+                    // Photos are already compressed, so deflating them again only costs CPU
+                    var entry = archive.CreateEntry(entryName, CompressionLevel.NoCompression);
+                    await using var entryStream = entry.Open();
+                    await source.CopyToAsync(entryStream, cancellationToken);
+                }
+            }
+        }
+        catch
+        {
+            TryDeleteFile(archivePath);
+            throw;
+        }
+
+        return archivePath;
+    }
+
+    private void TryDeleteFile(string path)
+    {
+        try
+        {
+            File.Delete(path);
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "Failed to delete archive {Path}", path);
+        }
     }
 
     public Task DeleteSessionFilesAsync(string sessionDirectory)
