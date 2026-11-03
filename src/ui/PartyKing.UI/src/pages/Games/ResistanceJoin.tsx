@@ -6,17 +6,20 @@ import { useResistanceLobby } from '@/service/endpoints/games/useResistanceLobby
 import { resistanceKey, resistanceLobbyKey } from '@/service/realtime/sessionMusicEvents';
 import { GameJoin } from './lobby/GameJoin';
 import { Resistance } from './Resistance';
+import { useTranslation } from 'react-i18next';
 
 /** Where a guest (or the host or an admin) joins the open Resistance game by name; once joined it shows the board. */
 export const ResistanceJoin = (): ReactNode => {
+  const { t } = useTranslation();
   const { sessionId = '' } = useParams();
   const { mutate } = useSWRConfig();
   const { data: lobby, error, isLoading } = useResistanceLobby(sessionId);
 
   return (
     <GameJoin
+      topic="resistance"
       sessionId={sessionId}
-      title="Dołącz do gry w Resistance"
+      title={t('resistance.joinTitle')}
       lobby={lobby}
       error={error}
       isLoading={isLoading}

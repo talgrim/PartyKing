@@ -2,6 +2,7 @@ import { ReactNode, useState } from 'react';
 import CloseIcon from '@mui/icons-material/Close';
 import { Dialog, DialogContent, DialogTitle, useMediaQuery } from '@mui/material';
 import { PhotoUploader } from './PhotoUploader';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   sessionId: string;
@@ -19,6 +20,7 @@ const PHONE_QUERY = '(max-width: 639px)';
  * keeps playing, and it can't be closed while an upload runs.
  */
 export const PhotoUploadDialog = ({ sessionId, open, onClose, onUnauthorized }: Props): ReactNode => {
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const fullScreen = useMediaQuery(PHONE_QUERY);
 
@@ -38,12 +40,12 @@ export const PhotoUploadDialog = ({ sessionId, open, onClose, onUnauthorized }: 
       slotProps={{ paper: { className: 'bg-slate-800! text-slate-200!' } }}
     >
       <DialogTitle id="photo-upload-title" className="flex! items-center justify-between text-xl! font-semibold!">
-        Upload photos
+        {t('photoUpload.title')}
         <button
           onClick={close}
           disabled={busy}
-          aria-label="Close"
-          title="Close"
+          aria-label={t('common.close')}
+          title={t('common.close')}
           className="p-1 text-slate-400 hover:text-slate-200 cursor-pointer disabled:opacity-40 disabled:cursor-default"
         >
           <CloseIcon />

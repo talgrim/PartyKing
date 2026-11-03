@@ -1,12 +1,12 @@
+using PartyKing.Application.Ports;
+using PartyKing.Domain.Repositories;
 using ErrorOr;
 using PartyKing.Application.Queue.Helpers;
+using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Application.Sessions.Services;
+using PartyKing.Application.Sessions;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Contract.V1.Spotify;
-using PartyKing.Domain.Results;
-using PartyKing.Infrastructure.Repositories;
-using PartyKing.Infrastructure.Spotify.RestApi;
-using SpotifyAPI.Web;
 
 namespace PartyKing.Application.Queue.Services;
 
@@ -14,14 +14,13 @@ public interface IFallbackPlaylistService
 {
     /// <summary>
     /// Sets the playlist played whenever the queue is empty, or clears it when <paramref name="playlist"/> is empty.
-    /// Only the host (<paramref name="profileId"/>) or an admin may; the playlist must belong to the session's host.
+    /// Only the host (<paramref name="caller"/>) or an admin may; the playlist must belong to the session's host.
     /// </summary>
     Task<ErrorOr<Success>> SetAsync(
         Guid sessionId,
         string? playlist,
         bool shuffle,
-        string? profileId,
-        bool isAdmin,
+        SessionCaller caller,
         CancellationToken cancellationToken);
 
     /// <summary>The playlists the host owns, to choose from. Forbidden unless <paramref name="profileId"/> hosts the session.</summary>
@@ -33,55 +32,52 @@ public interface IFallbackPlaylistService
 
 internal class FallbackPlaylistService : IFallbackPlaylistService
 {
-    private readonly ISessionService _sessionService;
+    private readonly ISessionAuthorizer _sessionAuthorizer;
     private readonly ISessionsRepository _sessionsRepository;
     private readonly ISpotifyIntegrationClient _spotifyClient;
     private readonly IHostTokenProvider _hostTokenProvider;
-    private readonly IFallbackQueueFiller _filler;
-    private readonly IPlaylistTrackCache _trackCache;
-    private readonly IFallbackStatusStore _statusStore;
 
     public FallbackPlaylistService(
-        ISessionService sessionService,
+        ISessionAuthorizer sessionAuthorizer,
         ISessionsRepository sessionsRepository,
         ISpotifyIntegrationClient spotifyClient,
-        IHostTokenProvider hostTokenProvider,
-        IFallbackQueueFiller filler,
-        IPlaylistTrackCache trackCache,
-        IFallbackStatusStore statusStore)
+        IHostTokenProvider hostTokenProvider)
     {
-        _sessionService = sessionService;
+        _sessionAuthorizer = sessionAuthorizer;
         _sessionsRepository = sessionsRepository;
         _spotifyClient = spotifyClient;
         _hostTokenProvider = hostTokenProvider;
-        _filler = filler;
-        _trackCache = trackCache;
-        _statusStore = statusStore;
     }
 
-    public async Task<ErrorOr<Success>> SetAsync(
+    public Task<ErrorOr<Success>> SetAsync(
         Guid sessionId,
         string? playlist,
         bool shuffle,
-        string? profileId,
-        bool isAdmin,
+        SessionCaller caller,
         CancellationToken cancellationToken)
     {
-        if (await _sessionService.AuthorizeManagerAsync(sessionId, profileId, isAdmin, cancellationToken)
-            is { IsError: true } denied)
-        {
-            return denied.Errors;
-        }
+        return _sessionAuthorizer.RunAsManagerAsync(
+            sessionId,
+            caller,
+            () => SetCoreAsync(sessionId, playlist, shuffle, cancellationToken),
+            cancellationToken);
+    }
 
+    private async Task<ErrorOr<Success>> SetCoreAsync(
+        Guid sessionId,
+        string? playlist,
+        bool shuffle,
+        CancellationToken cancellationToken)
+    {
         var session = await _sessionsRepository.GetAsync(sessionId, cancellationToken);
         if (session is null)
         {
-            return SessionNotFound();
+            return SessionErrors.NotFound();
         }
 
         if (string.IsNullOrWhiteSpace(playlist))
         {
-            return await ClearAsync(session.Id, session.FallbackPlaylistId, cancellationToken);
+            return await ClearAsync(session.Id, cancellationToken);
         }
 
         var playlistId = PlaylistInputParser.Parse(playlist);
@@ -112,11 +108,8 @@ internal class FallbackPlaylistService : IFallbackPlaylistService
             return Error.Validation(description: "The playlist is empty");
         }
 
+        // The cached tracks, the old error and the first song are the FallbackPlaylistChanged handler's job
         await _sessionsRepository.SetFallbackPlaylistAsync(sessionId, found.Id, found.Name, shuffle, cancellationToken);
-        _trackCache.Remove(found.Id);
-        _statusStore.Clear(sessionId);
-
-        await _filler.EnsureQueuedAsync(sessionId, cancellationToken);
 
         return Result.Success;
     }
@@ -129,7 +122,7 @@ internal class FallbackPlaylistService : IFallbackPlaylistService
         var session = await _sessionsRepository.GetAsync(sessionId, cancellationToken);
         if (session is null)
         {
-            return SessionNotFound();
+            return SessionErrors.NotFound();
         }
 
         if (session.HostProfileId != profileId)
@@ -152,25 +145,18 @@ internal class FallbackPlaylistService : IFallbackPlaylistService
                 .Select(x => new PlaylistDto($"spotify:playlist:{x.Id}", x.Name, x.ImageUrl, x.TrackCount))
                 .ToList();
         }
-        catch (APIException exception) when (exception.Response?.StatusCode is global::System.Net.HttpStatusCode.Forbidden)
+        catch (SpotifyApiException exception) when (exception.StatusCode is global::System.Net.HttpStatusCode.Forbidden)
         {
             // The host logged in before the playlist scope was requested
             return Error.Conflict(description: "Spotify did not allow reading your playlists. Log in as the host again");
         }
     }
 
-    private async Task<ErrorOr<Success>> ClearAsync(Guid sessionId, string? playlistId, CancellationToken cancellationToken)
+    private async Task<ErrorOr<Success>> ClearAsync(Guid sessionId, CancellationToken cancellationToken)
     {
+        // The FallbackPlaylistCleared handler drops the cached tracks and the error
         await _sessionsRepository.SetFallbackPlaylistAsync(sessionId, null, null, false, cancellationToken);
-        _statusStore.Clear(sessionId);
-
-        if (playlistId is not null)
-        {
-            _trackCache.Remove(playlistId);
-        }
 
         return Result.Success;
     }
-
-    private static Error SessionNotFound() => Error.NotFound(description: "The session was not found");
 }

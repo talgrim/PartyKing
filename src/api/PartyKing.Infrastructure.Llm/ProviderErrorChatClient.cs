@@ -1,3 +1,4 @@
+using PartyKing.Application.Ports;
 using System.ClientModel;
 using Microsoft.Extensions.AI;
 

@@ -1,6 +1,7 @@
 import { ReactNode, useState } from 'react';
 import { Button, Snackbar } from '@mui/material';
 import { withDevPersona } from '@/service/devPersona';
+import { useTranslation } from 'react-i18next';
 
 const wasDismissed = (key: string): boolean => {
   try {
@@ -24,6 +25,7 @@ type Props = {
 
 /** A non-modal invitation for a guest while a game of the session is open and they have not joined it. */
 export const GameInvite = ({ sessionId, lobby, gameId, dismissedKey, joinPath, message }: Props): ReactNode => {
+  const { t } = useTranslation();
   const [dismissedNow, setDismissedNow] = useState<string>();
 
   if (!lobby || !lobby.isOpen || lobby.isStarted || lobby.joined) return null;
@@ -53,10 +55,10 @@ export const GameInvite = ({ sessionId, lobby, gameId, dismissedKey, joinPath, m
       action={
         <>
           <Button color="inherit" size="small" onClick={accept}>
-            Tak
+            {t('lobby.yes')}
           </Button>
           <Button color="inherit" size="small" onClick={dismiss}>
-            Nie
+            {t('lobby.no')}
           </Button>
         </>
       }

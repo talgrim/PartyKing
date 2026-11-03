@@ -1,39 +1,42 @@
+using PartyKing.Application.Ports;
 using System.ComponentModel.DataAnnotations;
 using ErrorOr;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using PartyKing.API.Authentication;
 using PartyKing.API.Authorization;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Contract.V1.Slideshow;
-using PartyKing.Infrastructure.Authentication;
-using PartyKing.Infrastructure.Authorization;
 
 namespace PartyKing.API.Controllers;
 
 public class SlideshowController : CoreController
 {
     public const string UploadRateLimitPolicy = "photo-upload";
+    public const string ArchiveRateLimitPolicy = "photo-archive";
 
     // Limits for one upload request (a guest can pick several photos); the per-file limit is checked by the service
     private const long MaxUploadRequestBytes = 100L * 1024 * 1024;
 
     private readonly ISlideshowService _slideshowService;
-    private readonly ISessionService _sessionService;
+    private readonly ISlideshowArchiveService _archiveService;
+    private readonly ISessionAuthorizer _sessionAuthorizer;
     private readonly ICookieAuthorizationHandler _cookieAuthorizationHandler;
     private readonly ILogger<SlideshowController> _logger;
 
     public SlideshowController(
         IHttpContextAccessor httpContextAccessor,
         ISlideshowService slideshowService,
-        ISessionService sessionService,
+        ISlideshowArchiveService archiveService,
+        ISessionAuthorizer sessionAuthorizer,
         ICookieAuthorizationHandler cookieAuthorizationHandler,
         ILogger<SlideshowController> logger)
         : base(httpContextAccessor)
     {
         _slideshowService = slideshowService;
-        _sessionService = sessionService;
+        _archiveService = archiveService;
+        _sessionAuthorizer = sessionAuthorizer;
         _cookieAuthorizationHandler = cookieAuthorizationHandler;
         _logger = logger;
     }
@@ -112,13 +115,52 @@ public class SlideshowController : CoreController
         return result.Match(_ => NoContent(), Problem);
     }
 
+    /// <summary>How many photos can be downloaded. Host or admin only (403 otherwise).</summary>
+    [HttpGet("sessions/{sessionId:guid}/photos/count")]
+    [RequireSessionAccess]
+    [ProducesResponseType<SlideshowPhotoCountDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPhotoCount(Guid sessionId, CancellationToken cancellationToken)
+    {
+        var caller = await HttpContext.ReadSessionCallerAsync(_cookieAuthorizationHandler);
+        var result = await _archiveService.CountPhotosAsync(sessionId, caller, cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>The session's photos as a zip, in upload order. Host or admin only (403 otherwise); 404 without photos.</summary>
+    [HttpGet("sessions/{sessionId:guid}/photos/archive")]
+    [RequireSessionAccess]
+    [EnableRateLimiting(ArchiveRateLimitPolicy)]
+    [Produces("application/zip")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> DownloadPhotos(Guid sessionId, CancellationToken cancellationToken)
+    {
+        var caller = await HttpContext.ReadSessionCallerAsync(_cookieAuthorizationHandler);
+        var result = await _archiveService.CreateArchiveAsync(sessionId, caller, cancellationToken);
+
+        if (result.IsError)
+        {
+            return Problem(result.Errors);
+        }
+
+        // The temp file goes away when the response ends, finished or aborted
+        var stream = new FileStream(
+            result.Value.FilePath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read,
+            bufferSize: 81920,
+            FileOptions.DeleteOnClose | FileOptions.Asynchronous | FileOptions.SequentialScan);
+
+        return File(stream, "application/zip", result.Value.DownloadName);
+    }
+
     private async Task<ErrorOr<Success>> AuthorizeManagerAsync(
         Guid sessionId,
         CancellationToken cancellationToken)
     {
-        var profileId = _cookieAuthorizationHandler.TryReadProfileId(Request, out var id) ? id : null;
-        var isAdmin = (await HttpContext.AuthenticateAsync(Constants.AdminScheme)).Succeeded;
+        var caller = await HttpContext.ReadSessionCallerAsync(_cookieAuthorizationHandler);
 
-        return await _sessionService.AuthorizeManagerAsync(sessionId, profileId, isAdmin, cancellationToken);
+        return await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, caller, cancellationToken);
     }
 }

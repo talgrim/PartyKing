@@ -1,5 +1,5 @@
-using PartyKing.Domain.Entities.Games;
-using PartyKing.Infrastructure.Repositories;
+using PartyKing.Domain.Repositories;
+using PartyKing.Domain.Entities.Games.Base;
 
 namespace PartyKing.Infrastructure.Metrics;
 
@@ -47,6 +47,17 @@ internal abstract class MeteredLobbyGamesRepository<TGame, TPlayer> : MeteredRep
         Guid sessionId, IReadOnlyList<Guid> playerIds, CancellationToken cancellationToken)
     {
         return MeasureAsync(nameof(ReorderAsync), () => _inner.ReorderAsync(sessionId, playerIds, cancellationToken));
+    }
+
+    public Task<TResult> UpdateAsync<TResult>(
+        Guid sessionId,
+        string operation,
+        TResult noGame,
+        Func<TGame, TResult> action,
+        CancellationToken cancellationToken)
+        where TResult : IGameUpdateResult
+    {
+        return MeasureAsync(operation, () => _inner.UpdateAsync(sessionId, operation, noGame, action, cancellationToken));
     }
 
     public Task<bool> DeleteAsync(Guid sessionId, CancellationToken cancellationToken)

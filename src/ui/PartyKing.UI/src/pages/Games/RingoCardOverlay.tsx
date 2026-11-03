@@ -3,6 +3,7 @@ import { RingoFlipDto } from '@/service/endpoints/games/types';
 import { cardEffect, cardName } from './ringoCards';
 import { RingoRuleSuggestions } from './RingoRuleSuggestions';
 import { getCard } from './ringoLayout';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   sessionId: string;
@@ -29,6 +30,7 @@ export const RingoCardOverlay = ({
   canContinue = true,
   canSuggest = true,
 }: Props): ReactNode => {
+  const { t } = useTranslation();
   const card = getCard(cardId);
   const name = cardName(cardId);
 
@@ -57,7 +59,7 @@ export const RingoCardOverlay = ({
           onClick={onContinue}
           className="px-6 py-2 text-lg text-slate-100 bg-indigo-700 rounded-md cursor-pointer hover:bg-indigo-600"
         >
-          Kontynuuj
+          {t('ringo.continue')}
         </button>
       )}
     </div>

@@ -2,7 +2,7 @@ using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.DataProtection;
 using PartyKing.API.Authentication;
 using PartyKing.API.Authentication.Cookie;
-using PartyKing.API.Hubs;
+using PartyKing.API.Hubs.Notifiers;
 using PartyKing.API.Metrics;
 using PartyKing.Application;
 using PartyKing.Application.Realtime;
@@ -90,6 +90,11 @@ public static class DependencyInjection
     private static void RegisterHubs(this IServiceCollection services)
     {
         services.AddSignalR();
-        services.AddSingleton<ISessionMusicNotifier, SignalRSessionMusicNotifier>();
+        services.AddSingleton<IQueueNotifier, SignalRQueueNotifier>();
+        services.AddSingleton<IPlayerNotifier, SignalRPlayerNotifier>();
+        services.AddSingleton<ILyricsNotifier, SignalRLyricsNotifier>();
+        services.AddSingleton<ISlideshowNotifier, SignalRSlideshowNotifier>();
+        services.AddSingleton<IRingoNotifier, SignalRRingoNotifier>();
+        services.AddSingleton<IResistanceNotifier, SignalRResistanceNotifier>();
     }
 }

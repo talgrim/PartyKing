@@ -20,22 +20,22 @@ describe('RingoInvite', () => {
     sessionStorage.clear();
   });
 
-  it('invites a guest while the game is open and dismisses on "Nie"', async () => {
+  it('invites a guest while the game is open and dismisses on "No"', async () => {
     mocks.getLobby.mockResolvedValue({ seed: 1, isOpen: true, joined: false });
     renderInvite();
 
-    expect(await screen.findByText('Nowa gra w ringo została uruchomiona. Czy chcesz dołączyć?')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Nie' }));
+    expect(await screen.findByText('A new game of Ringo has started. Do you want to join?')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'No' }));
 
     expect(screen.queryByText(/Nowa gra w ringo/)).not.toBeInTheDocument();
   });
 
-  it('opens the join page in a new tab on "Tak"', async () => {
+  it('opens the join page in a new tab on "Yes"', async () => {
     const open = vi.spyOn(window, 'open').mockReturnValue(null);
     mocks.getLobby.mockResolvedValue({ seed: 1, isOpen: true, joined: false });
     renderInvite();
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Tak' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Yes' }));
 
     expect(open).toHaveBeenCalledWith('/s/session-1/games/ringo/join', '_blank', 'noopener,noreferrer');
     expect(screen.queryByText(/Nowa gra w ringo/)).not.toBeInTheDocument();

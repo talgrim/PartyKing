@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { sessionRingoJoinPath } from '@/router/constants';
 import { useRingoLobby } from '@/service/endpoints/games/useRingoLobby';
 import { GameInvite } from './lobby/GameInvite';
+import { useTranslation } from 'react-i18next';
 
 const dismissedKey = (sessionId: string, seed: string | number) => `partyking.ringoInviteDismissed.${sessionId}.${seed}`;
 
@@ -12,6 +13,7 @@ type Props = {
 
 /** An invitation for a guest while the session's Ringo game is open and they have not joined it. */
 export const RingoInvite = ({ sessionId, enabled }: Props): ReactNode => {
+  const { t } = useTranslation();
   const { data: lobby } = useRingoLobby(sessionId, enabled);
 
   return (
@@ -21,7 +23,7 @@ export const RingoInvite = ({ sessionId, enabled }: Props): ReactNode => {
       gameId={lobby?.seed ?? 0}
       dismissedKey={dismissedKey}
       joinPath={sessionRingoJoinPath(sessionId)}
-      message="Nowa gra w ringo została uruchomiona. Czy chcesz dołączyć?"
+      message={t('ringo.inviteMessage')}
     />
   );
 };

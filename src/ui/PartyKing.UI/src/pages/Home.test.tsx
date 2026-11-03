@@ -1,8 +1,10 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { SWRConfig } from 'swr';
 import { MemoryRouter } from 'react-router-dom';
 import { Home } from './Home';
 import { ADMIN_HINT_KEY } from '@/service/endpoints/admin/useIsAdmin';
+import { setLanguage } from '@/i18n';
 
 const mocks = vi.hoisted(() => ({ getSessions: vi.fn(), me: vi.fn() }));
 
@@ -52,5 +54,19 @@ describe('Home', () => {
     await renderPage();
 
     expect(screen.queryByRole('link', { name: 'Admin panel' })).not.toBeInTheDocument();
+  });
+
+  it('shows the page in Polish, with the host and the empty search result interpolated', async () => {
+    await setLanguage('pl');
+
+    await renderPage();
+
+    expect(screen.getByRole('heading', { name: 'Dołącz do imprezy' })).toBeInTheDocument();
+    expect(screen.getByText('Gospodarz: H')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Chroniona hasłem' })).toBeInTheDocument();
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Szukaj sesji po kodzie' }), 'zzz');
+
+    expect(screen.getByText('Żadna sesja nie pasuje do „zzz”.')).toBeInTheDocument();
   });
 });

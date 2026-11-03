@@ -1,14 +1,32 @@
+import { setLanguage } from '@/i18n';
 import { cardEffect, endingFlip, cardName, kingNumber, pileCards } from './ringoCards';
 
 const flip = (cardId: number) => ({ cardId, flippedAt: '2026-10-29T20:02:00Z', flippedBy: 'admin' });
 
 describe('ringoCards', () => {
-  it('names a card in Polish', () => {
+  it('names a card', () => {
+    expect(cardName(12)).toBe('Ace of Spades');
+    expect(cardName(0)).toBe('Two of Spades');
+    expect(cardName(13 + 8)).toBe('Ten of Hearts');
+    expect(cardName(26 + 9)).toBe('Jack of Diamonds');
+    expect(cardName(39 + 11)).toBe('King of Clubs');
+  });
+
+  it('names a card in Polish', async () => {
+    await setLanguage('pl');
+
     expect(cardName(12)).toBe('As Pik');
     expect(cardName(0)).toBe('Dwójka Pik');
     expect(cardName(13 + 8)).toBe('Dziesiątka Kier');
     expect(cardName(26 + 9)).toBe('Walet Karo');
     expect(cardName(39 + 11)).toBe('Król Trefl');
+  });
+
+  it('describes a card in Polish', async () => {
+    await setLanguage('pl');
+
+    expect(cardEffect(24, [flip(11), flip(24)])).toContain('2. król');
+    expect(cardEffect(50, [flip(11), flip(24), flip(37), flip(50)])).toContain('Koniec gry');
   });
 
   it('has an effect for every rank', () => {
@@ -23,8 +41,8 @@ describe('ringoCards', () => {
     expect(kingNumber(flips, 11)).toBe(1);
     expect(kingNumber(flips, 50)).toBe(4);
     expect(kingNumber(flips, 5)).toBe(0);
-    expect(cardEffect(24, flips)).toContain('2. król');
-    expect(cardEffect(50, flips)).toContain('Koniec gry');
+    expect(cardEffect(24, flips)).toContain('king 2 of 4');
+    expect(cardEffect(50, flips)).toContain('game is over');
   });
 
   it('piles up the kings and aces that are not pending', () => {

@@ -22,14 +22,14 @@ describe('ResistancePlotHand', () => {
   it('lists the held cards and leaves out the ones waiting to be dealt', () => {
     render(<ResistancePlotHand cards={[card(1, 'NoConfidence'), card(2, 'OpenUp', true)]} />);
 
-    expect(screen.getByText('Nie ufajcie mu')).toBeInTheDocument();
-    expect(screen.queryByText('Tylko tobie zaufam')).not.toBeInTheDocument();
+    expect(screen.getByText('No Confidence')).toBeInTheDocument();
+    expect(screen.queryByText('Open Up')).not.toBeInTheDocument();
   });
 
   it('marks an Opinion Maker in play as visible to everyone', () => {
     render(<ResistancePlotHand cards={[card(5, 'OpinionMaker', false, true)]} />);
 
-    expect(screen.getByText('W grze, widoczna dla wszystkich.')).toBeInTheDocument();
+    expect(screen.getByText('In play, visible to everyone.')).toBeInTheDocument();
   });
 
   it('renders nothing without held cards', () => {
@@ -52,14 +52,14 @@ describe('ResistancePlotDealer', () => {
       />,
     );
 
-    const button = screen.getByRole('button', { name: 'Rozdaj karty' });
+    const button = screen.getByRole('button', { name: 'Deal the cards' });
     expect(button).toBeDisabled();
     expect(screen.queryByRole('option', { name: 'Ala' })).not.toBeInTheDocument();
 
-    await user.selectOptions(screen.getByLabelText(/Komu dajesz kartę „Nie ufajcie mu”/), 'p1');
+    await user.selectOptions(screen.getByLabelText(/Who gets the “No Confidence” card/), 'p1');
     expect(button).toBeDisabled();
 
-    await user.selectOptions(screen.getByLabelText(/Komu dajesz kartę „Charyzmatyczny Przywódca”/), 'p1');
+    await user.selectOptions(screen.getByLabelText(/Who gets the “Strong Leader” card/), 'p1');
     expect(button).toBeEnabled();
 
     await user.click(button);

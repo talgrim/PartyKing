@@ -1,22 +1,10 @@
+using PartyKing.Application.Ports;
 using RestEase;
 using Microsoft.Extensions.Logging;
 using PartyKing.Domain.Entities.Lyrics;
 using PartyKing.Domain.Results;
 
 namespace PartyKing.Infrastructure.Lyrics.RestApi;
-
-public interface ILrclibClient
-{
-    /// <summary>
-    /// Searches LRCLIB's free, keyless catalogue. Either both <paramref name="trackName"/> (plus optionally
-    /// <paramref name="artistName"/>) or a free-text <paramref name="query"/> is used; the query wins when given.
-    /// </summary>
-    Task<LyricsSearchResult> SearchAsync(
-        string? trackName,
-        string? artistName,
-        string? query,
-        CancellationToken cancellationToken);
-}
 
 public sealed class LrclibClient : ILrclibClient
 {

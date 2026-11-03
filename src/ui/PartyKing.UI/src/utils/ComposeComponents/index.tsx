@@ -1,4 +1,6 @@
 interface Props {
+  // Each wrapper has its own props, so the list can't name them
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   components: Array<React.JSXElementConstructor<React.PropsWithChildren<any>>>;
   children: React.ReactNode;
 }

@@ -34,6 +34,7 @@ import { useSessionMusicHub } from '@/service/realtime/useSessionMusicHub';
 import { SessionHubContext } from '@/service/realtime/SessionHubContext';
 import { isMobileDevice } from '@/utils/isMobileDevice';
 import { usePersistedFlag } from '@/utils/usePersistedFlag';
+import { useTranslation } from 'react-i18next';
 
 const JOIN_PARAM = 'join';
 
@@ -44,6 +45,7 @@ const JOIN_PARAM = 'join';
  * can be hidden (hidden by default on a phone or tablet) or maximized; the host and admins can also switch it to the slideshow.
  */
 export const MusicQueue = (): ReactNode => {
+  const { t } = useTranslation();
   const { sessionId = '' } = useParams();
 
   const { mutate } = useSWRConfig();
@@ -83,6 +85,8 @@ export const MusicQueue = (): ReactNode => {
           { replace: true },
         );
       });
+    // Runs once per token: onJoined and setSearchParams are new functions on every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [joinToken, sessionId]);
 
   // Guests get the lyrics only: the slideshow is for the host and admins, so no guest ever requests the photos
@@ -129,7 +133,6 @@ export const MusicQueue = (): ReactNode => {
   const hostPlayerPush = useRef<HostPlayerPushHandlers>({});
   const hub = useSessionMusicHub(sessionId, Boolean(session && !locked), hostPlayerPush);
   const unlocked = Boolean(session && !locked);
-  const canManage = isHost || isAdmin;
   // The admin opens the games, so everyone else (the host included) is invited to join
   const invitable = unlocked && !isAdmin;
 
@@ -138,8 +141,8 @@ export const MusicQueue = (): ReactNode => {
     <div className="w-full min-h-full bg-slate-800 text-slate-400 md:flex">
       {session && !locked && slideshowOpen && !maximized && (
         <aside
-          aria-label={lyricsShown ? 'Lyrics' : 'Slideshow'}
-          className="relative m-2 rounded-md border-2 border-slate-400 md:w-[calc(50%-1rem)] md:shrink-0"
+          aria-label={lyricsShown ? t('views.lyrics') : t('views.slideshow')}
+          className="relative mx-2 mb-2 mt-9 rounded-md border-2 border-slate-400 md:w-[calc(50%-1rem)] md:shrink-0"
         >
           <div className="aspect-video w-full overflow-hidden rounded-sm bg-black">
             {lyricsShown ? (
@@ -171,19 +174,19 @@ export const MusicQueue = (): ReactNode => {
           className="fixed top-1/2 left-1 z-10 -translate-y-1/2"
         />
       )}
-      <div className="w-full max-w-xl mx-auto">
+      <div className="w-full max-w-xl mx-auto pt-6">
         <PageNavigation
           className="px-2 pt-4"
           links={[
-            { to: ROUTE_PATHS.HOME, label: 'All sessions' },
+            { to: ROUTE_PATHS.HOME, label: t('admin.allSessions') },
             // Photos can be added only once the session is unlocked
-            ...(session && !locked ? [{ onClick: uploadDialog.show, label: 'Upload photos' }] : []),
-            ...(isAdmin ? [{ to: ROUTE_PATHS.ADMIN, label: 'Admin panel' }] : []),
+            ...(session && !locked ? [{ onClick: uploadDialog.show, label: t('photoUpload.title') }] : []),
+            ...(isAdmin ? [{ to: ROUTE_PATHS.ADMIN, label: t('home.adminPanel') }] : []),
           ]}
         />
 
         {locked && joinFailed && (
-          <p className="px-2 pt-4 text-amber-500">This QR code has expired. Enter the password instead.</p>
+          <p className="px-2 pt-4 text-amber-500">{t('sessionPage.qrExpired')}</p>
         )}
         {invitable && <RingoInvite sessionId={sessionId} enabled />}
         {invitable && <ResistanceInvite sessionId={sessionId} enabled />}
@@ -192,10 +195,10 @@ export const MusicQueue = (): ReactNode => {
         {error && !locked && (
           <p className="px-2 pt-4 text-amber-500">
             {(error as { status?: number }).status === HTTP_STATUS_CODE.NOT_FOUND
-              ? 'This session does not exist (anymore).'
-              : 'Could not load the session.'}{' '}
+              ? t('sessionPage.notFound')
+              : t('sessionPage.loadFailed')}{' '}
             <Link to={ROUTE_PATHS.HOME} className="underline">
-              Back to the sessions
+              {t('common.backToSessions')}
             </Link>
           </p>
         )}

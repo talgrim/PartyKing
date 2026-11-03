@@ -4,15 +4,28 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Configuration;
-using PartyKing.Application.Games.Services;
+using PartyKing.Application.Events;
+using PartyKing.Application.Games.Handlers;
+using PartyKing.Application.Games.Services.Base;
+using PartyKing.Application.Games.Services.NeverHaveIEver;
+using PartyKing.Application.Games.Services.Resistance;
+using PartyKing.Application.Games.Services.Ringo;
 using PartyKing.Application.Lyrics.Services;
 using PartyKing.Application.Player.Services;
+using PartyKing.Application.Queue.Handlers;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Realtime;
+using PartyKing.Application.Sessions.Handlers;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Application.System;
+using PartyKing.Domain.Events;
+using PartyKing.Domain.Events.Games.Base;
+using PartyKing.Domain.Events.Games.Resistance;
+using PartyKing.Domain.Events.Games.Ringo;
+using PartyKing.Domain.Events.Queue;
+using PartyKing.Domain.Events.Sessions;
 
 namespace PartyKing.Application;
 
@@ -22,6 +35,7 @@ public static class DependencyInjection
     {
         services.RegisterSystem();
         services.RegisterRealtime();
+        services.RegisterDomainEvents();
         services.RegisterSlideshow(configuration);
         services.RegisterSpotify();
         services.RegisterQueue();
@@ -42,7 +56,26 @@ public static class DependencyInjection
     private static void RegisterSessions(this IServiceCollection services)
     {
         services.AddSingleton<IJoinTokenProtector, JoinTokenProtector>();
+        services.AddScoped<ISessionAuthorizer, SessionAuthorizer>();
         services.AddScoped<ISessionService, SessionService>();
+        services.AddScoped<ISessionAdminService, SessionAdminService>();
+        services.AddSingleton<SessionDummyHash>();
+        services.AddScoped<ISessionAccessService, SessionAccessService>();
+        services.AddScoped<ISessionJoinTokenService, SessionJoinTokenService>();
+        services.AddScoped<IHostSessionCleanup, HostSessionCleanup>();
+
+        // Handlers run in registration order; the cleanup comes before the log line of the same event
+        services.AddDomainEventHandler<HostReleased, HostCleanupHandler>();
+        services.AddDomainEventHandler<SessionDeleted, HostCleanupHandler>();
+        services.AddDomainEventHandler<SessionDeleted, SlideshowCleanupHandler>();
+        services.AddDomainEventHandler<FallbackPlaylistChanged, FallbackPlaylistHandler>();
+        services.AddDomainEventHandler<FallbackPlaylistCleared, FallbackPlaylistHandler>();
+        services.AddDomainEventHandler<SessionDeleted, FallbackPlaylistHandler>();
+        services.AddDomainEventHandler<SessionRenamed, SessionLogHandler>();
+        services.AddDomainEventHandler<SessionPasswordChanged, SessionLogHandler>();
+        services.AddDomainEventHandler<HostClaimed, SessionLogHandler>();
+        services.AddDomainEventHandler<HostReleased, SessionLogHandler>();
+        services.AddDomainEventHandler<SessionDeleted, SessionLogHandler>();
     }
 
     private static void RegisterAdmin(this IServiceCollection services, IConfiguration configuration)
@@ -57,10 +90,28 @@ public static class DependencyInjection
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
     }
 
+    private static void RegisterDomainEvents(this IServiceCollection services)
+    {
+        services.AddSingleton<IDomainEventDispatcher, DomainEventDispatcher>();
+    }
+
+    /// <summary>Registers a handler of <typeparamref name="TEvent"/>; an event may have any number of them.</summary>
+    private static void AddDomainEventHandler<TEvent, THandler>(this IServiceCollection services)
+        where TEvent : IDomainEvent
+        where THandler : class, IDomainEventHandler<TEvent>
+    {
+        services.AddScoped<IDomainEventHandler<TEvent>, THandler>();
+    }
+
     private static void RegisterRealtime(this IServiceCollection services)
     {
-        // The API replaces the notifier with the SignalR implementation; tests keep the no-ops unless they inject a fake
-        services.TryAddSingleton<ISessionMusicNotifier, NullSessionMusicNotifier>();
+        // The API replaces the notifiers with the SignalR implementations; tests keep the no-ops unless they inject a fake
+        services.TryAddSingleton<IQueueNotifier, NullQueueNotifier>();
+        services.TryAddSingleton<IPlayerNotifier, NullPlayerNotifier>();
+        services.TryAddSingleton<ILyricsNotifier, NullLyricsNotifier>();
+        services.TryAddSingleton<ISlideshowNotifier, NullSlideshowNotifier>();
+        services.TryAddSingleton<IRingoNotifier, NullRingoNotifier>();
+        services.TryAddSingleton<IResistanceNotifier, NullResistanceNotifier>();
         services.TryAddSingleton<IPlayerConnectionWatchdog, PlayerConnectionWatchdog>();
     }
 
@@ -69,6 +120,7 @@ public static class DependencyInjection
         services.AddSingleton<ISlideshowWatchers, SlideshowWatchers>();
         services.AddSingleton<ISlideshowScheduler, SlideshowScheduler>();
         services.AddSingleton<ISlideshowService, SlideshowService>();
+        services.AddScoped<ISlideshowArchiveService, SlideshowArchiveService>();
         services.Configure<SlideshowConfiguration>(configuration.GetSection(SlideshowConfiguration.SectionName));
     }
 
@@ -93,19 +145,57 @@ public static class DependencyInjection
     private static void RegisterGames(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<IGameService, GameService>();
+        services.AddDomainEventHandler<LobbyOpened, LobbyPushHandler>();
+        services.AddDomainEventHandler<LobbyPlayerJoined, LobbyPushHandler>();
+        services.AddDomainEventHandler<LobbyPlayerKicked, LobbyPushHandler>();
+        services.AddDomainEventHandler<LobbyOrderChanged, LobbyPushHandler>();
+        services.AddDomainEventHandler<LobbyGameEnded, LobbyPushHandler>();
+        services.RegisterRingo();
+        services.RegisterResistance(configuration);
+        services.RegisterNeverHaveIEver();
+    }
+
+    private static void RegisterRingo(this IServiceCollection services)
+    {
+        services.AddDomainEventHandler<RingoStarted, RingoPushHandler>();
+        services.AddDomainEventHandler<RingoCardFlipped, RingoPushHandler>();
+        services.AddDomainEventHandler<RingoTurnPassed, RingoPushHandler>();
+        services.AddScoped<RingoGameLobby>();
         services.AddScoped<IRingoService, RingoService>();
-        services.AddScoped<IResistanceService, ResistanceService>();
+        services.AddScoped<IRingoRuleSuggestionService, RingoRuleSuggestionService>();
+    }
+
+    private static void RegisterResistance(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddDomainEventHandler<ResistanceCreated, ResistancePushHandler>();
+        services.AddDomainEventHandler<ResistanceChanged, ResistancePushHandler>();
+        services.AddScoped<ResistanceGameLobby>();
+        services.AddScoped<ResistanceActionGate>();
+        services.AddScoped<IResistanceLobbyService, ResistanceLobbyService>();
+        services.AddScoped<IResistanceRoundService, ResistanceRoundService>();
+        services.AddScoped<IResistancePlotCardService, ResistancePlotCardService>();
         services.AddSingleton<IResistanceRulesProvider, ResistanceRulesProvider>();
         services.AddSingleton<IValidateOptions<ResistanceConfiguration>, ResistanceConfigurationValidator>();
         services.Configure<ResistanceConfiguration>(configuration.GetSection(ResistanceConfiguration.SectionName));
+    }
+
+    private static void RegisterNeverHaveIEver(this IServiceCollection services)
+    {
         services.AddScoped<INeverHaveIEverSuggestionService, NeverHaveIEverSuggestionService>();
-        services.AddScoped<IRingoRuleSuggestionService, RingoRuleSuggestionService>();
     }
 
     private static void RegisterQueue(this IServiceCollection services)
     {
         services.AddScoped<IQueueService, QueueService>();
         services.AddScoped<IFallbackQueueFiller, FallbackQueueFiller>();
+        services.AddScoped<IQueueAdvancer, QueueAdvancer>();
+
+        // Handlers run in registration order: the pushes first, then the refill whose own SongQueued push follows
+        services.AddDomainEventHandler<SongQueued, QueuePushHandler>();
+        services.AddDomainEventHandler<SongRemoved, QueuePushHandler>();
+        services.AddDomainEventHandler<QueueAdvanced, QueuePushHandler>();
+        services.AddDomainEventHandler<SongRemoved, FallbackRefillHandler>();
+        services.AddDomainEventHandler<QueueAdvanced, FallbackRefillHandler>();
         services.AddScoped<IFallbackPlaylistService, FallbackPlaylistService>();
         services.AddSingleton<IPlaylistTrackCache, PlaylistTrackCache>();
         services.AddSingleton<IFallbackStatusStore, FallbackStatusStore>();

@@ -3,6 +3,7 @@ import { HTTP_STATUS_CODE } from '@/service/constants';
 import { adminApi } from '@/service/endpoints/admin/adminApi';
 import { NowPlayingDto } from '@/service/endpoints/player/types';
 import { PlayerControls } from './PlayerControls';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   sessionId: string;
@@ -16,6 +17,7 @@ type Props = {
  * server, and they do nothing unless that player is connected.
  */
 export const AdminPlayerControls = ({ sessionId, nowPlaying, onChanged }: Props): ReactNode => {
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,10 +29,10 @@ export const AdminPlayerControls = ({ sessionId, nowPlaying, onChanged }: Props)
     } catch (e) {
       const status = (e as { status?: number })?.status;
       if (status === HTTP_STATUS_CODE.CONFLICT) {
-        setError("The host's player is not connected.");
+        setError(t('nowPlaying.playerNotConnected'));
       } else if (status !== HTTP_STATUS_CODE.NOT_FOUND) {
         // 404 is an empty queue: the song ended, which is not a failure
-        setError('The command failed');
+        setError(t('adminPlayer.commandFailed'));
       }
     } finally {
       setBusy(false);

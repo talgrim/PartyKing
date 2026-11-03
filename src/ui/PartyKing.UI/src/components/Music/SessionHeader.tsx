@@ -4,6 +4,7 @@ import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 import { JoinQrCode } from './JoinQrCode';
 import { OpenGamesMenu } from './OpenGamesMenu';
 import { SessionSettings } from './SessionSettings';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   session: SessionDto;
@@ -20,6 +21,7 @@ type Props = {
  * is or the login that makes the visitor the host.
  */
 export const SessionHeader = ({ session, isHost, isAdmin = false, onSessionChanged }: Props): ReactNode => {
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,7 +30,7 @@ export const SessionHeader = ({ session, isHost, isAdmin = false, onSessionChang
     try {
       window.location.href = await sessionsApi.createHostLoginUrl(session.id);
     } catch (e) {
-      setError((e as { message?: string })?.message ?? 'Could not start the login');
+      setError((e as { message?: string })?.message ?? t('sessionHeader.loginFailed'));
       setBusy(false);
     }
   };
@@ -39,7 +41,7 @@ export const SessionHeader = ({ session, isHost, isAdmin = false, onSessionChang
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold text-slate-100 break-words">{session.name}</h1>
           <div className="mt-1 text-sm text-slate-500">
-            Code{' '}
+            {t('sessionHeader.code')}{' '}
             <span className="px-2 py-0.5 font-mono text-amber-500 bg-slate-800 rounded-md">{session.code}</span>
           </div>
         </div>
@@ -57,7 +59,7 @@ export const SessionHeader = ({ session, isHost, isAdmin = false, onSessionChang
       <div className="mt-3 pt-3 border-t border-slate-800">
         {session.hasHost ? (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span>Current Host: {session.hostName}</span>
+            <span>{t('sessionHeader.currentHost', { name: session.hostName })}</span>
             {/* The host whose login expired gets back in here; anyone else is turned away after Spotify. */}
             {!isHost && (
               <button
@@ -65,7 +67,7 @@ export const SessionHeader = ({ session, isHost, isAdmin = false, onSessionChang
                 disabled={busy}
                 className="text-sm text-amber-500 underline cursor-pointer disabled:opacity-50"
               >
-                I'm the host
+                {t('sessionHeader.imTheHost')}
               </button>
             )}
           </div>
@@ -75,7 +77,7 @@ export const SessionHeader = ({ session, isHost, isAdmin = false, onSessionChang
             disabled={busy}
             className="px-3 py-2 bg-amber-600 text-slate-100 rounded-md cursor-pointer hover:bg-amber-500 disabled:opacity-50"
           >
-            Log in as host with Spotify
+            {t('sessionHeader.loginAsHost')}
           </button>
         )}
         {error && <p className="mt-2 text-sm text-amber-500">{error}</p>}

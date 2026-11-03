@@ -4,6 +4,7 @@ import {
   onResponseFulfilled,
   onResponseRejected,
 } from '@/service/interceptors/response';
+import { onRequestFulfilled } from '@/service/interceptors/request';
 import { devPersona } from '@/service/devPersona';
 
 const configureAxios = (
@@ -21,6 +22,7 @@ const configureAxios = (
   if (devPersona) {
     axios.defaults.headers.common['X-Dev-Persona'] = devPersona;
   }
+  axios.interceptors.request.use(onRequestFulfilled);
   axios.interceptors.response.use(onResponseFulfilled, onResponseRejected);
 };
 

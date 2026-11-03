@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using PartyKing.Application.Mappings;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Player.Services;
 using PartyKing.Application.Realtime;
@@ -17,7 +18,8 @@ public class PlayerServiceTests
     private readonly FakeClock _clock = new();
     private readonly FakeSessionsRepository _sessions = new();
     private readonly FakeQueueRepository _queue = new();
-    private readonly FakeSessionMusicNotifier _notifier = new();
+    private readonly FakePlayerNotifier _notifier = new();
+    private readonly FakeQueueAdvancer _advancer = new();
     private readonly PlayerStateStore _store;
     private readonly PlayerService _service;
     private readonly Session _session;
@@ -25,7 +27,7 @@ public class PlayerServiceTests
     public PlayerServiceTests()
     {
         _store = new PlayerStateStore(_clock);
-        _service = new PlayerService(_sessions, _queue, _store, _notifier, new NullPlayerConnectionWatchdog(), new FakeFallbackQueueFiller(), new FallbackStatusStore(_notifier, NullLogger<FallbackStatusStore>.Instance), NullLogger<PlayerService>.Instance);
+        _service = new PlayerService(_sessions, _queue, _store, _notifier, new NullPlayerConnectionWatchdog(), _advancer, new FallbackStatusStore(_notifier, NullLogger<FallbackStatusStore>.Instance), NullLogger<PlayerService>.Instance);
         _session = _sessions.AddSession(HostId);
     }
 
@@ -131,7 +133,7 @@ public class PlayerServiceTests
     public async Task ReportState_ByAnotherAccount_IsForbidden()
     {
         var result = await _service.ReportStateAsync(
-            _session.Id, "someone-else", new PlayerStateRequest(1, false), CancellationToken.None);
+            _session.Id, "someone-else", new PlayerStateRequestDto(1, false), CancellationToken.None);
 
         Assert.True(result.IsError);
         Assert.Equal(ErrorOr.ErrorType.Forbidden, result.FirstError.Type);
@@ -142,7 +144,7 @@ public class PlayerServiceTests
     public async Task ReportState_UnknownSession_IsNotFound()
     {
         var result = await _service.ReportStateAsync(
-            Guid.NewGuid(), HostId, new PlayerStateRequest(1, false), CancellationToken.None);
+            Guid.NewGuid(), HostId, new PlayerStateRequestDto(1, false), CancellationToken.None);
 
         Assert.Equal(ErrorOr.ErrorType.NotFound, result.FirstError.Type);
     }
@@ -150,11 +152,11 @@ public class PlayerServiceTests
     [Fact]
     public async Task ReportState_ByTheHost_ConnectsThePlayerAndReturnsTheAdminsCommand()
     {
-        await _service.ReportStateAsync(_session.Id, HostId, new PlayerStateRequest(1, false), CancellationToken.None);
+        await _service.ReportStateAsync(_session.Id, HostId, new PlayerStateRequestDto(1, false), CancellationToken.None);
         await _service.SendCommandAsync(_session.Id, PlayerCommand.Pause, CancellationToken.None);
 
         var result = await _service.ReportStateAsync(
-            _session.Id, HostId, new PlayerStateRequest(1, false), CancellationToken.None);
+            _session.Id, HostId, new PlayerStateRequestDto(1, false), CancellationToken.None);
 
         Assert.Equal(PlayerCommand.Pause, result.Value.Command);
         Assert.Contains(
@@ -166,7 +168,7 @@ public class PlayerServiceTests
     public async Task ReportState_BroadcastsThePositionOfAChange()
     {
         await _service.ReportStateAsync(
-            _session.Id, HostId, new PlayerStateRequest(1, true, PositionMs: 33_000), CancellationToken.None);
+            _session.Id, HostId, new PlayerStateRequestDto(1, true, PositionMs: 33_000), CancellationToken.None);
 
         Assert.Contains(_notifier.PlayerStateChanged, x => x.State is { SongId: 1, Paused: true, PositionMs: 33_000 });
     }
@@ -175,9 +177,9 @@ public class PlayerServiceTests
     public async Task ReportState_ASeek_IsBroadcastEvenThoughNothingElseChanged()
     {
         await _service.ReportStateAsync(
-            _session.Id, HostId, new PlayerStateRequest(1, false, PositionMs: 10_000), CancellationToken.None);
+            _session.Id, HostId, new PlayerStateRequestDto(1, false, PositionMs: 10_000), CancellationToken.None);
         await _service.ReportStateAsync(
-            _session.Id, HostId, new PlayerStateRequest(1, false, PositionMs: 80_000, Seeked: true), CancellationToken.None);
+            _session.Id, HostId, new PlayerStateRequestDto(1, false, PositionMs: 80_000, Seeked: true), CancellationToken.None);
 
         Assert.Equal(2, _notifier.PlayerStateChanged.Count);
         Assert.Equal(80_000, _notifier.PlayerStateChanged[1].State.PositionMs);
@@ -187,9 +189,9 @@ public class PlayerServiceTests
     public async Task ReportState_AKeepaliveWithAMovedOnPosition_DoesNotBroadcast()
     {
         await _service.ReportStateAsync(
-            _session.Id, HostId, new PlayerStateRequest(1, false, PositionMs: 10_000), CancellationToken.None);
+            _session.Id, HostId, new PlayerStateRequestDto(1, false, PositionMs: 10_000), CancellationToken.None);
         await _service.ReportStateAsync(
-            _session.Id, HostId, new PlayerStateRequest(1, false, PositionMs: 20_000), CancellationToken.None);
+            _session.Id, HostId, new PlayerStateRequestDto(1, false, PositionMs: 20_000), CancellationToken.None);
 
         Assert.Single(_notifier.PlayerStateChanged);
     }
@@ -197,13 +199,13 @@ public class PlayerServiceTests
     [Fact]
     public async Task ReportState_RepeatingTheSameState_DoesNotBroadcastAgain()
     {
-        var request = new PlayerStateRequest(1, false);
+        var request = new PlayerStateRequestDto(1, false);
         await _service.ReportStateAsync(_session.Id, HostId, request, CancellationToken.None);
         await _service.ReportStateAsync(_session.Id, HostId, request, CancellationToken.None);
 
         Assert.Single(_notifier.PlayerStateChanged);
 
-        await _service.ReportStateAsync(_session.Id, HostId, new PlayerStateRequest(1, true), CancellationToken.None);
+        await _service.ReportStateAsync(_session.Id, HostId, new PlayerStateRequestDto(1, true), CancellationToken.None);
 
         Assert.Equal(2, _notifier.PlayerStateChanged.Count);
     }
@@ -211,7 +213,7 @@ public class PlayerServiceTests
     [Fact]
     public async Task SendCommand_ToAConnectedPlayer_PushesTheCommand()
     {
-        await _service.ReportStateAsync(_session.Id, HostId, new PlayerStateRequest(1, false), CancellationToken.None);
+        await _service.ReportStateAsync(_session.Id, HostId, new PlayerStateRequestDto(1, false), CancellationToken.None);
 
         var result = await _service.SendCommandAsync(_session.Id, PlayerCommand.Pause, CancellationToken.None);
 
@@ -241,37 +243,37 @@ public class PlayerServiceTests
         var result = await _service.SkipAsync(_session.Id, 1, CancellationToken.None);
 
         Assert.Equal(ErrorOr.ErrorType.Conflict, result.FirstError.Type);
-        Assert.Empty(_queue.AdvanceCalls);
+        Assert.Empty(_advancer.Calls);
+    }
+
+    [Fact]
+    public async Task Skip_FromAMissingSession_IsNotFoundAndAdvancesNothing()
+    {
+        var result = await _service.SkipAsync(Guid.NewGuid(), 1, CancellationToken.None);
+
+        Assert.Equal(ErrorOr.ErrorType.NotFound, result.FirstError.Type);
+        Assert.Empty(_advancer.Calls);
     }
 
     [Fact]
     public async Task Skip_AdvancesFromTheSongTheAdminSaw()
     {
         _store.Report(_session.Id, 1, paused: false);
-        _queue.Playing = Item(1);
-        _queue.AdvanceResult = Item(2);
+        _advancer.Result = Item(2).ToDto();
 
         var result = await _service.SkipAsync(_session.Id, 1, CancellationToken.None);
 
         Assert.Equal(2, result.Value.Id);
-        Assert.Equal((_session.Id, (int?)1), Assert.Single(_queue.AdvanceCalls));
-        var advanced = Assert.Single(_notifier.QueueAdvanced);
-        Assert.Equal(1, advanced.PreviousSongId);
-        Assert.Equal(2, advanced.NowPlaying?.Id);
+        Assert.Equal((_session.Id, (int?)1), Assert.Single(_advancer.Calls));
     }
 
     [Fact]
     public async Task Skip_PastTheLastSong_IsNotFound()
     {
         _store.Report(_session.Id, 1, paused: false);
-        _queue.Playing = Item(1);
-        _queue.AdvanceResult = null;
 
         var result = await _service.SkipAsync(_session.Id, 1, CancellationToken.None);
 
         Assert.Equal(ErrorOr.ErrorType.NotFound, result.FirstError.Type);
-        var advanced = Assert.Single(_notifier.QueueAdvanced);
-        Assert.Equal(1, advanced.PreviousSongId);
-        Assert.Null(advanced.NowPlaying);
     }
 }

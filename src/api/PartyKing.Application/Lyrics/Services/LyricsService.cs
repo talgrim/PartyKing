@@ -1,11 +1,13 @@
+using PartyKing.Application.Sessions.Helpers;
+using PartyKing.Application.Ports;
+using PartyKing.Domain.Repositories;
 using ErrorOr;
 using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
+using PartyKing.Application.Sessions;
 using PartyKing.Contract.V1.Lyrics;
 using PartyKing.Domain.Entities.Lyrics;
 using PartyKing.Domain.Results;
-using PartyKing.Infrastructure.Lyrics.RestApi;
-using PartyKing.Infrastructure.Repositories;
 
 namespace PartyKing.Application.Lyrics.Services;
 
@@ -19,14 +21,13 @@ public interface ILyricsService
 
     /// <summary>
     /// Saves the timing offset of the song being played for every session and pushes it to this session's viewers.
-    /// Only the host (<paramref name="profileId"/>) or an admin may; anyone else gets Forbidden. NotFound when
+    /// Only the host (<paramref name="caller"/>) or an admin may; anyone else gets Forbidden. NotFound when
     /// nothing is playing, Validation when the offset is out of range.
     /// </summary>
     Task<ErrorOr<Success>> SetOffsetAsync(
         Guid sessionId,
         int offsetMs,
-        string? profileId,
-        bool isAdmin,
+        SessionCaller caller,
         CancellationToken cancellationToken);
 }
 
@@ -39,22 +40,22 @@ internal class LyricsService : ILyricsService
     private readonly ILrclibClient _lrclibClient;
     private readonly ILyricsCache _cache;
     private readonly ILyricsOffsetsRepository _offsetsRepository;
-    private readonly ISessionService _sessionService;
-    private readonly ISessionMusicNotifier _notifier;
+    private readonly ISessionAuthorizer _sessionAuthorizer;
+    private readonly ILyricsNotifier _notifier;
 
     public LyricsService(
         IQueueRepository queueRepository,
         ILrclibClient lrclibClient,
         ILyricsCache cache,
         ILyricsOffsetsRepository offsetsRepository,
-        ISessionService sessionService,
-        ISessionMusicNotifier notifier)
+        ISessionAuthorizer sessionAuthorizer,
+        ILyricsNotifier notifier)
     {
         _queueRepository = queueRepository;
         _lrclibClient = lrclibClient;
         _cache = cache;
         _offsetsRepository = offsetsRepository;
-        _sessionService = sessionService;
+        _sessionAuthorizer = sessionAuthorizer;
         _notifier = notifier;
     }
 
@@ -91,19 +92,24 @@ internal class LyricsService : ILyricsService
             offsetMs);
     }
 
-    public async Task<ErrorOr<Success>> SetOffsetAsync(
+    public Task<ErrorOr<Success>> SetOffsetAsync(
         Guid sessionId,
         int offsetMs,
-        string? profileId,
-        bool isAdmin,
+        SessionCaller caller,
         CancellationToken cancellationToken)
     {
-        var authorized = await _sessionService.AuthorizeManagerAsync(sessionId, profileId, isAdmin, cancellationToken);
-        if (authorized.IsError)
-        {
-            return authorized.Errors;
-        }
+        return _sessionAuthorizer.RunAsManagerAsync(
+            sessionId,
+            caller,
+            () => SetOffsetCoreAsync(sessionId, offsetMs, cancellationToken),
+            cancellationToken);
+    }
 
+    private async Task<ErrorOr<Success>> SetOffsetCoreAsync(
+        Guid sessionId,
+        int offsetMs,
+        CancellationToken cancellationToken)
+    {
         if (Math.Abs((long)offsetMs) > MaxOffsetMs)
         {
             return Error.Validation(description: $"The offset must be within {MaxOffsetMs / 1000} seconds");

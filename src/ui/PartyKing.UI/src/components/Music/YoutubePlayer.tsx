@@ -1,4 +1,4 @@
-import { ReactNode, Ref, useImperativeHandle, useRef } from "react";
+import { Ref, useImperativeHandle, useRef } from "react";
 import ReactPlayer from 'react-player';
 
 export type YoutubePlayerHandle = {

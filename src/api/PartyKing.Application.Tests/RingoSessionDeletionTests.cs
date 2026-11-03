@@ -1,7 +1,10 @@
+using PartyKing.Application.Events;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using PartyKing.Domain.Entities.Games;
+using PartyKing.Domain.Entities.Games.Base;
+using PartyKing.Domain.Entities.Games.Ringo;
 using PartyKing.Domain.Entities.Sessions;
+using PartyKing.Infrastructure.Metrics;
 using PartyKing.Infrastructure.Repositories;
 using PartyKing.Persistence.Database;
 
@@ -13,6 +16,7 @@ namespace PartyKing.Application.Tests;
 /// </summary>
 public class RingoSessionDeletionTests : IAsyncLifetime
 {
+    private readonly RepositoryMetrics _metrics = new();
     private readonly string _directory = Path.Combine(Path.GetTempPath(), $"partyking-tests-{Guid.NewGuid():N}");
     private string ConnectionString => $"Data Source={Path.Combine(_directory, "PartyKing.db")}";
     private ServiceProvider _provider = null!;
@@ -37,12 +41,13 @@ public class RingoSessionDeletionTests : IAsyncLifetime
             await dbContext.Database.MigrateAsync();
         }
 
-        _ringo = new RingoGamesRepository(reader, _writer);
-        _sessions = new SessionsRepository(reader, _writer);
+        _ringo = new RingoGamesRepository(reader, _writer, _metrics, new NullDomainEventDispatcher());
+        _sessions = new SessionsRepository(reader, _writer, new NullDomainEventDispatcher());
     }
 
     public async Task DisposeAsync()
     {
+        _metrics.Dispose();
         await _provider.DisposeAsync();
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
         Directory.Delete(_directory, recursive: true);
@@ -62,10 +67,21 @@ public class RingoSessionDeletionTests : IAsyncLifetime
         Assert.Equal(LobbyStatus.Done, host.Status);
         Assert.Equal(LobbyStatus.Done, guest.Status);
 
-        var flip = await _ringo.FlipAsync(session.Id, 5, "admin", turnOf: null, DateTimeOffset.UtcNow, CancellationToken.None);
-        Assert.Equal(RingoFlipStatus.Flipped, flip.Status);
-        await _ringo.ContinueAsync(session.Id, turnOf: null, CancellationToken.None);
-        await _ringo.FlipAsync(session.Id, 12, "admin", turnOf: null, DateTimeOffset.UtcNow, CancellationToken.None);
+        var flip = await _ringo.UpdateAsync(
+            session.Id,
+            "FlipAsync",
+            RingoOutcome.NoGame,
+            game => game.Flip(5, "admin", null, DateTimeOffset.UtcNow),
+            CancellationToken.None);
+        Assert.True(flip.Changed);
+        await _ringo.UpdateAsync(
+            session.Id, "ContinueAsync", RingoOutcome.NoGame, game => game.Continue(null), CancellationToken.None);
+        await _ringo.UpdateAsync(
+            session.Id,
+            "FlipAsync",
+            RingoOutcome.NoGame,
+            game => game.Flip(12, "admin", null, DateTimeOffset.UtcNow),
+            CancellationToken.None);
 
         return session.Id;
     }

@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { ResistanceGameDto } from '@/service/endpoints/games/types';
 import { MIN_PLAYERS } from './resistanceTeams';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   game: ResistanceGameDto;
@@ -10,7 +11,6 @@ type Props = {
   onStart: () => void;
   onOpen: () => void;
   onRefreshRules: () => void;
-  onSetPlotCards: (enabled: boolean) => void;
   onContinue: () => void;
   onRestart: () => void;
 };
@@ -19,7 +19,8 @@ const buttonClass =
   'px-3 py-2 text-slate-200 bg-slate-900 rounded-md hover:bg-slate-700 cursor-pointer disabled:opacity-50 disabled:cursor-default';
 
 /** What the host and admins do to the game: manage the players, start, open it to guests (admin) and end it. */
-export const ResistanceManagerControls = ({ game, isAdmin, onManagePlayers, onEnd, onStart, onOpen, onRefreshRules, onSetPlotCards, onContinue, onRestart }: Props): ReactNode => {
+export const ResistanceManagerControls = ({ game, isAdmin, onManagePlayers, onEnd, onStart, onOpen, onRefreshRules, onContinue, onRestart }: Props): ReactNode => {
+  const { t } = useTranslation();
   const started = game.startedAt != null;
   const enough = game.players.length >= MIN_PLAYERS;
 
@@ -30,31 +31,31 @@ export const ResistanceManagerControls = ({ game, isAdmin, onManagePlayers, onEn
     <>
       {missionOver && (
         <button type="button" onClick={onContinue} className={buttonClass}>
-          Dalej
+          {t('resistance.next')}
         </button>
       )}
       {gameOver && (
         <button type="button" onClick={onRestart} className={buttonClass}>
-          Restart game
+          {t('resistance.controls.restart')}
         </button>
       )}
       {!started && (
         <button type="button" onClick={onManagePlayers} className={buttonClass}>
-          Players
+          {t('lobby.players')}
         </button>
       )}
       <button type="button" onClick={onEnd} className={buttonClass}>
-        End game
+        {t('resistance.controls.end')}
       </button>
       {game.isOpen && !started && (
         <button
           type="button"
           onClick={onStart}
           disabled={!enough}
-          title={enough ? undefined : `Potrzeba co najmniej ${MIN_PLAYERS} graczy`}
+          title={enough ? undefined : t('resistance.controls.startNeeds', { min: MIN_PLAYERS })}
           className={buttonClass}
         >
-          Start game
+          {t('resistance.controls.start')}
         </button>
       )}
       {!started && (
@@ -62,25 +63,15 @@ export const ResistanceManagerControls = ({ game, isAdmin, onManagePlayers, onEn
           type="button"
           onClick={onRefreshRules}
           disabled={game.isOpen}
-          title={game.isOpen ? 'Zasady można odświeżyć tylko przed otwarciem gry' : 'Pobierz aktualną konfigurację zasad z serwera'}
+          title={game.isOpen ? t('resistance.controls.refreshRulesOpen') : t('resistance.controls.refreshRulesHint')}
           className={buttonClass}
         >
-          Refresh rules
+          {t('resistance.controls.refreshRules')}
         </button>
-      )}
-      {!started && (
-        <label className={`${buttonClass} flex items-center gap-2`}>
-          <input
-            type="checkbox"
-            checked={game.rules.plotCardsEnabled}
-            onChange={(event) => onSetPlotCards(event.target.checked)}
-          />
-          Plot cards
-        </label>
       )}
       {isAdmin && !started && (
         <button type="button" onClick={onOpen} disabled={game.isOpen} className={buttonClass}>
-          Open the game
+          {t('resistance.controls.open')}
         </button>
       )}
     </>

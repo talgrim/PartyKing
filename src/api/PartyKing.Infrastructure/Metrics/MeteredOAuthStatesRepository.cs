@@ -1,3 +1,4 @@
+using PartyKing.Application.Ports;
 using PartyKing.Infrastructure.Repositories;
 
 namespace PartyKing.Infrastructure.Metrics;

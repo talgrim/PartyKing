@@ -4,8 +4,8 @@ using PartyKing.Application.Configuration;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Contract.V1.Slideshow;
 using PartyKing.Domain.Entities.Slideshow;
-using PartyKing.Infrastructure.Repositories;
-using PartyKing.Infrastructure.Results;
+using PartyKing.Application.Ports;
+using PartyKing.Domain.Repositories;
 
 namespace PartyKing.Application.Tests;
 
@@ -17,7 +17,7 @@ public class SlideshowServiceTests
     private readonly FakeSlideshowImagesRepository _repository = new();
     private readonly FakeSessionsRepository _sessions = new();
     private readonly FakeSlideshowScheduler _scheduler = new();
-    private readonly FakeSessionMusicNotifier _notifier = new();
+    private readonly FakeSlideshowNotifier _notifier = new();
     private readonly SlideshowService _service;
     private readonly Guid _sessionId;
 
@@ -30,6 +30,7 @@ public class SlideshowServiceTests
         };
         _service = new SlideshowService(
             _clock,
+            _repository,
             _repository,
             _sessions,
             Options.Create(configuration),
@@ -418,7 +419,7 @@ public class SlideshowServiceTests
             target.WriteAsync(content, cancellationToken).AsTask();
     }
 
-    private class FakeSlideshowImagesRepository : ISlideshowImagesRepository
+    private class FakeSlideshowImagesRepository : ISlideshowImagesRepository, ISlideshowSettingsRepository
     {
         public Dictionary<Guid, SlideshowImageReadResult> NextImages { get; } = [];
         public Dictionary<Guid, SlideshowSettings> Settings { get; } = [];
@@ -462,5 +463,10 @@ public class SlideshowServiceTests
             DeletedDirectories.Add(sessionDirectory);
             return Task.CompletedTask;
         }
+
+        public int CountSessionPhotos(string sessionDirectory) => 0;
+
+        public Task<string?> CreateSessionArchiveAsync(string sessionDirectory, CancellationToken cancellationToken) =>
+            Task.FromResult<string?>(null);
     }
 }

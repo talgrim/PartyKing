@@ -1,7 +1,7 @@
+using PartyKing.Application.Ports;
 using System.Diagnostics;
 using PartyKing.Domain.Entities.Spotify;
 using PartyKing.Domain.Results;
-using PartyKing.Infrastructure.Spotify.RestApi;
 
 namespace PartyKing.Infrastructure.Spotify.Metrics;
 

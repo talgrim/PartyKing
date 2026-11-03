@@ -1,6 +1,7 @@
 import { FormEvent, ReactNode, useId, useState } from 'react';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 import { settingsButtonClass, settingsInputClass, settingsLabelClass, settingsMessageClass } from './settingsStyles';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   sessionId: string;
@@ -11,6 +12,7 @@ const MAX_PASSWORD_LENGTH = 100;
 
 /** Sets a new session password. Guests have to enter it again; whoever changes it stays in. */
 export const SessionPasswordChangeForm = ({ sessionId }: Props): ReactNode => {
+  const { t } = useTranslation();
   const inputId = useId();
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -23,9 +25,9 @@ export const SessionPasswordChangeForm = ({ sessionId }: Props): ReactNode => {
     try {
       await sessionsApi.changePassword(sessionId, password);
       setPassword('');
-      setMessage('Password changed. Guests have to enter the new one.');
+      setMessage(t('passwordChange.changed'));
     } catch (error) {
-      setMessage((error as { message?: string })?.message || 'Something went wrong');
+      setMessage((error as { message?: string })?.message || t('common.somethingWentWrong'));
     } finally {
       setBusy(false);
     }
@@ -34,7 +36,7 @@ export const SessionPasswordChangeForm = ({ sessionId }: Props): ReactNode => {
   return (
     <form onSubmit={submit}>
       <label htmlFor={inputId} className={settingsLabelClass}>
-        New password
+        {t('passwordChange.label')}
       </label>
       <div className="flex gap-2">
         <input
@@ -52,11 +54,11 @@ export const SessionPasswordChangeForm = ({ sessionId }: Props): ReactNode => {
           disabled={busy || password.length < MIN_PASSWORD_LENGTH}
           className={settingsButtonClass}
         >
-          Change password
+          {t('passwordChange.change')}
         </button>
       </div>
       <p className="mt-2 text-xs text-slate-500">
-        At least {MIN_PASSWORD_LENGTH} characters. Guests have to enter the new password again.
+        {t('passwordChange.hint', { count: MIN_PASSWORD_LENGTH })}
       </p>
       {message && <p className={`mt-2 ${settingsMessageClass}`}>{message}</p>}
     </form>

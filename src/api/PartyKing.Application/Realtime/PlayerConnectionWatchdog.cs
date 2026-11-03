@@ -8,13 +8,13 @@ namespace PartyKing.Application.Realtime;
 internal sealed class PlayerConnectionWatchdog : IPlayerConnectionWatchdog, IAsyncDisposable
 {
     private readonly IPlayerStateStore _playerStateStore;
-    private readonly ISessionMusicNotifier _notifier;
+    private readonly IPlayerNotifier _notifier;
     private readonly ILogger<PlayerConnectionWatchdog> _logger;
     private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _arms = new();
 
     public PlayerConnectionWatchdog(
         IPlayerStateStore playerStateStore,
-        ISessionMusicNotifier notifier,
+        IPlayerNotifier notifier,
         ILogger<PlayerConnectionWatchdog> logger)
     {
         _playerStateStore = playerStateStore;

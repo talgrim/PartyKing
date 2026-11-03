@@ -1,3 +1,4 @@
+using PartyKing.Application.Ports;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
@@ -6,12 +7,6 @@ using PartyKing.Domain.Entities.Youtube;
 using PartyKing.Domain.Results;
 
 namespace PartyKing.Infrastructure.Youtube.RestApi;
-
-public interface IYoutubeOEmbedClient
-{
-    /// <summary>Looks the video up through YouTube's keyless oEmbed endpoint.</summary>
-    Task<YoutubeVideoLookupResult> GetVideoAsync(string videoId, CancellationToken cancellationToken);
-}
 
 public sealed class YoutubeOEmbedClient : IYoutubeOEmbedClient
 {

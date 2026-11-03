@@ -1,9 +1,11 @@
 import { ChangeEvent, ReactNode, useRef, useState } from 'react';
 import { Alert, LinearProgress } from '@mui/material';
 import { UploadedImagePreview } from '@/components/UploadedImagePreview';
+import { i18n } from '@/i18n';
 import { HTTP_STATUS_CODE } from '@/service/constants';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 import { settingsButtonClass } from './settingsStyles';
+import { useTranslation } from 'react-i18next';
 
 type UploadStatus = 'waiting' | 'uploading' | 'success' | 'error';
 
@@ -20,14 +22,15 @@ const describeUploadError = (error: unknown): string => {
   const { status, message } = (error as { status?: number; message?: string }) ?? {};
 
   if (status === HTTP_STATUS_CODE.BAD_REQUEST && message) return message;
-  if (status === HTTP_STATUS_CODE.TOO_MANY_REQUESTS) return 'Too many attempts. Try again in a minute.';
-  if (status === HTTP_STATUS_CODE.PAYLOAD_TOO_LARGE) return 'The files are too big (20 MB per photo, 100 MB at once).';
+  if (status === HTTP_STATUS_CODE.TOO_MANY_REQUESTS) return i18n.t('uploader.tooMany');
+  if (status === HTTP_STATUS_CODE.PAYLOAD_TOO_LARGE) return i18n.t('uploader.tooBig');
 
-  return 'Could not upload the files. Try again.';
+  return i18n.t('uploader.failed');
 };
 
 /** Picks photos and uploads them to the session's slideshow. */
 export const PhotoUploader = ({ sessionId, onBusyChange, onUnauthorized }: Props): ReactNode => {
+  const { t } = useTranslation();
   const [files, setFiles] = useState<File[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>('waiting');
@@ -72,7 +75,7 @@ export const PhotoUploader = ({ sessionId, onBusyChange, onUnauthorized }: Props
     <div className="space-y-4">
       {uploadStatus === 'success' && (
         <Alert variant="filled" severity="success">
-          Photos uploaded
+          {t('uploader.done')}
         </Alert>
       )}
       {uploadStatus === 'error' && (
@@ -82,7 +85,7 @@ export const PhotoUploader = ({ sessionId, onBusyChange, onUnauthorized }: Props
       )}
 
       <div className="relative p-5 text-center font-semibold text-slate-400 border-2 border-slate-600 border-dashed rounded-xl hover:border-amber-600">
-        Choose photos
+        {t('uploader.choose')}
         <svg
           xmlns="http://www.w3.org/2000/svg"
           className="mx-auto mt-4 w-12 h-12"
@@ -96,7 +99,7 @@ export const PhotoUploader = ({ sessionId, onBusyChange, onUnauthorized }: Props
         <input
           ref={fileInput}
           type="file"
-          aria-label="Choose photos"
+          aria-label={t('uploader.choose')}
           onChange={handleChange}
           disabled={uploading}
           multiple
@@ -113,14 +116,14 @@ export const PhotoUploader = ({ sessionId, onBusyChange, onUnauthorized }: Props
           onChange={(e) => setDeleteAfterPresentation(e.target.checked)}
           disabled={uploading}
         />
-        Delete each photo after it has been shown
+        {t('uploader.deleteAfter')}
       </label>
 
-      {uploading && <LinearProgress variant="determinate" value={uploadProgress} aria-label="Upload progress" />}
+      {uploading && <LinearProgress variant="determinate" value={uploadProgress} aria-label={t('uploader.progress')} />}
 
       {files.length > 0 && (
         <button type="button" onClick={() => void handleSubmit()} disabled={uploading} className={settingsButtonClass}>
-          {uploading ? 'Uploading…' : `Upload ${files.length === 1 ? '1 photo' : `${files.length} photos`}`}
+          {uploading ? t('uploader.uploading') : t('uploader.upload', { count: files.length })}
         </button>
       )}
 

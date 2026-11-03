@@ -33,10 +33,10 @@ public class PlayerController : CoreController
     [HttpPost("sessions/{sessionId:guid}/player/state")]
     [RequireSessionAccess]
     [AuthorizeByCookie]
-    [ProducesResponseType<PlayerStateResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<PlayerStateResponseDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> ReportState(
         Guid sessionId,
-        [FromBody] PlayerStateRequest request,
+        [FromBody] PlayerStateRequestDto request,
         CancellationToken cancellationToken)
     {
         var result = await _playerService.ReportStateAsync(sessionId, GetProfileId(), request, cancellationToken);
@@ -51,7 +51,7 @@ public class PlayerController : CoreController
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> SendCommand(
         Guid sessionId,
-        [FromBody] PlayerCommandRequest request,
+        [FromBody] PlayerCommandRequestDto request,
         CancellationToken cancellationToken)
     {
         var result = await _playerService.SendCommandAsync(sessionId, request.Command, cancellationToken);

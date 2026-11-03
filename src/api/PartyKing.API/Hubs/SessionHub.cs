@@ -1,15 +1,15 @@
-using Microsoft.AspNetCore.Authentication;
+using PartyKing.Application.Ports;
 using Microsoft.AspNetCore.SignalR;
+using PartyKing.API.Authentication;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Slideshow.Services;
-using PartyKing.Infrastructure.Authentication;
-using PartyKing.Infrastructure.Authorization;
 
 namespace PartyKing.API.Hubs;
 
 /// <summary>
 /// Live music and slideshow updates for one unlocked session. Clients connect with <c>?sessionId=</c> and the
-/// session-access cookie; mutations stay on the REST controllers. The only hub methods tell the server that the
+/// session-access cookie, plus <c>&topics=</c> to receive only some pushes (see <see cref="SessionHubTopic"/>); mutations
+/// stay on the REST controllers. The only hub methods tell the server that the
 /// host or an admin displays the slideshow, so its timer runs.
 /// </summary>
 public class SessionHub : Hub
@@ -18,16 +18,19 @@ public class SessionHub : Hub
 
     private const string SessionIdItem = "sessionId";
 
-    private readonly ISessionService _sessionService;
+    private readonly ISessionAccessService _accessService;
+    private readonly ISessionAuthorizer _sessionAuthorizer;
     private readonly ICookieAuthorizationHandler _cookieAuthorizationHandler;
     private readonly ISlideshowService _slideshowService;
 
     public SessionHub(
-        ISessionService sessionService,
+        ISessionAccessService accessService,
+        ISessionAuthorizer sessionAuthorizer,
         ICookieAuthorizationHandler cookieAuthorizationHandler,
         ISlideshowService slideshowService)
     {
-        _sessionService = sessionService;
+        _accessService = accessService;
+        _sessionAuthorizer = sessionAuthorizer;
         _cookieAuthorizationHandler = cookieAuthorizationHandler;
         _slideshowService = slideshowService;
     }
@@ -39,7 +42,13 @@ public class SessionHub : Hub
 
         if (!Guid.TryParse(http.Request.Query["sessionId"], out var sessionId)
             || !_cookieAuthorizationHandler.TryReadSessionAccess(http.Request, sessionId, out var stamp)
-            || !await _sessionService.HasAccessAsync(sessionId, stamp, Context.ConnectionAborted))
+            || !await _accessService.HasAccessAsync(sessionId, stamp, Context.ConnectionAborted))
+        {
+            Context.Abort();
+            return;
+        }
+
+        if (!SessionHubTopics.TryParse(http.Request.Query["topics"], out var topics))
         {
             Context.Abort();
             return;
@@ -47,7 +56,11 @@ public class SessionHub : Hub
 
         Context.Items[SessionIdItem] = sessionId;
 
-        await Groups.AddToGroupAsync(Context.ConnectionId, GroupName(sessionId), Context.ConnectionAborted);
+        foreach (var topic in topics)
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, GroupName(sessionId, topic), Context.ConnectionAborted);
+        }
+
         await base.OnConnectedAsync();
     }
 
@@ -65,10 +78,9 @@ public class SessionHub : Hub
             ?? throw new HubException("HTTP context is required");
         var sessionId = (Guid)Context.Items[SessionIdItem]!;
 
-        var profileId = _cookieAuthorizationHandler.TryReadProfileId(http.Request, out var id) ? id : null;
-        var isAdmin = (await http.AuthenticateAsync(Constants.AdminScheme)).Succeeded;
+        var caller = await http.ReadSessionCallerAsync(_cookieAuthorizationHandler);
 
-        if ((await _sessionService.AuthorizeManagerAsync(sessionId, profileId, isAdmin, Context.ConnectionAborted)).IsError)
+        if ((await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, caller, Context.ConnectionAborted)).IsError)
         {
             throw new HubException("Only the host or an admin can watch the slideshow");
         }
@@ -81,5 +93,5 @@ public class SessionHub : Hub
         _slideshowService.Unwatch(Context.ConnectionId);
     }
 
-    internal static string GroupName(Guid sessionId) => $"session:{sessionId}";
+    internal static string GroupName(Guid sessionId, SessionHubTopic topic) => $"session:{sessionId}:{topic.ToString().ToLowerInvariant()}";
 }

@@ -22,22 +22,22 @@ describe('ResistanceInvite', () => {
     sessionStorage.clear();
   });
 
-  it('invites a guest while the game is open and dismisses on "Nie"', async () => {
+  it('invites a guest while the game is open and dismisses on "No"', async () => {
     mocks.getLobby.mockResolvedValue(open);
     renderInvite();
 
-    expect(await screen.findByText('Nowa gra w Resistance została uruchomiona. Czy chcesz dołączyć?')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Nie' }));
+    expect(await screen.findByText('A new Resistance game has started. Do you want to join?')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'No' }));
 
     expect(screen.queryByText(/Nowa gra w Resistance/)).not.toBeInTheDocument();
   });
 
-  it('opens the join page in a new tab on "Tak"', async () => {
+  it('opens the join page in a new tab on "Yes"', async () => {
     const spy = vi.spyOn(window, 'open').mockReturnValue(null);
     mocks.getLobby.mockResolvedValue(open);
     renderInvite();
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Tak' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Yes' }));
 
     expect(spy).toHaveBeenCalledWith('/s/session-1/games/resistance/join', '_blank', 'noopener,noreferrer');
     spy.mockRestore();

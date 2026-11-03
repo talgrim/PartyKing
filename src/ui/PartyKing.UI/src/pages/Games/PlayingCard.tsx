@@ -1,5 +1,6 @@
 import { CSSProperties, ReactNode } from 'react';
 import { CardPlacement, getCard } from './ringoLayout';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   placement: CardPlacement;
@@ -11,6 +12,7 @@ type Props = {
 
 /** One card on the board: face down until it is clicked, then it stays face up where it lies. */
 export const PlayingCard = ({ placement, flipped, disabled = false, onFlip }: Props): ReactNode => {
+  const { t } = useTranslation();
   const card = getCard(placement.id);
 
   // The board sets --card-w; the card stays inside it, whatever the board size
@@ -26,7 +28,7 @@ export const PlayingCard = ({ placement, flipped, disabled = false, onFlip }: Pr
   return (
     <button
       type="button"
-      aria-label={flipped ? label : 'Face down card'}
+      aria-label={flipped ? label : t('ringo.faceDown')}
       disabled={disabled && !flipped}
       onClick={() => !flipped && onFlip(card.id)}
       style={style}

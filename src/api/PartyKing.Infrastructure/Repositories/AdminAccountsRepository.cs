@@ -1,16 +1,9 @@
+using PartyKing.Domain.Repositories;
 using Microsoft.EntityFrameworkCore;
 using PartyKing.Domain.Entities.Auth;
 using PartyKing.Persistence.Database;
 
 namespace PartyKing.Infrastructure.Repositories;
-
-public interface IAdminAccountsRepository
-{
-    Task<bool> AnyAsync(CancellationToken cancellationToken);
-    Task<AdminAccount?> GetByUsernameAsync(string username, CancellationToken cancellationToken);
-    Task<AdminAccount?> GetAsync(Guid id, CancellationToken cancellationToken);
-    Task AddAsync(AdminAccount account, CancellationToken cancellationToken);
-}
 
 internal class AdminAccountsRepository : IAdminAccountsRepository
 {

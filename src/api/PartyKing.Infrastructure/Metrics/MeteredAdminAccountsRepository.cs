@@ -1,3 +1,4 @@
+using PartyKing.Domain.Repositories;
 using PartyKing.Domain.Entities.Auth;
 using PartyKing.Infrastructure.Repositories;
 

@@ -43,6 +43,11 @@ export type UserDto = {
   sessionId: string;
 };
 
+// Mirrors PartyKing.Contract.V1.Slideshow.SlideshowPhotoCountDto
+export type SlideshowPhotoCountDto = {
+  count: number;
+};
+
 // Mirrors PartyKing.Contract.V1.Slideshow.SlideshowSettingsDto
 export type SlideshowSettingsDto = {
   /** Start over after the last photo. */

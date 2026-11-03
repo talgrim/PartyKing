@@ -42,4 +42,30 @@ public class QueueItem
 
     /// <summary>True when the server queued the song from the session's fallback playlist.</summary>
     public bool IsFallback { get; set; }
+
+    /// <summary>Starts a song that was waiting. A song in any other state is left alone.</summary>
+    public bool StartPlaying()
+    {
+        if (Status != QueueItemStatus.Queued)
+        {
+            return false;
+        }
+
+        Status = QueueItemStatus.Playing;
+
+        return true;
+    }
+
+    /// <summary>Finishes the song that is playing. A song in any other state is left alone.</summary>
+    public bool MarkPlayed()
+    {
+        if (Status != QueueItemStatus.Playing)
+        {
+            return false;
+        }
+
+        Status = QueueItemStatus.Played;
+
+        return true;
+    }
 }

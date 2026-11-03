@@ -1,3 +1,4 @@
+using PartyKing.Application.Ports;
 using System.Diagnostics;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
@@ -5,7 +6,6 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 using PartyKing.API.Metrics;
 using PartyKing.Application.Admin.Services;
-using PartyKing.Infrastructure.Authorization;
 
 namespace PartyKing.API.Authentication.Cookie;
 

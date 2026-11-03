@@ -11,6 +11,7 @@ import {
 import { useResistanceLobby } from '@/service/endpoints/games/useResistanceLobby';
 import { useRingoLobby } from '@/service/endpoints/games/useRingoLobby';
 import { withDevPersona } from '@/service/devPersona';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   sessionId: string;
@@ -35,6 +36,7 @@ const resistancePaths = (sessionId: string, canManage: boolean, lobby: { isStart
 
 /** A gamepad icon with a menu of the games open in the session; hidden while none is. A game opens in a new tab. */
 export const OpenGamesMenu = ({ sessionId, canManage }: Props): ReactNode => {
+  const { t } = useTranslation();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const { data: ringo } = useRingoLobby(sessionId);
   const { data: resistance } = useResistanceLobby(sessionId);
@@ -59,8 +61,8 @@ export const OpenGamesMenu = ({ sessionId, canManage }: Props): ReactNode => {
     <>
       <button
         onClick={(event) => setAnchor(event.currentTarget)}
-        aria-label="Open games"
-        title="Open games"
+        aria-label={t('openGames.label')}
+        title={t('openGames.label')}
         aria-haspopup="menu"
         className="p-1 text-slate-400 hover:text-slate-200 cursor-pointer"
       >

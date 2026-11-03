@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using PartyKing.Domain.Entities.Games;
+using PartyKing.Domain.Entities.Games.Resistance;
 using PartyKing.Domain.Entities.Sessions;
 
 namespace PartyKing.Persistence.Configurations;

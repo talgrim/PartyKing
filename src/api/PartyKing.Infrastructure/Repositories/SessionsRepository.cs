@@ -1,51 +1,31 @@
+using PartyKing.Application.Events;
+using PartyKing.Domain.Repositories;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using PartyKing.Domain.Entities.Sessions;
 using PartyKing.Domain.Enums;
+using PartyKing.Domain.Events.Sessions;
 using PartyKing.Persistence.Database;
 
 namespace PartyKing.Infrastructure.Repositories;
 
-public interface ISessionsRepository
-{
-    /// <summary>Returns false when the session code is already taken.</summary>
-    Task<bool> TryAddAsync(Session session, CancellationToken cancellationToken);
-    Task<IReadOnlyList<Session>> GetAllAsync(CancellationToken cancellationToken);
-    Task<Session?> GetAsync(Guid id, CancellationToken cancellationToken);
-    Task<bool> RenameAsync(Guid id, string name, CancellationToken cancellationToken);
-    Task<bool> UpdatePasswordHashAsync(Guid id, string passwordHash, CancellationToken cancellationToken);
-
-    /// <summary>Sets the fallback playlist and rewinds it; a null <paramref name="playlistId"/> clears it.</summary>
-    Task<bool> SetFallbackPlaylistAsync(
-        Guid id,
-        string? playlistId,
-        string? playlistName,
-        bool shuffle,
-        CancellationToken cancellationToken);
-
-    Task<bool> SetFallbackCursorAsync(Guid id, int cursor, CancellationToken cancellationToken);
-
-    /// <summary>Deletes the session together with its queue.</summary>
-    Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken);
-
-    /// <summary>Atomically assigns the host. The first profile to claim a session owns it.</summary>
-    Task<SessionClaimResult> TryClaimAsync(Guid id, string profileId, CancellationToken cancellationToken);
-    Task<bool> ReleaseAsync(Guid id, CancellationToken cancellationToken);
-}
-
 internal class SessionsRepository : ISessionsRepository
 {
     private const int SqliteConstraintErrorCode = 19;
+    private const int MaxUpdateAttempts = 3;
 
     private readonly IDbContextFactory<ReaderDbContext> _readerDbContextFactory;
     private readonly IDbContextFactory<WriterDbContext> _writerDbContextFactory;
+    private readonly IDomainEventDispatcher _dispatcher;
 
     public SessionsRepository(
         IDbContextFactory<ReaderDbContext> readerDbContextFactory,
-        IDbContextFactory<WriterDbContext> writerDbContextFactory)
+        IDbContextFactory<WriterDbContext> writerDbContextFactory,
+        IDomainEventDispatcher dispatcher)
     {
         _readerDbContextFactory = readerDbContextFactory;
         _writerDbContextFactory = writerDbContextFactory;
+        _dispatcher = dispatcher;
     }
 
     public async Task<bool> TryAddAsync(Session session, CancellationToken cancellationToken)
@@ -87,57 +67,47 @@ internal class SessionsRepository : ISessionsRepository
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
     }
 
-    public async Task<bool> RenameAsync(Guid id, string name, CancellationToken cancellationToken)
+    public Task<bool> RenameAsync(Guid id, string name, CancellationToken cancellationToken)
     {
-        await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
-
-        var updated = await dbContext.Sessions
-            .Where(x => x.Id == id)
-            .ExecuteUpdateAsync(x => x.SetProperty(s => s.Name, name), cancellationToken);
-
-        return updated > 0;
+        return UpdateAsync(id, session => session.Rename(name), cancellationToken);
     }
 
-    public async Task<bool> UpdatePasswordHashAsync(
+    public Task<bool> UpdatePasswordHashAsync(
         Guid id,
         string passwordHash,
         CancellationToken cancellationToken)
     {
-        await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
-
-        var updated = await dbContext.Sessions
-            .Where(x => x.Id == id)
-            .ExecuteUpdateAsync(x => x.SetProperty(s => s.PasswordHash, passwordHash), cancellationToken);
-
-        return updated > 0;
+        return UpdateAsync(id, session => session.ChangePassword(passwordHash), cancellationToken);
     }
 
-    public async Task<bool> SetFallbackPlaylistAsync(
+    public Task<bool> SetFallbackPlaylistAsync(
         Guid id,
         string? playlistId,
         string? playlistName,
         bool shuffle,
         CancellationToken cancellationToken)
     {
-        await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
-
-        var updated = await dbContext.Sessions
-            .Where(x => x.Id == id)
-            .ExecuteUpdateAsync(
-                x => x
-                    .SetProperty(s => s.FallbackPlaylistId, playlistId)
-                    .SetProperty(s => s.FallbackPlaylistName, playlistName)
-                    .SetProperty(s => s.FallbackShuffle, shuffle)
-                    .SetProperty(s => s.FallbackCursor, 0),
-                cancellationToken);
-
-        return updated > 0;
+        return UpdateAsync(
+            id,
+            session =>
+            {
+                if (playlistId is null)
+                {
+                    session.ClearFallbackPlaylist();
+                }
+                else
+                {
+                    session.SetFallbackPlaylist(playlistId, playlistName, shuffle);
+                }
+            },
+            cancellationToken);
     }
 
     public async Task<bool> SetFallbackCursorAsync(Guid id, int cursor, CancellationToken cancellationToken)
     {
         await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
 
+        // Bookkeeping of the refill, not a change anyone reacts to, so it is a plain update that raises nothing
         var updated = await dbContext.Sessions
             .Where(x => x.Id == id)
             .ExecuteUpdateAsync(x => x.SetProperty(s => s.FallbackCursor, cursor), cancellationToken);
@@ -149,12 +119,29 @@ internal class SessionsRepository : ISessionsRepository
     {
         await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
 
+        // The row is gone after the delete, so what the cleanup needs is read first
+        var session = await dbContext.Sessions
+            .AsNoTracking()
+            .Where(x => x.Id == id)
+            .Select(x => new { x.HostProfileId, x.FallbackPlaylistId })
+            .FirstOrDefaultAsync(cancellationToken);
+
         // Queue items and pending OAuth states are removed by the cascade delete
         var deleted = await dbContext.Sessions
             .Where(x => x.Id == id)
             .ExecuteDeleteAsync(cancellationToken);
 
-        return deleted > 0;
+        if (deleted == 0)
+        {
+            return false;
+        }
+
+        // Nothing is loaded for an ExecuteDelete, so the repository raises the event, like LobbyGamesRepository.DeleteAsync
+        await _dispatcher.DispatchAsync(
+            [new SessionDeleted(id, session?.HostProfileId, session?.FallbackPlaylistId)],
+            CancellationToken.None);
+
+        return true;
     }
 
     public async Task<SessionClaimResult> TryClaimAsync(
@@ -191,7 +178,15 @@ internal class SessionsRepository : ISessionsRepository
                 .Where(x => x.Id == id && x.HostProfileId == null)
                 .ExecuteUpdateAsync(x => x.SetProperty(s => s.HostProfileId, profileId), cancellationToken);
 
-            return updated > 0 ? SessionClaimResult.Claimed : SessionClaimResult.AlreadyClaimed;
+            if (updated == 0)
+            {
+                return SessionClaimResult.AlreadyClaimed;
+            }
+
+            // The claim is a conditional update on an untracked row, so the repository raises the event
+            await _dispatcher.DispatchAsync([new HostClaimed(id, profileId)], CancellationToken.None);
+
+            return SessionClaimResult.Claimed;
         }
         catch (SqliteException exception) when (exception.SqliteErrorCode == SqliteConstraintErrorCode)
         {
@@ -200,22 +195,46 @@ internal class SessionsRepository : ISessionsRepository
         }
     }
 
-    public async Task<bool> ReleaseAsync(Guid id, CancellationToken cancellationToken)
+    public Task<bool> ReleaseAsync(Guid id, CancellationToken cancellationToken)
     {
-        await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
+        return UpdateAsync(id, session => session.Release(), cancellationToken);
+    }
 
-        var updated = await dbContext.Sessions
-            .Where(x => x.Id == id)
-            .ExecuteUpdateAsync(
-                x => x
-                    .SetProperty(s => s.HostProfileId, (string?)null)
-                    // The playlist belongs to the host who chose it, so the next host starts without one
-                    .SetProperty(s => s.FallbackPlaylistId, (string?)null)
-                    .SetProperty(s => s.FallbackPlaylistName, (string?)null)
-                    .SetProperty(s => s.FallbackShuffle, false)
-                    .SetProperty(s => s.FallbackCursor, 0),
-                cancellationToken);
+    /// <summary>
+    /// Loads the session, runs a Domain action on it, saves, and hands the events it raised to the dispatcher once the
+    /// change is committed. Returns false when the session does not exist (also when it vanished under the save).
+    /// The host is a concurrency token: when a claim or release changes it between the load and the save, the save
+    /// matches no row, so the action runs again on a fresh load instead of overwriting the newer host.
+    /// </summary>
+    private async Task<bool> UpdateAsync(Guid id, Action<Session> action, CancellationToken cancellationToken)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
 
-        return updated > 0;
+            var session = await dbContext.Sessions.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
+            if (session is null)
+            {
+                return false;
+            }
+
+            action(session);
+
+            try
+            {
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateConcurrencyException) when (attempt < MaxUpdateAttempts)
+            {
+                // Deleted (the next load answers false) or the host changed: try again on fresh data
+                continue;
+            }
+
+            // CancellationToken.None: the change is committed, an aborted request must not drop the cleanup
+            await _dispatcher.DispatchAsync(session.DrainEvents(), CancellationToken.None);
+
+            return true;
+        }
     }
 }

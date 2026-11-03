@@ -12,7 +12,7 @@ const onSuggested = vi.fn();
 
 const renderAndClick = async (suggestedRules: string[] = []) => {
   render(<RingoRuleSuggestions sessionId="session-1" suggestedRules={suggestedRules} onSuggested={onSuggested} />);
-  await userEvent.click(screen.getByRole('button', { name: 'Zaproponuj zasady' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Suggest rules' }));
 };
 
 describe('RingoRuleSuggestions', () => {
@@ -28,7 +28,7 @@ describe('RingoRuleSuggestions', () => {
 
     expect(await screen.findByText('Reguła A.')).toBeInTheDocument();
     expect(screen.getByText('Reguła B.')).toBeInTheDocument();
-    expect(screen.queryByText(/wbudowanej listy/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/built-in list/)).not.toBeInTheDocument();
     expect(onSuggested).toHaveBeenCalledWith(['Reguła A.', 'Reguła B.']);
   });
 
@@ -45,7 +45,7 @@ describe('RingoRuleSuggestions', () => {
 
     await renderAndClick();
 
-    expect(await screen.findByText(/wbudowanej listy/)).toBeInTheDocument();
+    expect(await screen.findByText(/built-in list/)).toBeInTheDocument();
   });
 
   it('asks the host to wait when requests are rate limited', async () => {
@@ -53,7 +53,7 @@ describe('RingoRuleSuggestions', () => {
 
     await renderAndClick();
 
-    expect(await screen.findByText(/Za dużo zapytań/)).toBeInTheDocument();
+    expect(await screen.findByText(/Too many requests/)).toBeInTheDocument();
     expect(onSuggested).not.toHaveBeenCalled();
   });
 
@@ -62,7 +62,7 @@ describe('RingoRuleSuggestions', () => {
 
     await renderAndClick();
 
-    expect(await screen.findByText('Nie udało się pobrać propozycji')).toBeInTheDocument();
+    expect(await screen.findByText('Could not get suggestions')).toBeInTheDocument();
   });
 
   it('disables the button while waiting for the answer', async () => {
@@ -70,6 +70,6 @@ describe('RingoRuleSuggestions', () => {
 
     await renderAndClick();
 
-    expect(screen.getByRole('button', { name: 'Zaproponuj zasady' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Suggest rules' })).toBeDisabled();
   });
 });

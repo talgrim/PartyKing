@@ -1,6 +1,7 @@
 import { FormEvent, ReactNode, useId, useState } from 'react';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 import { settingsButtonClass, settingsInputClass, settingsLabelClass, settingsMessageClass } from './settingsStyles';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   sessionId: string;
@@ -13,6 +14,7 @@ const MAX_NAME_LENGTH = 60;
 
 /** Changes the name of the session. */
 export const SessionNameForm = ({ sessionId, currentName, onRenamed }: Props): ReactNode => {
+  const { t } = useTranslation();
   const inputId = useId();
   const [name, setName] = useState(currentName);
   const [busy, setBusy] = useState(false);
@@ -26,10 +28,10 @@ export const SessionNameForm = ({ sessionId, currentName, onRenamed }: Props): R
     setMessage(null);
     try {
       await sessionsApi.renameSession(sessionId, trimmed);
-      setMessage('Name saved');
+      setMessage(t('nameForm.saved'));
       onRenamed();
     } catch (error) {
-      setMessage((error as { message?: string })?.message || 'Something went wrong');
+      setMessage((error as { message?: string })?.message || t('common.somethingWentWrong'));
     } finally {
       setBusy(false);
     }
@@ -38,7 +40,7 @@ export const SessionNameForm = ({ sessionId, currentName, onRenamed }: Props): R
   return (
     <form onSubmit={submit}>
       <label htmlFor={inputId} className={settingsLabelClass}>
-        Session name
+        {t('nameForm.label')}
       </label>
       <div className="flex gap-2">
         <input
@@ -53,7 +55,7 @@ export const SessionNameForm = ({ sessionId, currentName, onRenamed }: Props): R
           disabled={busy || !trimmed || trimmed === currentName}
           className={settingsButtonClass}
         >
-          Save name
+          {t('nameForm.save')}
         </button>
       </div>
       {message && <p className={`mt-2 ${settingsMessageClass}`}>{message}</p>}

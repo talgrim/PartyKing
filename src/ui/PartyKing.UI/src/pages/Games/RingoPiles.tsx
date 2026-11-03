@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { RingoFlipDto } from '@/service/endpoints/games/types';
 import { KINGS_TO_END, pileCards } from './ringoCards';
 import { RingoCard } from './ringoLayout';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   flips: RingoFlipDto[];
@@ -25,12 +26,13 @@ const Pile = ({ label, cards }: { label: string; cards: RingoCard[] }): ReactNod
 
 /** The kings and aces that were found and put aside, so everyone sees how many are gone. */
 export const RingoPiles = ({ flips, pendingCardId }: Props): ReactNode => {
+  const { t } = useTranslation();
   const { kings, aces } = pileCards(flips, pendingCardId);
 
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-      <Pile label={`Króle ${kings.length}/${KINGS_TO_END}`} cards={kings} />
-      <Pile label={`Asy ${aces.length}`} cards={aces} />
+      <Pile label={t('ringo.kingsPile', { found: kings.length, max: KINGS_TO_END })} cards={kings} />
+      <Pile label={t('ringo.acesPile', { found: aces.length })} cards={aces} />
     </div>
   );
 };

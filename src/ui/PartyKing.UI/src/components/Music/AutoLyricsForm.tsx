@@ -1,8 +1,10 @@
 import { ReactNode } from 'react';
 import { useAutoLyrics } from './useAutoLyrics';
+import { useTranslation } from 'react-i18next';
 
 /** Lets the slideshow drawer switch to the lyrics of each song that has some, and back to the slideshow when it has none. */
 export const AutoLyricsForm = (): ReactNode => {
+  const { t } = useTranslation();
   const [autoLyrics, setAutoLyrics] = useAutoLyrics();
 
   return (
@@ -13,7 +15,7 @@ export const AutoLyricsForm = (): ReactNode => {
         checked={autoLyrics}
         onChange={(e) => setAutoLyrics(e.target.checked)}
       />
-      Switch between the slideshow and the lyrics by itself
+      {t('autoLyrics.label')}
     </label>
   );
 };

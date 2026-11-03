@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { NowPlayingDto } from '@/service/endpoints/player/types';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   nowPlaying: NowPlayingDto | undefined;
@@ -11,6 +12,7 @@ const shortScreen = '[@media(max-height:500px)]';
 
 /** Only the artist and the title of the song playing, large enough to read from across the room. */
 export const NowPlayingOverlay = ({ nowPlaying, overLyrics = false }: Props): ReactNode => {
+  const { t } = useTranslation();
   const song = nowPlaying?.song;
   if (!song) return null;
 
@@ -21,7 +23,7 @@ export const NowPlayingOverlay = ({ nowPlaying, overLyrics = false }: Props): Re
   const artists = overLyrics ? `${shortScreen}:text-sm` : '';
 
   return (
-    <section aria-label="Now playing" className={`px-6 py-4 bg-black/60 text-white ${compact}`}>
+    <section aria-label={t('nowPlaying.title')} className={`px-6 py-4 bg-black/60 text-white ${compact}`}>
       <div className={`truncate text-3xl font-semibold ${title}`}>{song.name}</div>
       {song.artists && <div className={`truncate text-xl text-slate-300 ${artists}`}>{song.artists}</div>}
     </section>

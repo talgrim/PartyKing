@@ -41,8 +41,8 @@ describe('RingoJoin', () => {
     mocks.join.mockResolvedValue(undefined);
     renderPage();
 
-    await userEvent.type(await screen.findByLabelText(/Twoje imię/), ' Ola ');
-    await userEvent.click(screen.getByRole('button', { name: 'Dołącz' }));
+    await userEvent.type(await screen.findByLabelText(/Your name/), ' Ola ');
+    await userEvent.click(screen.getByRole('button', { name: 'Join' }));
 
     expect(mocks.join).toHaveBeenCalledWith('session-1', 'Ola');
     expect(await screen.findByText('Board')).toBeInTheDocument();
@@ -53,17 +53,17 @@ describe('RingoJoin', () => {
     mocks.join.mockRejectedValue({ status: 409 });
     renderPage();
 
-    await userEvent.type(await screen.findByLabelText(/Twoje imię/), 'Ola');
-    await userEvent.click(screen.getByRole('button', { name: 'Dołącz' }));
+    await userEvent.type(await screen.findByLabelText(/Your name/), 'Ola');
+    await userEvent.click(screen.getByRole('button', { name: 'Join' }));
 
-    expect(await screen.findByText(/Ktoś już używa tego imienia/)).toBeInTheDocument();
+    expect(await screen.findByText(/Somebody already uses that name/)).toBeInTheDocument();
   });
 
   it('says the game is not open yet', async () => {
     mocks.getLobby.mockResolvedValue({ seed: 1, isOpen: false, joined: false });
     renderPage();
 
-    expect(await screen.findByText(/nie jest jeszcze otwarta/)).toBeInTheDocument();
+    expect(await screen.findByText(/not open yet/)).toBeInTheDocument();
   });
 
   it('goes back to the session when there is no game', async () => {
@@ -79,8 +79,8 @@ describe('RingoJoin', () => {
     mocks.join.mockResolvedValue(undefined);
     renderPage();
 
-    expect(await screen.findByText('Bez imienia dołączysz jako „admin”.')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Dołącz' }));
+    expect(await screen.findByText('Without a name you join as “admin”.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Join' }));
 
     expect(mocks.join).toHaveBeenCalledWith('session-1', '');
   });
@@ -91,8 +91,8 @@ describe('RingoJoin', () => {
     mocks.join.mockResolvedValue(undefined);
     renderPage();
 
-    await userEvent.type(await screen.findByLabelText(/Twoje imię/), 'Adam');
-    await userEvent.click(screen.getByRole('button', { name: 'Dołącz' }));
+    await userEvent.type(await screen.findByLabelText(/Your name/), 'Adam');
+    await userEvent.click(screen.getByRole('button', { name: 'Join' }));
 
     expect(mocks.join).toHaveBeenCalledWith('session-1', 'Adam');
   });
@@ -102,7 +102,7 @@ describe('RingoJoin', () => {
     mocks.getLobby.mockResolvedValue({ seed: 1, isOpen: true, joined: false });
     renderPage();
 
-    await screen.findByRole('button', { name: 'Dołącz' });
-    expect(screen.queryByLabelText(/Twoje imię/)).not.toBeInTheDocument();
+    await screen.findByRole('button', { name: 'Join' });
+    expect(screen.queryByLabelText(/Your name/)).not.toBeInTheDocument();
   });
 });

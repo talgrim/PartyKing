@@ -1,3 +1,4 @@
+using PartyKing.Application.Ports;
 using ErrorOr;
 using Microsoft.EntityFrameworkCore;
 using PartyKing.Domain.Entities.Spotify;
@@ -5,12 +6,6 @@ using PartyKing.Domain.Results;
 using PartyKing.Persistence.Database;
 
 namespace PartyKing.Infrastructure.Repositories;
-
-public interface ISpotifyProfilesRepository
-{
-    Task CreateProfileAsync(AuthenticationResult result, CancellationToken cancellationToken);
-    Task<ErrorOr<SpotifyProfile>> GetProfileAsync(string id, CancellationToken cancellationToken);
-}
 
 internal class SpotifyProfilesRepository : ISpotifyProfilesRepository
 {

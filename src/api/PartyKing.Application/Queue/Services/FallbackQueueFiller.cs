@@ -1,10 +1,9 @@
+using PartyKing.Application.Ports;
+using PartyKing.Domain.Repositories;
 using PartyKing.Application.Mappings;
 using PartyKing.Application.Realtime;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Domain.Entities.Spotify;
-using PartyKing.Infrastructure.Repositories;
-using PartyKing.Infrastructure.Spotify.RestApi;
-using SpotifyAPI.Web;
 
 namespace PartyKing.Application.Queue.Services;
 
@@ -26,7 +25,6 @@ internal class FallbackQueueFiller : IFallbackQueueFiller
     private readonly IHostTokenProvider _hostTokenProvider;
     private readonly IPlaylistTrackCache _trackCache;
     private readonly IFallbackStatusStore _statusStore;
-    private readonly ISessionMusicNotifier _musicNotifier;
 
     public FallbackQueueFiller(
         ISessionsRepository sessionsRepository,
@@ -34,8 +32,7 @@ internal class FallbackQueueFiller : IFallbackQueueFiller
         ISpotifyIntegrationClient spotifyClient,
         IHostTokenProvider hostTokenProvider,
         IPlaylistTrackCache trackCache,
-        IFallbackStatusStore statusStore,
-        ISessionMusicNotifier musicNotifier)
+        IFallbackStatusStore statusStore)
     {
         _sessionsRepository = sessionsRepository;
         _queueRepository = queueRepository;
@@ -43,7 +40,6 @@ internal class FallbackQueueFiller : IFallbackQueueFiller
         _hostTokenProvider = hostTokenProvider;
         _trackCache = trackCache;
         _statusStore = statusStore;
-        _musicNotifier = musicNotifier;
     }
 
     public async Task EnsureQueuedAsync(Guid sessionId, CancellationToken cancellationToken)
@@ -84,8 +80,8 @@ internal class FallbackQueueFiller : IFallbackQueueFiller
             await _sessionsRepository.SetFallbackCursorAsync(sessionId, nextCursor, cancellationToken);
         }
 
+        // The repository raised SongQueued for it, which the push handler sends
         _statusStore.Clear(sessionId);
-        await _musicNotifier.SongAddedAsync(sessionId, added.ToDto(), cancellationToken);
     }
 
     /// <summary>The playlist's tracks, or an empty list after recording why they could not be read.</summary>
@@ -111,7 +107,7 @@ internal class FallbackQueueFiller : IFallbackQueueFiller
         {
             tracks = await _spotifyClient.GetPlaylistTracksAsync(token.Value, playlistId, cancellationToken);
         }
-        catch (Exception exception) when (exception is APIException or HttpRequestException)
+        catch (Exception exception) when (exception is SpotifyApiException or HttpRequestException)
         {
             _statusStore.SetError(sessionId, "Fallback playlist: Spotify could not provide the playlist's tracks");
             return [];

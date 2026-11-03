@@ -1,6 +1,7 @@
 import { ReactNode, useState } from 'react';
 import { ResistanceGameDto } from '@/service/endpoints/games/types';
 import { VoteApproveCardIcon, VoteRejectCardIcon } from './ResistanceIcons';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   game: ResistanceGameDto;
@@ -19,6 +20,7 @@ const card = (selected: boolean, tone: 'emerald' | 'rose', disabled: boolean) =>
  * stay active and show which one is picked.
  */
 export const ResistanceVotePanel = ({ game, onVote }: Props): ReactNode => {
+  const { t } = useTranslation();
   const [sending, setSending] = useState(false);
   const voted = game.yourVote != null;
   const makers = game.opinionMakerPlayerIds;
@@ -40,23 +42,23 @@ export const ResistanceVotePanel = ({ game, onVote }: Props): ReactNode => {
   };
 
   return (
-    <section aria-label="Głosowanie" className="w-full flex flex-col gap-3 rounded-xl bg-slate-900 p-4 ring-1 ring-slate-700 shadow-lg">
+    <section aria-label={t('resistance.votePanel.label')} className="w-full flex flex-col gap-3 rounded-xl bg-slate-900 p-4 ring-1 ring-slate-700 shadow-lg">
       <div className="flex items-baseline justify-between gap-2">
-        <h2 className="text-lg font-semibold text-slate-100">Głosowanie nad drużyną</h2>
+        <h2 className="text-lg font-semibold text-slate-100">{t('resistance.votePanel.title')}</h2>
         <span className="text-sm tabular-nums text-slate-400" aria-live="polite">
           {game.votedPlayerIds.length}/{game.players.length}
         </span>
       </div>
       <div className="flex justify-center gap-4">
         <VoteApproveCardIcon
-          title="Zatwierdź"
+          title={t('resistance.vote.approve')}
           className={card(game.yourVote === true, 'emerald', sending || blocked)}
           pressed={game.yourVote === true}
           disabled={sending || blocked}
           onClick={() => void vote(true)}
         />
         <VoteRejectCardIcon
-          title="Odrzuć"
+          title={t('resistance.vote.reject')}
           className={card(game.yourVote === false, 'rose', sending || blocked)}
           pressed={game.yourVote === false}
           disabled={sending || blocked}
@@ -65,14 +67,14 @@ export const ResistanceVotePanel = ({ game, onVote }: Props): ReactNode => {
       </div>
       <p className="text-sm text-slate-400">
         {waitingFor.length > 0
-          ? `Najpierw głosuje kreator opinii: ${waitingFor.map((player) => player.name).join(', ')}.`
+          ? t('resistance.votePanel.makerFirst', { names: waitingFor.map((player) => player.name).join(', ') })
           : locked
-            ? 'Twój głos jako kreatora opinii jest jawny i nie można go zmienić.'
+            ? t('resistance.votePanel.makerLocked')
             : voted
-              ? 'Twój głos jest zapisany. Możesz go zmienić, dopóki nie zagłosują wszyscy.'
+              ? t('resistance.votePanel.saved')
               : youAreMaker
-                ? 'Jako kreator opinii głosujesz pierwszy, a twój głos jest jawny i ostateczny.'
-                : 'Głosy są jawne dopiero wtedy, gdy zagłosują wszyscy.'}
+                ? t('resistance.votePanel.makerYou')
+                : t('resistance.votePanel.hidden')}
       </p>
     </section>
   );

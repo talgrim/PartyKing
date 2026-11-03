@@ -402,3 +402,6 @@ FodyWeavers.xsd
 PartyKing.API/wwwroot/
 
 CLAUDE.Local.md
+# Local notes and Windows-only build settings
+/context.md
+/src/api/Directory.Build.props

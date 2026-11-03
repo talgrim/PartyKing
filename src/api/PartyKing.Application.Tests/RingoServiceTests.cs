@@ -1,11 +1,12 @@
-using Microsoft.Extensions.Logging.Abstractions;
+using PartyKing.Application.Events;
+using PartyKing.Domain.Events.Games.Base;
+using PartyKing.Domain.Repositories;
 using PartyKing.Application.Admin.Services;
-using PartyKing.Application.Games.Services;
-using PartyKing.Application.Player.Services;
-using PartyKing.Application.Realtime;
+using PartyKing.Application.Games.Services.Base;
+using PartyKing.Application.Games.Services.Ringo;
 using PartyKing.Application.Sessions.Services;
-using PartyKing.Domain.Entities.Games;
-using PartyKing.Infrastructure.Repositories;
+using PartyKing.Domain.Entities.Games.Base;
+using PartyKing.Domain.Entities.Games.Ringo;
 
 namespace PartyKing.Application.Tests;
 
@@ -14,26 +15,20 @@ public class RingoServiceTests
     private const string HostId = "host-1";
 
     private readonly FakeSessionsRepository _sessions = new();
-    private readonly FakeRingoGamesRepository _games = new();
-    private readonly FakeSessionMusicNotifier _notifier = new();
+    private readonly FakeRingoGamesRepository _games;
+    private readonly FakeRingoNotifier _notifier = new();
     private readonly RingoService _service;
     private readonly Guid _id;
 
     public RingoServiceTests()
     {
+        _games = new FakeRingoGamesRepository(TestEvents.Dispatcher(_notifier, new FakeResistanceNotifier()));
         var clock = new FakeClock();
-        var sessionService = new SessionService(
-            _sessions,
-            new PasswordHasher(),
-            new PlayerStateStore(clock),
-            new FakeHostTokenProvider(),
-            new FakeSlideshowService(),
-            JoinTokens.Create(clock),
-            clock,
-            new NullSessionMusicNotifier(),
-            new NullPlayerConnectionWatchdog(),
-            NullLogger<SessionService>.Instance);
-        _service = new RingoService(sessionService, _sessions, _games, clock, _notifier);
+        var sessionAuthorizer = new SessionAuthorizer(_sessions);
+        _service = new RingoService(
+            new RingoGameLobby(sessionAuthorizer, _sessions, _games, clock),
+            _games,
+            clock);
         _id = _sessions.AddSession(HostId, new PasswordHasher().Hash("secret")).Id;
     }
 
@@ -161,6 +156,18 @@ public class RingoServiceTests
     }
 
     [Fact]
+    public async Task ContinuingWithNoCardPending_PushesNothing()
+    {
+        var ct = CancellationToken.None;
+        await _service.StartAsync(_id, new GameCaller(HostId, false), ct);
+        var pushes = _notifier.Changes.Count;
+
+        Assert.False((await _service.ContinueAsync(_id, new GameCaller(HostId, false), ct)).IsError);
+
+        Assert.Equal(pushes, _notifier.Changes.Count);
+    }
+
+    [Fact]
     public async Task EveryChange_IsPushedToTheSession()
     {
         var ct = CancellationToken.None;
@@ -172,7 +179,7 @@ public class RingoServiceTests
         await _service.ContinueAsync(_id, new GameCaller(HostId, false), ct);
         await _service.EndAsync(_id, new GameCaller(HostId, false), ct);
 
-        Assert.Equal(Enumerable.Repeat(_id, 4), _notifier.RingoChanges);
+        Assert.Equal(Enumerable.Repeat(_id, 4), _notifier.Changes);
     }
 
     [Theory]
@@ -245,7 +252,7 @@ public class RingoServiceTests
         Assert.Equal(ErrorOr.ErrorType.Forbidden, byHost.FirstError.Type);
         Assert.True(first.Value.IsOpen);
         Assert.True(again.Value.IsOpen);
-        Assert.Equal([_id], _notifier.RingoOpens);
+        Assert.Equal([_id], _notifier.Opens);
     }
 
     [Fact]
@@ -510,171 +517,105 @@ public class RingoServiceTests
     private sealed class FakeRingoGamesRepository : IRingoGamesRepository
     {
         private readonly Dictionary<Guid, RingoGame> _games = new();
+        private readonly IDomainEventDispatcher _dispatcher;
+
+        public FakeRingoGamesRepository(IDomainEventDispatcher dispatcher)
+        {
+            _dispatcher = dispatcher;
+        }
 
         public Task<RingoGame?> GetAsync(Guid sessionId, CancellationToken cancellationToken) =>
             Task.FromResult(_games.GetValueOrDefault(sessionId));
 
-        public Task<bool> TryCreateAsync(RingoGame game, CancellationToken cancellationToken) =>
-            Task.FromResult(_games.TryAdd(game.SessionId, game));
+        public async Task<bool> TryCreateAsync(RingoGame game, CancellationToken cancellationToken)
+        {
+            if (!_games.TryAdd(game.SessionId, game))
+            {
+                return false;
+            }
 
-        public Task<RingoGame?> OpenAsync(Guid sessionId, CancellationToken cancellationToken)
+            await _dispatcher.DispatchAsync(game);
+
+            return true;
+        }
+
+        public async Task<TResult> UpdateAsync<TResult>(
+            Guid sessionId,
+            string operation,
+            TResult noGame,
+            Func<RingoGame, TResult> action,
+            CancellationToken cancellationToken)
+            where TResult : IGameUpdateResult
+        {
+            if (!_games.TryGetValue(sessionId, out var game))
+            {
+                return noGame;
+            }
+
+            var result = action(game);
+            if (result.Changed)
+            {
+                await _dispatcher.DispatchAsync(game);
+            }
+
+            return result;
+        }
+
+        public async Task<RingoGame?> OpenAsync(Guid sessionId, CancellationToken cancellationToken)
         {
             var game = _games.GetValueOrDefault(sessionId);
-            if (game is not null)
+            if (game?.Open() == true)
             {
-                game.IsOpen = true;
+                await _dispatcher.DispatchAsync(game);
             }
 
-            return Task.FromResult(game);
+            return game;
         }
 
-        public Task<RingoFlipResult> FlipAsync(
-            Guid sessionId,
-            int cardId,
-            string flippedBy,
-            Guid? turnOf,
-            DateTimeOffset flippedAt,
-            CancellationToken cancellationToken)
-        {
-            if (!_games.TryGetValue(sessionId, out var game))
-            {
-                return Task.FromResult(new RingoFlipResult(RingoFlipStatus.NoGame, null));
-            }
-
-            var current = RingoTurns.Current(game);
-            if (turnOf is not null && turnOf != current?.PlayerId)
-            {
-                return Task.FromResult(new RingoFlipResult(RingoFlipStatus.NotYourTurn, game));
-            }
-
-            if (game.Flips.Any(x => x.CardId == cardId))
-            {
-                return Task.FromResult(new RingoFlipResult(RingoFlipStatus.AlreadyFlipped, game));
-            }
-
-            if (game.IsOver)
-            {
-                return Task.FromResult(new RingoFlipResult(RingoFlipStatus.GameOver, game));
-            }
-
-            if (game.PendingCardId is not null)
-            {
-                return Task.FromResult(new RingoFlipResult(RingoFlipStatus.CardPending, game));
-            }
-
-            game.Flips.Add(new RingoFlip
-            {
-                SessionId = sessionId,
-                Order = game.Flips.Count,
-                CardId = cardId,
-                FlippedAt = flippedAt,
-                FlippedBy = current?.DisplayName ?? flippedBy,
-            });
-            game.PendingCardId = cardId;
-            game.CurrentPlayerId = current?.PlayerId;
-
-            return Task.FromResult(new RingoFlipResult(RingoFlipStatus.Flipped, game));
-        }
-
-        public Task<RingoContinueResult> ContinueAsync(
-            Guid sessionId, Guid? turnOf, CancellationToken cancellationToken)
-        {
-            if (!_games.TryGetValue(sessionId, out var game))
-            {
-                return Task.FromResult(new RingoContinueResult(RingoContinueStatus.NoGame, null));
-            }
-
-            if (turnOf is not null && turnOf != RingoTurns.Current(game)?.PlayerId)
-            {
-                return Task.FromResult(new RingoContinueResult(RingoContinueStatus.NotYourTurn, game));
-            }
-
-            if (game.PendingCardId is not null)
-            {
-                game.PendingCardId = null;
-                game.CurrentPlayerId = RingoTurns.Next(game)?.PlayerId;
-            }
-
-            return Task.FromResult(new RingoContinueResult(RingoContinueStatus.Continued, game));
-        }
-
-        public Task<LobbyResult<RingoGame>> JoinAsync(
+        public async Task<LobbyResult<RingoGame>> JoinAsync(
             Guid sessionId, RingoPlayer player, CancellationToken cancellationToken)
         {
-            if (!_games.TryGetValue(sessionId, out var game))
-            {
-                return Task.FromResult(new LobbyResult<RingoGame>(LobbyStatus.NoGame, null));
-            }
-
-            if (!game.IsOpen)
-            {
-                return Task.FromResult(new LobbyResult<RingoGame>(LobbyStatus.NotOpen, game));
-            }
-
-            if (game.Players.Any(x => x.NormalizedName == player.NormalizedName))
-            {
-                return Task.FromResult(new LobbyResult<RingoGame>(LobbyStatus.NameTaken, game));
-            }
-
-            player.SessionId = sessionId;
-            player.Order = game.Players.Count;
-            game.Players.Add(player);
-            game.CurrentPlayerId ??= player.PlayerId;
-
-            return Task.FromResult(new LobbyResult<RingoGame>(LobbyStatus.Done, game));
+            return _games.TryGetValue(sessionId, out var game)
+                ? await ResultAsync(game.Join(player), game)
+                : new LobbyResult<RingoGame>(LobbyStatus.NoGame, null);
         }
 
-        public Task<LobbyResult<RingoGame>> KickAsync(Guid sessionId, Guid playerId, CancellationToken cancellationToken)
+        public async Task<LobbyResult<RingoGame>> KickAsync(
+            Guid sessionId, Guid playerId, CancellationToken cancellationToken)
         {
-            if (!_games.TryGetValue(sessionId, out var game))
-            {
-                return Task.FromResult(new LobbyResult<RingoGame>(LobbyStatus.NoGame, null));
-            }
-
-            var kicked = game.Players.FirstOrDefault(x => x.PlayerId == playerId);
-            if (kicked is null)
-            {
-                return Task.FromResult(new LobbyResult<RingoGame>(LobbyStatus.NoPlayer, game));
-            }
-
-            var wasCurrent = RingoTurns.Current(game)?.PlayerId == playerId;
-            var next = RingoTurns.AfterRemoving(game, kicked, wasCurrent);
-            game.Players.Remove(kicked);
-            var order = 0;
-            foreach (var player in game.Players.OrderBy(x => x.Order))
-            {
-                player.Order = order++;
-            }
-
-            game.CurrentPlayerId = next?.PlayerId;
-
-            return Task.FromResult(new LobbyResult<RingoGame>(LobbyStatus.Done, game));
+            return _games.TryGetValue(sessionId, out var game)
+                ? await ResultAsync(game.Kick(playerId).Status, game)
+                : new LobbyResult<RingoGame>(LobbyStatus.NoGame, null);
         }
 
-        public Task<LobbyResult<RingoGame>> ReorderAsync(
+        public async Task<LobbyResult<RingoGame>> ReorderAsync(
             Guid sessionId, IReadOnlyList<Guid> playerIds, CancellationToken cancellationToken)
         {
-            if (!_games.TryGetValue(sessionId, out var game))
-            {
-                return Task.FromResult(new LobbyResult<RingoGame>(LobbyStatus.NoGame, null));
-            }
-
-            if (playerIds.Count != game.Players.Count
-                || playerIds.Distinct().Count() != playerIds.Count
-                || game.Players.Any(x => !playerIds.Contains(x.PlayerId)))
-            {
-                return Task.FromResult(new LobbyResult<RingoGame>(LobbyStatus.OrderMismatch, game));
-            }
-
-            foreach (var player in game.Players)
-            {
-                player.Order = playerIds.ToList().IndexOf(player.PlayerId);
-            }
-
-            return Task.FromResult(new LobbyResult<RingoGame>(LobbyStatus.Done, game));
+            return _games.TryGetValue(sessionId, out var game)
+                ? await ResultAsync(game.Reorder(playerIds), game)
+                : new LobbyResult<RingoGame>(LobbyStatus.NoGame, null);
         }
 
-        public Task<bool> DeleteAsync(Guid sessionId, CancellationToken cancellationToken) =>
-            Task.FromResult(_games.Remove(sessionId));
+        private async Task<LobbyResult<RingoGame>> ResultAsync(LobbyStatus status, RingoGame game)
+        {
+            if (status == LobbyStatus.Done)
+            {
+                await _dispatcher.DispatchAsync(game);
+            }
+
+            return new LobbyResult<RingoGame>(status, game);
+        }
+
+        public async Task<bool> DeleteAsync(Guid sessionId, CancellationToken cancellationToken)
+        {
+            if (!_games.Remove(sessionId))
+            {
+                return false;
+            }
+
+            await _dispatcher.DispatchAsync([new LobbyGameEnded(sessionId, GameKind.Ringo)], cancellationToken);
+
+            return true;
+        }
     }
 }

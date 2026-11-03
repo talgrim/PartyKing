@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { LeaderTokenIcon } from '@/pages/Games/resistance/ResistanceIcons';
 import { ResistancePlayerDto } from '@/service/endpoints/games/types';
 import { seatPositions } from './ringoSeats';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   players: ResistancePlayerDto[];
@@ -16,10 +17,11 @@ type Props = {
 
 /** The players who joined, seated along the left, bottom and right edges in seating order. */
 export const ResistancePlayers = ({ players, yourPlayerId, leaderId = null, marks, beside }: Props): ReactNode => {
+  const { t } = useTranslation();
   const seats = seatPositions(players.length);
 
   return (
-    <ul aria-label="Players" className="absolute inset-0 z-30 pointer-events-none">
+    <ul aria-label={t('lobby.players')} className="absolute inset-0 z-30 pointer-events-none">
       {players.map((player, index) => {
         const you = player.id === yourPlayerId;
         const leader = player.id === leaderId;
@@ -38,14 +40,14 @@ export const ResistancePlayers = ({ players, yourPlayerId, leaderId = null, mark
                 : 'bg-slate-900 text-slate-200'
             }`}
           >
-            {leader && <LeaderTokenIcon title="Leader" />}
+            {leader && <LeaderTokenIcon title={t('resistance.leader')} />}
             <span className="truncate">
               {player.name}
-              {you && <span className="sr-only"> (you)</span>}
+              {you && <span className="sr-only"> {t('lobby.you')}</span>}
             </span>
             {you && (
               <span aria-hidden="true" className="shrink-0 text-xs uppercase rounded bg-slate-900 text-amber-300 px-1">
-                Ty
+                {t('resistance.youBadge')}
               </span>
             )}
             {marks?.(player.id)}

@@ -1,6 +1,7 @@
 import { ReactNode, useState } from 'react';
 import { HTTP_STATUS_CODE } from '@/service/constants';
 import { gamesApi } from '@/service/endpoints/games/gamesApi';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   sessionId: string;
@@ -11,6 +12,7 @@ type Props = {
 
 /** Asks the language model for new game rules, for the ace that was just flipped. */
 export const RingoRuleSuggestions = ({ sessionId, suggestedRules, onSuggested }: Props): ReactNode => {
+  const { t } = useTranslation();
   const [latest, setLatest] = useState<string[]>([]);
   const [fromFallback, setFromFallback] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -27,8 +29,8 @@ export const RingoRuleSuggestions = ({ sessionId, suggestedRules, onSuggested }:
     } catch (error) {
       setMessage(
         (error as { status?: number })?.status === HTTP_STATUS_CODE.TOO_MANY_REQUESTS
-          ? 'Za dużo zapytań, spróbuj za minutę'
-          : 'Nie udało się pobrać propozycji',
+          ? t('common.tooManyRequests')
+          : t('common.suggestionsFailed'),
       );
     } finally {
       setBusy(false);
@@ -43,11 +45,11 @@ export const RingoRuleSuggestions = ({ sessionId, suggestedRules, onSuggested }:
         disabled={busy}
         onClick={suggest}
       >
-        Zaproponuj zasady
+        {t('ringo.suggestRules')}
       </button>
       {message && <p className="pt-2 text-sm text-amber-500">{message}</p>}
       {fromFallback && (
-        <p className="pt-2 text-sm text-amber-500">AI jest niedostępne, oto zasady z wbudowanej listy.</p>
+        <p className="pt-2 text-sm text-amber-500">{t('ringo.suggestFallback')}</p>
       )}
       <ul className="pt-2 space-y-1 list-disc list-inside text-slate-200">
         {latest.map((rule) => (

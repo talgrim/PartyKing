@@ -17,8 +17,13 @@
     </ItemGroup>
 
     <ItemGroup>
+      <InternalsVisibleTo Include="PartyKing.Api.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
       <ProjectReference Include="..\PartyKing.Application\PartyKing.Application.csproj" />
       <ProjectReference Include="..\PartyKing.Contract\PartyKing.Contract.csproj" />
+      <ProjectReference Include="..\PartyKing.Infrastructure\PartyKing.Infrastructure.csproj" />
       <ProjectReference Include="..\PartyKing.Infrastructure.Spotify\PartyKing.Infrastructure.Spotify.csproj" />
       <ProjectReference Include="..\PartyKing.ServiceDefaults\PartyKing.ServiceDefaults.csproj" />
       <ProjectReference Include="..\PartyKing.Infrastructure.Youtube\PartyKing.Infrastructure.Youtube.csproj" />

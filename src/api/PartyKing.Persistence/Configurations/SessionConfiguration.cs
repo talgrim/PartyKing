@@ -17,6 +17,9 @@ public class SessionConfiguration : IEntityTypeConfiguration<Session>
 
         // One host account can own at most one session (NULLs are allowed to repeat).
         builder.HasIndex(x => x.HostProfileId).IsUnique();
+
+        // Claim and release both change the host: a save based on a stale host must not overwrite the newer one.
+        builder.Property(x => x.HostProfileId).IsConcurrencyToken();
         builder
             .HasOne(x => x.HostProfile)
             .WithMany()

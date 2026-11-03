@@ -1,5 +1,6 @@
+import envVariables from '@/envVariables';
 import { axios } from '@/service/request';
-import { JoinTokenDto, PlaylistDto, SessionDto, SlideshowSettingsDto, UserDto, ViewerRoleDto } from './types';
+import { JoinTokenDto, PlaylistDto, SessionDto, SlideshowPhotoCountDto, SlideshowSettingsDto, UserDto, ViewerRoleDto } from './types';
 
 // The axios response interceptor unwraps `response.data`, so these resolve to the payload itself.
 const unwrap = <T>(promise: Promise<unknown>) => promise as Promise<T>;
@@ -45,6 +46,16 @@ export const sessionsApi = {
 
   updateSlideshowSettings: (sessionId: string, settings: SlideshowSettingsDto) =>
     unwrap<void>(axios.put(`/sessions/${sessionId}/slideshow-settings`, settings, { withCredentials: true })),
+
+  /** How many photos the archive would hold. Host or admin only; rejects with status 403 for anyone else. */
+  getPhotoCount: (sessionId: string) =>
+    unwrap<SlideshowPhotoCountDto>(axios.get(`/sessions/${sessionId}/photos/count`, { withCredentials: true })),
+
+  /**
+   * Where the zip of the session's photos is downloaded from (host or admin only). A plain link, so the browser
+   * streams the file to disk with the session cookies.
+   */
+  photoArchiveUrl: (sessionId: string) => `${envVariables.apiUrl}/sessions/${sessionId}/photos/archive`,
 
   /**
    * Host or admin only. Sets the playlist (link or spotify:playlist: URI) played when the queue is empty, or clears
