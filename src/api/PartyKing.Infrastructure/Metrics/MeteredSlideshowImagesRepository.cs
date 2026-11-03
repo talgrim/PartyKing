@@ -32,6 +32,16 @@ internal sealed class MeteredSlideshowImagesRepository
         return _images.DeleteSessionFilesAsync(sessionDirectory);
     }
 
+    public int CountSessionPhotos(string sessionDirectory)
+    {
+        return _images.CountSessionPhotos(sessionDirectory);
+    }
+
+    public Task<string?> CreateSessionArchiveAsync(string sessionDirectory, CancellationToken cancellationToken)
+    {
+        return _images.CreateSessionArchiveAsync(sessionDirectory, cancellationToken);
+    }
+
     public Task<SlideshowSettings?> GetSettingsAsync(Guid sessionId, CancellationToken cancellationToken)
     {
         return MeasureAsync(nameof(GetSettingsAsync), () => _settings.GetSettingsAsync(sessionId, cancellationToken));

@@ -94,7 +94,18 @@
     "title": "Ustawienia sesji",
     "name": "Nazwa",
     "password": "Hasło",
-    "fallbackPlaylist": "Playlista zapasowa"
+    "fallbackPlaylist": "Playlista zapasowa",
+    "photos": "Zdjęcia"
+  },
+  "photoDownload": {
+    "loading": "Sprawdzanie zdjęć…",
+    "count_one": "W tej sesji jest {{count}} zdjęcie.",
+    "count_few": "W tej sesji są {{count}} zdjęcia.",
+    "count_many": "W tej sesji jest {{count}} zdjęć.",
+    "count_other": "W tej sesji jest {{count}} zdjęcia.",
+    "none": "Nie przesłano jeszcze żadnych zdjęć.",
+    "download": "Pobierz jako ZIP",
+    "hint": "Zdjęcia są nazwane w kolejności przesłania. Zdjęcia ustawione do usunięcia po wyświetleniu już nie istnieją."
   },
   "joinQr": {
     "createFailed": "Nie udało się utworzyć kodu QR",

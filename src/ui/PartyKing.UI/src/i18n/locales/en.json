@@ -94,7 +94,16 @@
     "title": "Session settings",
     "name": "Name",
     "password": "Password",
-    "fallbackPlaylist": "Fallback playlist"
+    "fallbackPlaylist": "Fallback playlist",
+    "photos": "Photos"
+  },
+  "photoDownload": {
+    "loading": "Checking the photos…",
+    "count_one": "{{count}} photo is stored for this session.",
+    "count_other": "{{count}} photos are stored for this session.",
+    "none": "No photos have been uploaded yet.",
+    "download": "Download as ZIP",
+    "hint": "The photos are named in upload order. Photos that were set to be deleted after being shown are gone."
   },
   "joinQr": {
     "createFailed": "Could not create the QR code",
