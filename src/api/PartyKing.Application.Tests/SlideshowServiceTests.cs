@@ -463,5 +463,10 @@ public class SlideshowServiceTests
             DeletedDirectories.Add(sessionDirectory);
             return Task.CompletedTask;
         }
+
+        public int CountSessionPhotos(string sessionDirectory) => 0;
+
+        public Task<string?> CreateSessionArchiveAsync(string sessionDirectory, CancellationToken cancellationToken) =>
+            Task.FromResult<string?>(null);
     }
 }

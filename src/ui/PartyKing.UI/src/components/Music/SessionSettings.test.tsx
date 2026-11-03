@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   updateSlideshowSettings: vi.fn(),
   getHostPlaylists: vi.fn(),
   setFallbackPlaylist: vi.fn(),
+  getPhotoCount: vi.fn(),
 }));
 
 vi.mock('@/service/endpoints/sessions/sessionsApi', () => ({
@@ -19,6 +20,8 @@ vi.mock('@/service/endpoints/sessions/sessionsApi', () => ({
     updateSlideshowSettings: mocks.updateSlideshowSettings,
     getHostPlaylists: mocks.getHostPlaylists,
     setFallbackPlaylist: mocks.setFallbackPlaylist,
+    getPhotoCount: mocks.getPhotoCount,
+    photoArchiveUrl: (id: string) => `/api/sessions/${id}/photos/archive`,
   },
 }));
 
@@ -38,6 +41,7 @@ describe('SessionSettings', () => {
     mocks.updateSlideshowSettings.mockReset().mockResolvedValue(undefined);
     mocks.getHostPlaylists.mockReset().mockResolvedValue([]);
     mocks.setFallbackPlaylist.mockReset().mockResolvedValue(undefined);
+    mocks.getPhotoCount.mockReset().mockResolvedValue({ count: 2 });
     mocks.getSlideshowSettings
       .mockReset()
       .mockResolvedValue({ autoRepeat: true, startFromBeginning: false, slideTime: '00:00:10' });
@@ -48,6 +52,15 @@ describe('SessionSettings', () => {
 
     expect(screen.queryByText('Session settings')).not.toBeInTheDocument();
     expect(mocks.getSlideshowSettings).not.toHaveBeenCalled();
+  });
+
+  it('offers the photo archive in the settings', async () => {
+    await openDialog();
+
+    expect(await screen.findByRole('link', { name: 'Download as ZIP' })).toHaveAttribute(
+      'href',
+      '/api/sessions/s1/photos/archive',
+    );
   });
 
   it('closes with the X in the corner', async () => {
