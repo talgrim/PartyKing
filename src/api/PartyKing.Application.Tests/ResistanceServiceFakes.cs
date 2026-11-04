@@ -30,6 +30,21 @@ internal sealed class FakeResistanceGamesRepository : IResistanceGamesRepository
     public Task<ResistanceGame?> GetAsync(Guid sessionId, CancellationToken cancellationToken) =>
         Task.FromResult(_games.GetValueOrDefault(sessionId));
 
+    public Task<ResistanceLobbyState?> GetLobbyAsync(
+        Guid sessionId, Guid? playerId, CancellationToken cancellationToken)
+    {
+        var game = _games.GetValueOrDefault(sessionId);
+        ResistanceLobbyState? lobby = game is null
+            ? null
+            : new ResistanceLobbyState(
+                game.CreatedAt,
+                game.IsOpen,
+                game.IsStarted,
+                playerId is { } id && game.Players.Any(x => x.PlayerId == id));
+
+        return Task.FromResult(lobby);
+    }
+
     public async Task<bool> TryCreateAsync(ResistanceGame game, CancellationToken cancellationToken)
     {
         if (!_games.TryAdd(game.SessionId, game))
