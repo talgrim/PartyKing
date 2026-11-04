@@ -266,6 +266,91 @@ public class LobbyGamesRepositoryUpdateTests : IAsyncLifetime
         Assert.All(waits, x => Assert.Equal(("RingoGamesRepository", true), (x.Repository, x.Acquired)));
     }
 
+    /// <summary>Collects, in order, whether each read of this test's repository joined a read in flight.</summary>
+    private MeterListener ListenToGameReads(ICollection<(string Repository, bool Shared)> reads)
+    {
+        var listener = new MeterListener();
+        listener.InstrumentPublished = (instrument, l) =>
+        {
+            if (instrument.Name == RepositoryMetrics.GameReadsInstrumentName
+                && ReferenceEquals(instrument.Meter.Scope, _metrics))
+            {
+                l.EnableMeasurementEvents(instrument);
+            }
+        };
+        listener.SetMeasurementEventCallback<long>((_, _, tags, _) =>
+        {
+            var tagMap = tags.ToArray().ToDictionary(t => t.Key, t => t.Value);
+            lock (reads)
+            {
+                reads.Add(((string)tagMap["repository"]!, (bool)tagMap["shared"]!));
+            }
+        });
+        listener.Start();
+
+        return listener;
+    }
+
+    /// <summary>Holds every read at the door until <see cref="Open"/>, so a test decides which reads overlap.</summary>
+    private sealed class GatedReaderFactory : IDbContextFactory<ReaderDbContext>
+    {
+        private readonly IDbContextFactory<ReaderDbContext> _inner;
+        private readonly TaskCompletionSource _gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public GatedReaderFactory(IDbContextFactory<ReaderDbContext> inner)
+        {
+            _inner = inner;
+        }
+
+        public void Open()
+        {
+            _gate.SetResult();
+        }
+
+        public ReaderDbContext CreateDbContext()
+        {
+            return _inner.CreateDbContext();
+        }
+
+        public async Task<ReaderDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+        {
+            await _gate.Task;
+
+            return await _inner.CreateDbContextAsync(cancellationToken);
+        }
+    }
+
+    [Fact]
+    public async Task ReadsOneAfterAnother_AreNeverCountedAsShared()
+    {
+        await CreateGameAsync();
+        var reads = new List<(string Repository, bool Shared)>();
+        using var listener = ListenToGameReads(reads);
+
+        await _repository.GetAsync(_sessionId, CancellationToken.None);
+        await _repository.GetAsync(_sessionId, CancellationToken.None);
+
+        Assert.Equal([("RingoGamesRepository", false), ("RingoGamesRepository", false)], reads);
+    }
+
+    [Fact]
+    public async Task AReadStartedWhileAnotherIsInFlight_IsCountedAsShared()
+    {
+        await CreateGameAsync();
+        var gated = new GatedReaderFactory(_provider.GetRequiredService<IDbContextFactory<ReaderDbContext>>());
+        var repository = new RingoGamesRepository(gated, _writer, _metrics, new NullDomainEventDispatcher());
+        var reads = new List<(string Repository, bool Shared)>();
+        using var listener = ListenToGameReads(reads);
+
+        var first = repository.GetAsync(_sessionId, CancellationToken.None);
+        var second = repository.GetAsync(_sessionId, CancellationToken.None);
+        gated.Open();
+        var games = await Task.WhenAll(first, second);
+
+        Assert.Same(games[0], games[1]);
+        Assert.Equal([("RingoGamesRepository", false), ("RingoGamesRepository", true)], reads);
+    }
+
     [Fact]
     public async Task ADeleteAndACreate_AlsoTakeTheSessionLock()
     {
