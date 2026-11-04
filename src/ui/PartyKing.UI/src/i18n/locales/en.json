@@ -490,6 +490,10 @@
       "team": "Team",
       "aria": "Team of mission {{n}}: {{names}}"
     },
+    "presence": {
+      "online": "Online",
+      "offline": "Offline"
+    },
     "marks": {
       "opinionMaker": "Opinion Maker",
       "plotCards": "Plot cards: {{count}}",

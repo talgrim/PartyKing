@@ -498,6 +498,10 @@
       "team": "Drużyna",
       "aria": "Drużyna misji {{n}}: {{names}}"
     },
+    "presence": {
+      "online": "Połączony/a",
+      "offline": "Rozłączony/a"
+    },
     "marks": {
       "opinionMaker": "Kreator opinii",
       "plotCards": "Karty Intryg: {{count}}",

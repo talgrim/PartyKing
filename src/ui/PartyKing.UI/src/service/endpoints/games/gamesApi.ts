@@ -1,5 +1,5 @@
 import { axios } from '@/service/request';
-import { GameDto, GameSuggestionsDto, ResistanceGameDto, ResistanceLobbyDto, RingoGameDto, RingoLobbyDto } from './types';
+import { GameDto, GameSuggestionsDto, ResistanceGameDto, ResistanceLobbyDto, ResistancePresenceDto, RingoGameDto, RingoLobbyDto } from './types';
 
 // The axios response interceptor unwraps `response.data`, so this resolves to the payload itself.
 export const gamesApi = {
@@ -90,6 +90,12 @@ export const gamesApi = {
     axios.get(`/sessions/${sessionId}/games/resistance/lobby`, {
       withCredentials: true,
     }) as unknown as Promise<ResistanceLobbyDto>,
+
+  /** Host or admin: the players who have the Resistance page open right now (the TV view's start and refetch). */
+  getResistancePresence: (sessionId: string) =>
+    axios.get(`/sessions/${sessionId}/games/resistance/presence`, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistancePresenceDto>,
 
   /** Host or admin: creates the Resistance lobby; rejects with status 409 when the session already has one. */
   createResistance: (sessionId: string) =>

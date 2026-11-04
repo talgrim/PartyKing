@@ -30,8 +30,9 @@ import { HTTP_STATUS_CODE } from '@/service/constants';
 import { withDevPersona } from '@/service/devPersona';
 import { gamesApi } from '@/service/endpoints/games/gamesApi';
 import { useResistanceGame } from '@/service/endpoints/games/useResistanceGame';
+import { useResistancePresence } from '@/service/endpoints/games/useResistancePresence';
 import { useViewerRole } from '@/service/endpoints/sessions/useViewerRole';
-import { RESISTANCE_HUB_TOPICS, resistanceLobbyKey } from '@/service/realtime/sessionMusicEvents';
+import { RESISTANCE_HUB_TOPICS, RESISTANCE_TV_HUB_TOPICS, resistanceLobbyKey } from '@/service/realtime/sessionMusicEvents';
 import { useSessionMusicHub } from '@/service/realtime/useSessionMusicHub';
 import { usePersistedFlag } from '@/utils/usePersistedFlag';
 import { ResistanceGameSettings } from './ResistanceGameSettings';
@@ -75,20 +76,30 @@ export const Resistance = (): ReactNode => {
   const [controlsOpen, setControlsOpen] = useState(false);
   const [message, setMessage] = useState<string>();
 
-  // The server pushes every change of the lobby (ResistanceChanged), so other devices stay current without polling
-  useSessionMusicHub(sessionId, game !== undefined, undefined, RESISTANCE_HUB_TOPICS);
-
   const canManage = isHost || isAdmin;
   const status = (error as { status?: number } | undefined)?.status;
+  const tv = canManage && searchParams.get('tv') === '1';
+  const isPlayer = game?.yourPlayerId != null;
+  const tvLayout = tv || (canManage && !isPlayer);
+
+  // The server pushes every change of the lobby (ResistanceChanged), so other devices stay current without polling.
+  // The TV view also follows who is connected; any other view is a player's (or observer's) own page and counts as
+  // that player being online. The TV tab shares the player's cookie, so it must not, not even before the viewer's
+  // role is known (`?tv=1` is the TV tab's own flag).
+  useSessionMusicHub(
+    sessionId,
+    game !== undefined,
+    undefined,
+    tvLayout ? RESISTANCE_TV_HUB_TOPICS : RESISTANCE_HUB_TOPICS,
+    { presence: !tvLayout && searchParams.get('tv') !== '1' },
+  );
+  const presence = useResistancePresence(sessionId, tvLayout && game !== undefined);
 
   // No lobby yet (or not open to guests): the games list for the host and admins, the session page for the rest
   if (status === HTTP_STATUS_CODE.NOT_FOUND) {
     return <Navigate to={canManage ? sessionGamesPath(sessionId) : sessionPath(sessionId)} replace />;
   }
 
-  const tv = canManage && searchParams.get('tv') === '1';
-  const isPlayer = game?.yourPlayerId != null;
-  const tvLayout = tv || (canManage && !isPlayer);
   const showSwitch = isPlayer && !tv && !wide;
   const showPlayerView = isPlayer && !tv && (wide || !boardView);
   const showBoard = !showPlayerView || wide;
@@ -381,7 +392,13 @@ export const Resistance = (): ReactNode => {
       )}
 
       {tvLayout ? (
-        <ResistanceTvBoard game={game} board={board} banner={banner} yourPlayerId={shownGame?.yourPlayerId ?? null} />
+        <ResistanceTvBoard
+          game={game}
+          board={board}
+          banner={banner}
+          yourPlayerId={shownGame?.yourPlayerId ?? null}
+          onlinePlayerIds={presence?.onlinePlayerIds}
+        />
       ) : (
         <>
           {banner}
