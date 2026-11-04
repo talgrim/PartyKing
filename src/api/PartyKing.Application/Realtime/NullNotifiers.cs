@@ -95,4 +95,9 @@ internal sealed class NullResistanceNotifier : IResistanceNotifier
     {
         return Task.CompletedTask;
     }
+
+    public Task LobbyChangedAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
 }

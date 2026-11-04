@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useSWRConfig } from 'swr';
 import { gamesApi } from '@/service/endpoints/games/gamesApi';
 import { useResistanceLobby } from '@/service/endpoints/games/useResistanceLobby';
-import { resistanceKey, resistanceLobbyKey } from '@/service/realtime/sessionMusicEvents';
+import { resistanceKey, resistanceLobbyKey, RESISTANCE_JOIN_HUB_TOPICS } from '@/service/realtime/sessionMusicEvents';
 import { GameJoin } from './lobby/GameJoin';
 import { Resistance } from './Resistance';
 import { useTranslation } from 'react-i18next';
@@ -17,7 +17,7 @@ export const ResistanceJoin = (): ReactNode => {
 
   return (
     <GameJoin
-      topic="resistance"
+      topics={RESISTANCE_JOIN_HUB_TOPICS}
       sessionId={sessionId}
       title={t('resistance.joinTitle')}
       lobby={lobby}

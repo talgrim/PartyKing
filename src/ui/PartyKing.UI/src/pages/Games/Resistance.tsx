@@ -31,7 +31,7 @@ import { withDevPersona } from '@/service/devPersona';
 import { gamesApi } from '@/service/endpoints/games/gamesApi';
 import { useResistanceGame } from '@/service/endpoints/games/useResistanceGame';
 import { useViewerRole } from '@/service/endpoints/sessions/useViewerRole';
-import { resistanceLobbyKey } from '@/service/realtime/sessionMusicEvents';
+import { RESISTANCE_HUB_TOPICS, resistanceLobbyKey } from '@/service/realtime/sessionMusicEvents';
 import { useSessionMusicHub } from '@/service/realtime/useSessionMusicHub';
 import { usePersistedFlag } from '@/utils/usePersistedFlag';
 import { ResistanceGameSettings } from './ResistanceGameSettings';
@@ -76,7 +76,7 @@ export const Resistance = (): ReactNode => {
   const [message, setMessage] = useState<string>();
 
   // The server pushes every change of the lobby (ResistanceChanged), so other devices stay current without polling
-  useSessionMusicHub(sessionId, game !== undefined, undefined, ['resistance']);
+  useSessionMusicHub(sessionId, game !== undefined, undefined, RESISTANCE_HUB_TOPICS);
 
   const canManage = isHost || isAdmin;
   const status = (error as { status?: number } | undefined)?.status;

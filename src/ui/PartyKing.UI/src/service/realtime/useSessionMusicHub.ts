@@ -42,6 +42,13 @@ const RESISTANCE_REVALIDATE_DEBOUNCE_MS = 250;
 /** Each client waits a random extra moment, so a push doesn't make every client fetch in the same instant. */
 const RESISTANCE_REVALIDATE_JITTER_MS = 500;
 
+/**
+ * The lobby changes a few times per game, and `ResistanceOpened` and `ResistanceLobbyChanged` arrive together when an
+ * admin opens it: a short wait makes them one fetch.
+ */
+const RESISTANCE_LOBBY_REVALIDATE_DEBOUNCE_MS = 50;
+const RESISTANCE_LOBBY_REVALIDATE_JITTER_MS = 250;
+
 /** Fetches again what the topics feed, after a missed push (reconnect, failed start). */
 const revalidateSession = (sessionId: string, topics: readonly SessionHubTopic[]) => {
   if (topics.includes('music')) {
@@ -59,6 +66,8 @@ const revalidateSession = (sessionId: string, topics: readonly SessionHubTopic[]
   }
   if (topics.includes('resistance')) {
     void mutate(resistanceKey(sessionId));
+  }
+  if (topics.includes('resistanceLobby')) {
     void mutate(resistanceLobbyKey(sessionId));
   }
 };
@@ -93,6 +102,15 @@ export const useSessionMusicHub = (
     let cancelled = false;
     let connection: HubConnection | undefined;
     let resistanceTimer: ReturnType<typeof setTimeout> | undefined;
+    let resistanceLobbyTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const revalidateResistanceLobby = () => {
+      clearTimeout(resistanceLobbyTimer);
+      resistanceLobbyTimer = setTimeout(
+        () => void mutate(resistanceLobbyKey(sessionId)),
+        RESISTANCE_LOBBY_REVALIDATE_DEBOUNCE_MS + Math.random() * RESISTANCE_LOBBY_REVALIDATE_JITTER_MS,
+      );
+    };
 
     const start = async () => {
       connection = new HubConnectionBuilder()
@@ -169,13 +187,12 @@ export const useSessionMusicHub = (
         clearTimeout(resistanceTimer);
         resistanceTimer = setTimeout(() => {
           void mutate(resistanceKey(sessionId));
-          void mutate(resistanceLobbyKey(sessionId));
         }, RESISTANCE_REVALIDATE_DEBOUNCE_MS + Math.random() * RESISTANCE_REVALIDATE_JITTER_MS);
       });
 
-      connection.on(SESSION_MUSIC_EVENTS.ResistanceOpened, () => {
-        void mutate(resistanceLobbyKey(sessionId));
-      });
+      connection.on(SESSION_MUSIC_EVENTS.ResistanceOpened, revalidateResistanceLobby);
+
+      connection.on(SESSION_MUSIC_EVENTS.ResistanceLobbyChanged, revalidateResistanceLobby);
 
       const built = connection;
       connection.onreconnecting(() => setHandle({ connection: built, connected: false }));
@@ -200,6 +217,7 @@ export const useSessionMusicHub = (
     return () => {
       cancelled = true;
       clearTimeout(resistanceTimer);
+      clearTimeout(resistanceLobbyTimer);
       const active = connection;
       connection = undefined;
       if (active && active.state !== HubConnectionState.Disconnected) {

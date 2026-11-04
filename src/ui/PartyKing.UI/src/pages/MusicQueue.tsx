@@ -29,6 +29,7 @@ import {
   applyLyricsOffsetChanged,
   HostPlayerPushHandlers,
   lyricsKey,
+  MUSIC_QUEUE_HUB_TOPICS,
 } from '@/service/realtime/sessionMusicEvents';
 import { useSessionMusicHub } from '@/service/realtime/useSessionMusicHub';
 import { SessionHubContext } from '@/service/realtime/SessionHubContext';
@@ -131,7 +132,7 @@ export const MusicQueue = (): ReactNode => {
   };
 
   const hostPlayerPush = useRef<HostPlayerPushHandlers>({});
-  const hub = useSessionMusicHub(sessionId, Boolean(session && !locked), hostPlayerPush);
+  const hub = useSessionMusicHub(sessionId, Boolean(session && !locked), hostPlayerPush, MUSIC_QUEUE_HUB_TOPICS);
   const unlocked = Boolean(session && !locked);
   // The admin opens the games, so everyone else (the host included) is invited to join
   const invitable = unlocked && !isAdmin;

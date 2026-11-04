@@ -14,4 +14,5 @@ internal static class SessionMusicHubEvents
     public const string RingoOpened = "RingoOpened";
     public const string ResistanceChanged = "ResistanceChanged";
     public const string ResistanceOpened = "ResistanceOpened";
+    public const string ResistanceLobbyChanged = "ResistanceLobbyChanged";
 }
