@@ -65,6 +65,8 @@ public static class DependencyInjection
         services.AddScoped<IHostSessionCleanup, HostSessionCleanup>();
 
         // Handlers run in registration order; the cleanup comes before the log line of the same event
+        // The push comes first so connected clients hear of the delete before the slower cleanup runs
+        services.AddDomainEventHandler<SessionDeleted, SessionDeletedPushHandler>();
         services.AddDomainEventHandler<HostReleased, HostCleanupHandler>();
         services.AddDomainEventHandler<SessionDeleted, HostCleanupHandler>();
         services.AddDomainEventHandler<SessionDeleted, SlideshowCleanupHandler>();
