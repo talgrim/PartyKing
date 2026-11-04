@@ -16,6 +16,12 @@ internal abstract class SessionGroupNotifier
 
     protected IClientProxy Clients(Guid sessionId)
     {
-        return _hub.Clients.Group(SessionHub.GroupName(sessionId, _topic));
+        return Clients(sessionId, _topic);
+    }
+
+    /// <summary>For a notifier that also sends to a topic of its own besides the one it was built for.</summary>
+    protected IClientProxy Clients(Guid sessionId, SessionHubTopic topic)
+    {
+        return _hub.Clients.Group(SessionHub.GroupName(sessionId, topic));
     }
 }

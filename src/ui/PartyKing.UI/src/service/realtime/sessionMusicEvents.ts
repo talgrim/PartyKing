@@ -15,15 +15,32 @@ export const SESSION_MUSIC_EVENTS = {
   RingoOpened: 'RingoOpened',
   ResistanceChanged: 'ResistanceChanged',
   ResistanceOpened: 'ResistanceOpened',
+  ResistanceLobbyChanged: 'ResistanceLobbyChanged',
 } as const;
 
 /**
  * What a connection listens to; the server puts it in one group per topic, so a page gets only the pushes it asked
- * for. `music` is the queue, the player, the fallback playlist status and the lyrics offsets.
+ * for. `music` is the queue, the player, the fallback playlist status and the lyrics offsets. `resistance` is every
+ * action of a Resistance round, `resistanceLobby` only what the lobby shows (the game exists, opens, starts, ends,
+ * a player joins or is kicked), so a page that only offers the game does not wake up for every vote.
  */
-export const SESSION_HUB_TOPICS = ['music', 'slideshow', 'ringo', 'resistance'] as const;
+export const SESSION_HUB_TOPICS = ['music', 'slideshow', 'ringo', 'resistance', 'resistanceLobby'] as const;
 
 export type SessionHubTopic = (typeof SESSION_HUB_TOPICS)[number];
+
+/**
+ * The session page hears everything except the Resistance rounds: it needs the lobby pushes for the invite and the
+ * games menu, and a vote must not make a page that only shows music fetch anything.
+ */
+export const MUSIC_QUEUE_HUB_TOPICS: readonly SessionHubTopic[] = ['music', 'slideshow', 'ringo', 'resistanceLobby'];
+
+/** The Resistance board shows both the game and the lobby (the invite, who joined, the kick). */
+export const RESISTANCE_HUB_TOPICS: readonly SessionHubTopic[] = ['resistance', 'resistanceLobby'];
+
+/** The join page shows the lobby only; once the player joined the board opens its own connection. */
+export const RESISTANCE_JOIN_HUB_TOPICS: readonly SessionHubTopic[] = ['resistanceLobby'];
+
+export const RINGO_JOIN_HUB_TOPICS: readonly SessionHubTopic[] = ['ringo'];
 
 /** Hub methods the client calls: tells the server this connection displays the slideshow (its timer runs only then). */
 export const SESSION_HUB_METHODS = {

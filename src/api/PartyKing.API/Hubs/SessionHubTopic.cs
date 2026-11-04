@@ -10,7 +10,15 @@ internal enum SessionHubTopic
     Music,
     Slideshow,
     Ringo,
-    Resistance
+
+    /// <summary>The Resistance game: every action of a round (<c>ResistanceChanged</c>, <c>ResistanceOpened</c>).</summary>
+    Resistance,
+
+    /// <summary>
+    /// The Resistance lobby (exists, open, started, who joined): it changes a few times per game, not with every
+    /// vote, so a tab that only shows the invite hears this and not <see cref="Resistance"/>.
+    /// </summary>
+    ResistanceLobby
 }
 
 internal static class SessionHubTopics

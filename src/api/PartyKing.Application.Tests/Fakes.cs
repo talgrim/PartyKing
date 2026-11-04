@@ -412,7 +412,16 @@ internal class FakeGameLobbyNotifier : IGameLobbyNotifier
 
 internal class FakeRingoNotifier : FakeGameLobbyNotifier, IRingoNotifier;
 
-internal class FakeResistanceNotifier : FakeGameLobbyNotifier, IResistanceNotifier;
+internal class FakeResistanceNotifier : FakeGameLobbyNotifier, IResistanceNotifier
+{
+    public List<Guid> LobbyChanges { get; } = [];
+
+    public Task LobbyChangedAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        LobbyChanges.Add(sessionId);
+        return Task.CompletedTask;
+    }
+}
 
 internal class FakeQueueAdvancer : IQueueAdvancer
 {

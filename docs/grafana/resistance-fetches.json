@@ -240,7 +240,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum(rate(partyking_games_reads_total{repository=\"ResistanceGamesRepository\"}{shared=\"true\"}[$__rate_interval])) / sum(rate(partyking_games_reads_total{repository=\"ResistanceGamesRepository\"}[$__rate_interval]))",
+          "expr": "sum(rate(partyking_games_reads_total{repository=\"ResistanceGamesRepository\",shared=\"true\"}[$__rate_interval])) / sum(rate(partyking_games_reads_total{repository=\"ResistanceGamesRepository\"}[$__rate_interval]))",
           "legendFormat": "shared"
         }
       ]

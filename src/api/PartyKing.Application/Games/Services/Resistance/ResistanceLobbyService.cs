@@ -109,15 +109,11 @@ internal class ResistanceLobbyService : IResistanceLobbyService
     public async Task<ErrorOr<ResistanceLobbyDto>> GetLobbyAsync(
         Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
     {
-        var game = await _games.GetAsync(sessionId, cancellationToken);
+        var lobby = await _games.GetLobbyAsync(sessionId, caller.PlayerId, cancellationToken);
 
-        return game is null
+        return lobby is null
             ? ResistanceErrors.NoGame
-            : new ResistanceLobbyDto(
-                game.CreatedAt,
-                game.IsOpen,
-                game.IsStarted,
-                ResistanceGameLobby.IsPlayer(game, caller));
+            : new ResistanceLobbyDto(lobby.CreatedAt, lobby.IsOpen, lobby.IsStarted, lobby.Joined);
     }
 
     public async Task<ErrorOr<ResistanceGameDto>> CreateAsync(

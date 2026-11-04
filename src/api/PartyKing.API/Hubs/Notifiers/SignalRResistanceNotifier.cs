@@ -18,4 +18,10 @@ internal sealed class SignalRResistanceNotifier : SessionGroupNotifier, IResista
     {
         return Clients(sessionId).SendAsync(SessionMusicHubEvents.ResistanceChanged, cancellationToken);
     }
+
+    public Task LobbyChangedAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        return Clients(sessionId, SessionHubTopic.ResistanceLobby)
+            .SendAsync(SessionMusicHubEvents.ResistanceLobbyChanged, cancellationToken);
+    }
 }
