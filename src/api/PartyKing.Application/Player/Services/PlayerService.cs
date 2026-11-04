@@ -99,7 +99,7 @@ internal class PlayerService : IPlayerService
             return SessionErrors.NotFound();
         }
 
-        if (session.HostProfileId != hostProfileId)
+        if (!session.IsHostedBy(hostProfileId))
         {
             return Error.Forbidden(description: "Only the host of this session can report its player state");
         }

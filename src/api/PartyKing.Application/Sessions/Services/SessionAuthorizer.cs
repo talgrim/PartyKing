@@ -44,7 +44,7 @@ internal class SessionAuthorizer : ISessionAuthorizer
             return SessionErrors.NotFound();
         }
 
-        return SessionRoles.IsManager(session, caller)
+        return session.IsManagedBy(caller.ProfileId, caller.IsAdmin)
             ? Result.Success
             : Error.Forbidden(description: "Only the host or an admin can change the session settings");
     }
@@ -61,6 +61,6 @@ internal class SessionAuthorizer : ISessionAuthorizer
             return SessionErrors.NotFound();
         }
 
-        return new ViewerRoleDto(SessionRoles.IsHost(session, caller), caller.IsAdmin);
+        return new ViewerRoleDto(session.IsHostedBy(caller.ProfileId), caller.IsAdmin);
     }
 }

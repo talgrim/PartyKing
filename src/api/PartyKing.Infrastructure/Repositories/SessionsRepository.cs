@@ -67,9 +67,24 @@ internal class SessionsRepository : ISessionsRepository
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
     }
 
-    public Task<bool> RenameAsync(Guid id, string name, CancellationToken cancellationToken)
+    public async Task<SessionRenameResult> RenameAsync(Guid id, string? name, CancellationToken cancellationToken)
     {
-        return UpdateAsync(id, session => session.Rename(name), cancellationToken);
+        var failure = SessionNameFailure.None;
+
+        // A refused name changes nothing, so the save finds no change and the dispatcher gets no event
+        var found = await UpdateAsync(id, session => failure = session.Rename(name), cancellationToken);
+
+        if (!found)
+        {
+            return SessionRenameResult.SessionNotFound;
+        }
+
+        return failure switch
+        {
+            SessionNameFailure.None => SessionRenameResult.Renamed,
+            SessionNameFailure.Empty => SessionRenameResult.NameEmpty,
+            _ => SessionRenameResult.NameTooLong
+        };
     }
 
     public Task<bool> UpdatePasswordHashAsync(

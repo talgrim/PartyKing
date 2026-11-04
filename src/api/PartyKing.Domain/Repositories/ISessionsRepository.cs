@@ -9,7 +9,8 @@ public interface ISessionsRepository
     Task<bool> TryAddAsync(Session session, CancellationToken cancellationToken);
     Task<IReadOnlyList<Session>> GetAllAsync(CancellationToken cancellationToken);
     Task<Session?> GetAsync(Guid id, CancellationToken cancellationToken);
-    Task<bool> RenameAsync(Guid id, string name, CancellationToken cancellationToken);
+    /// <summary>Renames the session; the name rule is the aggregate's, so a refused name is part of the result.</summary>
+    Task<SessionRenameResult> RenameAsync(Guid id, string? name, CancellationToken cancellationToken);
     Task<bool> UpdatePasswordHashAsync(Guid id, string passwordHash, CancellationToken cancellationToken);
 
     /// <summary>Sets the fallback playlist and rewinds it; a null <paramref name="playlistId"/> clears it.</summary>

@@ -1,8 +1,13 @@
+using System.Security.Cryptography;
+using System.Text;
 using PartyKing.Domain.Entities.Base;
 using PartyKing.Domain.Entities.Spotify;
 using PartyKing.Domain.Events.Sessions;
 
 namespace PartyKing.Domain.Entities.Sessions;
+
+/// <summary>A session that was created, or the reason it was not.</summary>
+public readonly record struct SessionCreation(SessionNameFailure Failure, Session? Session);
 
 public class Session : AggregateRoot
 {
@@ -12,13 +17,30 @@ public class Session : AggregateRoot
     {
     }
 
-    public Session(string code, string name, string passwordHash)
+    /// <summary>The name is already normalized and checked by <see cref="Create"/>.</summary>
+    internal Session(Guid id, string code, string name, string passwordHash, DateTime createdAt)
     {
-        Id = Guid.NewGuid();
+        Id = id;
         Code = code;
         PasswordHash = passwordHash;
-        Name = SessionNames.Normalize(name);
-        CreatedAt = DateTime.UtcNow;
+        Name = name;
+        CreatedAt = createdAt;
+    }
+
+    /// <summary>
+    /// Makes a session. A blank name falls back to <see cref="DefaultName"/>; a name over
+    /// <see cref="SessionNames.MaxLength"/> characters is refused. Id and time are arguments, like in the games.
+    /// </summary>
+    public static SessionCreation Create(Guid id, string code, string? name, string passwordHash, DateTime now)
+    {
+        var normalized = SessionNames.Normalize(name);
+
+        if (SessionNames.Validate(normalized) == SessionNameFailure.TooLong)
+        {
+            return new SessionCreation(SessionNameFailure.TooLong, null);
+        }
+
+        return new SessionCreation(SessionNameFailure.None, new Session(id, code, normalized, passwordHash, now));
     }
 
     public Guid Id { get; internal set; }
@@ -29,6 +51,12 @@ public class Session : AggregateRoot
 
     /// <summary>Hash of the password everyone (admins included) must enter to join the session.</summary>
     public string PasswordHash { get; internal set; } = null!;
+
+    /// <summary>
+    /// Proof that the password was entered, kept in the visitor's cookie. It derives from the password hash, so it
+    /// changes with the password and the unlocks issued for the old one stop working.
+    /// </summary>
+    public string AccessStamp => AccessStampOf(PasswordHash);
 
     /// <summary>Spotify profile id of the host; null until someone claims the session.</summary>
     public string? HostProfileId { get; internal set; }
@@ -45,17 +73,46 @@ public class Session : AggregateRoot
     public int FallbackCursor { get; internal set; }
     public DateTime CreatedAt { get; internal set; }
 
-    /// <summary>Renames the session. The name must pass <see cref="SessionNames.Validate"/>, which callers check first.</summary>
-    public void Rename(string? name)
+    /// <summary>The stamp a session with this password hash has, for callers that only know the new hash.</summary>
+    public static string AccessStampOf(string passwordHash)
+    {
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(passwordHash)))[..16];
+    }
+
+    /// <summary>Whether <paramref name="accessStamp"/> is the current <see cref="AccessStamp"/>.</summary>
+    public bool IsUnlockedBy(string? accessStamp)
+    {
+        return !string.IsNullOrEmpty(accessStamp) && accessStamp == AccessStamp;
+    }
+
+    /// <summary>Whether <paramref name="profileId"/> is the session's host. A session without a host has no such profile.</summary>
+    public bool IsHostedBy(string? profileId)
+    {
+        return profileId is not null && HostProfileId == profileId;
+    }
+
+    /// <summary>Whether the caller may change the session's settings: the host or an admin.</summary>
+    public bool IsManagedBy(string? profileId, bool isAdmin)
+    {
+        return isAdmin || IsHostedBy(profileId);
+    }
+
+    /// <summary>
+    /// Renames the session (trimmed, at most <see cref="SessionNames.MaxLength"/> characters, not blank).
+    /// A refused name changes nothing and raises nothing.
+    /// </summary>
+    public SessionNameFailure Rename(string? name)
     {
         var failure = SessionNames.Validate(name);
         if (failure != SessionNameFailure.None)
         {
-            throw new ArgumentException($"Invalid session name: {failure}", nameof(name));
+            return failure;
         }
 
         Name = name!.Trim();
         Raise(new SessionRenamed(Id, Name));
+
+        return SessionNameFailure.None;
     }
 
     /// <summary>Replaces the password hash. Every access stamp derives from it, so the old unlocks stop working.</summary>

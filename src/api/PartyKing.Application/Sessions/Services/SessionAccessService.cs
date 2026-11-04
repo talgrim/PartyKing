@@ -3,6 +3,7 @@ using ErrorOr;
 using Microsoft.Extensions.Logging;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Sessions.Helpers;
+using PartyKing.Domain.Entities.Sessions;
 
 namespace PartyKing.Application.Sessions.Services;
 
@@ -58,8 +59,8 @@ internal class SessionAccessService : ISessionAccessService
 
         // An unknown session is verified against the dummy hash, so it costs the same as a wrong password
         // An over-long password can't be right, and skipping the hash keeps it from being a cheap CPU burner
-        var valid = password is { Length: <= SessionPasswordPolicy.MaxLength }
-            && _passwordHasher.Verify(password, session?.PasswordHash ?? _dummyHash.Value);
+        var valid = SessionPassword.CanMatch(password)
+            && _passwordHasher.Verify(password!, session?.PasswordHash ?? _dummyHash.Value);
 
         if (session is null || !valid)
         {
@@ -68,7 +69,7 @@ internal class SessionAccessService : ISessionAccessService
         }
 
         _logger.LogDebug("Joined session {SessionId} with the password", id);
-        return SessionAccessStamp.For(session.PasswordHash);
+        return session.AccessStamp;
     }
 
     public Task<ErrorOr<string>> ChangePasswordAsync(
@@ -89,26 +90,22 @@ internal class SessionAccessService : ISessionAccessService
         string? password,
         CancellationToken cancellationToken)
     {
-        if (SessionPasswordPolicy.Validate(password) is { } invalid)
+        var typed = SessionPassword.Create(password);
+        if (typed.Password is null)
         {
-            return invalid;
+            return SessionPasswordErrors.From(typed.Failure);
         }
 
-        var passwordHash = _passwordHasher.Hash(password!, PasswordHasher.SessionIterations);
+        var passwordHash = _passwordHasher.Hash(typed.Password.Value, PasswordHasher.SessionIterations);
         var updated = await _sessionsRepository.UpdatePasswordHashAsync(id, passwordHash, cancellationToken);
 
-        return updated ? SessionAccessStamp.For(passwordHash) : SessionErrors.NotFound();
+        return updated ? Session.AccessStampOf(passwordHash) : SessionErrors.NotFound();
     }
 
     public async Task<bool> HasAccessAsync(Guid id, string? accessStamp, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrEmpty(accessStamp))
-        {
-            return false;
-        }
-
         var session = await _sessionsRepository.GetAsync(id, cancellationToken);
 
-        return session is not null && accessStamp == SessionAccessStamp.For(session.PasswordHash);
+        return session is not null && session.IsUnlockedBy(accessStamp);
     }
 }

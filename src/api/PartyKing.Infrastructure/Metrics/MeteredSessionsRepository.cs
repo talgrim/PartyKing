@@ -30,7 +30,7 @@ internal sealed class MeteredSessionsRepository : MeteredRepository, ISessionsRe
         return MeasureAsync(nameof(GetAsync), () => _inner.GetAsync(id, cancellationToken));
     }
 
-    public Task<bool> RenameAsync(Guid id, string name, CancellationToken cancellationToken)
+    public Task<SessionRenameResult> RenameAsync(Guid id, string? name, CancellationToken cancellationToken)
     {
         return MeasureAsync(nameof(RenameAsync), () => _inner.RenameAsync(id, name, cancellationToken));
     }
