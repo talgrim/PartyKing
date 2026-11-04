@@ -15,7 +15,8 @@ public class QueueItem
         string title,
         string? artists,
         string? albumArtUrl,
-        int? durationMs)
+        int? durationMs,
+        bool isFallback = false)
     {
         SessionId = sessionId;
         Source = source;
@@ -25,26 +26,27 @@ public class QueueItem
         AlbumArtUrl = albumArtUrl;
         DurationMs = durationMs;
         Status = QueueItemStatus.Queued;
+        IsFallback = isFallback;
     }
 
     /// <summary>Auto-incremented; also defines the queue order.</summary>
-    public int Id { get; set; }
-    public Guid SessionId { get; set; }
-    public QueueItemSource Source { get; set; }
+    public int Id { get; internal set; }
+    public Guid SessionId { get; internal set; }
+    public QueueItemSource Source { get; internal set; }
 
     /// <summary>YouTube URL or Spotify track URI (spotify:track:...).</summary>
-    public string Url { get; set; } = null!;
-    public string Title { get; set; } = null!;
-    public string? Artists { get; set; }
-    public string? AlbumArtUrl { get; set; }
-    public int? DurationMs { get; set; }
-    public QueueItemStatus Status { get; set; }
+    public string Url { get; internal set; } = null!;
+    public string Title { get; internal set; } = null!;
+    public string? Artists { get; internal set; }
+    public string? AlbumArtUrl { get; internal set; }
+    public int? DurationMs { get; internal set; }
+    public QueueItemStatus Status { get; internal set; }
 
     /// <summary>True when the server queued the song from the session's fallback playlist.</summary>
-    public bool IsFallback { get; set; }
+    public bool IsFallback { get; internal set; }
 
     /// <summary>Starts a song that was waiting. A song in any other state is left alone.</summary>
-    public bool StartPlaying()
+    internal bool StartPlaying()
     {
         if (Status != QueueItemStatus.Queued)
         {
@@ -57,7 +59,7 @@ public class QueueItem
     }
 
     /// <summary>Finishes the song that is playing. A song in any other state is left alone.</summary>
-    public bool MarkPlayed()
+    internal bool MarkPlayed()
     {
         if (Status != QueueItemStatus.Playing)
         {
