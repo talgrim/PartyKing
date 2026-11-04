@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using PartyKing.Application.Queue.Services;
+using PartyKing.Contract.V1.Queue;
 using PartyKing.Application.Sessions.Handlers;
 using PartyKing.Domain.Events.Sessions;
 
@@ -36,6 +37,24 @@ public class SessionHandlersTests
 
         Assert.Equal((SessionId, "host-1"), Assert.Single(_cleanup.Forgotten));
         Assert.Equal([SessionId], _slideshow.DeletedSessions);
+    }
+
+    [Fact]
+    public async Task SessionDeleted_TellsTheGameAndQueueClientsOfTheSession()
+    {
+        var ringo = new FakeRingoNotifier();
+        var resistance = new FakeResistanceNotifier();
+        var queue = new FakeQueueNotifier();
+
+        await new SessionDeletedPushHandler(ringo, resistance, queue).HandleAsync(new SessionDeleted(SessionId, "host-1", null), Ct);
+
+        Assert.Equal([SessionId], ringo.Changes);
+        Assert.Equal([SessionId], resistance.Changes);
+        Assert.Equal((SessionId, (int?)null, (QueueItemDto?)null), Assert.Single(queue.QueueAdvanced));
+        Assert.Empty(ringo.Opens);
+        Assert.Empty(resistance.Opens);
+        Assert.Empty(queue.SongAdded);
+        Assert.Empty(queue.SongRemoved);
     }
 
     [Fact]
