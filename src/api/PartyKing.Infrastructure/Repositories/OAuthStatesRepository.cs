@@ -1,7 +1,6 @@
-using PartyKing.Application.Ports;
-using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using PartyKing.Domain.Entities.Auth;
+using PartyKing.Domain.Repositories;
 using PartyKing.Persistence.Database;
 
 namespace PartyKing.Infrastructure.Repositories;
@@ -15,47 +14,36 @@ internal class OAuthStatesRepository : IOAuthStatesRepository
         _writerDbContextFactory = writerDbContextFactory;
     }
 
-    public async Task<string> CreateAsync(Guid sessionId, TimeSpan lifetime, CancellationToken cancellationToken)
+    public async Task AddAsync(OAuthState state, DateTime now, CancellationToken cancellationToken)
     {
         await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
-
-        var now = DateTime.UtcNow;
 
         await dbContext.OAuthStates
             .Where(x => x.ExpiresAt < now)
             .ExecuteDeleteAsync(cancellationToken);
 
-        var state = Convert.ToHexString(RandomNumberGenerator.GetBytes(24));
-
-        dbContext.OAuthStates.Add(new OAuthState(state, sessionId, now.Add(lifetime)));
+        dbContext.OAuthStates.Add(state);
         await dbContext.SaveChangesAsync(cancellationToken);
-
-        return state;
     }
 
-    public async Task<Guid?> ConsumeAsync(string state, CancellationToken cancellationToken)
+    public async Task<OAuthState?> TakeAsync(string id, CancellationToken cancellationToken)
     {
         await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
 
-        var record = await dbContext.OAuthStates
+        var state = await dbContext.OAuthStates
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == state, cancellationToken);
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
-        if (record is null)
+        if (state is null)
         {
             return null;
         }
 
-        // The delete decides who consumed it, so a replayed state can't be used twice
+        // The delete decides who took it, so a replayed state can't be used twice
         var deleted = await dbContext.OAuthStates
-            .Where(x => x.Id == state)
+            .Where(x => x.Id == id)
             .ExecuteDeleteAsync(cancellationToken);
 
-        if (deleted == 0 || record.ExpiresAt < DateTime.UtcNow)
-        {
-            return null;
-        }
-
-        return record.SessionId;
+        return deleted == 0 ? null : state;
     }
 }
