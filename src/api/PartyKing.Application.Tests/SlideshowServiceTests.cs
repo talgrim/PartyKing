@@ -1,6 +1,9 @@
+using ErrorOr;
 using Microsoft.Extensions.Options;
 using PartyKing.Application.Configuration;
 using PartyKing.Application.Events;
+using PartyKing.Application.Sessions;
+using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Slideshow.Models;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Contract.V1.Slideshow;
@@ -33,14 +36,18 @@ public class SlideshowServiceTests
             _clock,
             _repository,
             _repository,
-            _sessions,
+            new SessionAuthorizer(_sessions),
             Options.Create(configuration),
             new SlideshowWatchers(),
             _scheduler,
             _notifier);
-        _sessionId = _sessions.AddSession().Id;
+        _sessionId = _sessions.AddSession(hostProfileId: "host").Id;
         _repository.Events = TestEvents.SlideshowDispatcher(_service);
     }
+
+    private static SessionCaller Admin => new(null, true);
+    private static SessionCaller Host => new("host", false);
+    private static SessionCaller Guest => new("someone-else", false);
 
     private static UploadedFile File(string name, byte[] content) =>
         new(name, content.Length, () => new MemoryStream(content));
@@ -124,7 +131,7 @@ public class SlideshowServiceTests
     [Fact]
     public async Task GetSettings_OfASessionWithoutOwnSettings_ReturnsTheDefaults()
     {
-        var result = await _service.GetSettingsAsync(_sessionId, CancellationToken.None);
+        var result = await _service.GetSettingsAsync(_sessionId, Admin, CancellationToken.None);
 
         Assert.False(result.IsError);
         Assert.Equal(TimeSpan.FromSeconds(5), result.Value.SlideTime);
@@ -135,9 +142,47 @@ public class SlideshowServiceTests
     [Fact]
     public async Task GetSettings_OfAnUnknownSession_IsNotFound()
     {
-        var result = await _service.GetSettingsAsync(Guid.NewGuid(), CancellationToken.None);
+        var result = await _service.GetSettingsAsync(Guid.NewGuid(), Admin, CancellationToken.None);
 
         Assert.True(result.IsError);
+    }
+
+    [Fact]
+    public async Task GetSettings_ForTheHost_ReturnsThem()
+    {
+        var result = await _service.GetSettingsAsync(_sessionId, Host, CancellationToken.None);
+
+        Assert.False(result.IsError);
+    }
+
+    [Fact]
+    public async Task GetSettings_ForAGuest_IsForbidden()
+    {
+        var result = await _service.GetSettingsAsync(_sessionId, Guest, CancellationToken.None);
+
+        Assert.Equal(ErrorType.Forbidden, result.FirstError.Type);
+    }
+
+    [Fact]
+    public async Task UpdateSettings_ForAGuest_IsForbiddenAndSavesNothing()
+    {
+        var settings = new SlideshowSettingsDto { SlideTime = TimeSpan.FromSeconds(12) };
+
+        var result = await _service.UpdateSettingsAsync(_sessionId, Guest, settings, CancellationToken.None);
+
+        Assert.Equal(ErrorType.Forbidden, result.FirstError.Type);
+        Assert.Empty(_repository.Settings);
+    }
+
+    [Fact]
+    public async Task UpdateSettings_ForTheHost_SavesThem()
+    {
+        var settings = new SlideshowSettingsDto { SlideTime = TimeSpan.FromSeconds(12) };
+
+        var result = await _service.UpdateSettingsAsync(_sessionId, Host, settings, CancellationToken.None);
+
+        Assert.False(result.IsError);
+        Assert.Equal(TimeSpan.FromSeconds(12), _repository.Settings[_sessionId].SlideTime);
     }
 
     [Fact]
@@ -145,7 +190,7 @@ public class SlideshowServiceTests
     {
         var settings = new SlideshowSettingsDto { AutoRepeat = true, SlideTime = TimeSpan.FromSeconds(12) };
 
-        var result = await _service.UpdateSettingsAsync(_sessionId, settings, CancellationToken.None);
+        var result = await _service.UpdateSettingsAsync(_sessionId, Admin, settings, CancellationToken.None);
 
         Assert.False(result.IsError);
         var saved = _repository.Settings[_sessionId];
@@ -161,7 +206,7 @@ public class SlideshowServiceTests
     {
         var settings = new SlideshowSettingsDto { SlideTime = TimeSpan.FromSeconds(seconds) };
 
-        var result = await _service.UpdateSettingsAsync(_sessionId, settings, CancellationToken.None);
+        var result = await _service.UpdateSettingsAsync(_sessionId, Admin, settings, CancellationToken.None);
 
         Assert.True(result.IsError);
         Assert.Empty(_repository.Settings);
@@ -170,7 +215,7 @@ public class SlideshowServiceTests
     [Fact]
     public async Task UpdateSettings_OfAnUnknownSession_IsNotFound()
     {
-        var result = await _service.UpdateSettingsAsync(Guid.NewGuid(), new SlideshowSettingsDto(), CancellationToken.None);
+        var result = await _service.UpdateSettingsAsync(Guid.NewGuid(), Admin, new SlideshowSettingsDto(), CancellationToken.None);
 
         Assert.True(result.IsError);
         Assert.Empty(_repository.Settings);
@@ -231,9 +276,39 @@ public class SlideshowServiceTests
     {
         _repository.NextImages[_sessionId] = Image("a.jpg");
 
-        await _service.WatchAsync(_sessionId, "conn", CancellationToken.None);
+        await _service.WatchAsync(_sessionId, Admin, "conn", CancellationToken.None);
 
         Assert.Equal(_clock.UtcNow.AddSeconds(5), _scheduler.Scheduled[_sessionId].At);
+    }
+
+    [Fact]
+    public async Task Watch_ForAGuest_IsForbiddenAndStartsNothing()
+    {
+        _repository.NextImages[_sessionId] = Image("a.jpg");
+
+        var result = await _service.WatchAsync(_sessionId, Guest, "conn", CancellationToken.None);
+
+        Assert.Equal(ErrorType.Forbidden, result.FirstError.Type);
+        Assert.Empty(_scheduler.Scheduled);
+        Assert.Empty(_notifier.SlideshowChanges);
+    }
+
+    [Fact]
+    public async Task Watch_ForTheHost_ArmsTheTimer()
+    {
+        var result = await _service.WatchAsync(_sessionId, Host, "conn", CancellationToken.None);
+
+        Assert.False(result.IsError);
+        Assert.Contains(_sessionId, _scheduler.Scheduled.Keys);
+    }
+
+    [Fact]
+    public async Task Watch_OfAnUnknownSession_IsNotFound()
+    {
+        var result = await _service.WatchAsync(Guid.NewGuid(), Admin, "conn", CancellationToken.None);
+
+        Assert.Equal(ErrorType.NotFound, result.FirstError.Type);
+        Assert.Empty(_scheduler.Scheduled);
     }
 
     [Fact]
@@ -241,7 +316,7 @@ public class SlideshowServiceTests
     {
         _repository.NextImages[_sessionId] = Image("a.jpg");
 
-        await _service.WatchAsync(_sessionId, "conn", CancellationToken.None);
+        await _service.WatchAsync(_sessionId, Admin, "conn", CancellationToken.None);
 
         Assert.Equal([_sessionId], _notifier.SlideshowChanges);
     }
@@ -253,7 +328,7 @@ public class SlideshowServiceTests
         await _service.GetImageAsync(_sessionId, CancellationToken.None);
 
         _repository.NextImages[_sessionId] = Image("b.jpg");
-        await _service.WatchAsync(_sessionId, "conn", CancellationToken.None);
+        await _service.WatchAsync(_sessionId, Admin, "conn", CancellationToken.None);
 
         Assert.Empty(_notifier.SlideshowChanges);
         Assert.Equal("Images/Uploaded/a.jpg", (await _service.GetImageAsync(_sessionId, CancellationToken.None))!.FileName);
@@ -263,7 +338,7 @@ public class SlideshowServiceTests
     public async Task Timer_RotatesTheSlideNotifiesAndArmsTheNextOne()
     {
         _repository.NextImages[_sessionId] = Image("a.jpg");
-        await _service.WatchAsync(_sessionId, "conn", CancellationToken.None);
+        await _service.WatchAsync(_sessionId, Admin, "conn", CancellationToken.None);
         _notifier.SlideshowChanges.Clear();
 
         _clock.Advance(TimeSpan.FromSeconds(6));
@@ -279,7 +354,7 @@ public class SlideshowServiceTests
     public async Task Timer_WithTheSameImageAgain_DoesNotNotify()
     {
         _repository.NextImages[_sessionId] = Image("a.jpg");
-        await _service.WatchAsync(_sessionId, "conn", CancellationToken.None);
+        await _service.WatchAsync(_sessionId, Admin, "conn", CancellationToken.None);
         _notifier.SlideshowChanges.Clear();
 
         _clock.Advance(TimeSpan.FromSeconds(6));
@@ -292,7 +367,7 @@ public class SlideshowServiceTests
     public async Task Timer_FiringBeforeTheExpiration_RotatesNothing()
     {
         _repository.NextImages[_sessionId] = Image("a.jpg");
-        await _service.WatchAsync(_sessionId, "conn", CancellationToken.None);
+        await _service.WatchAsync(_sessionId, Admin, "conn", CancellationToken.None);
         _notifier.SlideshowChanges.Clear();
 
         _repository.NextImages[_sessionId] = Image("b.jpg");
@@ -305,7 +380,7 @@ public class SlideshowServiceTests
     public async Task Timer_FiringAfterTheLastWatcherLeft_RotatesNothing()
     {
         _repository.NextImages[_sessionId] = Image("a.jpg");
-        await _service.WatchAsync(_sessionId, "conn", CancellationToken.None);
+        await _service.WatchAsync(_sessionId, Admin, "conn", CancellationToken.None);
         var callback = _scheduler.Scheduled[_sessionId].Callback;
         _service.Unwatch("conn");
         _notifier.SlideshowChanges.Clear();
@@ -320,7 +395,7 @@ public class SlideshowServiceTests
     [Fact]
     public async Task Unwatch_OfTheLastWatcher_CancelsTheTimer()
     {
-        await _service.WatchAsync(_sessionId, "conn", CancellationToken.None);
+        await _service.WatchAsync(_sessionId, Admin, "conn", CancellationToken.None);
 
         _service.Unwatch("conn");
 
@@ -330,8 +405,8 @@ public class SlideshowServiceTests
     [Fact]
     public async Task Unwatch_WhileAnotherConnectionWatches_KeepsTheTimer()
     {
-        await _service.WatchAsync(_sessionId, "one", CancellationToken.None);
-        await _service.WatchAsync(_sessionId, "two", CancellationToken.None);
+        await _service.WatchAsync(_sessionId, Admin, "one", CancellationToken.None);
+        await _service.WatchAsync(_sessionId, Admin, "two", CancellationToken.None);
 
         _service.Unwatch("one");
 
@@ -343,7 +418,7 @@ public class SlideshowServiceTests
     public async Task GetImage_OfAWatchedSession_LeavesRotationToTheTimer()
     {
         _repository.NextImages[_sessionId] = Image("a.jpg");
-        await _service.WatchAsync(_sessionId, "conn", CancellationToken.None);
+        await _service.WatchAsync(_sessionId, Admin, "conn", CancellationToken.None);
 
         _clock.Advance(TimeSpan.FromSeconds(6));
         _repository.NextImages[_sessionId] = Image("b.jpg");
@@ -356,11 +431,12 @@ public class SlideshowServiceTests
     public async Task UpdateSettings_RestartsTheSlideOnDisplayWithTheNewSlideTime()
     {
         _repository.NextImages[_sessionId] = Image("a.jpg");
-        await _service.WatchAsync(_sessionId, "conn", CancellationToken.None);
+        await _service.WatchAsync(_sessionId, Admin, "conn", CancellationToken.None);
         _clock.Advance(TimeSpan.FromSeconds(2));
 
         await _service.UpdateSettingsAsync(
             _sessionId,
+            Admin,
             new SlideshowSettingsDto { SlideTime = TimeSpan.FromSeconds(30) },
             CancellationToken.None);
 
@@ -398,7 +474,7 @@ public class SlideshowServiceTests
     [Fact]
     public async Task DeleteSession_CancelsItsTimer()
     {
-        await _service.WatchAsync(_sessionId, "conn", CancellationToken.None);
+        await _service.WatchAsync(_sessionId, Admin, "conn", CancellationToken.None);
 
         await _service.DeleteSessionAsync(_sessionId);
 

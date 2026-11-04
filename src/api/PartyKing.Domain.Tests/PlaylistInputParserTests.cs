@@ -1,6 +1,6 @@
-using PartyKing.Application.Queue.Helpers;
+using PartyKing.Domain.Entities.Queue;
 
-namespace PartyKing.Application.Tests;
+namespace PartyKing.Domain.Tests;
 
 public class PlaylistInputParserTests
 {

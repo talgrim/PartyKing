@@ -1,9 +1,8 @@
-using PartyKing.Application.Lyrics.Services;
 using PartyKing.Domain.Entities.Lyrics;
 using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Enums;
 
-namespace PartyKing.Application.Tests;
+namespace PartyKing.Domain.Tests;
 
 public class LyricsMatchingTests
 {
