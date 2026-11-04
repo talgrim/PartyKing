@@ -4,5 +4,5 @@ namespace PartyKing.Domain.Entities.Games.Base;
 public interface ILobbyPlayerFactory<out TPlayer>
     where TPlayer : LobbyPlayer
 {
-    static abstract TPlayer Create(Guid playerId, string name, string? profileId, DateTimeOffset joinedAt);
+    static abstract TPlayer Create(Guid playerId, string name, string? profileId, DateTimeOffset joinedAt, bool isAdminSeat = false);
 }

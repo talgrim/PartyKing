@@ -190,12 +190,16 @@ public static class DependencyInjection
         services.AddDomainEventHandler<LobbyPlayerJoined, ResistanceLobbyPushHandler>();
         services.AddDomainEventHandler<LobbyPlayerKicked, ResistanceLobbyPushHandler>();
         services.AddDomainEventHandler<LobbyGameEnded, ResistanceLobbyPushHandler>();
+        services.AddDomainEventHandler<ResistanceSeatReleaseChanged, ResistanceLobbyPushHandler>();
+        services.AddDomainEventHandler<ResistanceSeatClaimed, ResistanceLobbyPushHandler>();
+        services.AddDomainEventHandler<ResistanceSeatClaimed, ResistanceSeatClaimedHandler>();
         services.AddScoped<ResistanceGameLobby>();
         services.AddScoped<ResistanceActionGate>();
         services.AddScoped<IResistanceLobbyService, ResistanceLobbyService>();
         services.AddScoped<IResistanceRoundService, ResistanceRoundService>();
         services.AddScoped<IResistancePlotCardService, ResistancePlotCardService>();
         services.AddScoped<IResistancePresenceService, ResistancePresenceService>();
+        services.AddScoped<IResistanceSeatService, ResistanceSeatService>();
         services.AddSingleton<IResistanceRulesProvider, ResistanceRulesProvider>();
         services.AddSingleton<IValidateOptions<ResistanceConfiguration>, ResistanceConfigurationValidator>();
         services.Configure<ResistanceConfiguration>(configuration.GetSection(ResistanceConfiguration.SectionName));

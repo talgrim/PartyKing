@@ -22,17 +22,16 @@ public abstract class GameControllerBase : CoreController
 
     protected ISignedCookies Cookies { get; }
 
-    /// <summary>The caller as host and admin; with <paramref name="game"/> also as that game's player.</summary>
+    /// <summary>The caller as host and admin; with <paramref name="game"/> also as that game's player (id and seat stamp of the cookie).</summary>
     protected async Task<GameCaller> ReadCallerAsync(Guid sessionId, GameKind? game = null)
     {
         var session = await HttpContext.ReadSessionCallerAsync(Cookies);
 
-        Guid? playerId = null;
-        if (game is { } kind && Cookies.TryReadGamePlayer(kind, Request, sessionId, out var player))
+        if (game is { } kind && Cookies.TryReadGamePlayer(kind, Request, sessionId, out var seat))
         {
-            playerId = player;
+            return new GameCaller(session.ProfileId, session.IsAdmin, seat.PlayerId, seat.Stamp);
         }
 
-        return new GameCaller(session.ProfileId, session.IsAdmin, playerId);
+        return new GameCaller(session.ProfileId, session.IsAdmin);
     }
 }

@@ -107,7 +107,8 @@ public class ResistanceController : ResistanceControllerBase
 
     /// <summary>
     /// Joins the open Resistance game as a player and remembers the player in a cookie. 400 for a bad name, 409 while
-    /// the game is closed or full or the name is taken. The session host's name comes from their Spotify profile, an
+    /// the game is closed or full or the name is taken, and 409 once it started (the session host gets their own seat
+    /// back, any other player returns through the seats the host released, see <c>ResistanceSeatsController</c>). The session host's name comes from their Spotify profile, an
     /// admin without a name joins as "admin".
     /// </summary>
     [HttpPost("join")]

@@ -49,10 +49,15 @@ internal class GameLobby<TGame, TPlayer>
         return _sessionAuthorizer.AuthorizeManagerAsync(sessionId, caller, cancellationToken);
     }
 
-    /// <summary>The caller's own player in the game, or null when the caller only watches.</summary>
+    /// <summary>
+    /// The caller's own player in the game, or null when the caller only watches. A device whose seat was taken
+    /// over (its stamp is not the seat's any more) only watches too.
+    /// </summary>
     public static TPlayer? PlayerOf(TGame game, GameCaller caller)
     {
-        return caller.PlayerId is { } id ? game.Players.FirstOrDefault(x => x.PlayerId == id) : null;
+        return caller.PlayerId is { } id
+            ? game.Players.FirstOrDefault(x => x.PlayerId == id && x.IsHeldBy(caller.PlayerStamp))
+            : null;
     }
 
     public static bool IsPlayer(TGame game, GameCaller caller)
@@ -113,12 +118,13 @@ internal class GameLobby<TGame, TPlayer>
     }
 
     /// <summary>
-    /// Joins an open game and returns the new player's id (the caller's own one when they already joined). The
-    /// session host joins under the first name of their Spotify profile and ignores <paramref name="name"/>; an
-    /// admin without a name joins as "admin". Validation error for an empty or over-long name, Conflict while the
+    /// Joins an open game and returns the new player's seat (the caller's own one when they already joined; the
+    /// host's own one when they lost their cookie, even once the game started). The session host joins under the
+    /// first name of their Spotify profile and ignores <paramref name="name"/>; an admin without a name joins as
+    /// "admin". Validation error for an empty or over-long name, Conflict while the
     /// game is closed, full or the name is taken, NotFound without a game.
     /// </summary>
-    public async Task<ErrorOr<Guid>> JoinAsync(
+    public async Task<ErrorOr<GameSeat>> JoinAsync(
         Guid sessionId, string? name, GameCaller caller, CancellationToken cancellationToken)
     {
         var session = await _sessions.GetAsync(sessionId, cancellationToken);
@@ -133,12 +139,18 @@ internal class GameLobby<TGame, TPlayer>
             return NoGame;
         }
 
-        if (caller.PlayerId is { } existing && game.Players.Any(x => x.PlayerId == existing))
+        if (PlayerOf(game, caller) is { } own)
         {
-            return existing;
+            return new GameSeat(own.PlayerId, own.ClaimStamp);
         }
 
         var isHost = session.IsHostedBy(caller.ProfileId);
+        if (isHost && game.Players.FirstOrDefault(x => x.ProfileId == caller.ProfileId) is { } hostSeat)
+        {
+            // The host proves who they are with their own cookie, so their seat is theirs again on any device
+            return new GameSeat(hostSeat.PlayerId, hostSeat.ClaimStamp);
+        }
+
         var typed = name?.Trim() ?? string.Empty;
         var playerName = isHost
             ? LobbyNames.HostName(session.HostDisplayName)
@@ -148,7 +160,8 @@ internal class GameLobby<TGame, TPlayer>
             return invalid;
         }
 
-        var player = TPlayer.Create(Guid.NewGuid(), playerName, isHost ? caller.ProfileId : null, _clock.UtcNow);
+        var player = TPlayer.Create(
+            Guid.NewGuid(), playerName, isHost ? caller.ProfileId : null, _clock.UtcNow, caller.IsAdmin);
 
         var result = await _games.JoinAsync(sessionId, player, cancellationToken);
         if (_errors.From(result.Status) is { } error)
@@ -156,7 +169,7 @@ internal class GameLobby<TGame, TPlayer>
             return error;
         }
 
-        return player.PlayerId;
+        return new GameSeat(player.PlayerId, null);
     }
 
     /// <summary>Host or admin: removes a player. NotFound for an unknown game or player.</summary>

@@ -9,10 +9,10 @@ public class RingoPlayer : LobbyPlayer, ILobbyPlayerFactory<RingoPlayer>
     {
     }
 
-    public static RingoPlayer Create(Guid playerId, string name, string? profileId, DateTimeOffset joinedAt)
+    public static RingoPlayer Create(Guid playerId, string name, string? profileId, DateTimeOffset joinedAt, bool isAdminSeat = false)
     {
         var player = new RingoPlayer();
-        player.Initialize(playerId, name, profileId, joinedAt);
+        player.Initialize(playerId, name, profileId, joinedAt, isAdminSeat);
 
         return player;
     }

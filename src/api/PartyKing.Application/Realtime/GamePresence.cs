@@ -21,6 +21,12 @@ public interface IGamePresence
 
     /// <summary>The players that are online, the ones inside their grace period included.</summary>
     IReadOnlyList<Guid> OnlinePlayers(GameKind kind, Guid sessionId);
+
+    /// <summary>
+    /// Drops every connection of the player at once, without a grace period, and pushes the new list when they were
+    /// online. For a seat that was taken over: the connections of the device that lost it must not keep it online.
+    /// </summary>
+    Task ForgetAsync(GameKind kind, Guid sessionId, Guid playerId);
 }
 
 internal sealed class GamePresence : IGamePresence, IDisposable
@@ -94,6 +100,32 @@ internal sealed class GamePresence : IGamePresence, IDisposable
         lock (_gate)
         {
             return OnlineIds(kind, sessionId);
+        }
+    }
+
+    public async Task ForgetAsync(GameKind kind, Guid sessionId, Guid playerId)
+    {
+        bool wasOnline;
+
+        lock (_gate)
+        {
+            if (!_entries.Remove(new Key(kind, sessionId, playerId), out var entry))
+            {
+                return;
+            }
+
+            foreach (var connectionId in entry.Connections)
+            {
+                _keyByConnection.Remove(connectionId);
+            }
+
+            entry.CancelGrace();
+            wasOnline = entry.Online;
+        }
+
+        if (wasOnline)
+        {
+            await PushAsync(kind, sessionId);
         }
     }
 

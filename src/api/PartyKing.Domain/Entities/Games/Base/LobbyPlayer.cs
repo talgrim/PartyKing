@@ -8,12 +8,13 @@ public abstract class LobbyPlayer
     {
     }
 
-    protected void Initialize(Guid playerId, string name, string? profileId, DateTimeOffset joinedAt)
+    protected void Initialize(Guid playerId, string name, string? profileId, DateTimeOffset joinedAt, bool isAdminSeat)
     {
         PlayerId = playerId;
         Name = name;
         ProfileId = profileId;
         JoinedAt = joinedAt;
+        IsAdminSeat = isAdminSeat;
     }
 
     public Guid SessionId { get; internal set; }
@@ -42,6 +43,24 @@ public abstract class LobbyPlayer
 
     /// <summary>The Spotify profile id of a player who joined as the session host; null for anyone else.</summary>
     public string? ProfileId { get; internal set; }
+
+    /// <summary>Whether an admin joined as this player (whatever name they typed).</summary>
+    public bool IsAdminSeat { get; internal set; }
+
+    /// <summary>
+    /// The seat of the session host or of an admin. Their identity comes from their own cookies, so such a seat is
+    /// never handed to a guest.
+    /// </summary>
+    public bool IsManagerSeat => ProfileId is not null || IsAdminSeat;
+
+    /// <summary>
+    /// Null until the seat is taken over by another device; then a fresh id, which the player's cookie has to carry.
+    /// A cookie with another stamp (the one of the device that lost the seat) no longer identifies the player.
+    /// </summary>
+    public Guid? ClaimStamp { get; internal set; }
+
+    /// <summary>Whether a device that holds the given stamp (null for a cookie that never had one) is this player's.</summary>
+    public bool IsHeldBy(Guid? stamp) => ClaimStamp == stamp;
 
     public const string HostSuffix = " (host)";
 
