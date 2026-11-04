@@ -21,7 +21,17 @@ public interface ISessionsRepository
         bool shuffle,
         CancellationToken cancellationToken);
 
-    Task<bool> SetFallbackCursorAsync(Guid id, int cursor, CancellationToken cancellationToken);
+    /// <summary>
+    /// Stores the cursor, but only while the session still has <paramref name="playlistId"/> and is at
+    /// <paramref name="expectedCursor"/>, the values the caller's pick was based on: a playlist that was changed or
+    /// rewound meanwhile keeps its new cursor. Returns whether the cursor was stored.
+    /// </summary>
+    Task<bool> SetFallbackCursorAsync(
+        Guid id,
+        string playlistId,
+        int expectedCursor,
+        int cursor,
+        CancellationToken cancellationToken);
 
     /// <summary>Deletes the session together with its queue.</summary>
     Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken);
