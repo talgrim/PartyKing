@@ -5,6 +5,8 @@ import {
   MUSIC_QUEUE_HUB_TOPICS,
   RESISTANCE_HUB_TOPICS,
   RESISTANCE_JOIN_HUB_TOPICS,
+  RESISTANCE_TV_HUB_TOPICS,
+  resistancePresenceKey,
   resistanceKey,
   resistanceLobbyKey,
   SESSION_HUB_TOPICS,
@@ -58,14 +60,14 @@ const SESSION = 'session-1';
 const mutated = () => vi.mocked(mutate).mock.calls.map(([key]) => key);
 
 /** Mounts the hook and lets the connection start; the pushes are then sent through `hub.handlers`. */
-const mountHub = async (topics?: readonly SessionHubTopic[]) => {
-  const rendered = renderHook(() => useSessionMusicHub(SESSION, true, undefined, topics));
+const mountHub = async (topics?: readonly SessionHubTopic[], options?: { presence?: boolean }) => {
+  const rendered = renderHook(() => useSessionMusicHub(SESSION, true, undefined, topics, options));
   await act(async () => {});
   return rendered;
 };
 
-const push = (name: string) => {
-  act(() => hub.handlers.get(name)!());
+const push = (name: string, ...args: unknown[]) => {
+  act(() => hub.handlers.get(name)!(...args));
 };
 
 const wait = async (ms: number) => {
@@ -184,5 +186,38 @@ describe('useSessionMusicHub, Resistance pushes', () => {
     await wait(1000);
 
     expect(mutated()).toEqual([]);
+  });
+
+  it('asks for the presence topic only when it is the TV view', async () => {
+    await mountHub(RESISTANCE_TV_HUB_TOPICS);
+    await mountHub(RESISTANCE_HUB_TOPICS);
+
+    expect(hub.urls[0]).toContain('topics=resistance,resistanceLobby,resistancePresence');
+    expect(hub.urls[1]).not.toContain('resistancePresence');
+  });
+
+  it('announces a player page as presence, and a connection without the option as nothing', async () => {
+    await mountHub(RESISTANCE_HUB_TOPICS, { presence: true });
+    await mountHub(RESISTANCE_TV_HUB_TOPICS);
+
+    expect(hub.urls[0]).toContain('&presence=1');
+    expect(hub.urls[1]).not.toContain('presence=1');
+  });
+
+  it('puts the pushed list of online players into the cache without a fetch', async () => {
+    await mountHub(RESISTANCE_TV_HUB_TOPICS);
+
+    const presence = { onlinePlayerIds: ['p1', 'p2'] };
+    push('ResistancePresenceChanged', presence);
+
+    expect(mutate).toHaveBeenCalledWith(resistancePresenceKey(SESSION), presence, { revalidate: false });
+  });
+
+  it('fetches who is online again after a reconnect of the TV view only', async () => {
+    await mountHub(RESISTANCE_TV_HUB_TOPICS);
+
+    act(() => hub.reconnected!());
+
+    expect(mutated()).toContainEqual(resistancePresenceKey(SESSION));
   });
 });
