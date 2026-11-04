@@ -9,6 +9,7 @@ import { gamesApi } from './gamesApi';
 export const useResistanceLobby = (sessionId: string, enabled = true) => {
   const { data, error, ...rest } = useSWR(enabled ? resistanceLobbyKey(sessionId) : null, () => gamesApi.getResistanceLobby(sessionId), {
     shouldRetryOnError: false,
+    revalidateOnFocus: false,
   });
 
   return { ...rest, data: error ? undefined : data, error };
