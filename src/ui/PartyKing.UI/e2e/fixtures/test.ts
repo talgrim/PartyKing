@@ -1,4 +1,4 @@
-import { APIRequestContext, Page, test as base, expect, request } from '@playwright/test';
+import { APIRequestContext, BrowserContext, Page, test as base, expect, request } from '@playwright/test';
 import { ADMIN_STATE_FILE, API_URL } from '../constants';
 
 export type CreatedSession = { id: string; code: string; name: string; password: string };
@@ -6,6 +6,10 @@ export type CreatedSession = { id: string; code: string; name: string; password:
 type Fixtures = {
   /** Creates sessions through the admin API; they are deleted when the test ends. */
   createSession: (name?: string) => Promise<CreatedSession>;
+  /** A page in its own browser context (own cookies, so own player identity) that has unlocked the session. */
+  openGuest: (session: CreatedSession) => Promise<Page>;
+  /** Like openGuest, but the context carries the admin cookies. */
+  openAdmin: (session: CreatedSession) => Promise<Page>;
 };
 
 let counter = 0;
@@ -29,6 +33,30 @@ export const test = base.extend<Fixtures>({
       await admin.delete(`/admin/sessions/${session.id}`);
     }
     await admin.dispose();
+  },
+
+  openGuest: async ({ browser }, use) => {
+    const contexts: BrowserContext[] = [];
+    await use(async (session) => {
+      const context = await browser.newContext();
+      contexts.push(context);
+      const page = await context.newPage();
+      await unlockSession(page, session);
+      return page;
+    });
+    await Promise.all(contexts.map((context) => context.close()));
+  },
+
+  openAdmin: async ({ browser }, use) => {
+    const contexts: BrowserContext[] = [];
+    await use(async (session) => {
+      const context = await browser.newContext({ storageState: ADMIN_STATE_FILE });
+      contexts.push(context);
+      const page = await context.newPage();
+      await unlockSession(page, session);
+      return page;
+    });
+    await Promise.all(contexts.map((context) => context.close()));
   },
 });
 
