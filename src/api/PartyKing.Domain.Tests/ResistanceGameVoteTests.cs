@@ -1,6 +1,6 @@
 using PartyKing.Domain.Entities.Games.Resistance;
 
-namespace PartyKing.Application.Tests;
+namespace PartyKing.Domain.Tests;
 
 /// <summary>Voting on a submitted team, with no database.</summary>
 public class ResistanceGameVoteTests

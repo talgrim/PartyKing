@@ -1,6 +1,6 @@
 using PartyKing.Domain.Entities.Games.Resistance;
 
-namespace PartyKing.Application.Tests;
+namespace PartyKing.Domain.Tests;
 
 /// <summary>The rules switches of <see cref="ResistanceGame"/>, with no database.</summary>
 public class ResistanceGameRulesTests

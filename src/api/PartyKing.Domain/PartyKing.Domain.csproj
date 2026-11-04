@@ -8,6 +8,7 @@
 
     <ItemGroup>
         <InternalsVisibleTo Include="PartyKing.Application.Tests" />
+        <InternalsVisibleTo Include="PartyKing.Domain.Tests" />
         <InternalsVisibleTo Include="PartyKing.Persistence" />
     </ItemGroup>
 

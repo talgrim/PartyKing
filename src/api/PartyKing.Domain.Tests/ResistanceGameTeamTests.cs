@@ -1,6 +1,6 @@
 using PartyKing.Domain.Entities.Games.Resistance;
 
-namespace PartyKing.Application.Tests;
+namespace PartyKing.Domain.Tests;
 
 /// <summary>The leader's team selection of <see cref="ResistanceGame"/>, with no database.</summary>
 public class ResistanceGameTeamTests

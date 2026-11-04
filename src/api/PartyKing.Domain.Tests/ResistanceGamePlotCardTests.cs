@@ -1,6 +1,6 @@
 using PartyKing.Domain.Entities.Games.Resistance;
 
-namespace PartyKing.Application.Tests;
+namespace PartyKing.Domain.Tests;
 
 /// <summary>The plot cards of <see cref="ResistanceGame"/>, with no database, a fixed clock and a seeded random.</summary>
 public class ResistanceGamePlotCardTests

@@ -3,7 +3,7 @@ using PartyKing.Domain.Entities.Games.Resistance;
 using PartyKing.Domain.Entities.Games.Ringo;
 using PartyKing.Domain.Events.Games.Base;
 
-namespace PartyKing.Application.Tests;
+namespace PartyKing.Domain.Tests;
 
 /// <summary>The events <see cref="LobbyGame{TPlayer}"/> raises for its lobby rules, with no database.</summary>
 public class LobbyEventsTests

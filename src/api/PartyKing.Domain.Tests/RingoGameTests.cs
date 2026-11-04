@@ -1,6 +1,6 @@
 using PartyKing.Domain.Entities.Games.Ringo;
 
-namespace PartyKing.Application.Tests;
+namespace PartyKing.Domain.Tests;
 
 /// <summary>The flip and continue rules of <see cref="RingoGame"/>, with no database.</summary>
 public class RingoGameTests
