@@ -83,8 +83,8 @@ public class HostTokenProviderTests
 
     private class FakeProfilesRepository : ISpotifyProfilesRepository
     {
-        public Task<ErrorOr<SpotifyProfile>> GetProfileAsync(string id, CancellationToken cancellationToken) =>
-            Task.FromResult<ErrorOr<SpotifyProfile>>(new SpotifyProfile(id, "refresh-token"));
+        public Task<SpotifyProfile?> GetProfileAsync(string id, CancellationToken cancellationToken) =>
+            Task.FromResult<SpotifyProfile?>(new SpotifyProfile(id, "refresh-token"));
 
         public Task CreateProfileAsync(AuthenticationResult result, CancellationToken cancellationToken) =>
             throw new NotSupportedException();

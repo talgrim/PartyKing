@@ -1,12 +1,12 @@
 using PartyKing.Domain.Repositories;
 using ErrorOr;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Http;
 using PartyKing.Application.Events;
 using PartyKing.Application.Games.Services.Base;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
+using PartyKing.Application.Slideshow.Models;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Application.System;
@@ -244,7 +244,7 @@ internal class FakeSlideshowService : ISlideshowService
 
     public Task UploadImagesAsync(
         Guid sessionId,
-        IFormFile[] files,
+        IReadOnlyList<UploadedFile> files,
         bool deleteAfterPresentation,
         CancellationToken cancellationToken) => throw new NotSupportedException();
 

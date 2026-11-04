@@ -1,4 +1,4 @@
-using PartyKing.Application.Ports;
+using PartyKing.API.Cookies;
 using ErrorOr;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
@@ -72,7 +72,7 @@ public class AcceptLanguageTests
         }
     }
 
-    private sealed class FakeCookies : ICookieAuthorizationHandler
+    private sealed class FakeCookies : ISignedCookies
     {
         public bool TryReadProfileId(HttpRequest request, out string profileId)
         {
@@ -80,11 +80,11 @@ public class AcceptLanguageTests
             return false;
         }
 
-        public void Authorize(string profileId, HttpContext? httpContext) => throw new NotSupportedException();
-        public void Authorize(string spotifyAccessToken, int expiresIn, HttpContext? httpContext) => throw new NotSupportedException();
-        public void AuthorizeAdmin(Guid adminId, HttpContext? httpContext) => throw new NotSupportedException();
+        public void GrantHost(string profileId, HttpContext? httpContext) => throw new NotSupportedException();
+        public void GrantSpotifyAccessToken(string spotifyAccessToken, int expiresIn, HttpContext? httpContext) => throw new NotSupportedException();
+        public void GrantAdmin(Guid adminId, HttpContext? httpContext) => throw new NotSupportedException();
         public bool TryReadAdminId(HttpRequest request, out Guid adminId) => throw new NotSupportedException();
-        public void SignOutAdmin(HttpContext? httpContext) => throw new NotSupportedException();
+        public void RevokeAdmin(HttpContext? httpContext) => throw new NotSupportedException();
         public void GrantSessionAccess(Guid sessionId, string stamp, HttpContext? httpContext) => throw new NotSupportedException();
         public bool TryReadSessionAccess(HttpRequest request, Guid sessionId, out string stamp) => throw new NotSupportedException();
         public void GrantGamePlayer(GameKind game, Guid sessionId, Guid playerId, HttpContext? httpContext) => throw new NotSupportedException();
