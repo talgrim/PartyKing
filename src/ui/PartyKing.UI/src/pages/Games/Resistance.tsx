@@ -1,5 +1,5 @@
 import { ReactNode, useState } from 'react';
-import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { mutate as mutateGlobal } from 'swr';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -36,6 +36,7 @@ import { RESISTANCE_HUB_TOPICS, RESISTANCE_TV_HUB_TOPICS, resistanceLobbyKey } f
 import { useSessionMusicHub } from '@/service/realtime/useSessionMusicHub';
 import { usePersistedFlag } from '@/utils/usePersistedFlag';
 import { ResistanceGameSettings } from './ResistanceGameSettings';
+import { ResistanceSeatsDialog } from '@/pages/Games/resistance/ResistanceSeatsDialog';
 import { ResistanceSettings } from './ResistanceSettings';
 import { useTranslation } from 'react-i18next';
 
@@ -71,7 +72,9 @@ export const Resistance = (): ReactNode => {
   const [boardView, setBoardView] = usePersistedFlag('partyking.resistanceBoardView', false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [managingPlayers, setManagingPlayers] = useState(false);
+  const [seatsOpen, setSeatsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [wasPlayer, setWasPlayer] = useState(false);
   const [confirmingEnd, setConfirmingEnd] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [message, setMessage] = useState<string>();
@@ -81,6 +84,9 @@ export const Resistance = (): ReactNode => {
   const tv = canManage && searchParams.get('tv') === '1';
   const isPlayer = game?.yourPlayerId != null;
   const tvLayout = tv || (canManage && !isPlayer);
+  // A player whose seat was taken over from another device is an observer from now on (their cookie no longer counts)
+  if (isPlayer && !wasPlayer) setWasPlayer(true);
+  const lostSeat = wasPlayer && game !== undefined && !isPlayer && !canManage;
 
   // The server pushes every change of the lobby (ResistanceChanged), so other devices stay current without polling.
   // The TV view also follows who is connected; any other view is a player's (or observer's) own page and counts as
@@ -316,6 +322,7 @@ export const Resistance = (): ReactNode => {
       game={game}
       isAdmin={isAdmin}
       onManagePlayers={() => setManagingPlayers(true)}
+      onManageSeats={() => setSeatsOpen(true)}
       onEnd={() => setConfirmingEnd(true)}
       onStart={() => void startGame()}
       onOpen={() => void openGame()}
@@ -391,6 +398,15 @@ export const Resistance = (): ReactNode => {
         </div>
       )}
 
+      {lostSeat && (
+        <p role="status" className="text-amber-500">
+          {t('resistance.page.seatLost')}{' '}
+          <Link to={sessionResistanceJoinPath(sessionId)} className="underline">
+            {t('resistance.page.seatLostLink')}
+          </Link>
+        </p>
+      )}
+
       {tvLayout ? (
         <ResistanceTvBoard
           game={game}
@@ -433,6 +449,18 @@ export const Resistance = (): ReactNode => {
 
       {canManage && !started && (
         <ResistanceSettings sessionId={sessionId} open={managingPlayers} onClose={() => setManagingPlayers(false)} />
+      )}
+
+      {canManage && game && started && (
+        <ResistanceSeatsDialog
+          sessionId={sessionId}
+          open={seatsOpen}
+          onClose={() => setSeatsOpen(false)}
+          players={game.players}
+          onSetReleased={(player, released) =>
+            mutate(gamesApi.setResistanceSeatReleased(sessionId, player.id, released), { revalidate: false })
+          }
+        />
       )}
 
       {canManage && <ResistanceGameSettings sessionId={sessionId} open={settingsOpen} onClose={() => setSettingsOpen(false)} />}

@@ -7,6 +7,7 @@ type Props = {
   game: ResistanceGameDto;
   isAdmin: boolean;
   onManagePlayers: () => void;
+  onManageSeats: () => void;
   onEnd: () => void;
   onStart: () => void;
   onOpen: () => void;
@@ -18,8 +19,11 @@ type Props = {
 const buttonClass =
   'px-3 py-2 text-slate-200 bg-slate-900 rounded-md hover:bg-slate-700 cursor-pointer disabled:opacity-50 disabled:cursor-default';
 
-/** What the host and admins do to the game: manage the players, start, open it to guests (admin) and end it. */
-export const ResistanceManagerControls = ({ game, isAdmin, onManagePlayers, onEnd, onStart, onOpen, onRefreshRules, onContinue, onRestart }: Props): ReactNode => {
+/**
+ * What the host and admins do to the game: manage the players, start, open it to guests (admin), free the seat of a
+ * player who lost their device once it started, and end it.
+ */
+export const ResistanceManagerControls = ({ game, isAdmin, onManagePlayers, onManageSeats, onEnd, onStart, onOpen, onRefreshRules, onContinue, onRestart }: Props): ReactNode => {
   const { t } = useTranslation();
   const started = game.startedAt != null;
   const enough = game.players.length >= MIN_PLAYERS;
@@ -42,6 +46,11 @@ export const ResistanceManagerControls = ({ game, isAdmin, onManagePlayers, onEn
       {!started && (
         <button type="button" onClick={onManagePlayers} className={buttonClass}>
           {t('lobby.players')}
+        </button>
+      )}
+      {started && (
+        <button type="button" onClick={onManageSeats} title={t('resistance.controls.seatsHint')} className={buttonClass}>
+          {t('resistance.controls.seats')}
         </button>
       )}
       <button type="button" onClick={onEnd} className={buttonClass}>
