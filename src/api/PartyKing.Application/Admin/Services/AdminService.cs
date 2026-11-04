@@ -25,11 +25,12 @@ internal class AdminService : IAdminService
     private readonly ILogger<AdminService> _logger;
 
     // Verified against when the username is unknown, so both failures cost the same time
-    private readonly string _dummyHash;
+    private readonly AdminDummyHash _dummyHash;
 
     public AdminService(
         IAdminAccountsRepository accountsRepository,
         IPasswordHasher passwordHasher,
+        AdminDummyHash dummyHash,
         IOptions<AdminConfiguration> config,
         ILogger<AdminService> logger)
     {
@@ -37,7 +38,7 @@ internal class AdminService : IAdminService
         _passwordHasher = passwordHasher;
         _config = config.Value;
         _logger = logger;
-        _dummyHash = passwordHasher.Hash(Guid.NewGuid().ToString());
+        _dummyHash = dummyHash;
     }
 
     public async Task<ErrorOr<Guid>> LoginAsync(
@@ -51,7 +52,7 @@ internal class AdminService : IAdminService
             ? null
             : await _accountsRepository.GetByUsernameAsync(normalized, cancellationToken);
 
-        var valid = _passwordHasher.Verify(password ?? string.Empty, account?.PasswordHash ?? _dummyHash);
+        var valid = _passwordHasher.Verify(password ?? string.Empty, account?.PasswordHash ?? _dummyHash.Value);
 
         if (account is null || !valid)
         {
