@@ -173,7 +173,9 @@ Backend jest podzielony na warstwy w stylu Clean Architecture (projekty w `src/a
 | `PartyKing.Infrastructure.Youtube` | Klient oEmbed YouTube (tytuł, autor, miniatura; sprawdzenie, czy film można osadzić) |
 | `PartyKing.Persistence` | `DbContext`, konfiguracje encji, migracje, dane startowe |
 | `PartyKing.Domain` | Encje, enumy, modele read/write |
+| `PartyKing.Domain.Tests` | Testy jednostkowe Domain (xUnit): agregaty, zdarzenia i reguły gier, bez bazy i atrap |
 | `PartyKing.Application.Tests` | Testy jednostkowe (xUnit): serwisy, repozytoria, parser wejścia |
+| `PartyKing.Architecture.Tests` | Testy architektury (xUnit): kierunek zależności między warstwami, brak HTTP w Application |
 | `PartyKing.Api.Tests` | Testy warstwy API (xUnit): metryki, obsługa błędów |
 | `PartyKing.UI` | SPA w React (osobny projekt npm w `src/ui`, poza `.sln`) |
 
@@ -624,9 +626,9 @@ dotnet test PartyKing.sln
 npm test
 ```
 
-Backend ma dwa projekty testowe: `PartyKing.Application.Tests` (parser wejścia `SongInputParser`, hasła sesji, tokeny QR,
+Backend ma cztery projekty testowe: `PartyKing.Domain.Tests` (reguły agregatów: sesja, lobby, Ringo, Resistance), `PartyKing.Architecture.Tests` (zależności między warstwami), `PartyKing.Application.Tests` (parser wejścia `SongInputParser`, hasła sesji, tokeny QR,
 kolejka, dekoratory metryk repozytoriów) i `PartyKing.Api.Tests` (metryki akcji i autoryzacji, klient Spotify, odpowiedź `500`
-na nieobsłużony wyjątek); `dotnet test PartyKing.sln` uruchamia oba.  Konfiguracja pokrycia frontendu znajduje się w `vite.config.ts`.
+na nieobsłużony wyjątek); `dotnet test PartyKing.sln` uruchamia wszystkie.  Konfiguracja pokrycia frontendu znajduje się w `vite.config.ts`.
 
 ## Znane ograniczenia
 
