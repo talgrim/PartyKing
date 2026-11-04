@@ -47,9 +47,23 @@ internal sealed class MeteredSlideshowImagesRepository
         return MeasureAsync(nameof(GetSettingsAsync), () => _settings.GetSettingsAsync(sessionId, cancellationToken));
     }
 
-    public Task SaveSettingsAsync(SlideshowSettings settings, CancellationToken cancellationToken)
+    public Task<SlideshowSettingsFailure> ChangeAsync(
+        Guid sessionId,
+        bool autoRepeat,
+        bool startFromBeginning,
+        TimeSpan? slideTime,
+        TimeSpan defaultSlideTime,
+        CancellationToken cancellationToken)
     {
-        return MeasureAsync(nameof(SaveSettingsAsync), () => _settings.SaveSettingsAsync(settings, cancellationToken));
+        return MeasureAsync(
+            nameof(ChangeAsync),
+            () => _settings.ChangeAsync(
+                sessionId,
+                autoRepeat,
+                startFromBeginning,
+                slideTime,
+                defaultSlideTime,
+                cancellationToken));
     }
 
     public Task AddSlideshowImageAsync(SlideshowImageWriteModel slideshowImage, CancellationToken cancellationToken)

@@ -18,6 +18,7 @@ using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Handlers;
 using PartyKing.Application.Sessions.Services;
+using PartyKing.Application.Slideshow.Handlers;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Application.System;
@@ -28,6 +29,7 @@ using PartyKing.Domain.Events.Games.Ringo;
 using PartyKing.Domain.Events.Lyrics;
 using PartyKing.Domain.Events.Queue;
 using PartyKing.Domain.Events.Sessions;
+using PartyKing.Domain.Events.Slideshow;
 
 namespace PartyKing.Application;
 
@@ -125,6 +127,7 @@ public static class DependencyInjection
         services.AddSingleton<ISlideshowScheduler, SlideshowScheduler>();
         services.AddSingleton<ISlideshowService, SlideshowService>();
         services.AddScoped<ISlideshowArchiveService, SlideshowArchiveService>();
+        services.AddDomainEventHandler<SlideshowSettingsChanged, SlideshowSettingsHandler>();
         services.Configure<SlideshowConfiguration>(configuration.GetSection(SlideshowConfiguration.SectionName));
     }
 
