@@ -13,13 +13,42 @@ public class AdminServiceTests
 {
     private readonly FakeAccountsRepository _accounts = new();
 
+    private readonly FakePasswordHasher _hasher = new();
+
     private AdminService CreateService(AdminConfiguration? configuration = null)
     {
         return new AdminService(
             _accounts,
-            new FakePasswordHasher(),
+            _hasher,
+            new AdminDummyHash(_hasher),
             Options.Create(configuration ?? new AdminConfiguration()),
             NullLogger<AdminService>.Instance);
+    }
+
+    /// <summary>
+    /// The service is scoped and the admin cookie handler builds it on every request that asks who the caller is, so
+    /// building it must not hash anything: a hash takes about 55 ms of CPU, which every game fetch paid.
+    /// </summary>
+    [Fact]
+    public void BuildingTheService_HashesNothing()
+    {
+        CreateService();
+        CreateService();
+
+        Assert.Equal(0, _hasher.Hashes);
+    }
+
+    [Fact]
+    public async Task AnUnknownUsername_VerifiesAgainstOneDummyHashSharedByEveryService()
+    {
+        var dummyHash = new AdminDummyHash(_hasher);
+        var first = new AdminService(_accounts, _hasher, dummyHash, Options.Create(new AdminConfiguration()), NullLogger<AdminService>.Instance);
+        var second = new AdminService(_accounts, _hasher, dummyHash, Options.Create(new AdminConfiguration()), NullLogger<AdminService>.Instance);
+
+        await first.LoginAsync("nobody", "secret", CancellationToken.None);
+        await second.LoginAsync("someone", "secret", CancellationToken.None);
+
+        Assert.Equal(1, _hasher.Hashes);
     }
 
     private Guid AddAccount(string username, string password)
@@ -131,9 +160,16 @@ public class AdminServiceTests
     {
         private const string Prefix = "fake$";
 
+        public int Hashes { get; private set; }
+
         public static string HashOf(string password) => Prefix + password;
 
-        public string Hash(string password, int iterations = PasswordHasher.AdminIterations) => HashOf(password);
+        public string Hash(string password, int iterations = PasswordHasher.AdminIterations)
+        {
+            Hashes++;
+
+            return HashOf(password);
+        }
 
         public bool Verify(string password, string hash) => hash == HashOf(password);
 
