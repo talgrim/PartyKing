@@ -48,11 +48,16 @@ public class RingoGame : LobbyGame<RingoPlayer>
     /// <summary>
     /// Records the flip of a card and makes it the pending one. With players the flip is recorded under the name of the
     /// player whose turn it is, and <paramref name="turnOf"/> (null for a manager, who may flip out of turn) must be
-    /// that player; without players <paramref name="flippedBy"/> is recorded. A card that is flipped already changes
-    /// nothing, and is not a failure.
+    /// that player; without players <paramref name="flippedBy"/> is recorded. A card id outside the deck is refused
+    /// first of all. A card that is flipped already changes nothing, and is not a failure.
     /// </summary>
     public RingoOutcome Flip(int cardId, string flippedBy, Guid? turnOf, DateTimeOffset flippedAt)
     {
+        if (cardId is < 0 or >= CardCount)
+        {
+            return RingoOutcome.Failed(RingoFailure.InvalidCard, this);
+        }
+
         var current = RingoTurns.Current(this);
         if (turnOf is not null && turnOf != current?.PlayerId)
         {
@@ -118,6 +123,9 @@ public class RingoGame : LobbyGame<RingoPlayer>
     }
 
     public const int KingsToEnd = 4;
+
+    /// <summary>The cards of the deck; card ids run from 0 to <c>CardCount - 1</c>.</summary>
+    public const int CardCount = 52;
 
     // Card ids run by suit, 13 ranks each, 2 to ace, so the king is the rank at index 11
     private const int KingRankIndex = 11;

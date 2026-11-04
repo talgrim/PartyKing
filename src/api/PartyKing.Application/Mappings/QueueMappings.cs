@@ -15,9 +15,7 @@ public static partial class QueueMappings
     [MapProperty(nameof(QueueItem.Title), nameof(QueueItemDto.Name))]
     public static partial QueueItemDto ToDto(this QueueItem item);
 
-    // Id and Status are not copied from the song: the database assigns the id and the constructor starts at Queued.
-    [MapperIgnoreTarget(nameof(QueueItem.Id))]
-    [MapperIgnoreTarget(nameof(QueueItem.Status))]
+    // Mapped through the constructor, which starts the song at Queued; the database assigns the id.
     [MapValue(nameof(QueueItem.Source), QueueItemSource.Spotify)]
     [MapProperty(nameof(Song.Uri), nameof(QueueItem.Url))]
     [MapProperty(nameof(Song.Name), nameof(QueueItem.Title))]

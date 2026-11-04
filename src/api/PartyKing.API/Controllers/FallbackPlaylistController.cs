@@ -1,4 +1,4 @@
-using PartyKing.Application.Ports;
+using PartyKing.API.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using PartyKing.API.Authentication;
 using PartyKing.API.Authorization;
@@ -11,16 +11,16 @@ namespace PartyKing.API.Controllers;
 public class FallbackPlaylistController : CoreController
 {
     private readonly IFallbackPlaylistService _fallbackPlaylistService;
-    private readonly ICookieAuthorizationHandler _cookieAuthorizationHandler;
+    private readonly ISignedCookies _cookies;
 
     public FallbackPlaylistController(
         IHttpContextAccessor httpContextAccessor,
         IFallbackPlaylistService fallbackPlaylistService,
-        ICookieAuthorizationHandler cookieAuthorizationHandler)
+        ISignedCookies cookies)
         : base(httpContextAccessor)
     {
         _fallbackPlaylistService = fallbackPlaylistService;
-        _cookieAuthorizationHandler = cookieAuthorizationHandler;
+        _cookies = cookies;
     }
 
     /// <summary>
@@ -35,7 +35,7 @@ public class FallbackPlaylistController : CoreController
         [FromBody] SetFallbackPlaylistRequestDto request,
         CancellationToken cancellationToken)
     {
-        var caller = await HttpContext.ReadSessionCallerAsync(_cookieAuthorizationHandler);
+        var caller = await HttpContext.ReadSessionCallerAsync(_cookies);
 
         var result = await _fallbackPlaylistService.SetAsync(
             sessionId,

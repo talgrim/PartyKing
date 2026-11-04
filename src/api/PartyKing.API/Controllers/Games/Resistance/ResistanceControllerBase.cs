@@ -1,4 +1,4 @@
-using PartyKing.Application.Ports;
+using PartyKing.API.Cookies;
 using PartyKing.Domain.Entities.Games.Base;
 
 namespace PartyKing.API.Controllers.Games.Resistance;
@@ -10,8 +10,8 @@ public abstract class ResistanceControllerBase : LobbyGameControllerBase
 
     protected ResistanceControllerBase(
         IHttpContextAccessor httpContextAccessor,
-        ICookieAuthorizationHandler cookieAuthorizationHandler)
-        : base(httpContextAccessor, cookieAuthorizationHandler)
+        ISignedCookies cookies)
+        : base(httpContextAccessor, cookies)
     {
     }
 

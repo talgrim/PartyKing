@@ -74,9 +74,9 @@ internal class HostTokenProvider : IHostTokenProvider
             }
 
             var profile = await _profilesRepository.GetProfileAsync(profileId, cancellationToken);
-            if (profile.IsError)
+            if (profile is null)
             {
-                return profile.FirstError;
+                return SpotifyErrors.ProfileNotFound(profileId);
             }
 
             await using var scope = _scopeFactory.CreateAsyncScope();
@@ -85,7 +85,7 @@ internal class HostTokenProvider : IHostTokenProvider
             ReAuthenticationResult result;
             try
             {
-                result = await client.ReAuthenticateAsync(profile.Value.RefreshToken, cancellationToken);
+                result = await client.ReAuthenticateAsync(profile.RefreshToken, cancellationToken);
             }
             catch (SpotifyApiException)
             {

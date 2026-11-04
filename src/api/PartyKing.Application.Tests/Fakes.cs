@@ -1,12 +1,13 @@
 using PartyKing.Domain.Repositories;
 using ErrorOr;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Http;
 using PartyKing.Application.Events;
 using PartyKing.Application.Games.Services.Base;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Realtime;
+using PartyKing.Application.Sessions;
 using PartyKing.Application.Sessions.Services;
+using PartyKing.Application.Slideshow.Models;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Application.System;
@@ -45,7 +46,7 @@ internal class FakeSessionsRepository : ISessionsRepository
 
     public Session AddSession(string? hostProfileId = null, string passwordHash = "hash")
     {
-        var session = new Session("ABC123", "Party", passwordHash) { HostProfileId = hostProfileId };
+        var session = new Session(Guid.NewGuid(), "ABC123", "Party", passwordHash, DateTime.UtcNow) { HostProfileId = hostProfileId };
         _sessions.Add(session);
         return session;
     }
@@ -74,17 +75,24 @@ internal class FakeSessionsRepository : ISessionsRepository
     public Task<IReadOnlyList<Session>> GetAllAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
     public List<(Guid Id, string Name)> Renamed { get; } = [];
 
-    public async Task<bool> RenameAsync(Guid id, string name, CancellationToken cancellationToken)
+    public async Task<SessionRenameResult> RenameAsync(Guid id, string? name, CancellationToken cancellationToken)
     {
         var session = _sessions.FirstOrDefault(x => x.Id == id);
-        if (session is not null)
+        if (session is null)
         {
-            session.Rename(name);
-            Renamed.Add((id, session.Name));
-            await DispatchAsync(session.DrainEvents());
+            return SessionRenameResult.SessionNotFound;
         }
 
-        return session is not null;
+        var failure = session.Rename(name);
+        if (failure != SessionNameFailure.None)
+        {
+            return failure == SessionNameFailure.Empty ? SessionRenameResult.NameEmpty : SessionRenameResult.NameTooLong;
+        }
+
+        Renamed.Add((id, session.Name));
+        await DispatchAsync(session.DrainEvents());
+
+        return SessionRenameResult.Renamed;
     }
     public List<(Guid Id, string? PlaylistId, string? Name, bool Shuffle)> FallbackPlaylistSet { get; } = [];
     public List<(Guid Id, int Cursor)> FallbackCursorSet { get; } = [];
@@ -115,16 +123,22 @@ internal class FakeSessionsRepository : ISessionsRepository
         return session is not null;
     }
 
-    public Task<bool> SetFallbackCursorAsync(Guid id, int cursor, CancellationToken cancellationToken)
+    public Task<bool> SetFallbackCursorAsync(
+        Guid id,
+        string playlistId,
+        int expectedCursor,
+        int cursor,
+        CancellationToken cancellationToken)
     {
         var session = _sessions.FirstOrDefault(x => x.Id == id);
-        if (session is not null)
+        var matches = session is not null && session.FallbackPlaylistId == playlistId && session.FallbackCursor == expectedCursor;
+        if (matches)
         {
-            session.FallbackCursor = cursor;
+            session!.FallbackCursor = cursor;
             FallbackCursorSet.Add((id, cursor));
         }
 
-        return Task.FromResult(session is not null);
+        return Task.FromResult(matches);
     }
 
     public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken)
@@ -234,25 +248,39 @@ internal class FakeSlideshowService : ISlideshowService
 
     public Task InitializeAsync(string rootPath, CancellationToken cancellationToken) => Task.CompletedTask;
 
-    public Task<ErrorOr<SlideshowSettingsDto>> GetSettingsAsync(Guid sessionId, CancellationToken cancellationToken) =>
-        throw new NotSupportedException();
+    public List<Guid> RestartedSlides { get; } = [];
+
+    public Task RestartSlideAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        RestartedSlides.Add(sessionId);
+        return Task.CompletedTask;
+    }
+
+    public Task<ErrorOr<SlideshowSettingsDto>> GetSettingsAsync(
+        Guid sessionId,
+        SessionCaller caller,
+        CancellationToken cancellationToken) => throw new NotSupportedException();
 
     public Task<ErrorOr<Success>> UpdateSettingsAsync(
         Guid sessionId,
+        SessionCaller caller,
         SlideshowSettingsDto settings,
         CancellationToken cancellationToken) => throw new NotSupportedException();
 
     public Task UploadImagesAsync(
         Guid sessionId,
-        IFormFile[] files,
+        IReadOnlyList<UploadedFile> files,
         bool deleteAfterPresentation,
         CancellationToken cancellationToken) => throw new NotSupportedException();
 
     public Task<SlideshowImageDto?> GetImageAsync(Guid sessionId, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
 
-    public Task WatchAsync(Guid sessionId, string connectionId, CancellationToken cancellationToken) =>
-        throw new NotSupportedException();
+    public Task<ErrorOr<Success>> WatchAsync(
+        Guid sessionId,
+        SessionCaller caller,
+        string connectionId,
+        CancellationToken cancellationToken) => throw new NotSupportedException();
 
     public void Unwatch(string connectionId) => throw new NotSupportedException();
 }

@@ -37,7 +37,7 @@ public class QueueRepositoryTests : IAsyncLifetime
         {
             await dbContext.Database.MigrateAsync();
 
-            var session = new Session("ABC123", "Party", "hash");
+            var session = new Session(Guid.NewGuid(), "ABC123", "Party", "hash", DateTime.UtcNow);
             _sessionId = session.Id;
             dbContext.Sessions.Add(session);
             await dbContext.SaveChangesAsync();
@@ -258,9 +258,11 @@ public class QueueRepositoryTests : IAsyncLifetime
         using var listener = new MeterListener();
         listener.InstrumentPublished = (instrument, l) =>
         {
-            if (instrument.Name == RepositoryMetrics.AdvanceLockWaitInstrumentName)
+            // Tests of other classes run in parallel and record the same instrument, so only this test's meter counts
+            if (instrument.Name == RepositoryMetrics.AdvanceLockWaitInstrumentName
+                && ReferenceEquals(instrument.Meter.Scope, _metrics))
             {
-                l.EnableMeasurementEvents(instrument, _metrics);
+                l.EnableMeasurementEvents(instrument);
             }
         };
         listener.SetMeasurementEventCallback<double>((_, _, tags, _) =>

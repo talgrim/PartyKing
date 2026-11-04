@@ -1,4 +1,5 @@
-using PartyKing.Application.Ports;
+using PartyKing.Domain.Entities.Auth;
+using PartyKing.Domain.Repositories;
 using PartyKing.Infrastructure.Repositories;
 
 namespace PartyKing.Infrastructure.Metrics;
@@ -13,13 +14,13 @@ internal sealed class MeteredOAuthStatesRepository : MeteredRepository, IOAuthSt
         _inner = inner;
     }
 
-    public Task<string> CreateAsync(Guid sessionId, TimeSpan lifetime, CancellationToken cancellationToken)
+    public Task AddAsync(OAuthState state, DateTime now, CancellationToken cancellationToken)
     {
-        return MeasureAsync(nameof(CreateAsync), () => _inner.CreateAsync(sessionId, lifetime, cancellationToken));
+        return MeasureAsync(nameof(AddAsync), () => _inner.AddAsync(state, now, cancellationToken));
     }
 
-    public Task<Guid?> ConsumeAsync(string state, CancellationToken cancellationToken)
+    public Task<OAuthState?> TakeAsync(string id, CancellationToken cancellationToken)
     {
-        return MeasureAsync(nameof(ConsumeAsync), () => _inner.ConsumeAsync(state, cancellationToken));
+        return MeasureAsync(nameof(TakeAsync), () => _inner.TakeAsync(id, cancellationToken));
     }
 }

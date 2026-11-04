@@ -2,7 +2,6 @@ using PartyKing.Application.Ports;
 using PartyKing.Domain.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using PartyKing.Infrastructure.Authorization;
 using PartyKing.Infrastructure.Metrics;
 using PartyKing.Infrastructure.Repositories;
 using PartyKing.Persistence.Database;
@@ -15,7 +14,6 @@ public static class DependencyInjection
     {
         services.RegisterDatabase();
         services.RegisterRepositories();
-        services.AddAuthorization();
     }
 
     public static async Task MigrateDb(this IServiceProvider services)
@@ -77,10 +75,5 @@ public static class DependencyInjection
         services.AddSingleton(provider => decorate(
             provider.GetRequiredService<TImplementation>(),
             provider.GetRequiredService<RepositoryMetrics>()));
-    }
-
-    private static void AddAuthorization(this IServiceCollection services)
-    {
-        services.AddSingleton<ICookieAuthorizationHandler, CookieAuthorizationHandler>();
     }
 }

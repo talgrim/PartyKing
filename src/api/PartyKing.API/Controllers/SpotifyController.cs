@@ -1,3 +1,4 @@
+using PartyKing.API.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using PartyKing.API.Authorization;
 using PartyKing.Application.Spotify.Services;
@@ -8,13 +9,16 @@ namespace PartyKing.API.Controllers;
 public class SpotifyController : CoreController
 {
     private readonly ISpotifyService _spotifyService;
+    private readonly ISignedCookies _cookies;
 
     public SpotifyController(
         IHttpContextAccessor httpContextAccessor,
-        ISpotifyService spotifyService)
+        ISpotifyService spotifyService,
+        ISignedCookies cookies)
         : base(httpContextAccessor)
     {
         _spotifyService = spotifyService;
+        _cookies = cookies;
     }
 
     /// <summary>Starts the Spotify login that makes the caller the host of the session.</summary>
@@ -37,7 +41,21 @@ public class SpotifyController : CoreController
     {
         var result = await _spotifyService.AuthenticateByCodeAsync(request.Code, request.State, cancellationToken);
 
-        return result.Match(Ok, Problem);
+        if (result.IsError)
+        {
+            return Problem(result.Errors);
+        }
+
+        var login = result.Value;
+        _cookies.GrantHost(login.ProfileId, HttpContext);
+        _cookies.GrantSpotifyAccessToken(login.AccessToken, login.ExpiresIn, HttpContext);
+
+        return Ok(new UserDto
+        {
+            Id = login.ProfileId,
+            AccessToken = login.AccessToken,
+            SessionId = login.SessionId
+        });
     }
 
     [HttpGet("sessions/{sessionId:guid}/tracks")]

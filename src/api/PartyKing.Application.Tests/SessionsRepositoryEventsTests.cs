@@ -40,7 +40,7 @@ public class SessionsRepositoryEventsTests : IAsyncLifetime
 
             dbContext.SpotifyProfiles.AddRange(new SpotifyProfile("host-1", "refresh-1"), new SpotifyProfile("host-2", "refresh-2"));
 
-            var session = new Session("ABC123", "Party", "hash");
+            var session = new Session(Guid.NewGuid(), "ABC123", "Party", "hash", DateTime.UtcNow);
             _sessionId = session.Id;
             dbContext.Sessions.Add(session);
             await dbContext.SaveChangesAsync();
@@ -64,6 +64,41 @@ public class SessionsRepositoryEventsTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Get_OfAHostedSession_CarriesTheHostsDisplayName()
+    {
+        var writer = _provider.GetRequiredService<IDbContextFactory<WriterDbContext>>();
+        await using (var dbContext = await writer.CreateDbContextAsync())
+        {
+            (await dbContext.SpotifyProfiles.SingleAsync(x => x.Id == "host-1")).UpdateDisplayName("Jan Kowalski");
+            await dbContext.SaveChangesAsync();
+        }
+        await _repository.TryClaimAsync(_sessionId, "host-1", Ct);
+
+        var session = await ReadAsync();
+        var listed = Assert.Single(await _repository.GetAllAsync(Ct));
+
+        Assert.Equal("host-1", session.HostProfileId);
+        Assert.Equal("Jan Kowalski", session.HostDisplayName);
+        Assert.Equal("Jan Kowalski", listed.HostDisplayName);
+    }
+
+    [Fact]
+    public async Task Get_OfASessionWithoutAHost_HasNoDisplayName()
+    {
+        var session = await ReadAsync();
+        var listed = Assert.Single(await _repository.GetAllAsync(Ct));
+
+        Assert.Null(session.HostDisplayName);
+        Assert.Null(listed.HostDisplayName);
+    }
+
+    [Fact]
+    public async Task Get_OfAnUnknownSession_IsNull()
+    {
+        Assert.Null(await _repository.GetAsync(Guid.NewGuid(), Ct));
+    }
+
+    [Fact]
     public async Task Rename_SavesTheTrimmedNameAndDispatchesAfterTheCommit()
     {
         string? nameSeenByHandlers = null;
@@ -71,7 +106,7 @@ public class SessionsRepositoryEventsTests : IAsyncLifetime
 
         var renamed = await _repository.RenameAsync(_sessionId, "  Friday  ", Ct);
 
-        Assert.True(renamed);
+        Assert.Equal(SessionRenameResult.Renamed, renamed);
         Assert.Equal("Friday", nameSeenByHandlers);
         Assert.Equal(new SessionRenamed(_sessionId, "Friday"), Assert.Single(_dispatcher.Events));
     }
@@ -81,7 +116,7 @@ public class SessionsRepositoryEventsTests : IAsyncLifetime
     {
         var renamed = await _repository.RenameAsync(Guid.NewGuid(), "Friday", Ct);
 
-        Assert.False(renamed);
+        Assert.Equal(SessionRenameResult.SessionNotFound, renamed);
         Assert.Empty(_dispatcher.Events);
     }
 
@@ -123,10 +158,43 @@ public class SessionsRepositoryEventsTests : IAsyncLifetime
         await _repository.SetFallbackPlaylistAsync(_sessionId, "playlist", "Mix", false, Ct);
         _dispatcher.Events.Clear();
 
-        await _repository.SetFallbackCursorAsync(_sessionId, 3, Ct);
+        var stored = await _repository.SetFallbackCursorAsync(_sessionId, "playlist", 0, 3, Ct);
 
+        Assert.True(stored);
         Assert.Equal(3, (await ReadAsync()).FallbackCursor);
         Assert.Empty(_dispatcher.Events);
+    }
+
+    [Fact]
+    public async Task SetFallbackCursor_AfterThePlaylistChanged_KeepsTheNewPlaylistsCursor()
+    {
+        await _repository.SetFallbackPlaylistAsync(_sessionId, "old", "Old", false, Ct);
+        await _repository.SetFallbackPlaylistAsync(_sessionId, "new", "New", false, Ct);
+
+        var stored = await _repository.SetFallbackCursorAsync(_sessionId, "old", 0, 3, Ct);
+
+        Assert.False(stored);
+        Assert.Equal(0, (await ReadAsync()).FallbackCursor);
+    }
+
+    [Fact]
+    public async Task SetFallbackCursor_AfterTheSamePlaylistWasRewound_KeepsTheRewind()
+    {
+        await _repository.SetFallbackPlaylistAsync(_sessionId, "playlist", "Mix", false, Ct);
+        await _repository.SetFallbackCursorAsync(_sessionId, "playlist", 0, 5, Ct);
+        // Saving the playlist again rewinds it to the start
+        await _repository.SetFallbackPlaylistAsync(_sessionId, "playlist", "Mix", false, Ct);
+
+        var stored = await _repository.SetFallbackCursorAsync(_sessionId, "playlist", 5, 6, Ct);
+
+        Assert.False(stored);
+        Assert.Equal(0, (await ReadAsync()).FallbackCursor);
+    }
+
+    [Fact]
+    public async Task SetFallbackCursor_OfAnUnknownSession_AnswersFalse()
+    {
+        Assert.False(await _repository.SetFallbackCursorAsync(Guid.NewGuid(), "playlist", 0, 1, Ct));
     }
 
     [Fact]
@@ -185,7 +253,7 @@ public class SessionsRepositoryEventsTests : IAsyncLifetime
         await _repository.TryClaimAsync(_sessionId, "host-1", Ct);
         await _repository.SetFallbackPlaylistAsync(_sessionId, "playlist", "Mix", false, Ct);
         _dispatcher.Events.Clear();
-        Session? seenByHandlers = new("X", "X", "X");
+        Session? seenByHandlers = null;
         _dispatcher.OnDispatch = async _ => seenByHandlers = await _repository.GetAsync(_sessionId, Ct);
 
         var deleted = await _repository.DeleteAsync(_sessionId, Ct);

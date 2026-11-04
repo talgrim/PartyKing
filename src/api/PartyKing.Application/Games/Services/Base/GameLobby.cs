@@ -1,6 +1,5 @@
 using PartyKing.Domain.Repositories;
 using ErrorOr;
-using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.System;
 using PartyKing.Domain.Entities.Games.Base;
@@ -139,10 +138,10 @@ internal class GameLobby<TGame, TPlayer>
             return existing;
         }
 
-        var isHost = SessionRoles.IsHost(session, caller);
+        var isHost = session.IsHostedBy(caller.ProfileId);
         var typed = name?.Trim() ?? string.Empty;
         var playerName = isHost
-            ? LobbyNames.HostName(session.HostProfile?.DisplayName)
+            ? LobbyNames.HostName(session.HostDisplayName)
             : caller.IsAdmin && typed.Length == 0 ? AdminName : typed;
         if (!isHost && ValidateName(playerName) is { } invalid)
         {

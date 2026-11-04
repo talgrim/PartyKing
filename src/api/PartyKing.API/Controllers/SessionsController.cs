@@ -1,4 +1,4 @@
-using PartyKing.Application.Ports;
+using PartyKing.API.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using PartyKing.API.Authentication;
@@ -16,7 +16,7 @@ public class SessionsController : CoreController
     private readonly ISessionAccessService _accessService;
     private readonly ISessionJoinTokenService _joinTokenService;
     private readonly ISessionAuthorizer _sessionAuthorizer;
-    private readonly ICookieAuthorizationHandler _cookieAuthorizationHandler;
+    private readonly ISignedCookies _cookies;
 
     public SessionsController(
         IHttpContextAccessor httpContextAccessor,
@@ -24,14 +24,14 @@ public class SessionsController : CoreController
         ISessionAccessService accessService,
         ISessionJoinTokenService joinTokenService,
         ISessionAuthorizer sessionAuthorizer,
-        ICookieAuthorizationHandler cookieAuthorizationHandler)
+        ISignedCookies cookies)
         : base(httpContextAccessor)
     {
         _sessionService = sessionService;
         _accessService = accessService;
         _joinTokenService = joinTokenService;
         _sessionAuthorizer = sessionAuthorizer;
-        _cookieAuthorizationHandler = cookieAuthorizationHandler;
+        _cookies = cookies;
     }
 
     [HttpGet("sessions")]
@@ -60,7 +60,7 @@ public class SessionsController : CoreController
             return Problem(result.Errors);
         }
 
-        _cookieAuthorizationHandler.GrantSessionAccess(sessionId, result.Value, HttpContext);
+        _cookies.GrantSessionAccess(sessionId, result.Value, HttpContext);
 
         return NoContent();
     }
@@ -84,7 +84,7 @@ public class SessionsController : CoreController
             return Problem(result.Errors);
         }
 
-        _cookieAuthorizationHandler.GrantSessionAccess(sessionId, result.Value, HttpContext);
+        _cookies.GrantSessionAccess(sessionId, result.Value, HttpContext);
 
         return NoContent();
     }
@@ -95,7 +95,7 @@ public class SessionsController : CoreController
     [ProducesResponseType<JoinTokenDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> CreateJoinToken(Guid sessionId, CancellationToken cancellationToken)
     {
-        var caller = await HttpContext.ReadSessionCallerAsync(_cookieAuthorizationHandler);
+        var caller = await HttpContext.ReadSessionCallerAsync(_cookies);
 
         var result = await _joinTokenService.CreateJoinTokenAsync(sessionId, caller, cancellationToken);
 
@@ -111,7 +111,7 @@ public class SessionsController : CoreController
         [FromBody] RenameSessionRequestDto request,
         CancellationToken cancellationToken)
     {
-        var caller = await HttpContext.ReadSessionCallerAsync(_cookieAuthorizationHandler);
+        var caller = await HttpContext.ReadSessionCallerAsync(_cookies);
 
         var result = await _sessionService.RenameAsync(sessionId, request.Name, caller, cancellationToken);
 
@@ -130,7 +130,7 @@ public class SessionsController : CoreController
         [FromBody] ChangeSessionPasswordRequestDto request,
         CancellationToken cancellationToken)
     {
-        var caller = await HttpContext.ReadSessionCallerAsync(_cookieAuthorizationHandler);
+        var caller = await HttpContext.ReadSessionCallerAsync(_cookies);
 
         var result = await _accessService.ChangePasswordAsync(
             sessionId,
@@ -143,7 +143,7 @@ public class SessionsController : CoreController
             return Problem(result.Errors);
         }
 
-        _cookieAuthorizationHandler.GrantSessionAccess(sessionId, result.Value, HttpContext);
+        _cookies.GrantSessionAccess(sessionId, result.Value, HttpContext);
 
         return NoContent();
     }
@@ -169,7 +169,7 @@ public class SessionsController : CoreController
     {
         // The signed cookie is enough to know who the host is; whether their Spotify token still works is a
         // separate matter, handled where the token is used
-        var caller = await HttpContext.ReadSessionCallerAsync(_cookieAuthorizationHandler);
+        var caller = await HttpContext.ReadSessionCallerAsync(_cookies);
 
         var result = await _sessionAuthorizer.GetViewerRoleAsync(sessionId, caller, cancellationToken);
 

@@ -1,7 +1,6 @@
 using PartyKing.Application.Ports;
 using PartyKing.Domain.Repositories;
 using PartyKing.Application.Mappings;
-using PartyKing.Application.Realtime;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Domain.Entities.Spotify;
 
@@ -57,17 +56,29 @@ internal class FallbackQueueFiller : IFallbackQueueFiller
             return;
         }
 
+        // The cursor the pick is based on: the session is a snapshot, and the playlist can be changed while Spotify is read
+        var cursorAtPick = session.FallbackCursor;
+
         var tracks = await LoadTracksAsync(sessionId, playlistId, cancellationToken);
         if (tracks.Count == 0)
         {
             return;
         }
 
-        var (track, nextCursor) = await PickAsync(session.FallbackShuffle, session.FallbackCursor, tracks, sessionId, cancellationToken);
+        // Only a shuffled playlist needs the song that plays, to avoid repeating it
+        var playingUrl = session.FallbackShuffle
+            ? (await _queueRepository.GetPlayingAsync(sessionId, cancellationToken))?.Url
+            : null;
+
+        var pick = session.NextFallbackTrack(tracks, playingUrl, Random.Shared);
+        if (pick is null)
+        {
+            return;
+        }
 
         // Null when a guest queued a song while the playlist was being read: theirs goes first, and no refill is needed
         var added = await _queueRepository.AddIfNoneQueuedAsync(
-            track.ToQueueItem(sessionId, isFallback: true),
+            pick.Track.ToQueueItem(sessionId, isFallback: true),
             cancellationToken);
 
         if (added is null)
@@ -75,9 +86,15 @@ internal class FallbackQueueFiller : IFallbackQueueFiller
             return;
         }
 
-        if (!session.FallbackShuffle)
+        if (pick.NextCursor is { } nextCursor)
         {
-            await _sessionsRepository.SetFallbackCursorAsync(sessionId, nextCursor, cancellationToken);
+            // Refused when the playlist was changed or rewound since the snapshot, which keeps the newer cursor
+            await _sessionsRepository.SetFallbackCursorAsync(
+                sessionId,
+                playlistId,
+                cursorAtPick,
+                nextCursor,
+                cancellationToken);
         }
 
         // The repository raised SongQueued for it, which the push handler sends
@@ -122,29 +139,5 @@ internal class FallbackQueueFiller : IFallbackQueueFiller
         _trackCache.Set(playlistId, tracks);
 
         return tracks;
-    }
-
-    private async Task<(Song Track, int NextCursor)> PickAsync(
-        bool shuffle,
-        int cursor,
-        IReadOnlyList<Song> tracks,
-        Guid sessionId,
-        CancellationToken cancellationToken)
-    {
-        if (!shuffle)
-        {
-            var index = cursor % tracks.Count;
-            return (tracks[index], (index + 1) % tracks.Count);
-        }
-
-        // A random track, but not the one that is playing right now unless it is the only one
-        var playing = await _queueRepository.GetPlayingAsync(sessionId, cancellationToken);
-        var candidates = tracks.Where(x => x.Uri != playing?.Url).ToList();
-        if (candidates.Count == 0)
-        {
-            candidates = tracks.ToList();
-        }
-
-        return (candidates[Random.Shared.Next(candidates.Count)], 0);
     }
 }

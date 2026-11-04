@@ -65,7 +65,7 @@ public class MeteredRepositoryTests
     [Fact]
     public void AddAsync_WithoutAResult_RecordsTheCall()
     {
-        var tags = Assert.Single(Capture(new FakeAdminAccountsRepository(), r => r.AddAsync(new AdminAccount("admin", "hash"), default)));
+        var tags = Assert.Single(Capture(new FakeAdminAccountsRepository(), r => r.AddAsync(new AdminAccount(Guid.NewGuid(), "admin", "hash"), default)));
 
         Assert.Equal("AddAsync", tags["operation"]);
         Assert.Equal(RepositoryMetrics.SuccessOutcome, tags["outcome"]);

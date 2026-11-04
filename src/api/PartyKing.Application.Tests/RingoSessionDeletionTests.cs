@@ -55,7 +55,7 @@ public class RingoSessionDeletionTests : IAsyncLifetime
 
     private async Task<Guid> CreateSessionWithGameAsync(string code, int seed)
     {
-        var session = new Session(code, "Party", "hash");
+        var session = new Session(Guid.NewGuid(), code, "Party", "hash", DateTime.UtcNow);
         Assert.True(await _sessions.TryAddAsync(session, CancellationToken.None));
         Assert.True(await _ringo.TryCreateAsync(
             new RingoGame { SessionId = session.Id, Seed = seed, CreatedAt = DateTimeOffset.UtcNow },

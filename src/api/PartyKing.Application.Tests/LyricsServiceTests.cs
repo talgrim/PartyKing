@@ -1,3 +1,4 @@
+using PartyKing.Application.Events;
 using PartyKing.Application.Ports;
 using PartyKing.Application.Lyrics.Services;
 using PartyKing.Application.Sessions.Services;
@@ -6,6 +7,7 @@ using PartyKing.Contract.V1.Lyrics;
 using PartyKing.Domain.Entities.Lyrics;
 using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Enums;
+using PartyKing.Domain.Repositories;
 using PartyKing.Domain.Results;
 
 namespace PartyKing.Application.Tests;
@@ -16,7 +18,7 @@ public class LyricsServiceTests
 
     private readonly FakeQueueRepository _queue = new();
     private readonly FakeLrclibClient _lrclib = new();
-    private readonly FakeLyricsOffsetsRepository _offsets = new();
+    private readonly FakeLyricsOffsetsRepository _offsets;
     private readonly FakeLyricsNotifier _notifier = new();
     private readonly LyricsService _service;
     private readonly Guid _sessionId;
@@ -24,10 +26,11 @@ public class LyricsServiceTests
     public LyricsServiceTests()
     {
         var clock = new FakeClock();
+        _offsets = new FakeLyricsOffsetsRepository(TestEvents.LyricsDispatcher(_notifier));
         var sessions = new FakeSessionsRepository();
         _sessionId = sessions.AddSession(HostId).Id;
         var sessionAuthorizer = new SessionAuthorizer(sessions);
-        _service = new LyricsService(_queue, _lrclib, new LyricsCache(clock), _offsets, sessionAuthorizer, _notifier);
+        _service = new LyricsService(_queue, _lrclib, new LyricsCache(clock), _offsets, sessionAuthorizer);
         _queue.Playing = Song(7, "Song");
     }
 
@@ -191,15 +194,35 @@ public class LyricsServiceTests
 
     private sealed class FakeLyricsOffsetsRepository : ILyricsOffsetsRepository
     {
+        private readonly IDomainEventDispatcher _events;
+
+        public FakeLyricsOffsetsRepository(IDomainEventDispatcher events)
+        {
+            _events = events;
+        }
+
         public Dictionary<string, int> Saved { get; } = [];
 
         public Task<int> GetAsync(string songUrl, CancellationToken cancellationToken) =>
             Task.FromResult(Saved.GetValueOrDefault(songUrl));
 
-        public Task SaveAsync(string songUrl, int offsetMs, CancellationToken cancellationToken)
+        // Runs the real aggregate and dispatches like the real repository does
+        public async Task<LyricsOffsetFailure> ChangeAsync(
+            string songUrl,
+            int offsetMs,
+            Guid sessionId,
+            int songId,
+            CancellationToken cancellationToken)
         {
-            Saved[songUrl] = offsetMs;
-            return Task.CompletedTask;
+            var offset = new LyricsOffset(songUrl);
+            var failure = offset.Change(offsetMs, sessionId, songId);
+            if (failure == LyricsOffsetFailure.None)
+            {
+                Saved[songUrl] = offset.OffsetMs;
+                await _events.DispatchAsync(offset);
+            }
+
+            return failure;
         }
     }
 

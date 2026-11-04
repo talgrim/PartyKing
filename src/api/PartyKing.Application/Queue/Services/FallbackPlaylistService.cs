@@ -1,12 +1,12 @@
 using PartyKing.Application.Ports;
 using PartyKing.Domain.Repositories;
 using ErrorOr;
-using PartyKing.Application.Queue.Helpers;
 using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Sessions;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Contract.V1.Spotify;
+using PartyKing.Domain.Entities.Queue;
 
 namespace PartyKing.Application.Queue.Services;
 
@@ -125,7 +125,7 @@ internal class FallbackPlaylistService : IFallbackPlaylistService
             return SessionErrors.NotFound();
         }
 
-        if (session.HostProfileId != profileId)
+        if (!session.IsHostedBy(profileId))
         {
             return Error.Forbidden(description: "Only the host of this session can list their playlists");
         }

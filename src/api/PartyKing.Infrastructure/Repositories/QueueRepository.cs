@@ -1,6 +1,5 @@
 using PartyKing.Application.Events;
 using PartyKing.Domain.Events;
-using PartyKing.Domain.Events.Queue;
 using PartyKing.Domain.Repositories;
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
@@ -37,13 +36,17 @@ internal class QueueRepository : IQueueRepository
 
     public async Task<QueueItem> AddAsync(QueueItem item, CancellationToken cancellationToken)
     {
+        // Adding has no precondition, so there is nothing to load (and no lock)
+        var queue = SessionQueue.Of(item.SessionId, []);
+        queue.Enqueue(item);
+
         await using (var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken))
         {
             await dbContext.QueueItems.AddAsync(item, cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
         }
 
-        await DispatchAsync([new SongQueued(item.SessionId, item)]);
+        await DispatchAsync(queue.DrainEvents());
 
         return item;
     }
@@ -54,20 +57,20 @@ internal class QueueRepository : IQueueRepository
         {
             await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
 
-            var anyQueued = await dbContext.QueueItems
-                .AnyAsync(x => x.SessionId == item.SessionId && x.Status == QueueItemStatus.Queued, cancellationToken);
+            var queue = await LoadQueueAsync(dbContext, item.SessionId, null, cancellationToken);
+            var added = queue.EnqueueIfNoneQueued(item);
 
-            if (anyQueued)
+            if (added is null)
             {
                 return null;
             }
 
-            await dbContext.QueueItems.AddAsync(item, cancellationToken);
+            await dbContext.QueueItems.AddAsync(added, cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
 
-            events.Add(new SongQueued(item.SessionId, item));
+            events.AddRange(queue.DrainEvents());
 
-            return item;
+            return added;
         }, cancellationToken);
     }
 
@@ -102,32 +105,19 @@ internal class QueueRepository : IQueueRepository
         {
             await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
 
-            var playing = await dbContext.QueueItems
-                .Where(x => x.SessionId == sessionId && x.Status == QueueItemStatus.Playing)
-                .ToListAsync(cancellationToken);
+            var queue = await LoadQueueAsync(dbContext, sessionId, null, cancellationToken);
+            var result = queue.Advance(currentItemId);
 
-            if (playing.FirstOrDefault()?.Id != currentItemId)
+            if (!result.Advanced)
             {
-                return new QueueAdvanceResult(playing.FirstOrDefault(), Advanced: false, PreviousSongId: null);
+                return result;
             }
-
-            foreach (var item in playing)
-            {
-                item.MarkPlayed();
-            }
-
-            var next = await dbContext.QueueItems
-                .Where(x => x.SessionId == sessionId && x.Status == QueueItemStatus.Queued)
-                .OrderBy(x => x.Id)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            next?.StartPlaying();
 
             await dbContext.SaveChangesAsync(cancellationToken);
 
-            events.Add(new QueueAdvanced(sessionId, currentItemId, next));
+            events.AddRange(queue.DrainEvents());
 
-            return new QueueAdvanceResult(next, Advanced: true, PreviousSongId: currentItemId);
+            return result;
         }, cancellationToken);
     }
 
@@ -137,26 +127,39 @@ internal class QueueRepository : IQueueRepository
         {
             await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
 
-            var item = await dbContext.QueueItems
-                .FirstOrDefaultAsync(x => x.Id == itemId && x.SessionId == sessionId, cancellationToken);
+            var queue = await LoadQueueAsync(dbContext, sessionId, itemId, cancellationToken);
+            var removal = queue.Remove(itemId);
 
-            if (item is null)
+            if (removal.Item is null)
             {
-                return QueueItemRemoval.NotFound;
+                return removal.Outcome;
             }
 
-            if (item.Status != QueueItemStatus.Queued)
-            {
-                return QueueItemRemoval.NotQueued;
-            }
-
-            dbContext.QueueItems.Remove(item);
+            dbContext.QueueItems.Remove(removal.Item);
             await dbContext.SaveChangesAsync(cancellationToken);
 
-            events.Add(new SongRemoved(sessionId, itemId));
+            events.AddRange(queue.DrainEvents());
 
-            return QueueItemRemoval.Removed;
+            return removal.Outcome;
         }, cancellationToken);
+    }
+
+    /// <summary>
+    /// Loads the songs the queue acts on, tracked by the context: the ones playing or waiting, plus
+    /// <paramref name="alsoItemId"/> whatever its state, so a removal can tell a played song from an unknown one.
+    /// Played songs pile up over a night and no rule looks at them.
+    /// </summary>
+    private static async Task<SessionQueue> LoadQueueAsync(
+        WriterDbContext dbContext,
+        Guid sessionId,
+        int? alsoItemId,
+        CancellationToken cancellationToken)
+    {
+        var items = await dbContext.QueueItems
+            .Where(x => x.SessionId == sessionId && (x.Status != QueueItemStatus.Played || x.Id == alsoItemId))
+            .ToListAsync(cancellationToken);
+
+        return SessionQueue.Of(sessionId, items);
     }
 
     /// <summary>

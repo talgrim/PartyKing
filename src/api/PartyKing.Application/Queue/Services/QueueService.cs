@@ -3,8 +3,6 @@ using PartyKing.Domain.Repositories;
 using ErrorOr;
 using Microsoft.Extensions.Logging;
 using PartyKing.Application.Mappings;
-using PartyKing.Application.Queue.Helpers;
-using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions;
 using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Application.Spotify.Services;
@@ -133,7 +131,7 @@ internal class QueueService : IQueueService
             return SessionErrors.NotFound();
         }
 
-        if (session.HostProfileId != hostProfileId)
+        if (!session.IsHostedBy(hostProfileId))
         {
             return Error.Forbidden(description: "Only the host of this session can advance its queue");
         }
@@ -153,7 +151,7 @@ internal class QueueService : IQueueService
             return SessionErrors.NotFound();
         }
 
-        if (!SessionRoles.IsManager(session, caller))
+        if (!session.IsManagedBy(caller.ProfileId, caller.IsAdmin))
         {
             return Error.Forbidden(description: "Only the host or an admin can remove songs from the queue");
         }

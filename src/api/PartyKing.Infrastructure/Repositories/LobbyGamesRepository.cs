@@ -132,6 +132,7 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
         Lazy<Task<TGame?>>? created = null;
         created = new Lazy<Task<TGame?>>(() => ReadSharedAsync(sessionId, created!));
         var read = _reads.GetOrAdd(sessionId, created);
+        _metrics.RecordGameRead(GetType().Name, !ReferenceEquals(read, created));
 
         // The query is shared, so one caller's cancellation must not cancel it for the others
         return await read.Value.WaitAsync(cancellationToken);

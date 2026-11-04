@@ -1,6 +1,5 @@
 using PartyKing.Application.Mappings;
 using PartyKing.Contract.V1.Enums;
-using PartyKing.Contract.V1.Slideshow;
 using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Entities.Sessions;
 using PartyKing.Domain.Entities.Slideshow;
@@ -25,7 +24,7 @@ public class ApplicationMappingsTests
     [Fact]
     public void Session_ToDto_WithoutHost_HasNoHost()
     {
-        var session = new Session("ABC123", "Party", "hash");
+        var session = new Session(Guid.NewGuid(), "ABC123", "Party", "hash", DateTime.UtcNow);
 
         var dto = session.ToDto();
 
@@ -41,12 +40,10 @@ public class ApplicationMappingsTests
     [Fact]
     public void Session_ToDto_WithHostProfile_UsesDisplayName()
     {
-        var profile = new SpotifyProfile("profile-id", "refresh");
-        profile.UpdateDisplayName("Display Name");
-        var session = new Session("ABC123", "Party", "hash")
+        var session = new Session(Guid.NewGuid(), "ABC123", "Party", "hash", DateTime.UtcNow)
         {
             HostProfileId = "profile-id",
-            HostProfile = profile,
+            HostDisplayName = "Display Name",
             FallbackPlaylistName = "Playlist",
             FallbackShuffle = true
         };
@@ -62,7 +59,7 @@ public class ApplicationMappingsTests
     [Fact]
     public void Session_ToDto_HostProfileNotLoaded_FallsBackToProfileId()
     {
-        var session = new Session("ABC123", "Party", "hash") { HostProfileId = "profile-id" };
+        var session = new Session(Guid.NewGuid(), "ABC123", "Party", "hash", DateTime.UtcNow) { HostProfileId = "profile-id" };
 
         var dto = session.ToDto();
 
@@ -73,10 +70,9 @@ public class ApplicationMappingsTests
     [Fact]
     public void Session_ToDto_ProfileWithoutDisplayName_FallsBackToProfileId()
     {
-        var session = new Session("ABC123", "Party", "hash")
+        var session = new Session(Guid.NewGuid(), "ABC123", "Party", "hash", DateTime.UtcNow)
         {
-            HostProfileId = "profile-id",
-            HostProfile = new SpotifyProfile("profile-id", "refresh")
+            HostProfileId = "profile-id"
         };
 
         Assert.Equal("profile-id", session.ToDto().HostName);
@@ -159,47 +155,12 @@ public class ApplicationMappingsTests
     [Fact]
     public void SlideshowSettings_ToDto_MapsAllFields()
     {
-        var settings = new SlideshowSettings
-        {
-            SessionId = Guid.NewGuid(),
-            AutoRepeat = true,
-            StartFromBeginning = false,
-            SlideTime = TimeSpan.FromSeconds(12)
-        };
+        var settings = new SlideshowSettings(Guid.NewGuid(), true, TimeSpan.FromSeconds(12), false);
 
         var dto = settings.ToDto();
 
         Assert.True(dto.AutoRepeat);
         Assert.False(dto.StartFromBeginning);
         Assert.Equal(TimeSpan.FromSeconds(12), dto.SlideTime);
-    }
-
-    [Fact]
-    public void SlideshowSettingsDto_ToDomain_UsesGivenSlideTime()
-    {
-        var sessionId = Guid.NewGuid();
-        var dto = new SlideshowSettingsDto
-        {
-            AutoRepeat = false,
-            StartFromBeginning = true,
-            SlideTime = TimeSpan.FromSeconds(8)
-        };
-
-        var settings = dto.ToDomain(sessionId, TimeSpan.FromSeconds(30));
-
-        Assert.Equal(sessionId, settings.SessionId);
-        Assert.False(settings.AutoRepeat);
-        Assert.True(settings.StartFromBeginning);
-        Assert.Equal(TimeSpan.FromSeconds(8), settings.SlideTime);
-    }
-
-    [Fact]
-    public void SlideshowSettingsDto_ToDomain_WithoutSlideTime_UsesDefault()
-    {
-        var dto = new SlideshowSettingsDto { AutoRepeat = true, StartFromBeginning = true };
-
-        var settings = dto.ToDomain(Guid.NewGuid(), TimeSpan.FromSeconds(30));
-
-        Assert.Equal(TimeSpan.FromSeconds(30), settings.SlideTime);
     }
 }

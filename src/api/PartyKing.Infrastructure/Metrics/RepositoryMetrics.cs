@@ -11,11 +11,13 @@ public sealed class RepositoryMetrics : IDisposable
     public const string ExceptionOutcome = "exception";
     public const string AdvanceLockWaitInstrumentName = "partyking.queue.advance_lock.wait";
     public const string GameWriteLockWaitInstrumentName = "partyking.games.write_lock.wait";
+    public const string GameReadsInstrumentName = "partyking.games.reads";
 
     private readonly Meter _meter;
     private readonly Histogram<double> _duration;
     private readonly Histogram<double> _advanceLockWait;
     private readonly Histogram<double> _gameWriteLockWait;
+    private readonly Counter<long> _gameReads;
 
     public RepositoryMetrics()
     {
@@ -33,6 +35,9 @@ public sealed class RepositoryMetrics : IDisposable
             GameWriteLockWaitInstrumentName,
             unit: "ms",
             description: "Time a write of a lobby game (Resistance, Ringo) waited for the session's write lock.");
+        _gameReads = _meter.CreateCounter<long>(
+            GameReadsInstrumentName,
+            description: "Reads of a lobby game (Resistance, Ringo), by whether the caller joined a read already in flight.");
     }
 
     public void RecordDuration(string repository, string operation, double durationMs, bool succeeded)
@@ -61,6 +66,15 @@ public sealed class RepositoryMetrics : IDisposable
             new KeyValuePair<string, object?>("repository", repository),
             new KeyValuePair<string, object?>("operation", operation),
             new KeyValuePair<string, object?>("acquired", acquired));
+    }
+
+    /// <param name="shared">True when the caller joined the session's read already in flight instead of querying.</param>
+    public void RecordGameRead(string repository, bool shared)
+    {
+        _gameReads.Add(
+            1,
+            new KeyValuePair<string, object?>("repository", repository),
+            new KeyValuePair<string, object?>("shared", shared));
     }
 
     public void Dispose()

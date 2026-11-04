@@ -1,4 +1,4 @@
-using PartyKing.Application.Ports;
+using PartyKing.API.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using PartyKing.API.Authentication;
 using PartyKing.API.Authorization;
@@ -10,16 +10,16 @@ namespace PartyKing.API.Controllers;
 public class LyricsController : CoreController
 {
     private readonly ILyricsService _lyricsService;
-    private readonly ICookieAuthorizationHandler _cookieAuthorizationHandler;
+    private readonly ISignedCookies _cookies;
 
     public LyricsController(
         IHttpContextAccessor httpContextAccessor,
         ILyricsService lyricsService,
-        ICookieAuthorizationHandler cookieAuthorizationHandler)
+        ISignedCookies cookies)
         : base(httpContextAccessor)
     {
         _lyricsService = lyricsService;
-        _cookieAuthorizationHandler = cookieAuthorizationHandler;
+        _cookies = cookies;
     }
 
     /// <summary>
@@ -48,7 +48,7 @@ public class LyricsController : CoreController
         [FromBody] SetLyricsOffsetRequestDto request,
         CancellationToken cancellationToken)
     {
-        var caller = await HttpContext.ReadSessionCallerAsync(_cookieAuthorizationHandler);
+        var caller = await HttpContext.ReadSessionCallerAsync(_cookies);
 
         var result = await _lyricsService.SetOffsetAsync(
             sessionId,

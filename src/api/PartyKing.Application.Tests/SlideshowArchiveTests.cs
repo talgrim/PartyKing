@@ -3,11 +3,9 @@ using ErrorOr;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using PartyKing.Application.Configuration;
-using PartyKing.Application.Ports;
 using PartyKing.Application.Sessions;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Slideshow.Services;
-using PartyKing.Domain.Entities.Slideshow;
 using PartyKing.Infrastructure.Repositories;
 
 namespace PartyKing.Application.Tests;
@@ -25,7 +23,8 @@ public class SlideshowArchiveTests : IDisposable
     public SlideshowArchiveTests()
     {
         // The archive methods never touch the database
-        _files = new SlideshowImagesRepository(null!, null!, NullLogger<SlideshowImagesRepository>.Instance);
+        _files = new SlideshowImagesRepository(
+            null!, null!, NullLogger<SlideshowImagesRepository>.Instance, new RecordingDispatcher());
         _files.InitializeAsync(_root, Uploads, CancellationToken.None).GetAwaiter().GetResult();
         _service = new SlideshowArchiveService(
             new SessionAuthorizer(_sessions),

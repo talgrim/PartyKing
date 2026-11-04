@@ -1,72 +1,44 @@
+using PartyKing.Domain.Entities.Slideshow;
+
 namespace PartyKing.Application.Slideshow.Services;
 
-internal record ValidatedImage(string Extension, string ContentType);
-
 /// <summary>
-/// Accepts only jpg/jpeg/png/gif/webp, judged by the file's extension and its magic bytes.
-/// The client's content type is ignored: the stored extension and content type come from the detected format.
+/// Reads an upload and applies <see cref="UploadedImageRules"/> to it; the messages are the ones the client sees. The
+/// stream is read for its first bytes and rewound.
 /// </summary>
 internal static class UploadedImageValidator
 {
-    public const long MaxFileBytes = 20L * 1024 * 1024;
-
-    private static readonly string[] AllowedExtensions = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
-
-    private static readonly ValidatedImage Jpeg = new(".jpg", "image/jpeg");
-    private static readonly ValidatedImage Png = new(".png", "image/png");
-    private static readonly ValidatedImage Gif = new(".gif", "image/gif");
-    private static readonly ValidatedImage Webp = new(".webp", "image/webp");
-
-    public static async Task<ValidatedImage> ValidateAsync(
+    public static async Task<ImageFormat> ValidateAsync(
         string fileName,
         long length,
         Stream content,
         CancellationToken cancellationToken)
     {
-        var extension = Path.GetExtension(fileName);
-        if (!AllowedExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
+        var name = Path.GetFileName(fileName);
+
+        var failure = UploadedImageRules.CheckFile(fileName, length);
+        if (failure != UploadedImageFailure.None)
         {
-            throw new InvalidUploadException(
-                $"'{Path.GetFileName(fileName)}' is not supported. Allowed formats: jpg, jpeg, png, gif, webp.");
+            throw new InvalidUploadException(Describe(failure, name));
         }
 
-        if (length is <= 0 or > MaxFileBytes)
-        {
-            throw new InvalidUploadException(
-                $"'{Path.GetFileName(fileName)}' must be between 1 byte and {MaxFileBytes / 1024 / 1024} MB.");
-        }
-
-        var header = new byte[12];
+        var header = new byte[UploadedImageRules.HeaderLength];
         var read = await content.ReadAtLeastAsync(header, header.Length, throwOnEndOfStream: false, cancellationToken);
         content.Seek(0, SeekOrigin.Begin);
 
-        return Detect(header.AsSpan(0, read))
-               ?? throw new InvalidUploadException($"'{Path.GetFileName(fileName)}' is not a valid image.");
+        return UploadedImageRules.Detect(header.AsSpan(0, read))
+               ?? throw new InvalidUploadException(Describe(UploadedImageFailure.NotAnImage, name));
     }
 
-    private static ValidatedImage? Detect(ReadOnlySpan<byte> header)
+    private static string Describe(UploadedImageFailure failure, string name)
     {
-        if (header.StartsWith(new byte[] { 0xFF, 0xD8, 0xFF }))
+        return failure switch
         {
-            return Jpeg;
-        }
-
-        if (header.StartsWith(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }))
-        {
-            return Png;
-        }
-
-        if (header.StartsWith("GIF87a"u8) || header.StartsWith("GIF89a"u8))
-        {
-            return Gif;
-        }
-
-        // RIFF....WEBP
-        if (header.Length >= 12 && header[..4].SequenceEqual("RIFF"u8) && header[8..12].SequenceEqual("WEBP"u8))
-        {
-            return Webp;
-        }
-
-        return null;
+            UploadedImageFailure.UnsupportedExtension =>
+                $"'{name}' is not supported. Allowed formats: jpg, jpeg, png, gif, webp.",
+            UploadedImageFailure.InvalidSize =>
+                $"'{name}' must be between 1 byte and {UploadedImageRules.MaxFileBytes / 1024 / 1024} MB.",
+            _ => $"'{name}' is not a valid image."
+        };
     }
 }
