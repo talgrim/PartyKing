@@ -1,9 +1,7 @@
-using PartyKing.Domain.Entities.Lyrics;
-
-namespace PartyKing.Application.Lyrics.Services;
+namespace PartyKing.Domain.Entities.Lyrics;
 
 /// <summary>Picks the search result that really is the song, or none: wrong lyrics are worse than no lyrics.</summary>
-internal static class LyricsMatcher
+public static class LyricsMatcher
 {
     /// <summary>Lyrics of another cut of the song would drift, so the lengths have to agree this closely.</summary>
     public const double MaxDurationDifferenceSeconds = 5;

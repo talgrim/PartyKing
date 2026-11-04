@@ -5,6 +5,7 @@ using PartyKing.Application.Events;
 using PartyKing.Application.Games.Services.Base;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Realtime;
+using PartyKing.Application.Sessions;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Slideshow.Models;
 using PartyKing.Application.Slideshow.Services;
@@ -255,11 +256,14 @@ internal class FakeSlideshowService : ISlideshowService
         return Task.CompletedTask;
     }
 
-    public Task<ErrorOr<SlideshowSettingsDto>> GetSettingsAsync(Guid sessionId, CancellationToken cancellationToken) =>
-        throw new NotSupportedException();
+    public Task<ErrorOr<SlideshowSettingsDto>> GetSettingsAsync(
+        Guid sessionId,
+        SessionCaller caller,
+        CancellationToken cancellationToken) => throw new NotSupportedException();
 
     public Task<ErrorOr<Success>> UpdateSettingsAsync(
         Guid sessionId,
+        SessionCaller caller,
         SlideshowSettingsDto settings,
         CancellationToken cancellationToken) => throw new NotSupportedException();
 
@@ -272,8 +276,11 @@ internal class FakeSlideshowService : ISlideshowService
     public Task<SlideshowImageDto?> GetImageAsync(Guid sessionId, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
 
-    public Task WatchAsync(Guid sessionId, string connectionId, CancellationToken cancellationToken) =>
-        throw new NotSupportedException();
+    public Task<ErrorOr<Success>> WatchAsync(
+        Guid sessionId,
+        SessionCaller caller,
+        string connectionId,
+        CancellationToken cancellationToken) => throw new NotSupportedException();
 
     public void Unwatch(string connectionId) => throw new NotSupportedException();
 }

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using PartyKing.Domain.Entities.Sessions;
+using PartyKing.Domain.Entities.Spotify;
 
 namespace PartyKing.Persistence.Configurations;
 
@@ -20,8 +21,9 @@ public class SessionConfiguration : IEntityTypeConfiguration<Session>
 
         // Claim and release both change the host: a save based on a stale host must not overwrite the newer one.
         builder.Property(x => x.HostProfileId).IsConcurrencyToken();
+        builder.Ignore(x => x.HostDisplayName);
         builder
-            .HasOne(x => x.HostProfile)
+            .HasOne<SpotifyProfile>()
             .WithMany()
             .HasForeignKey(x => x.HostProfileId)
             .OnDelete(DeleteBehavior.SetNull);

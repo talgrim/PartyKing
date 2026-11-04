@@ -67,7 +67,12 @@ public class Session : AggregateRoot
 
     /// <summary>Spotify profile id of the host; null until someone claims the session.</summary>
     public string? HostProfileId { get; internal set; }
-    public SpotifyProfile? HostProfile { get; internal set; }
+
+    /// <summary>
+    /// The host's name on Spotify, for display. Not stored with the session and not the profile itself (which holds the
+    /// refresh token): a repository that reads sessions fills it with <see cref="WithHostDisplayName"/>.
+    /// </summary>
+    public string? HostDisplayName { get; internal set; }
 
     /// <summary>Spotify id of the host's playlist played whenever the queue runs empty; null when there is none.</summary>
     public string? FallbackPlaylistId { get; internal set; }
@@ -154,6 +159,14 @@ public class Session : AggregateRoot
         return HostClaimOutcome.Claimed;
     }
 
+    /// <summary>Tells the session the display name of its host, as a read of the session found it. Changes nothing stored.</summary>
+    public Session WithHostDisplayName(string? displayName)
+    {
+        HostDisplayName = displayName;
+
+        return this;
+    }
+
     /// <summary>
     /// Removes the host. The playlist belongs to the host who chose it, so the next host starts without one.
     /// Also valid without a host, so the player of a hostless session is still forgotten.
@@ -163,7 +176,7 @@ public class Session : AggregateRoot
         var previousHost = HostProfileId;
 
         HostProfileId = null;
-        HostProfile = null;
+        HostDisplayName = null;
         Raise(new HostReleased(Id, previousHost));
 
         ClearFallbackPlaylist();

@@ -1,8 +1,7 @@
 using System.Text.RegularExpressions;
-using System.Web;
 using PartyKing.Domain.Enums;
 
-namespace PartyKing.Application.Queue.Helpers;
+namespace PartyKing.Domain.Entities.Queue;
 
 public abstract record ParsedSongInput(QueueItemSource Source);
 
@@ -78,11 +77,41 @@ public static partial class SongInputParser
 
         if (uri.AbsolutePath == "/watch")
         {
-            var id = HttpUtility.ParseQueryString(uri.Query)["v"];
+            var id = QueryValue(uri.Query, "v");
             return id is not null && YoutubeVideoIdRegex().IsMatch(id) ? id : null;
         }
 
         var pathMatch = YoutubePathRegex().Match(uri.AbsolutePath);
         return pathMatch.Success ? pathMatch.Groups["id"].Value : null;
+    }
+
+    /// <summary>The value of a query parameter; null when it is missing or given more than once.</summary>
+    private static string? QueryValue(string query, string name)
+    {
+        string? found = null;
+
+        foreach (var pair in query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var separator = pair.IndexOf('=');
+            var key = Decode(separator < 0 ? pair : pair[..separator]);
+            if (key != name)
+            {
+                continue;
+            }
+
+            if (found is not null)
+            {
+                return null;
+            }
+
+            found = separator < 0 ? string.Empty : Decode(pair[(separator + 1)..]);
+        }
+
+        return found;
+    }
+
+    private static string Decode(string text)
+    {
+        return Uri.UnescapeDataString(text.Replace('+', ' '));
     }
 }

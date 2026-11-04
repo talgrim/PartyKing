@@ -1,7 +1,7 @@
-using PartyKing.Application.Queue.Helpers;
+using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Enums;
 
-namespace PartyKing.Application.Tests;
+namespace PartyKing.Domain.Tests;
 
 public class SongInputParserTests
 {
@@ -60,6 +60,8 @@ public class SongInputParserTests
     [InlineData("https://WWW.YouTube.com/watch?v=dQw4w9WgXcQ")]
     [InlineData("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42s&list=PL123")]
     [InlineData("https://www.youtube.com/watch?list=PL123&v=dQw4w9WgXcQ")]
+    [InlineData("https://www.youtube.com/watch?v=dQw4w9WgXcQ&x=1")]
+    [InlineData("https://www.youtube.com/watch?v=%64Qw4w9WgXcQ")]
     [InlineData("https://youtu.be/dQw4w9WgXcQ?si=abcdef")]
     [InlineData("https://www.youtube.com/shorts/dQw4w9WgXcQ")]
     [InlineData("https://www.youtube.com/embed/dQw4w9WgXcQ")]
@@ -80,6 +82,8 @@ public class SongInputParserTests
     [InlineData("https://www.youtube.com/results?search_query=music")]
     [InlineData("https://www.youtube.com/watch")]
     [InlineData("https://www.youtube.com/watch?v=tooShort")]
+    [InlineData("https://www.youtube.com/watch?v=dQw4w9WgXcQ&v=dQw4w9WgXcR")]
+    [InlineData("https://www.youtube.com/watch?v=")]
     [InlineData("https://www.youtube.com/watch?v=dQw4w9WgXcQextra")]
     [InlineData("https://youtu.be/")]
     [InlineData("https://youtu.be/short")]

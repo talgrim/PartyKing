@@ -4,16 +4,18 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace PartyKing.Application.Lyrics.Services;
+namespace PartyKing.Domain.Entities.Lyrics;
 
 /// <param name="Title">The song's title with the noise stripped.</param>
 /// <param name="Artist">The artist, when known with some confidence.</param>
 /// <param name="FullText">Title and artist together, for a free-text search and for matching.</param>
 /// <param name="DurationMs">The length of the song when the queue knows it; YouTube items don't.</param>
-internal partial record LyricsQuery(string Title, string? Artist, string FullText, int? DurationMs)
+public partial record LyricsQuery(string Title, string? Artist, string FullText, int? DurationMs)
 {
-    public static LyricsQuery From(QueueItem item) =>
-        item.Source == QueueItemSource.Spotify ? FromSpotify(item) : FromYoutube(item);
+    public static LyricsQuery From(QueueItem item)
+    {
+        return item.Source == QueueItemSource.Spotify ? FromSpotify(item) : FromYoutube(item);
+    }
 
     // Spotify gives clean fields, apart from suffixes like "- Remastered 2011"
     private static LyricsQuery FromSpotify(QueueItem item)

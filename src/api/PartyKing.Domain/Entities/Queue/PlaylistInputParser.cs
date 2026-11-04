@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace PartyKing.Application.Queue.Helpers;
+namespace PartyKing.Domain.Entities.Queue;
 
 public static partial class PlaylistInputParser
 {

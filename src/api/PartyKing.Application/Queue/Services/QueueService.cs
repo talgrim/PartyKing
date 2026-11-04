@@ -3,8 +3,6 @@ using PartyKing.Domain.Repositories;
 using ErrorOr;
 using Microsoft.Extensions.Logging;
 using PartyKing.Application.Mappings;
-using PartyKing.Application.Queue.Helpers;
-using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions;
 using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Application.Spotify.Services;

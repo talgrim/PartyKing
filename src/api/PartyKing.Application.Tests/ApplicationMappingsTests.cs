@@ -1,6 +1,5 @@
 using PartyKing.Application.Mappings;
 using PartyKing.Contract.V1.Enums;
-using PartyKing.Contract.V1.Slideshow;
 using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Entities.Sessions;
 using PartyKing.Domain.Entities.Slideshow;
@@ -41,12 +40,10 @@ public class ApplicationMappingsTests
     [Fact]
     public void Session_ToDto_WithHostProfile_UsesDisplayName()
     {
-        var profile = new SpotifyProfile("profile-id", "refresh");
-        profile.UpdateDisplayName("Display Name");
         var session = new Session(Guid.NewGuid(), "ABC123", "Party", "hash", DateTime.UtcNow)
         {
             HostProfileId = "profile-id",
-            HostProfile = profile,
+            HostDisplayName = "Display Name",
             FallbackPlaylistName = "Playlist",
             FallbackShuffle = true
         };
@@ -75,8 +72,7 @@ public class ApplicationMappingsTests
     {
         var session = new Session(Guid.NewGuid(), "ABC123", "Party", "hash", DateTime.UtcNow)
         {
-            HostProfileId = "profile-id",
-            HostProfile = new SpotifyProfile("profile-id", "refresh")
+            HostProfileId = "profile-id"
         };
 
         Assert.Equal("profile-id", session.ToDto().HostName);

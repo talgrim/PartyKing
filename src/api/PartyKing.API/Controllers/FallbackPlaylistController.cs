@@ -1,5 +1,4 @@
 using PartyKing.API.Cookies;
-using PartyKing.Application.Ports;
 using Microsoft.AspNetCore.Mvc;
 using PartyKing.API.Authentication;
 using PartyKing.API.Authorization;

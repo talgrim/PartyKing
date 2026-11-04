@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging.Abstractions;
 using ErrorOr;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Sessions.Services;

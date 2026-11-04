@@ -64,6 +64,41 @@ public class SessionsRepositoryEventsTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Get_OfAHostedSession_CarriesTheHostsDisplayName()
+    {
+        var writer = _provider.GetRequiredService<IDbContextFactory<WriterDbContext>>();
+        await using (var dbContext = await writer.CreateDbContextAsync())
+        {
+            (await dbContext.SpotifyProfiles.SingleAsync(x => x.Id == "host-1")).UpdateDisplayName("Jan Kowalski");
+            await dbContext.SaveChangesAsync();
+        }
+        await _repository.TryClaimAsync(_sessionId, "host-1", Ct);
+
+        var session = await ReadAsync();
+        var listed = Assert.Single(await _repository.GetAllAsync(Ct));
+
+        Assert.Equal("host-1", session.HostProfileId);
+        Assert.Equal("Jan Kowalski", session.HostDisplayName);
+        Assert.Equal("Jan Kowalski", listed.HostDisplayName);
+    }
+
+    [Fact]
+    public async Task Get_OfASessionWithoutAHost_HasNoDisplayName()
+    {
+        var session = await ReadAsync();
+        var listed = Assert.Single(await _repository.GetAllAsync(Ct));
+
+        Assert.Null(session.HostDisplayName);
+        Assert.Null(listed.HostDisplayName);
+    }
+
+    [Fact]
+    public async Task Get_OfAnUnknownSession_IsNull()
+    {
+        Assert.Null(await _repository.GetAsync(Guid.NewGuid(), Ct));
+    }
+
+    [Fact]
     public async Task Rename_SavesTheTrimmedNameAndDispatchesAfterTheCommit()
     {
         string? nameSeenByHandlers = null;
