@@ -31,7 +31,7 @@ internal sealed class FakeResistanceGamesRepository : IResistanceGamesRepository
         Task.FromResult(_games.GetValueOrDefault(sessionId));
 
     public Task<ResistanceLobbyState?> GetLobbyAsync(
-        Guid sessionId, Guid? playerId, CancellationToken cancellationToken)
+        Guid sessionId, Guid? playerId, Guid? playerStamp, CancellationToken cancellationToken)
     {
         var game = _games.GetValueOrDefault(sessionId);
         ResistanceLobbyState? lobby = game is null
@@ -40,7 +40,7 @@ internal sealed class FakeResistanceGamesRepository : IResistanceGamesRepository
                 game.CreatedAt,
                 game.IsOpen,
                 game.IsStarted,
-                playerId is { } id && game.Players.Any(x => x.PlayerId == id));
+                playerId is { } id && game.Players.Any(x => x.PlayerId == id && x.IsHeldBy(playerStamp)));
 
         return Task.FromResult(lobby);
     }

@@ -144,6 +144,6 @@ public abstract class ResistanceServiceTestBase
     {
         var joined = await _lobbyService.JoinAsync(_id, name, new GameCaller("guest", false), CancellationToken.None);
 
-        return new GameCaller("guest", false, joined.Value);
+        return new GameCaller("guest", false, joined.Value.PlayerId, joined.Value.Stamp);
     }
 }

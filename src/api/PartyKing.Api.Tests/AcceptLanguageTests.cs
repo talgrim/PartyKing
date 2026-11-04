@@ -87,8 +87,8 @@ public class AcceptLanguageTests
         public void RevokeAdmin(HttpContext? httpContext) => throw new NotSupportedException();
         public void GrantSessionAccess(Guid sessionId, string stamp, HttpContext? httpContext) => throw new NotSupportedException();
         public bool TryReadSessionAccess(HttpRequest request, Guid sessionId, out string stamp) => throw new NotSupportedException();
-        public void GrantGamePlayer(GameKind game, Guid sessionId, Guid playerId, HttpContext? httpContext) => throw new NotSupportedException();
-        public bool TryReadGamePlayer(GameKind game, HttpRequest request, Guid sessionId, out Guid playerId) => throw new NotSupportedException();
+        public void GrantGamePlayer(GameKind game, Guid sessionId, GameSeat seat, HttpContext? httpContext) => throw new NotSupportedException();
+        public bool TryReadGamePlayer(GameKind game, HttpRequest request, Guid sessionId, out GameSeat seat) => throw new NotSupportedException();
     }
 
     private sealed class NoAuthenticationService : IAuthenticationService

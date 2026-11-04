@@ -2,9 +2,9 @@ import { render, screen, within } from '@testing-library/react';
 import { ResistancePlayers } from './ResistancePlayers';
 
 const players = [
-  { id: 'a', name: 'Ola' },
-  { id: 'b', name: 'Bartek' },
-  { id: 'c', name: 'Celina' },
+  { id: 'a', name: 'Ola', isSeatReleased: false, isManagerSeat: false },
+  { id: 'b', name: 'Bartek', isSeatReleased: false, isManagerSeat: false },
+  { id: 'c', name: 'Celina', isSeatReleased: false, isManagerSeat: false },
 ];
 
 const seat = (name: string) => screen.getAllByRole('listitem').find((item) => item.getAttribute('title') === name)!;

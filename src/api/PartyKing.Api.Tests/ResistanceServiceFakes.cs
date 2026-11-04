@@ -39,7 +39,7 @@ internal sealed class FakeResistanceLobbyService : IResistanceLobbyService
         Guid sessionId, GameCaller caller, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
 
-    public Task<ErrorOr<Guid>> JoinAsync(
+    public Task<ErrorOr<GameSeat>> JoinAsync(
         Guid sessionId, string? name, GameCaller caller, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
 
@@ -170,4 +170,37 @@ internal sealed class FakeResistancePresenceService : IResistancePresenceService
         LastCall = (sessionId, caller.PlayerId);
         return Task.FromResult(Result);
     }
+}
+
+/// <summary>Remembers what the seats controller asked of it.</summary>
+internal sealed class FakeResistanceSeatService : IResistanceSeatService
+{
+    public ErrorOr<GameSeat> ClaimResult { get; set; }
+
+    public List<(Guid SessionId, Guid PlayerId)> Claims { get; } = [];
+
+    public (Guid PlayerId, bool Released, GameCaller Caller)? LastRelease { get; private set; }
+
+    public Task<ErrorOr<IReadOnlyList<ResistanceClaimableSeatDto>>> GetClaimableAsync(
+        Guid sessionId, CancellationToken cancellationToken) =>
+        Task.FromResult(ErrorOrFactory.From<IReadOnlyList<ResistanceClaimableSeatDto>>(
+            [new ResistanceClaimableSeatDto(Guid.Empty, "Ola")]));
+
+    public Task<ErrorOr<ResistanceGameDto>> SetReleasedAsync(
+        Guid sessionId, Guid playerId, bool released, GameCaller caller, CancellationToken cancellationToken)
+    {
+        LastRelease = (playerId, released, caller);
+
+        return Task.FromResult(ErrorOrFactory.From(new ResistanceGameDto { Rules = new ResistanceRulesDto([], false, 1) }));
+    }
+
+    public Task<ErrorOr<GameSeat>> ClaimAsync(Guid sessionId, Guid playerId, CancellationToken cancellationToken)
+    {
+        Claims.Add((sessionId, playerId));
+
+        return Task.FromResult(ClaimResult);
+    }
+
+    public Task<bool> HoldsSeatAsync(Guid sessionId, GameSeat seat, CancellationToken cancellationToken) =>
+        Task.FromResult(true);
 }
