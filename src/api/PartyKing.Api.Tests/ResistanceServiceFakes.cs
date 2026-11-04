@@ -157,3 +157,17 @@ internal sealed class FakeResistancePlotCardService : FakeResistanceCalls, IResi
         return Record("pass-leader-window", sessionId, null, caller);
     }
 }
+
+internal sealed class FakeResistancePresenceService : IResistancePresenceService
+{
+    public ErrorOr<ResistancePresenceDto> Result { get; set; } = new ResistancePresenceDto([]);
+
+    public (Guid SessionId, Guid? PlayerId)? LastCall { get; private set; }
+
+    public Task<ErrorOr<ResistancePresenceDto>> GetAsync(
+        Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
+    {
+        LastCall = (sessionId, caller.PlayerId);
+        return Task.FromResult(Result);
+    }
+}

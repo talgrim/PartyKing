@@ -15,4 +15,5 @@ internal static class SessionMusicHubEvents
     public const string ResistanceChanged = "ResistanceChanged";
     public const string ResistanceOpened = "ResistanceOpened";
     public const string ResistanceLobbyChanged = "ResistanceLobbyChanged";
+    public const string ResistancePresenceChanged = "ResistancePresenceChanged";
 }

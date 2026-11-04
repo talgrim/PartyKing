@@ -17,6 +17,7 @@ public class ResistanceControllerTests
     private readonly FakeResistanceLobbyService _lobbyService = new();
     private readonly FakeResistanceRoundService _roundService = new();
     private readonly FakeResistancePlotCardService _plotCardService = new();
+    private readonly FakeResistancePresenceService _presenceService = new();
     private readonly ResistanceController _lifecycle;
     private readonly ResistanceRoundController _round;
     private readonly ResistancePlotCardsController _plotCards;
@@ -33,9 +34,21 @@ public class ResistanceControllerTests
         var cookies = new FakeCookies(_playerId);
         var context = new ControllerContext { HttpContext = httpContext };
 
-        _lifecycle = new ResistanceController(accessor, _lobbyService, _roundService, cookies) { ControllerContext = context };
+        _lifecycle = new ResistanceController(accessor, _lobbyService, _roundService, _presenceService, cookies) { ControllerContext = context };
         _round = new ResistanceRoundController(accessor, _roundService, _plotCardService, cookies) { ControllerContext = context };
         _plotCards = new ResistancePlotCardsController(accessor, _plotCardService, _lobbyService, cookies) { ControllerContext = context };
+    }
+
+    [Fact]
+    public async Task GetPresence_ReturnsTheServicesOnlinePlayers()
+    {
+        var online = new ResistancePresenceDto([_playerId]);
+        _presenceService.Result = online;
+
+        var result = await _lifecycle.GetPresence(_sessionId, CancellationToken.None);
+
+        Assert.Same(online, Assert.IsType<OkObjectResult>(result).Value);
+        Assert.Equal((_sessionId, (Guid?)_playerId), _presenceService.LastCall);
     }
 
     [Fact]

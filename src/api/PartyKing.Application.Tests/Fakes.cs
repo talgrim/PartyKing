@@ -11,6 +11,7 @@ using PartyKing.Application.Slideshow.Models;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Application.System;
+using PartyKing.Contract.V1.Games.Resistance;
 using PartyKing.Contract.V1.Lyrics;
 using PartyKing.Contract.V1.Player;
 using PartyKing.Contract.V1.Queue;
@@ -416,9 +417,22 @@ internal class FakeResistanceNotifier : FakeGameLobbyNotifier, IResistanceNotifi
 {
     public List<Guid> LobbyChanges { get; } = [];
 
+    public List<(Guid SessionId, ResistancePresenceDto Presence)> PresenceChanges { get; } = [];
+
     public Task LobbyChangedAsync(Guid sessionId, CancellationToken cancellationToken)
     {
         LobbyChanges.Add(sessionId);
+        return Task.CompletedTask;
+    }
+
+    public Task PresenceChangedAsync(
+        Guid sessionId, ResistancePresenceDto presence, CancellationToken cancellationToken)
+    {
+        lock (PresenceChanges)
+        {
+            PresenceChanges.Add((sessionId, presence));
+        }
+
         return Task.CompletedTask;
     }
 }

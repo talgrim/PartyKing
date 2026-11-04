@@ -1,3 +1,4 @@
+using PartyKing.Contract.V1.Games.Resistance;
 using PartyKing.Contract.V1.Lyrics;
 using PartyKing.Contract.V1.Player;
 using PartyKing.Contract.V1.Queue;
@@ -97,6 +98,12 @@ internal sealed class NullResistanceNotifier : IResistanceNotifier
     }
 
     public Task LobbyChangedAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task PresenceChangedAsync(
+        Guid sessionId, ResistancePresenceDto presence, CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }

@@ -16,10 +16,12 @@ type Props = {
   banner: ReactNode;
   /** Marks the viewer's own seat; the TV tab shows no one as "you". */
   yourPlayerId: string | null;
+  /** The players connected right now; undefined until the first answer, which shows no status at all. */
+  onlinePlayerIds?: string[];
 };
 
 /** The board for a big screen: the board and the phase line keep to the middle 80%, the players sit in the margins. */
-export const ResistanceTvBoard = ({ game, board, banner, yourPlayerId }: Props): ReactNode => {
+export const ResistanceTvBoard = ({ game, board, banner, yourPlayerId, onlinePlayerIds }: Props): ReactNode => {
   const { t } = useTranslation();
   const team = game?.players.filter((player) => game.teamPlayerIds.includes(player.id)) ?? [];
 
@@ -71,6 +73,7 @@ export const ResistanceTvBoard = ({ game, board, banner, yourPlayerId }: Props):
           players={game.players}
           yourPlayerId={yourPlayerId}
           leaderId={game.leaderPlayerId}
+          onlinePlayerIds={onlinePlayerIds}
           marks={(playerId) => <ResistancePlayerMarks game={game} playerId={playerId} />}
           beside={(playerId) =>
             game.opinionMakerPlayerIds.includes(playerId) ? (

@@ -2,6 +2,8 @@ import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } fro
 import { MutableRefObject, useEffect, useState } from 'react';
 import { mutate } from 'swr';
 import envVariables from '@/envVariables';
+import { devPersona } from '@/service/devPersona';
+import { ResistancePresenceDto } from '@/service/endpoints/games/types';
 import { LyricsDto, LyricsOffsetChangedEvent } from '@/service/endpoints/lyrics/types';
 import { SongDto } from '@/service/endpoints/queue/types';
 import { NowPlayingDto } from '@/service/endpoints/player/types';
@@ -23,6 +25,7 @@ import {
   ringoKey,
   resistanceKey,
   resistanceLobbyKey,
+  resistancePresenceKey,
   ringoLobbyKey,
   SESSION_HUB_TOPICS,
   SESSION_MUSIC_EVENTS,
@@ -31,9 +34,14 @@ import {
   SongRemovedEvent,
 } from '@/service/realtime/sessionMusicEvents';
 
-const hubUrl = (sessionId: string, topics: readonly SessionHubTopic[]) => {
+const hubUrl = (sessionId: string, topics: readonly SessionHubTopic[], presence: boolean) => {
   const base = envVariables.apiUrl.replace(/\/$/, '');
-  return `${base}/hubs/session?sessionId=${encodeURIComponent(sessionId)}&topics=${topics.join(',')}`;
+  let url = `${base}/hubs/session?sessionId=${encodeURIComponent(sessionId)}&topics=${topics.join(',')}`;
+  // The connection of a player's own Resistance page counts as that player being online (the server reads the player from the cookie)
+  if (presence) url += '&presence=1';
+  // A hub connection can't send the dev persona header, so the development server reads it from the query
+  if (devPersona) url += `&persona=${encodeURIComponent(devPersona)}`;
+  return url;
 };
 
 /** A burst of pushes (everyone voting at once) is answered with one refetch per client instead of one per push. */
@@ -74,6 +82,17 @@ const revalidateSession = (sessionId: string, topics: readonly SessionHubTopic[]
   if (topics.includes('resistanceLobby')) {
     void mutate(resistanceLobbyKey(sessionId));
   }
+  if (topics.includes('resistancePresence')) {
+    void mutate(resistancePresenceKey(sessionId));
+  }
+};
+
+export type SessionHubOptions = {
+  /**
+   * This connection is a Resistance player's own page: the server counts the player in the cookie as online while it
+   * lasts. Leave it out on the TV view, which shares that cookie.
+   */
+  presence?: boolean;
 };
 
 /** The live connection of a session page; `connected` is false while it is starting, reconnecting or down. */
@@ -94,10 +113,12 @@ export const useSessionMusicHub = (
   enabled: boolean,
   hostPlayer?: MutableRefObject<HostPlayerPushHandlers>,
   topics: readonly SessionHubTopic[] = SESSION_HUB_TOPICS,
+  options: SessionHubOptions = {},
 ): SessionHubHandle => {
   const [handle, setHandle] = useState<SessionHubHandle>(DISCONNECTED);
   // A new array with the same topics must not restart the connection
   const topicKey = topics.join(',');
+  const presence = options.presence === true;
 
   useEffect(() => {
     if (!enabled || !sessionId) return;
@@ -118,7 +139,7 @@ export const useSessionMusicHub = (
 
     const start = async () => {
       connection = new HubConnectionBuilder()
-        .withUrl(hubUrl(sessionId, subscribed), { withCredentials: true })
+        .withUrl(hubUrl(sessionId, subscribed, presence), { withCredentials: true })
         .withAutomaticReconnect()
         .configureLogging(LogLevel.Warning)
         .build();
@@ -198,6 +219,10 @@ export const useSessionMusicHub = (
 
       connection.on(SESSION_MUSIC_EVENTS.ResistanceLobbyChanged, revalidateResistanceLobby);
 
+      connection.on(SESSION_MUSIC_EVENTS.ResistancePresenceChanged, (presenceNow: ResistancePresenceDto) => {
+        void mutate(resistancePresenceKey(sessionId), presenceNow, { revalidate: false });
+      });
+
       const built = connection;
       connection.onreconnecting(() => setHandle({ connection: built, connected: false }));
       connection.onclose(() => setHandle({ connection: built, connected: false }));
@@ -229,7 +254,7 @@ export const useSessionMusicHub = (
       }
       setHandle(DISCONNECTED);
     };
-  }, [sessionId, enabled, hostPlayer, topicKey]);
+  }, [sessionId, enabled, hostPlayer, topicKey, presence]);
 
   return handle;
 };

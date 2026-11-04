@@ -232,6 +232,12 @@ export type ResistancePlayerDto = {
   name: string;
 };
 
+// Mirrors PartyKing.Contract.V1.Games.ResistancePresenceDto
+export type ResistancePresenceDto = {
+  /** The players who have the Resistance page open right now; a joined player who is not listed is offline. */
+  onlinePlayerIds: string[];
+};
+
 // Mirrors PartyKing.Contract.V1.Games.ResistanceLobbyDto
 export type ResistanceLobbyDto = {
   /** ISO timestamp of the game's creation, which tells one game from the next. */

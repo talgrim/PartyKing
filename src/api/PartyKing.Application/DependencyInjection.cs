@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Configuration;
@@ -120,6 +121,10 @@ public static class DependencyInjection
         services.TryAddSingleton<IRingoNotifier, NullRingoNotifier>();
         services.TryAddSingleton<IResistanceNotifier, NullResistanceNotifier>();
         services.TryAddSingleton<IPlayerConnectionWatchdog, PlayerConnectionWatchdog>();
+        services.TryAddSingleton<IGamePresence>(provider => new GamePresence(
+            provider.GetRequiredService<IResistanceNotifier>(),
+            provider.GetRequiredService<ILogger<GamePresence>>(),
+            GamePresence.DefaultGrace));
     }
 
     private static void RegisterSlideshow(this IServiceCollection services, IConfiguration configuration)
@@ -190,6 +195,7 @@ public static class DependencyInjection
         services.AddScoped<IResistanceLobbyService, ResistanceLobbyService>();
         services.AddScoped<IResistanceRoundService, ResistanceRoundService>();
         services.AddScoped<IResistancePlotCardService, ResistancePlotCardService>();
+        services.AddScoped<IResistancePresenceService, ResistancePresenceService>();
         services.AddSingleton<IResistanceRulesProvider, ResistanceRulesProvider>();
         services.AddSingleton<IValidateOptions<ResistanceConfiguration>, ResistanceConfigurationValidator>();
         services.Configure<ResistanceConfiguration>(configuration.GetSection(ResistanceConfiguration.SectionName));

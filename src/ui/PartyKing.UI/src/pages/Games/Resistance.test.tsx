@@ -3,10 +3,12 @@ import userEvent from '@testing-library/user-event';
 import { SWRConfig } from 'swr';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { Resistance } from './Resistance';
+import { useSessionMusicHub } from '@/service/realtime/useSessionMusicHub';
 
 const mocks = vi.hoisted(() => ({
   role: { isHost: false, isAdmin: true },
   getResistance: vi.fn(),
+  getResistancePresence: vi.fn(),
   openResistance: vi.fn(),
   startResistance: vi.fn(),
   refreshResistanceRules: vi.fn(),
@@ -24,6 +26,7 @@ vi.mock('@/service/realtime/useSessionMusicHub', () => ({ useSessionMusicHub: vi
 vi.mock('@/service/endpoints/games/gamesApi', () => ({
   gamesApi: {
     getResistance: mocks.getResistance,
+    getResistancePresence: mocks.getResistancePresence,
     openResistance: mocks.openResistance,
     startResistance: mocks.startResistance,
     refreshResistanceRules: mocks.refreshResistanceRules,
@@ -108,6 +111,9 @@ describe('Resistance', () => {
   beforeEach(() => {
     mocks.role = { isHost: false, isAdmin: true };
     mocks.getResistance.mockReset();
+    mocks.getResistancePresence.mockReset();
+    mocks.getResistancePresence.mockResolvedValue({ onlinePlayerIds: [] });
+    vi.mocked(useSessionMusicHub).mockClear();
     mocks.restartResistance.mockReset();
     mocks.openResistance.mockReset();
     mocks.startResistance.mockReset();
@@ -472,6 +478,40 @@ describe('Resistance', () => {
       expect(screen.queryByRole('button', { name: 'Show your role' })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Board' })).not.toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'End game' })).toBeInTheDocument();
+    });
+
+    it('shows the TV who is connected, and follows the presence topic without announcing itself', async () => {
+      mocks.role = { isHost: true, isAdmin: false };
+      mocks.getResistance.mockResolvedValue(joined());
+      mocks.getResistancePresence.mockResolvedValue({ onlinePlayerIds: ['p0', 'p2'] });
+      renderPage('/s/session-1/games/resistance?tv=1');
+
+      const seats = await screen.findByRole('list', { name: 'Players' });
+      await waitFor(() => expect(within(seats).getAllByText('Online')).toHaveLength(2));
+      expect(within(seats).getAllByText('Offline')).toHaveLength(3);
+      expect(mocks.getResistancePresence).toHaveBeenCalledWith('session-1');
+      expect(useSessionMusicHub).toHaveBeenLastCalledWith(
+        'session-1',
+        true,
+        undefined,
+        ['resistance', 'resistanceLobby', 'resistancePresence'],
+        { presence: false },
+      );
+    });
+
+    it('counts a player page as the player being online and never asks for who is connected', async () => {
+      mocks.getResistance.mockResolvedValue(joined());
+      renderPage();
+
+      await screen.findByRole('button', { name: 'Show your role' });
+      expect(useSessionMusicHub).toHaveBeenLastCalledWith(
+        'session-1',
+        true,
+        undefined,
+        ['resistance', 'resistanceLobby'],
+        { presence: true },
+      );
+      expect(mocks.getResistancePresence).not.toHaveBeenCalled();
     });
 
     it('keeps the manager controls of a playing host collapsed until asked for', async () => {
