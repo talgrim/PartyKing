@@ -1,7 +1,6 @@
 using PartyKing.Domain.Repositories;
 using ErrorOr;
 using PartyKing.Application.Games.Services.Base;
-using PartyKing.Application.Realtime;
 using PartyKing.Application.System;
 using PartyKing.Contract.V1.Games.Ringo;
 using PartyKing.Domain.Entities.Games.Ringo;

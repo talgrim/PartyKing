@@ -1,5 +1,4 @@
 using PartyKing.API.Cookies;
-using PartyKing.Application.Ports;
 using PartyKing.API.Authentication;
 using PartyKing.Application.Games.Services.Base;
 using PartyKing.Domain.Entities.Games.Base;

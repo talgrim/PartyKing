@@ -1,7 +1,6 @@
 using PartyKing.Application.Ports;
 using PartyKing.Domain.Repositories;
 using PartyKing.Application.Mappings;
-using PartyKing.Application.Realtime;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Domain.Entities.Spotify;
 
