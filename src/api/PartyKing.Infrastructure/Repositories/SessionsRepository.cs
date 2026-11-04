@@ -118,13 +118,20 @@ internal class SessionsRepository : ISessionsRepository
             cancellationToken);
     }
 
-    public async Task<bool> SetFallbackCursorAsync(Guid id, int cursor, CancellationToken cancellationToken)
+    public async Task<bool> SetFallbackCursorAsync(
+        Guid id,
+        string playlistId,
+        int expectedCursor,
+        int cursor,
+        CancellationToken cancellationToken)
     {
         await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
 
-        // Bookkeeping of the refill, not a change anyone reacts to, so it is a plain update that raises nothing
+        // Bookkeeping of the refill, not a change anyone reacts to, so it is a plain update that raises nothing.
+        // The caller picked from a snapshot, so the write holds only while the playlist and cursor are still those
+        // of the snapshot: a playlist changed or rewound meanwhile keeps its new cursor.
         var updated = await dbContext.Sessions
-            .Where(x => x.Id == id)
+            .Where(x => x.Id == id && x.FallbackPlaylistId == playlistId && x.FallbackCursor == expectedCursor)
             .ExecuteUpdateAsync(x => x.SetProperty(s => s.FallbackCursor, cursor), cancellationToken);
 
         return updated > 0;
@@ -175,15 +182,14 @@ internal class SessionsRepository : ISessionsRepository
             return SessionClaimResult.SessionNotFound;
         }
 
-        if (session.HostProfileId == profileId)
+        // The aggregate decides the outcome and raises HostClaimed; the conditional update below only makes it atomic
+        switch (session.ClaimHost(profileId))
         {
-            // The host logging in again keeps their session
-            return SessionClaimResult.Claimed;
-        }
-
-        if (session.HostProfileId is not null)
-        {
-            return SessionClaimResult.AlreadyClaimed;
+            case HostClaimOutcome.AlreadyHost:
+                // The host logging in again keeps their session
+                return SessionClaimResult.Claimed;
+            case HostClaimOutcome.HostedByAnother:
+                return SessionClaimResult.AlreadyClaimed;
         }
 
         try
@@ -198,8 +204,8 @@ internal class SessionsRepository : ISessionsRepository
                 return SessionClaimResult.AlreadyClaimed;
             }
 
-            // The claim is a conditional update on an untracked row, so the repository raises the event
-            await _dispatcher.DispatchAsync([new HostClaimed(id, profileId)], CancellationToken.None);
+            // The row was loaded untracked and written by the update above, so the repository dispatches what it raised
+            await _dispatcher.DispatchAsync(session.DrainEvents(), CancellationToken.None);
 
             return SessionClaimResult.Claimed;
         }

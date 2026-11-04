@@ -2,12 +2,19 @@ using System.Security.Cryptography;
 using System.Text;
 using PartyKing.Domain.Entities.Base;
 using PartyKing.Domain.Entities.Spotify;
+using PartyKing.Domain.Enums;
 using PartyKing.Domain.Events.Sessions;
 
 namespace PartyKing.Domain.Entities.Sessions;
 
 /// <summary>A session that was created, or the reason it was not.</summary>
 public readonly record struct SessionCreation(SessionNameFailure Failure, Session? Session);
+
+/// <summary>
+/// The track the fallback playlist wants next. <see cref="NextCursor"/> is the cursor to store after queueing it,
+/// null when the playlist is shuffled (the cursor is not used then).
+/// </summary>
+public sealed record FallbackPick(Song Track, int? NextCursor);
 
 public class Session : AggregateRoot
 {
@@ -123,6 +130,31 @@ public class Session : AggregateRoot
     }
 
     /// <summary>
+    /// Makes <paramref name="profileId"/> the host of a session that has none and raises <see cref="HostClaimed"/>.
+    /// The host logging in again changes nothing, and a session that has another host refuses; neither raises anything.
+    /// A caller that persists the claim must do it atomically (first claim wins): this only decides the outcome.
+    /// </summary>
+    public HostClaimOutcome ClaimHost(string profileId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(profileId);
+
+        if (HostProfileId == profileId)
+        {
+            return HostClaimOutcome.AlreadyHost;
+        }
+
+        if (HostProfileId is not null)
+        {
+            return HostClaimOutcome.HostedByAnother;
+        }
+
+        HostProfileId = profileId;
+        Raise(new HostClaimed(Id, profileId));
+
+        return HostClaimOutcome.Claimed;
+    }
+
+    /// <summary>
     /// Removes the host. The playlist belongs to the host who chose it, so the next host starts without one.
     /// Also valid without a host, so the player of a hostless session is still forgotten.
     /// </summary>
@@ -149,6 +181,34 @@ public class Session : AggregateRoot
         FallbackShuffle = shuffle;
         FallbackCursor = 0;
         Raise(new FallbackPlaylistChanged(Id, previous, playlistId));
+    }
+
+    /// <summary>
+    /// Picks the next track of the fallback playlist, or null when it has none. In order it is the track at
+    /// <see cref="FallbackCursor"/> (which wraps around the playlist) and the pick carries the cursor to store next.
+    /// Shuffled it is a random track, but not the one that plays (<paramref name="playingUrl"/>) unless it is the only
+    /// one. Changes nothing: the caller stores the cursor once the track is really queued.
+    /// </summary>
+    public FallbackPick? NextFallbackTrack(IReadOnlyList<Song> tracks, string? playingUrl, Random random)
+    {
+        if (tracks.Count == 0)
+        {
+            return null;
+        }
+
+        if (!FallbackShuffle)
+        {
+            var index = FallbackCursor % tracks.Count;
+            return new FallbackPick(tracks[index], (index + 1) % tracks.Count);
+        }
+
+        var candidates = tracks.Where(x => x.Uri != playingUrl).ToList();
+        if (candidates.Count == 0)
+        {
+            candidates = tracks.ToList();
+        }
+
+        return new FallbackPick(candidates[random.Next(candidates.Count)], null);
     }
 
     /// <summary>Removes the fallback playlist; raises nothing when there is none.</summary>
