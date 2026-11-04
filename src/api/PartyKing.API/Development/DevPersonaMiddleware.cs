@@ -1,4 +1,5 @@
 using PartyKing.API.Cookies;
+using PartyKing.API.Hubs;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Primitives;
 
@@ -8,11 +9,13 @@ namespace PartyKing.API.Development;
 /// Development only. Lets one browser act as several guests: a request with an <c>X-Dev-Persona</c> header (the UI sends
 /// it from the tab's <c>?persona=</c>) is a plain guest, because the host and admin cookies are hidden from it, and
 /// keeps its own game player cookies, stored under the persona's name. The session unlock cookie stays shared, so the
-/// password is entered once per browser. Never registered outside Development.
+/// password is entered once per browser. A hub connection cannot set headers, so it sends the persona as the
+/// <c>persona</c> query value instead. Never registered outside Development.
 /// </summary>
 public sealed partial class DevPersonaMiddleware
 {
     public const string HeaderName = "X-Dev-Persona";
+    public const string QueryName = "persona";
 
     private static readonly string[] HiddenCookies =
     [
@@ -36,9 +39,8 @@ public sealed partial class DevPersonaMiddleware
 
     public Task InvokeAsync(HttpContext context)
     {
-        if (!context.Request.Headers.TryGetValue(HeaderName, out var header)
-            || header.ToString() is not { } persona
-            || !ValidPersona().IsMatch(persona))
+        var persona = ReadPersona(context.Request);
+        if (persona is null)
         {
             return _next(context);
         }
@@ -52,6 +54,17 @@ public sealed partial class DevPersonaMiddleware
         });
 
         return _next(context);
+    }
+
+    private static string? ReadPersona(HttpRequest request)
+    {
+        var persona = request.Headers.TryGetValue(HeaderName, out var header)
+            ? header.ToString()
+            : request.Path.StartsWithSegments(SessionHub.Path)
+                ? request.Query[QueryName].ToString()
+                : null;
+
+        return persona is not null && ValidPersona().IsMatch(persona) ? persona : null;
     }
 
     private static string RewriteRequestCookies(HttpRequest request, string persona)
