@@ -96,6 +96,15 @@ describe('useSessionMusicHub, Resistance pushes', () => {
     expect(mutated()).toEqual([resistanceKey(SESSION)]);
   });
 
+  it('shows an action within a third of a second', async () => {
+    await mountHub(RESISTANCE_HUB_TOPICS);
+
+    push('ResistanceChanged');
+    await wait(350);
+
+    expect(mutated()).toEqual([resistanceKey(SESSION)]);
+  });
+
   it('refetches only the lobby on ResistanceLobbyChanged', async () => {
     await mountHub(RESISTANCE_HUB_TOPICS);
 
