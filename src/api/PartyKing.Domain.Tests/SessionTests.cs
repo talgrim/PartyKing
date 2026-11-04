@@ -5,7 +5,12 @@ namespace PartyKing.Domain.Tests;
 
 public class SessionTests
 {
-    private static Session NewSession() => new("ABC123", "Party", "hash");
+    private static readonly DateTime Now = new(2026, 11, 4, 12, 0, 0, DateTimeKind.Utc);
+
+    private static Session NewSession()
+    {
+        return Session.Create(Guid.NewGuid(), "ABC123", "Party", "hash", Now).Session!;
+    }
 
     [Theory]
     [InlineData(null, SessionNameFailure.Empty)]
@@ -37,7 +42,37 @@ public class SessionTests
     public void ABlankNameFallsBackToTheDefault(string? name)
     {
         Assert.Equal("New session", SessionNames.Normalize(name));
-        Assert.Equal("New session", new Session("ABC123", name!, "hash").Name);
+        Assert.Equal("New session", Session.Create(Guid.NewGuid(), "ABC123", name, "hash", Now).Session!.Name);
+    }
+
+    [Fact]
+    public void Create_TakesTheIdAndTheTimeItIsGiven_AndTrimsTheName()
+    {
+        var id = Guid.NewGuid();
+
+        var creation = Session.Create(id, "ABC123", "  Friday  ", "hash", Now);
+
+        Assert.Equal(SessionNameFailure.None, creation.Failure);
+        Assert.Equal((id, "ABC123", "Friday", "hash", Now), (creation.Session!.Id, creation.Session.Code, creation.Session.Name, creation.Session.PasswordHash, creation.Session.CreatedAt));
+    }
+
+    [Fact]
+    public void Create_RefusesANameOverTheMaximum_AndMakesNoSession()
+    {
+        var creation = Session.Create(Guid.NewGuid(), "ABC123", new string('a', SessionNames.MaxLength + 1), "hash", Now);
+
+        Assert.Equal(SessionNameFailure.TooLong, creation.Failure);
+        Assert.Null(creation.Session);
+    }
+
+    [Fact]
+    public void Create_AcceptsANameOfExactlyTheMaximum_EvenWithSpacesAround()
+    {
+        var name = $"  {new string('a', SessionNames.MaxLength)}  ";
+
+        var creation = Session.Create(Guid.NewGuid(), "ABC123", name, "hash", Now);
+
+        Assert.Equal(new string('a', SessionNames.MaxLength), creation.Session!.Name);
     }
 
     [Fact]
@@ -51,21 +86,25 @@ public class SessionTests
     {
         var session = NewSession();
 
-        session.Rename("  Friday  ");
+        var failure = session.Rename("  Friday  ");
 
+        Assert.Equal(SessionNameFailure.None, failure);
         Assert.Equal("Friday", session.Name);
         Assert.Equal(new SessionRenamed(session.Id, "Friday"), Assert.Single(session.DrainEvents()));
     }
 
     [Theory]
-    [InlineData(null)]
-    [InlineData(" ")]
-    public void Rename_RefusesABlankName_AndRaisesNothing(string? name)
+    [InlineData(null, SessionNameFailure.Empty)]
+    [InlineData(" ", SessionNameFailure.Empty)]
+    [InlineData("over", SessionNameFailure.TooLong)]
+    public void Rename_RefusesABadName_ChangesNothing_AndRaisesNothing(string? name, SessionNameFailure expected)
     {
         var session = NewSession();
+        var badName = name == "over" ? new string('a', SessionNames.MaxLength + 1) : name;
 
-        Assert.Throws<ArgumentException>(() => session.Rename(name));
+        var failure = session.Rename(badName);
 
+        Assert.Equal(expected, failure);
         Assert.Equal("Party", session.Name);
         Assert.Empty(session.DrainEvents());
     }

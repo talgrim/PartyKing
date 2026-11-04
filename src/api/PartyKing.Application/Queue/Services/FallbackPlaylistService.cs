@@ -125,7 +125,7 @@ internal class FallbackPlaylistService : IFallbackPlaylistService
             return SessionErrors.NotFound();
         }
 
-        if (session.HostProfileId != profileId)
+        if (!session.IsHostedBy(profileId))
         {
             return Error.Forbidden(description: "Only the host of this session can list their playlists");
         }

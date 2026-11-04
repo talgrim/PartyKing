@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Mappings;
 using PartyKing.Application.Sessions.Helpers;
+using PartyKing.Application.System;
 using PartyKing.Contract.V1.Sessions;
 using PartyKing.Domain.Entities.Sessions;
 
@@ -24,15 +25,18 @@ internal class SessionAdminService : ISessionAdminService
 
     private readonly ISessionsRepository _sessionsRepository;
     private readonly IPasswordHasher _passwordHasher;
+    private readonly IDateTimeProvider _clock;
     private readonly ILogger<SessionAdminService> _logger;
 
     public SessionAdminService(
         ISessionsRepository sessionsRepository,
         IPasswordHasher passwordHasher,
+        IDateTimeProvider clock,
         ILogger<SessionAdminService> logger)
     {
         _sessionsRepository = sessionsRepository;
         _passwordHasher = passwordHasher;
+        _clock = clock;
         _logger = logger;
     }
 
@@ -41,21 +45,22 @@ internal class SessionAdminService : ISessionAdminService
         string? password,
         CancellationToken cancellationToken)
     {
-        if (SessionNamePolicy.Validate(name, allowBlank: true) is { } invalidName)
+        var typed = SessionPassword.Create(password);
+        if (typed.Password is null)
         {
-            return invalidName;
+            return SessionPasswordErrors.From(typed.Failure);
         }
 
-        if (SessionPasswordPolicy.Validate(password) is { } invalid)
-        {
-            return invalid;
-        }
-
-        var passwordHash = _passwordHasher.Hash(password!, PasswordHasher.SessionIterations);
+        var passwordHash = _passwordHasher.Hash(typed.Password.Value, PasswordHasher.SessionIterations);
+        var id = Guid.NewGuid();
 
         for (var attempt = 0; attempt < MaxCodeAttempts; attempt++)
         {
-            var session = new Session(SessionCodeGenerator.Generate(), name ?? string.Empty, passwordHash);
+            var creation = Session.Create(id, SessionCodeGenerator.Generate(), name, passwordHash, _clock.UtcNow.UtcDateTime);
+            if (creation.Session is not { } session)
+            {
+                return SessionNamePolicy.ToError(creation.Failure);
+            }
 
             if (await _sessionsRepository.TryAddAsync(session, cancellationToken))
             {

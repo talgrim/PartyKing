@@ -139,7 +139,7 @@ internal class GameLobby<TGame, TPlayer>
             return existing;
         }
 
-        var isHost = SessionRoles.IsHost(session, caller);
+        var isHost = session.IsHostedBy(caller.ProfileId);
         var typed = name?.Trim() ?? string.Empty;
         var playerName = isHost
             ? LobbyNames.HostName(session.HostProfile?.DisplayName)

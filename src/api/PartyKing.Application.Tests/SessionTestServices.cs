@@ -41,6 +41,7 @@ internal static class SessionTestServices
         return new SessionAdminService(
             sessions,
             new PasswordHasher(),
+            new FakeClock(),
             NullLogger<SessionAdminService>.Instance);
     }
 }

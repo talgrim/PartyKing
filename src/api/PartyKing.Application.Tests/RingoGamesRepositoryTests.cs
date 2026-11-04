@@ -41,7 +41,7 @@ public class RingoGamesRepositoryTests : IAsyncLifetime
         {
             await dbContext.Database.MigrateAsync();
 
-            var session = new Session("ABC123", "Party", "hash");
+            var session = new Session(Guid.NewGuid(), "ABC123", "Party", "hash", DateTime.UtcNow);
             _sessionId = session.Id;
             dbContext.Sessions.Add(session);
             await dbContext.SaveChangesAsync();

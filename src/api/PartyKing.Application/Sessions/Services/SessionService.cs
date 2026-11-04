@@ -3,6 +3,8 @@ using ErrorOr;
 using PartyKing.Application.Mappings;
 using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Contract.V1.Sessions;
+using PartyKing.Domain.Entities.Sessions;
+using PartyKing.Domain.Enums;
 
 namespace PartyKing.Application.Sessions.Services;
 
@@ -64,13 +66,14 @@ internal class SessionService : ISessionService
         string? name,
         CancellationToken cancellationToken)
     {
-        if (SessionNamePolicy.Validate(name, allowBlank: false) is { } invalid)
+        var result = await _sessionsRepository.RenameAsync(id, name, cancellationToken);
+
+        return result switch
         {
-            return invalid;
-        }
-
-        var renamed = await _sessionsRepository.RenameAsync(id, name!, cancellationToken);
-
-        return renamed ? Result.Success : SessionErrors.NotFound();
+            SessionRenameResult.Renamed => Result.Success,
+            SessionRenameResult.NameTooLong => SessionNamePolicy.ToError(SessionNameFailure.TooLong),
+            SessionRenameResult.NameEmpty => SessionNamePolicy.ToError(SessionNameFailure.Empty),
+            _ => SessionErrors.NotFound()
+        };
     }
 }

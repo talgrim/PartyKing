@@ -133,7 +133,7 @@ internal class QueueService : IQueueService
             return SessionErrors.NotFound();
         }
 
-        if (session.HostProfileId != hostProfileId)
+        if (!session.IsHostedBy(hostProfileId))
         {
             return Error.Forbidden(description: "Only the host of this session can advance its queue");
         }
@@ -153,7 +153,7 @@ internal class QueueService : IQueueService
             return SessionErrors.NotFound();
         }
 
-        if (!SessionRoles.IsManager(session, caller))
+        if (!session.IsManagedBy(caller.ProfileId, caller.IsAdmin))
         {
             return Error.Forbidden(description: "Only the host or an admin can remove songs from the queue");
         }

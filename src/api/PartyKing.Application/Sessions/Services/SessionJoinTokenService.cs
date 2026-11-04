@@ -59,13 +59,13 @@ internal class SessionJoinTokenService : ISessionJoinTokenService
             return SessionErrors.NotFound();
         }
 
-        if (!SessionRoles.IsManager(session, caller))
+        if (!session.IsManagedBy(caller.ProfileId, caller.IsAdmin))
         {
             return Error.Forbidden(description: "Only the host or an admin can create a join code");
         }
 
         var expiresAt = _clock.UtcNow.Add(JoinTokenLifetime);
-        var payload = new JoinTokenPayload(id, SessionAccessStamp.For(session.PasswordHash));
+        var payload = new JoinTokenPayload(id, session.AccessStamp);
 
         return new JoinTokenDto(_joinTokenProtector.Protect(payload, expiresAt), expiresAt);
     }
@@ -79,13 +79,13 @@ internal class SessionJoinTokenService : ISessionJoinTokenService
         if (session is null
             || payload is null
             || payload.SessionId != id
-            || payload.AccessStamp != SessionAccessStamp.For(session.PasswordHash))
+            || !session.IsUnlockedBy(payload.AccessStamp))
         {
             _logger.LogWarning("Failed to join session {SessionId}: invalid or expired join code", id);
             return Error.Unauthorized(description: "Invalid or expired join code");
         }
 
         _logger.LogDebug("Joined session {SessionId} with a join code", id);
-        return SessionAccessStamp.For(session.PasswordHash);
+        return session.AccessStamp;
     }
 }

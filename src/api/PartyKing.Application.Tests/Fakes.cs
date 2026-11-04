@@ -45,7 +45,7 @@ internal class FakeSessionsRepository : ISessionsRepository
 
     public Session AddSession(string? hostProfileId = null, string passwordHash = "hash")
     {
-        var session = new Session("ABC123", "Party", passwordHash) { HostProfileId = hostProfileId };
+        var session = new Session(Guid.NewGuid(), "ABC123", "Party", passwordHash, DateTime.UtcNow) { HostProfileId = hostProfileId };
         _sessions.Add(session);
         return session;
     }
@@ -74,17 +74,24 @@ internal class FakeSessionsRepository : ISessionsRepository
     public Task<IReadOnlyList<Session>> GetAllAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
     public List<(Guid Id, string Name)> Renamed { get; } = [];
 
-    public async Task<bool> RenameAsync(Guid id, string name, CancellationToken cancellationToken)
+    public async Task<SessionRenameResult> RenameAsync(Guid id, string? name, CancellationToken cancellationToken)
     {
         var session = _sessions.FirstOrDefault(x => x.Id == id);
-        if (session is not null)
+        if (session is null)
         {
-            session.Rename(name);
-            Renamed.Add((id, session.Name));
-            await DispatchAsync(session.DrainEvents());
+            return SessionRenameResult.SessionNotFound;
         }
 
-        return session is not null;
+        var failure = session.Rename(name);
+        if (failure != SessionNameFailure.None)
+        {
+            return failure == SessionNameFailure.Empty ? SessionRenameResult.NameEmpty : SessionRenameResult.NameTooLong;
+        }
+
+        Renamed.Add((id, session.Name));
+        await DispatchAsync(session.DrainEvents());
+
+        return SessionRenameResult.Renamed;
     }
     public List<(Guid Id, string? PlaylistId, string? Name, bool Shuffle)> FallbackPlaylistSet { get; } = [];
     public List<(Guid Id, int Cursor)> FallbackCursorSet { get; } = [];

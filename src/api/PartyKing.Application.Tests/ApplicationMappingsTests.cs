@@ -25,7 +25,7 @@ public class ApplicationMappingsTests
     [Fact]
     public void Session_ToDto_WithoutHost_HasNoHost()
     {
-        var session = new Session("ABC123", "Party", "hash");
+        var session = new Session(Guid.NewGuid(), "ABC123", "Party", "hash", DateTime.UtcNow);
 
         var dto = session.ToDto();
 
@@ -43,7 +43,7 @@ public class ApplicationMappingsTests
     {
         var profile = new SpotifyProfile("profile-id", "refresh");
         profile.UpdateDisplayName("Display Name");
-        var session = new Session("ABC123", "Party", "hash")
+        var session = new Session(Guid.NewGuid(), "ABC123", "Party", "hash", DateTime.UtcNow)
         {
             HostProfileId = "profile-id",
             HostProfile = profile,
@@ -62,7 +62,7 @@ public class ApplicationMappingsTests
     [Fact]
     public void Session_ToDto_HostProfileNotLoaded_FallsBackToProfileId()
     {
-        var session = new Session("ABC123", "Party", "hash") { HostProfileId = "profile-id" };
+        var session = new Session(Guid.NewGuid(), "ABC123", "Party", "hash", DateTime.UtcNow) { HostProfileId = "profile-id" };
 
         var dto = session.ToDto();
 
@@ -73,7 +73,7 @@ public class ApplicationMappingsTests
     [Fact]
     public void Session_ToDto_ProfileWithoutDisplayName_FallsBackToProfileId()
     {
-        var session = new Session("ABC123", "Party", "hash")
+        var session = new Session(Guid.NewGuid(), "ABC123", "Party", "hash", DateTime.UtcNow)
         {
             HostProfileId = "profile-id",
             HostProfile = new SpotifyProfile("profile-id", "refresh")
