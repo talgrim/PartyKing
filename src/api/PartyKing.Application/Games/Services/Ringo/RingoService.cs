@@ -57,8 +57,6 @@ public interface IRingoService
 
 internal class RingoService : IRingoService
 {
-    public const int CardCount = 52;
-
     private readonly IRingoGamesRepository _games;
     private readonly IDateTimeProvider _clock;
     private readonly RingoGameLobby _lobby;
@@ -150,11 +148,6 @@ internal class RingoService : IRingoService
         if (access.IsError)
         {
             return access.Errors;
-        }
-
-        if (cardId is < 0 or >= CardCount)
-        {
-            return Error.Validation("Ringo.InvalidCard", $"The card id must be between 0 and {CardCount - 1}.");
         }
 
         // Without players there is no name to record, so the role stands in

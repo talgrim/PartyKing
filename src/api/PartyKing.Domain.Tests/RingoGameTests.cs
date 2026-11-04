@@ -53,6 +53,27 @@ public class RingoGameTests
         Assert.Equal(ola.PlayerId, _game.CurrentPlayerId);
     }
 
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(RingoGame.CardCount)]
+    public void Flip_OfACardOutsideTheDeck_IsRefusedAndChangesNothing(int cardId)
+    {
+        var outcome = _game.Flip(cardId, "admin", null, Now);
+
+        Assert.Equal(RingoFailure.InvalidCard, outcome.Failure);
+        Assert.False(outcome.Changed);
+        Assert.Empty(_game.Flips);
+        Assert.Null(_game.PendingCardId);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(RingoGame.CardCount - 1)]
+    public void Flip_OfTheFirstAndTheLastCard_IsAccepted(int cardId)
+    {
+        Assert.True(_game.Flip(cardId, "admin", null, Now).Changed);
+    }
+
     [Fact]
     public void Flip_ChecksTheTurnBeforeEverythingElse()
     {

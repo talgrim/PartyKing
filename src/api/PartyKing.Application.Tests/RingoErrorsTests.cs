@@ -15,6 +15,7 @@ public class RingoErrorsTests
     private static readonly Dictionary<RingoFailure, Expected> Golden = new()
     {
         [RingoFailure.NoGame] = new(ErrorType.NotFound, "Ringo.NotFound", "The session has no Ringo game."),
+        [RingoFailure.InvalidCard] = new(ErrorType.Validation, "Ringo.InvalidCard", "The card id must be between 0 and 51."),
         [RingoFailure.NotYourTurn] = new(ErrorType.Conflict, "Ringo.NotYourTurn", "It is another player's turn."),
         [RingoFailure.GameOver] = new(ErrorType.Conflict, "Ringo.GameOver", "The fourth king ended the game."),
         [RingoFailure.CardPending] = new(

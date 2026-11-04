@@ -5,6 +5,9 @@ public enum RingoFailure
 {
     NoGame,
 
+    /// <summary>The card id is not one of the 52 cards of the deck.</summary>
+    InvalidCard,
+
     /// <summary>The caller is a player but it is another player's turn.</summary>
     NotYourTurn,
 
