@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using PartyKing.Application.Configuration;
+using PartyKing.Application.Events;
 using PartyKing.Application.Slideshow.Models;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Contract.V1.Slideshow;
@@ -38,6 +39,7 @@ public class SlideshowServiceTests
             _scheduler,
             _notifier);
         _sessionId = _sessions.AddSession().Id;
+        _repository.Events = TestEvents.SlideshowDispatcher(_service);
     }
 
     private static UploadedFile File(string name, byte[] content) =>
@@ -96,7 +98,7 @@ public class SlideshowServiceTests
     [Fact]
     public async Task GetImage_UsesTheSessionsSlideTime()
     {
-        _repository.Settings[_sessionId] = new SlideshowSettings { SessionId = _sessionId, SlideTime = TimeSpan.FromSeconds(30) };
+        _repository.Settings[_sessionId] = new SlideshowSettings(_sessionId, true, TimeSpan.FromSeconds(30), true);
         _repository.NextImages[_sessionId] = Image("a.jpg");
 
         var result = await _service.GetImageAsync(_sessionId, CancellationToken.None);
@@ -407,6 +409,9 @@ public class SlideshowServiceTests
     {
         public Dictionary<Guid, SlideshowImageReadResult> NextImages { get; } = [];
         public Dictionary<Guid, SlideshowSettings> Settings { get; } = [];
+
+        /// <summary>Receives the events a settings change raised; none until the test wires it.</summary>
+        public IDomainEventDispatcher? Events { get; set; }
         public List<SlideshowImageWriteModel> Added { get; } = [];
         public List<SlideshowImageReadResult> Deleted { get; } = [];
         public List<string> DeletedDirectories { get; } = [];
@@ -417,10 +422,27 @@ public class SlideshowServiceTests
         public Task<SlideshowSettings?> GetSettingsAsync(Guid sessionId, CancellationToken cancellationToken) =>
             Task.FromResult(Settings.GetValueOrDefault(sessionId));
 
-        public Task SaveSettingsAsync(SlideshowSettings settings, CancellationToken cancellationToken)
+        // Runs the real aggregate and dispatches like the real repository does
+        public async Task<SlideshowSettingsFailure> ChangeAsync(
+            Guid sessionId,
+            bool autoRepeat,
+            bool startFromBeginning,
+            TimeSpan? slideTime,
+            TimeSpan defaultSlideTime,
+            CancellationToken cancellationToken)
         {
-            Settings[settings.SessionId] = settings;
-            return Task.CompletedTask;
+            var settings = Settings.GetValueOrDefault(sessionId) ?? SlideshowSettings.Defaults(sessionId, defaultSlideTime);
+            var failure = settings.Change(autoRepeat, startFromBeginning, slideTime, defaultSlideTime);
+            if (failure == SlideshowSettingsFailure.None)
+            {
+                Settings[sessionId] = settings;
+                if (Events is not null)
+                {
+                    await Events.DispatchAsync(settings);
+                }
+            }
+
+            return failure;
         }
 
         public Task AddSlideshowImageAsync(SlideshowImageWriteModel slideshowImage, CancellationToken cancellationToken)

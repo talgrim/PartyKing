@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using PartyKing.Application.Events;
 using PartyKing.Domain.Entities.Slideshow;
 using PartyKing.Application.Ports;
 using PartyKing.Domain.Repositories;
@@ -13,23 +14,29 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository, ISlidesho
     // Uploads used to live under this folder, shared by all sessions
     private const string LegacyImagesDirectory = "SampleImages";
 
+    // The second attempt finds the row the racing save inserted; settings rows are never deleted, bar the cascade of a session
+    private const int MaxSettingsAttempts = 2;
+
     // Archives are built here and deleted once the download ends; leftovers of a crashed process are swept at startup
     private static readonly string ArchiveDirectory = Path.Combine(Path.GetTempPath(), "partyking-archives");
 
     private readonly IDbContextFactory<ReaderDbContext> _readerFactory;
     private readonly IDbContextFactory<WriterDbContext> _writerFactory;
     private readonly ILogger<SlideshowImagesRepository> _logger;
+    private readonly IDomainEventDispatcher _dispatcher;
 
     private string _rootPath = null!;
 
     public SlideshowImagesRepository(
         IDbContextFactory<ReaderDbContext> readerFactory,
         IDbContextFactory<WriterDbContext> writerFactory,
-        ILogger<SlideshowImagesRepository> logger)
+        ILogger<SlideshowImagesRepository> logger,
+        IDomainEventDispatcher dispatcher)
     {
         _readerFactory = readerFactory;
         _writerFactory = writerFactory;
         _logger = logger;
+        _dispatcher = dispatcher;
     }
 
     public Task InitializeAsync(string rootPath, string uploadedPath, CancellationToken cancellationToken)
@@ -65,23 +72,48 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository, ISlidesho
             .FirstOrDefaultAsync(x => x.SessionId == sessionId, cancellationToken);
     }
 
-    public async Task SaveSettingsAsync(SlideshowSettings settings, CancellationToken cancellationToken)
+    public async Task<SlideshowSettingsFailure> ChangeAsync(
+        Guid sessionId,
+        bool autoRepeat,
+        bool startFromBeginning,
+        TimeSpan? slideTime,
+        TimeSpan defaultSlideTime,
+        CancellationToken cancellationToken)
     {
-        await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
-
-        var updated = await dbContext.SlideshowSettings
-            .Where(x => x.SessionId == settings.SessionId)
-            .ExecuteUpdateAsync(
-                x => x
-                    .SetProperty(s => s.AutoRepeat, settings.AutoRepeat)
-                    .SetProperty(s => s.StartFromBeginning, settings.StartFromBeginning)
-                    .SetProperty(s => s.SlideTime, settings.SlideTime),
-                cancellationToken);
-
-        if (updated == 0)
+        for (var attempt = 1; ; attempt++)
         {
-            dbContext.SlideshowSettings.Add(settings);
-            await dbContext.SaveChangesAsync(cancellationToken);
+            await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
+
+            var settings = await dbContext.SlideshowSettings
+                .FirstOrDefaultAsync(x => x.SessionId == sessionId, cancellationToken);
+            var isNew = settings is null;
+            settings ??= SlideshowSettings.Defaults(sessionId, defaultSlideTime);
+
+            var failure = settings.Change(autoRepeat, startFromBeginning, slideTime, defaultSlideTime);
+            if (failure != SlideshowSettingsFailure.None)
+            {
+                return failure;
+            }
+
+            if (isNew)
+            {
+                dbContext.SlideshowSettings.Add(settings);
+            }
+
+            try
+            {
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException ex) when (isNew && ex.IsUniqueViolation() && attempt < MaxSettingsAttempts)
+            {
+                // Another save inserted the session's row between the read and ours: start again on top of it
+                continue;
+            }
+
+            // Not tied to the request: an aborted request must not drop the follow-up of a change that is saved
+            await _dispatcher.DispatchAsync(settings.DrainEvents(), CancellationToken.None);
+
+            return SlideshowSettingsFailure.None;
         }
     }
 

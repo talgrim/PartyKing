@@ -42,13 +42,13 @@ public interface ISlideshowService
 
     /// <summary>Drops the slideshow state and the uploaded files of a deleted session.</summary>
     Task DeleteSessionAsync(Guid sessionId);
+
+    /// <summary>A new slide time applies to the slide on display right away, counted from now.</summary>
+    Task RestartSlideAsync(Guid sessionId, CancellationToken cancellationToken);
 }
 
 internal class SlideshowService : ISlideshowService
 {
-    private static readonly TimeSpan MinSlideTime = TimeSpan.FromSeconds(1);
-    private static readonly TimeSpan MaxSlideTime = TimeSpan.FromHours(1);
-
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ISlideshowImagesRepository _imagesRepository;
     private readonly ISlideshowSettingsRepository _settingsRepository;
@@ -105,9 +105,11 @@ internal class SlideshowService : ISlideshowService
         SlideshowSettingsDto settings,
         CancellationToken cancellationToken)
     {
-        if (settings.SlideTime is { } slideTime && (slideTime < MinSlideTime || slideTime > MaxSlideTime))
+        // Refused before anything is looked up, like before; the rule is the aggregate's
+        var rangeFailure = SlideshowSettings.ValidateSlideTime(settings.SlideTime);
+        if (rangeFailure != SlideshowSettingsFailure.None)
         {
-            return Error.Validation(description: "The slide time must be between 1 second and 1 hour");
+            return ToError(rangeFailure);
         }
 
         if (await _sessionsRepository.GetAsync(sessionId, cancellationToken) is null)
@@ -115,13 +117,21 @@ internal class SlideshowService : ISlideshowService
             return SessionErrors.NotFound();
         }
 
-        await _settingsRepository.SaveSettingsAsync(
-            settings.ToDomain(sessionId, _slideshowConfiguration.SlideTime),
+        // The slide on display is restarted by the handler of the SlideshowSettingsChanged event
+        var failure = await _settingsRepository.ChangeAsync(
+            sessionId,
+            settings.AutoRepeat,
+            settings.StartFromBeginning,
+            settings.SlideTime,
+            _slideshowConfiguration.SlideTime,
             cancellationToken);
 
-        await RestartSlideAsync(sessionId, cancellationToken);
+        return failure == SlideshowSettingsFailure.None ? Result.Success : ToError(failure);
+    }
 
-        return Result.Success;
+    private static Error ToError(SlideshowSettingsFailure failure)
+    {
+        return Error.Validation(description: "The slide time must be between 1 second and 1 hour");
     }
 
     public async Task UploadImagesAsync(
@@ -281,7 +291,7 @@ internal class SlideshowService : ISlideshowService
     }
 
     /// <summary>A new slide time applies to the slide on display right away, counted from now.</summary>
-    private async Task RestartSlideAsync(Guid sessionId, CancellationToken cancellationToken)
+    public async Task RestartSlideAsync(Guid sessionId, CancellationToken cancellationToken)
     {
         if (!_slides.TryGetValue(sessionId, out var slide))
         {
@@ -350,13 +360,7 @@ internal class SlideshowService : ISlideshowService
     private async Task<SlideshowSettings> LoadSettingsAsync(Guid sessionId, CancellationToken cancellationToken)
     {
         return await _settingsRepository.GetSettingsAsync(sessionId, cancellationToken)
-               ?? new SlideshowSettings
-               {
-                   SessionId = sessionId,
-                   AutoRepeat = true,
-                   SlideTime = _slideshowConfiguration.SlideTime,
-                   StartFromBeginning = true
-               };
+               ?? SlideshowSettings.Defaults(sessionId, _slideshowConfiguration.SlideTime);
     }
 
     private async Task UploadImageAsync(

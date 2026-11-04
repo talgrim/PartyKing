@@ -247,6 +247,14 @@ internal class FakeSlideshowService : ISlideshowService
 
     public Task InitializeAsync(string rootPath, CancellationToken cancellationToken) => Task.CompletedTask;
 
+    public List<Guid> RestartedSlides { get; } = [];
+
+    public Task RestartSlideAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        RestartedSlides.Add(sessionId);
+        return Task.CompletedTask;
+    }
+
     public Task<ErrorOr<SlideshowSettingsDto>> GetSettingsAsync(Guid sessionId, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
 

@@ -159,47 +159,12 @@ public class ApplicationMappingsTests
     [Fact]
     public void SlideshowSettings_ToDto_MapsAllFields()
     {
-        var settings = new SlideshowSettings
-        {
-            SessionId = Guid.NewGuid(),
-            AutoRepeat = true,
-            StartFromBeginning = false,
-            SlideTime = TimeSpan.FromSeconds(12)
-        };
+        var settings = new SlideshowSettings(Guid.NewGuid(), true, TimeSpan.FromSeconds(12), false);
 
         var dto = settings.ToDto();
 
         Assert.True(dto.AutoRepeat);
         Assert.False(dto.StartFromBeginning);
         Assert.Equal(TimeSpan.FromSeconds(12), dto.SlideTime);
-    }
-
-    [Fact]
-    public void SlideshowSettingsDto_ToDomain_UsesGivenSlideTime()
-    {
-        var sessionId = Guid.NewGuid();
-        var dto = new SlideshowSettingsDto
-        {
-            AutoRepeat = false,
-            StartFromBeginning = true,
-            SlideTime = TimeSpan.FromSeconds(8)
-        };
-
-        var settings = dto.ToDomain(sessionId, TimeSpan.FromSeconds(30));
-
-        Assert.Equal(sessionId, settings.SessionId);
-        Assert.False(settings.AutoRepeat);
-        Assert.True(settings.StartFromBeginning);
-        Assert.Equal(TimeSpan.FromSeconds(8), settings.SlideTime);
-    }
-
-    [Fact]
-    public void SlideshowSettingsDto_ToDomain_WithoutSlideTime_UsesDefault()
-    {
-        var dto = new SlideshowSettingsDto { AutoRepeat = true, StartFromBeginning = true };
-
-        var settings = dto.ToDomain(Guid.NewGuid(), TimeSpan.FromSeconds(30));
-
-        Assert.Equal(TimeSpan.FromSeconds(30), settings.SlideTime);
     }
 }

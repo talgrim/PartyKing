@@ -10,6 +10,7 @@ using PartyKing.Application.Games.Services.Base;
 using PartyKing.Application.Games.Services.NeverHaveIEver;
 using PartyKing.Application.Games.Services.Resistance;
 using PartyKing.Application.Games.Services.Ringo;
+using PartyKing.Application.Lyrics.Handlers;
 using PartyKing.Application.Lyrics.Services;
 using PartyKing.Application.Player.Services;
 using PartyKing.Application.Queue.Handlers;
@@ -17,6 +18,7 @@ using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Handlers;
 using PartyKing.Application.Sessions.Services;
+using PartyKing.Application.Slideshow.Handlers;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Application.System;
@@ -24,8 +26,10 @@ using PartyKing.Domain.Events;
 using PartyKing.Domain.Events.Games.Base;
 using PartyKing.Domain.Events.Games.Resistance;
 using PartyKing.Domain.Events.Games.Ringo;
+using PartyKing.Domain.Events.Lyrics;
 using PartyKing.Domain.Events.Queue;
 using PartyKing.Domain.Events.Sessions;
+using PartyKing.Domain.Events.Slideshow;
 
 namespace PartyKing.Application;
 
@@ -123,6 +127,7 @@ public static class DependencyInjection
         services.AddSingleton<ISlideshowScheduler, SlideshowScheduler>();
         services.AddSingleton<ISlideshowService, SlideshowService>();
         services.AddScoped<ISlideshowArchiveService, SlideshowArchiveService>();
+        services.AddDomainEventHandler<SlideshowSettingsChanged, SlideshowSettingsHandler>();
         services.Configure<SlideshowConfiguration>(configuration.GetSection(SlideshowConfiguration.SectionName));
     }
 
@@ -142,6 +147,7 @@ public static class DependencyInjection
     {
         services.AddSingleton<ILyricsCache, LyricsCache>();
         services.AddScoped<ILyricsService, LyricsService>();
+        services.AddDomainEventHandler<LyricsOffsetChanged, LyricsPushHandler>();
     }
 
     private static void RegisterGames(this IServiceCollection services, IConfiguration configuration)

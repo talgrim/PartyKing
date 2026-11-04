@@ -2,7 +2,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using PartyKing.Application.Events;
 using PartyKing.Application.Games.Handlers;
+using PartyKing.Application.Lyrics.Handlers;
 using PartyKing.Application.Queue.Services;
+using PartyKing.Application.Slideshow.Handlers;
 using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Handlers;
 using PartyKing.Application.Sessions.Services;
@@ -12,7 +14,9 @@ using PartyKing.Domain.Events;
 using PartyKing.Domain.Events.Games.Base;
 using PartyKing.Domain.Events.Games.Resistance;
 using PartyKing.Domain.Events.Games.Ringo;
+using PartyKing.Domain.Events.Lyrics;
 using PartyKing.Domain.Events.Sessions;
+using PartyKing.Domain.Events.Slideshow;
 
 namespace PartyKing.Application.Tests;
 
@@ -84,6 +88,30 @@ internal static class TestEvents
         services.AddScoped<IDomainEventHandler<FallbackPlaylistChanged>, FallbackPlaylistHandler>();
         services.AddScoped<IDomainEventHandler<FallbackPlaylistCleared>, FallbackPlaylistHandler>();
         services.AddScoped<IDomainEventHandler<SessionDeleted>, FallbackPlaylistHandler>();
+
+        return new DomainEventDispatcher(
+            services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<DomainEventDispatcher>.Instance);
+    }
+
+    /// <summary>The real dispatcher with the lyrics push handler over the given notifier: what the API wires up.</summary>
+    public static IDomainEventDispatcher LyricsDispatcher(ILyricsNotifier notifier)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(notifier);
+        services.AddScoped<IDomainEventHandler<LyricsOffsetChanged>, LyricsPushHandler>();
+
+        return new DomainEventDispatcher(
+            services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<DomainEventDispatcher>.Instance);
+    }
+
+    /// <summary>The real dispatcher with the slideshow settings handler over the given service: what the API wires up.</summary>
+    public static IDomainEventDispatcher SlideshowDispatcher(ISlideshowService slideshow)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(slideshow);
+        services.AddScoped<IDomainEventHandler<SlideshowSettingsChanged>, SlideshowSettingsHandler>();
 
         return new DomainEventDispatcher(
             services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),
