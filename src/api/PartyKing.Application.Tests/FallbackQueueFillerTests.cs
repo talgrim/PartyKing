@@ -149,6 +149,20 @@ public class FallbackQueueFillerTests
     }
 
     [Fact]
+    public async Task Ensure_WhenThePlaylistWasRewoundWhileSpotifyWasRead_KeepsTheRewind()
+    {
+        _session.FallbackPlaylistId = "playlist";
+        _session.FallbackCursor = 2;
+        _spotify.OnReadTracks = () => _session.SetFallbackPlaylist("playlist", "Mix", false);
+
+        await _filler.EnsureQueuedAsync(_session.Id, CancellationToken.None);
+
+        Assert.Single(_queue.Added);
+        Assert.Equal(0, _session.FallbackCursor);
+        Assert.Empty(_sessions.FallbackCursorSet);
+    }
+
+    [Fact]
     public async Task Ensure_WhenAGuestQueuedASongMeanwhile_KeepsTheCursor()
     {
         _session.FallbackPlaylistId = "playlist";

@@ -122,16 +122,22 @@ internal class FakeSessionsRepository : ISessionsRepository
         return session is not null;
     }
 
-    public Task<bool> SetFallbackCursorAsync(Guid id, int cursor, CancellationToken cancellationToken)
+    public Task<bool> SetFallbackCursorAsync(
+        Guid id,
+        string playlistId,
+        int expectedCursor,
+        int cursor,
+        CancellationToken cancellationToken)
     {
         var session = _sessions.FirstOrDefault(x => x.Id == id);
-        if (session is not null)
+        var matches = session is not null && session.FallbackPlaylistId == playlistId && session.FallbackCursor == expectedCursor;
+        if (matches)
         {
-            session.FallbackCursor = cursor;
+            session!.FallbackCursor = cursor;
             FallbackCursorSet.Add((id, cursor));
         }
 
-        return Task.FromResult(session is not null);
+        return Task.FromResult(matches);
     }
 
     public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken)

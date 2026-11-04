@@ -123,10 +123,43 @@ public class SessionsRepositoryEventsTests : IAsyncLifetime
         await _repository.SetFallbackPlaylistAsync(_sessionId, "playlist", "Mix", false, Ct);
         _dispatcher.Events.Clear();
 
-        await _repository.SetFallbackCursorAsync(_sessionId, 3, Ct);
+        var stored = await _repository.SetFallbackCursorAsync(_sessionId, "playlist", 0, 3, Ct);
 
+        Assert.True(stored);
         Assert.Equal(3, (await ReadAsync()).FallbackCursor);
         Assert.Empty(_dispatcher.Events);
+    }
+
+    [Fact]
+    public async Task SetFallbackCursor_AfterThePlaylistChanged_KeepsTheNewPlaylistsCursor()
+    {
+        await _repository.SetFallbackPlaylistAsync(_sessionId, "old", "Old", false, Ct);
+        await _repository.SetFallbackPlaylistAsync(_sessionId, "new", "New", false, Ct);
+
+        var stored = await _repository.SetFallbackCursorAsync(_sessionId, "old", 0, 3, Ct);
+
+        Assert.False(stored);
+        Assert.Equal(0, (await ReadAsync()).FallbackCursor);
+    }
+
+    [Fact]
+    public async Task SetFallbackCursor_AfterTheSamePlaylistWasRewound_KeepsTheRewind()
+    {
+        await _repository.SetFallbackPlaylistAsync(_sessionId, "playlist", "Mix", false, Ct);
+        await _repository.SetFallbackCursorAsync(_sessionId, "playlist", 0, 5, Ct);
+        // Saving the playlist again rewinds it to the start
+        await _repository.SetFallbackPlaylistAsync(_sessionId, "playlist", "Mix", false, Ct);
+
+        var stored = await _repository.SetFallbackCursorAsync(_sessionId, "playlist", 5, 6, Ct);
+
+        Assert.False(stored);
+        Assert.Equal(0, (await ReadAsync()).FallbackCursor);
+    }
+
+    [Fact]
+    public async Task SetFallbackCursor_OfAnUnknownSession_AnswersFalse()
+    {
+        Assert.False(await _repository.SetFallbackCursorAsync(Guid.NewGuid(), "playlist", 0, 1, Ct));
     }
 
     [Fact]

@@ -1,4 +1,6 @@
 using PartyKing.Domain.Entities.Sessions;
+using PartyKing.Domain.Entities.Spotify;
+using PartyKing.Domain.Enums;
 using PartyKing.Domain.Events.Sessions;
 
 namespace PartyKing.Domain.Tests;
@@ -177,6 +179,178 @@ public class SessionTests
         session.Release();
 
         Assert.Equal(new HostReleased(session.Id, null), Assert.Single(session.DrainEvents()));
+    }
+
+    [Fact]
+    public void ClaimHost_OfASessionWithoutAHost_MakesTheProfileTheHost_AndRaisesHostClaimed()
+    {
+        var session = NewSession();
+
+        var outcome = session.ClaimHost("host-1");
+
+        Assert.Equal(HostClaimOutcome.Claimed, outcome);
+        Assert.Equal("host-1", session.HostProfileId);
+        Assert.Equal(new HostClaimed(session.Id, "host-1"), Assert.Single(session.DrainEvents()));
+    }
+
+    [Fact]
+    public void ClaimHost_ByTheCurrentHost_ChangesAndRaisesNothing()
+    {
+        var session = NewSession();
+        session.ClaimHost("host-1");
+        session.DrainEvents();
+
+        var outcome = session.ClaimHost("host-1");
+
+        Assert.Equal(HostClaimOutcome.AlreadyHost, outcome);
+        Assert.Equal("host-1", session.HostProfileId);
+        Assert.Empty(session.DrainEvents());
+    }
+
+    [Fact]
+    public void ClaimHost_ByAnotherProfile_IsRefused_AndKeepsTheFirstHost()
+    {
+        var session = NewSession();
+        session.ClaimHost("host-1");
+        session.DrainEvents();
+
+        var outcome = session.ClaimHost("host-2");
+
+        Assert.Equal(HostClaimOutcome.HostedByAnother, outcome);
+        Assert.Equal("host-1", session.HostProfileId);
+        Assert.Empty(session.DrainEvents());
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("  ")]
+    public void ClaimHost_WithoutAProfileId_Throws(string? profileId)
+    {
+        Assert.ThrowsAny<ArgumentException>(() => NewSession().ClaimHost(profileId!));
+    }
+
+    [Fact]
+    public void ClaimHost_AfterARelease_LetsAnotherProfileClaim()
+    {
+        var session = NewSession();
+        session.ClaimHost("host-1");
+        session.Release();
+
+        Assert.Equal(HostClaimOutcome.Claimed, session.ClaimHost("host-2"));
+    }
+
+    private static Song Track(string id)
+    {
+        return new Song
+        {
+            Id = id,
+            Uri = $"spotify:track:{id}",
+            Name = id,
+            Artists = [],
+            Album = new Album { Name = "Album", Artists = [] }
+        };
+    }
+
+    private static Session PlaylistSession(bool shuffle, int cursor = 0)
+    {
+        var session = NewSession();
+        session.SetFallbackPlaylist("playlist", "Mix", shuffle);
+        session.FallbackCursor = cursor;
+        return session;
+    }
+
+    [Fact]
+    public void NextFallbackTrack_InOrder_TakesTheTrackAtTheCursor_AndAdvancesIt()
+    {
+        var session = PlaylistSession(shuffle: false, cursor: 1);
+
+        var pick = session.NextFallbackTrack([Track("a"), Track("b"), Track("c")], null, new Random(1));
+
+        Assert.Equal("spotify:track:b", pick!.Track.Uri);
+        Assert.Equal(2, pick.NextCursor);
+    }
+
+    [Fact]
+    public void NextFallbackTrack_AfterTheLastTrack_WrapsToTheFirst()
+    {
+        var session = PlaylistSession(shuffle: false, cursor: 2);
+
+        var pick = session.NextFallbackTrack([Track("a"), Track("b"), Track("c")], null, new Random(1));
+
+        Assert.Equal("spotify:track:c", pick!.Track.Uri);
+        Assert.Equal(0, pick.NextCursor);
+    }
+
+    [Fact]
+    public void NextFallbackTrack_WithACursorBeyondAShorterPlaylist_WrapsIt()
+    {
+        var session = PlaylistSession(shuffle: false, cursor: 7);
+
+        var pick = session.NextFallbackTrack([Track("a"), Track("b"), Track("c")], null, new Random(1));
+
+        Assert.Equal("spotify:track:b", pick!.Track.Uri);
+        Assert.Equal(2, pick.NextCursor);
+    }
+
+    [Fact]
+    public void NextFallbackTrack_DoesNotMoveTheCursorItself()
+    {
+        var session = PlaylistSession(shuffle: false, cursor: 1);
+
+        session.NextFallbackTrack([Track("a"), Track("b")], null, new Random(1));
+
+        Assert.Equal(1, session.FallbackCursor);
+    }
+
+    [Fact]
+    public void NextFallbackTrack_WhenShuffled_NeverPicksThePlayingTrack_AndHasNoCursor()
+    {
+        var session = PlaylistSession(shuffle: true);
+        var tracks = new[] { Track("a"), Track("b"), Track("c") };
+        var random = new Random(7);
+
+        for (var i = 0; i < 50; i++)
+        {
+            var pick = session.NextFallbackTrack(tracks, "spotify:track:a", random);
+
+            Assert.NotEqual("spotify:track:a", pick!.Track.Uri);
+            Assert.Null(pick.NextCursor);
+        }
+    }
+
+    [Fact]
+    public void NextFallbackTrack_WhenShuffled_CanPickEveryOtherTrack()
+    {
+        var session = PlaylistSession(shuffle: true);
+        var tracks = new[] { Track("a"), Track("b"), Track("c") };
+        var random = new Random(7);
+
+        var picked = Enumerable.Range(0, 100)
+            .Select(_ => session.NextFallbackTrack(tracks, "spotify:track:a", random)!.Track.Uri)
+            .ToHashSet();
+
+        Assert.Equal(["spotify:track:b", "spotify:track:c"], picked.Order());
+    }
+
+    [Fact]
+    public void NextFallbackTrack_WhenShuffledWithOnlyThePlayingTrack_PicksItAnyway()
+    {
+        var session = PlaylistSession(shuffle: true);
+
+        var pick = session.NextFallbackTrack([Track("a")], "spotify:track:a", new Random(1));
+
+        Assert.Equal("spotify:track:a", pick!.Track.Uri);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void NextFallbackTrack_WithoutTracks_PicksNothing(bool shuffle)
+    {
+        var session = PlaylistSession(shuffle);
+
+        Assert.Null(session.NextFallbackTrack([], null, new Random(1)));
     }
 
     [Fact]
