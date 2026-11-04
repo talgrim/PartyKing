@@ -11,7 +11,7 @@ public static partial class SessionMappings
     [MapPropertyFromSource(nameof(SessionDto.HasHost), Use = nameof(HasHostOf))]
     public static partial SessionDto ToDto(this Session session);
 
-    private static string? HostNameOf(Session session) => session.HostProfile?.DisplayName ?? session.HostProfileId;
+    private static string? HostNameOf(Session session) => session.HostDisplayName ?? session.HostProfileId;
 
     private static bool HasHostOf(Session session) => session.HostProfileId is not null;
 }

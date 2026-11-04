@@ -7,7 +7,9 @@ using PartyKing.Application.Configuration;
 using PartyKing.Application.Mappings;
 using PartyKing.Application.Realtime;
 using PartyKing.Application.Slideshow.Models;
+using PartyKing.Application.Sessions;
 using PartyKing.Application.Sessions.Helpers;
+using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.System;
 using PartyKing.Contract.V1.Slideshow;
 using PartyKing.Domain.Entities.Slideshow;
@@ -17,9 +19,17 @@ namespace PartyKing.Application.Slideshow.Services;
 public interface ISlideshowService
 {
     Task InitializeAsync(string rootPath, CancellationToken cancellationToken);
-    Task<ErrorOr<SlideshowSettingsDto>> GetSettingsAsync(Guid sessionId, CancellationToken cancellationToken);
+
+    /// <summary>The session's slideshow settings. Host or admin only (Forbidden otherwise).</summary>
+    Task<ErrorOr<SlideshowSettingsDto>> GetSettingsAsync(
+        Guid sessionId,
+        SessionCaller caller,
+        CancellationToken cancellationToken);
+
+    /// <summary>Host or admin only (Forbidden otherwise).</summary>
     Task<ErrorOr<Success>> UpdateSettingsAsync(
         Guid sessionId,
+        SessionCaller caller,
         SlideshowSettingsDto settings,
         CancellationToken cancellationToken);
     Task UploadImagesAsync(
@@ -34,8 +44,15 @@ public interface ISlideshowService
     /// </summary>
     Task<SlideshowImageDto?> GetImageAsync(Guid sessionId, CancellationToken cancellationToken);
 
-    /// <summary>Starts the server timer for the session (if it was idle) on behalf of a displaying connection.</summary>
-    Task WatchAsync(Guid sessionId, string connectionId, CancellationToken cancellationToken);
+    /// <summary>
+    /// Starts the server timer for the session (if it was idle) on behalf of a displaying connection. Host or admin
+    /// only (Forbidden otherwise): nobody else displays the slideshow.
+    /// </summary>
+    Task<ErrorOr<Success>> WatchAsync(
+        Guid sessionId,
+        SessionCaller caller,
+        string connectionId,
+        CancellationToken cancellationToken);
 
     /// <summary>Stops the connection watching; the timer stops with the last watcher.</summary>
     void Unwatch(string connectionId);
@@ -52,7 +69,7 @@ internal class SlideshowService : ISlideshowService
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ISlideshowImagesRepository _imagesRepository;
     private readonly ISlideshowSettingsRepository _settingsRepository;
-    private readonly ISessionsRepository _sessionsRepository;
+    private readonly ISessionAuthorizer _sessionAuthorizer;
     private readonly SlideshowConfiguration _slideshowConfiguration;
     private readonly ISlideshowWatchers _watchers;
     private readonly ISlideshowScheduler _scheduler;
@@ -64,7 +81,7 @@ internal class SlideshowService : ISlideshowService
         IDateTimeProvider dateTimeProvider,
         ISlideshowImagesRepository imagesRepository,
         ISlideshowSettingsRepository settingsRepository,
-        ISessionsRepository sessionsRepository,
+        ISessionAuthorizer sessionAuthorizer,
         IOptions<SlideshowConfiguration> slideshowSettingsOptions,
         ISlideshowWatchers watchers,
         ISlideshowScheduler scheduler,
@@ -73,7 +90,7 @@ internal class SlideshowService : ISlideshowService
         _dateTimeProvider = dateTimeProvider;
         _imagesRepository = imagesRepository;
         _settingsRepository = settingsRepository;
-        _sessionsRepository = sessionsRepository;
+        _sessionAuthorizer = sessionAuthorizer;
         _slideshowConfiguration = slideshowSettingsOptions.Value;
         _watchers = watchers;
         _scheduler = scheduler;
@@ -88,33 +105,41 @@ internal class SlideshowService : ISlideshowService
             cancellationToken);
     }
 
-    public async Task<ErrorOr<SlideshowSettingsDto>> GetSettingsAsync(
+    public Task<ErrorOr<SlideshowSettingsDto>> GetSettingsAsync(
         Guid sessionId,
+        SessionCaller caller,
         CancellationToken cancellationToken)
     {
-        if (await _sessionsRepository.GetAsync(sessionId, cancellationToken) is null)
-        {
-            return SessionErrors.NotFound();
-        }
-
-        return (await LoadSettingsAsync(sessionId, cancellationToken)).ToDto();
+        return _sessionAuthorizer.RunAsManagerAsync<SlideshowSettingsDto>(
+            sessionId,
+            caller,
+            async () => (await LoadSettingsAsync(sessionId, cancellationToken)).ToDto(),
+            cancellationToken);
     }
 
-    public async Task<ErrorOr<Success>> UpdateSettingsAsync(
+    public Task<ErrorOr<Success>> UpdateSettingsAsync(
+        Guid sessionId,
+        SessionCaller caller,
+        SlideshowSettingsDto settings,
+        CancellationToken cancellationToken)
+    {
+        return _sessionAuthorizer.RunAsManagerAsync(
+            sessionId,
+            caller,
+            () => ChangeSettingsAsync(sessionId, settings, cancellationToken),
+            cancellationToken);
+    }
+
+    private async Task<ErrorOr<Success>> ChangeSettingsAsync(
         Guid sessionId,
         SlideshowSettingsDto settings,
         CancellationToken cancellationToken)
     {
-        // Refused before anything is looked up, like before; the rule is the aggregate's
+        // Refused before the row is read; the rule is the aggregate's
         var rangeFailure = SlideshowSettings.ValidateSlideTime(settings.SlideTime);
         if (rangeFailure != SlideshowSettingsFailure.None)
         {
             return ToError(rangeFailure);
-        }
-
-        if (await _sessionsRepository.GetAsync(sessionId, cancellationToken) is null)
-        {
-            return SessionErrors.NotFound();
         }
 
         // The slide on display is restarted by the handler of the SlideshowSettingsChanged event
@@ -141,7 +166,7 @@ internal class SlideshowService : ISlideshowService
         CancellationToken cancellationToken)
     {
         // Validate everything first so a bad file doesn't leave the rest of the batch half stored
-        var validated = new List<(UploadedFile File, ValidatedImage Image)>();
+        var validated = new List<(UploadedFile File, ImageFormat Image)>();
         foreach (var file in files)
         {
             await using var content = file.OpenRead();
@@ -190,7 +215,25 @@ internal class SlideshowService : ISlideshowService
         }
     }
 
-    public async Task WatchAsync(Guid sessionId, string connectionId, CancellationToken cancellationToken)
+    public Task<ErrorOr<Success>> WatchAsync(
+        Guid sessionId,
+        SessionCaller caller,
+        string connectionId,
+        CancellationToken cancellationToken)
+    {
+        return _sessionAuthorizer.RunAsManagerAsync<Success>(
+            sessionId,
+            caller,
+            async () =>
+            {
+                await StartWatchingAsync(sessionId, connectionId, cancellationToken);
+
+                return Result.Success;
+            },
+            cancellationToken);
+    }
+
+    private async Task StartWatchingAsync(Guid sessionId, string connectionId, CancellationToken cancellationToken)
     {
         _watchers.Watch(sessionId, connectionId);
 
@@ -366,7 +409,7 @@ internal class SlideshowService : ISlideshowService
     private async Task UploadImageAsync(
         Guid sessionId,
         UploadedFile file,
-        ValidatedImage image,
+        ImageFormat image,
         bool deleteAfterPresentation,
         CancellationToken cancellationToken)
     {

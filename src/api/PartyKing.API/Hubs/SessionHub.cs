@@ -1,5 +1,4 @@
 using PartyKing.API.Cookies;
-using PartyKing.Application.Ports;
 using Microsoft.AspNetCore.SignalR;
 using PartyKing.API.Authentication;
 using PartyKing.Application.Sessions.Services;
@@ -20,18 +19,15 @@ public class SessionHub : Hub
     private const string SessionIdItem = "sessionId";
 
     private readonly ISessionAccessService _accessService;
-    private readonly ISessionAuthorizer _sessionAuthorizer;
     private readonly ISignedCookies _cookies;
     private readonly ISlideshowService _slideshowService;
 
     public SessionHub(
         ISessionAccessService accessService,
-        ISessionAuthorizer sessionAuthorizer,
         ISignedCookies cookies,
         ISlideshowService slideshowService)
     {
         _accessService = accessService;
-        _sessionAuthorizer = sessionAuthorizer;
         _cookies = cookies;
         _slideshowService = slideshowService;
     }
@@ -81,12 +77,15 @@ public class SessionHub : Hub
 
         var caller = await http.ReadSessionCallerAsync(_cookies);
 
-        if ((await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, caller, Context.ConnectionAborted)).IsError)
+        var watching = await _slideshowService.WatchAsync(
+            sessionId,
+            caller,
+            Context.ConnectionId,
+            Context.ConnectionAborted);
+        if (watching.IsError)
         {
             throw new HubException("Only the host or an admin can watch the slideshow");
         }
-
-        await _slideshowService.WatchAsync(sessionId, Context.ConnectionId, Context.ConnectionAborted);
     }
 
     public void StopWatchingSlideshow()

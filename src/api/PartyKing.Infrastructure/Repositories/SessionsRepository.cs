@@ -50,21 +50,41 @@ internal class SessionsRepository : ISessionsRepository
     {
         await using var dbContext = await _readerDbContextFactory.CreateDbContextAsync(cancellationToken);
 
-        return await dbContext.Sessions
+        // Only the host's display name is read, never the profile with its refresh token
+        var rows = await dbContext.Sessions
             .AsNoTracking()
-            .Include(x => x.HostProfile)
             .OrderBy(x => x.CreatedAt)
+            .Select(x => new
+            {
+                Session = x,
+                HostName = dbContext.SpotifyProfiles
+                    .Where(profile => profile.Id == x.HostProfileId)
+                    .Select(profile => profile.DisplayName)
+                    .FirstOrDefault()
+            })
             .ToListAsync(cancellationToken);
+
+        return rows.Select(x => x.Session.WithHostDisplayName(x.HostName)).ToList();
     }
 
     public async Task<Session?> GetAsync(Guid id, CancellationToken cancellationToken)
     {
         await using var dbContext = await _readerDbContextFactory.CreateDbContextAsync(cancellationToken);
 
-        return await dbContext.Sessions
+        var row = await dbContext.Sessions
             .AsNoTracking()
-            .Include(x => x.HostProfile)
-            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+            .Where(x => x.Id == id)
+            .Select(x => new
+            {
+                Session = x,
+                HostName = dbContext.SpotifyProfiles
+                    .Where(profile => profile.Id == x.HostProfileId)
+                    .Select(profile => profile.DisplayName)
+                    .FirstOrDefault()
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return row?.Session.WithHostDisplayName(row.HostName);
     }
 
     public async Task<SessionRenameResult> RenameAsync(Guid id, string? name, CancellationToken cancellationToken)

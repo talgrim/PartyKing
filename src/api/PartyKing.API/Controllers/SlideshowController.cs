@@ -1,11 +1,9 @@
 using PartyKing.API.Cookies;
 using System.ComponentModel.DataAnnotations;
-using ErrorOr;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using PartyKing.API.Authentication;
 using PartyKing.API.Authorization;
-using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Slideshow.Models;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Contract.V1.Slideshow;
@@ -22,7 +20,6 @@ public class SlideshowController : CoreController
 
     private readonly ISlideshowService _slideshowService;
     private readonly ISlideshowArchiveService _archiveService;
-    private readonly ISessionAuthorizer _sessionAuthorizer;
     private readonly ISignedCookies _cookies;
     private readonly ILogger<SlideshowController> _logger;
 
@@ -30,14 +27,12 @@ public class SlideshowController : CoreController
         IHttpContextAccessor httpContextAccessor,
         ISlideshowService slideshowService,
         ISlideshowArchiveService archiveService,
-        ISessionAuthorizer sessionAuthorizer,
         ISignedCookies cookies,
         ILogger<SlideshowController> logger)
         : base(httpContextAccessor)
     {
         _slideshowService = slideshowService;
         _archiveService = archiveService;
-        _sessionAuthorizer = sessionAuthorizer;
         _cookies = cookies;
         _logger = logger;
     }
@@ -89,12 +84,9 @@ public class SlideshowController : CoreController
     [ProducesResponseType<SlideshowSettingsDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetSettings(Guid sessionId, CancellationToken cancellationToken)
     {
-        if (await AuthorizeManagerAsync(sessionId, cancellationToken) is { IsError: true } denied)
-        {
-            return Problem(denied.Errors);
-        }
+        var caller = await HttpContext.ReadSessionCallerAsync(_cookies);
 
-        var result = await _slideshowService.GetSettingsAsync(sessionId, cancellationToken);
+        var result = await _slideshowService.GetSettingsAsync(sessionId, caller, cancellationToken);
 
         return result.Match(Ok, Problem);
     }
@@ -108,12 +100,9 @@ public class SlideshowController : CoreController
         [FromBody] SlideshowSettingsDto settings,
         CancellationToken cancellationToken)
     {
-        if (await AuthorizeManagerAsync(sessionId, cancellationToken) is { IsError: true } denied)
-        {
-            return Problem(denied.Errors);
-        }
+        var caller = await HttpContext.ReadSessionCallerAsync(_cookies);
 
-        var result = await _slideshowService.UpdateSettingsAsync(sessionId, settings, cancellationToken);
+        var result = await _slideshowService.UpdateSettingsAsync(sessionId, caller, settings, cancellationToken);
 
         return result.Match(_ => NoContent(), Problem);
     }
@@ -156,14 +145,5 @@ public class SlideshowController : CoreController
             FileOptions.DeleteOnClose | FileOptions.Asynchronous | FileOptions.SequentialScan);
 
         return File(stream, "application/zip", result.Value.DownloadName);
-    }
-
-    private async Task<ErrorOr<Success>> AuthorizeManagerAsync(
-        Guid sessionId,
-        CancellationToken cancellationToken)
-    {
-        var caller = await HttpContext.ReadSessionCallerAsync(_cookies);
-
-        return await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, caller, cancellationToken);
     }
 }

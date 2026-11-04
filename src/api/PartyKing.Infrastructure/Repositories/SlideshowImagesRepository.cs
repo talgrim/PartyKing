@@ -148,14 +148,24 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository, ISlidesho
         SlideshowSettings settings,
         CancellationToken cancellationToken)
     {
-        if (currentId is not null)
+        // One context for both halves: the image being left is marked and the next one chosen in a single save
+        await using var context = await _writerFactory.CreateDbContextAsync(cancellationToken);
+
+        var images = await context.Images.Where(x => x.SessionId == sessionId).ToListAsync(cancellationToken);
+        var step = SlideshowPlaylist.Of(sessionId, images).Advance(currentId, settings);
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        if (step.Repeated)
         {
-            await MarkImageAsPresentedAsync(currentId.Value, cancellationToken);
+            _logger.LogInformation("Reached the end of uploaded images. Repeating from begin");
+        }
+        else if (step.Image is null)
+        {
+            _logger.LogDebug("Auto repeat is off and last uploaded image was already viewed");
         }
 
-        var result = await GetUploadedImageAsync(sessionId, currentId, settings, cancellationToken);
-
-        return new SlideshowImageReadResult(result?.Id ?? currentId, result?.ToReadModel());
+        return new SlideshowImageReadResult(step.Image?.Id ?? currentId, step.Image?.ToReadModel());
     }
 
     public async Task DeleteImageAsync(SlideshowImageReadResult image, CancellationToken cancellationToken)
@@ -276,35 +286,6 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository, ISlidesho
         return Task.CompletedTask;
     }
 
-    private async Task<SlideshowImage?> GetUploadedImageAsync(
-        Guid sessionId,
-        Guid? currentId,
-        SlideshowSettings settings,
-        CancellationToken cancellationToken)
-    {
-        await using var context = await _readerFactory.CreateDbContextAsync(cancellationToken);
-
-        var result = await context.Images
-            .Where(x => x.SessionId == sessionId && (settings.StartFromBeginning || !x.WasPresented))
-            .OrderBy(x => x.Id)
-            .FirstOrDefaultAsync(x => x.Id > (currentId ?? Guid.Empty), cancellationToken);
-
-        if (result is not null)
-        {
-            return result;
-        }
-
-        if (currentId.HasValue && settings.AutoRepeat)
-        {
-            _logger.LogInformation("Reached the end of uploaded images. Repeating from begin");
-            return await GetUploadedImageAsync(sessionId, null, settings, cancellationToken);
-        }
-
-        _logger.LogDebug("Auto repeat is off and last uploaded image was already viewed");
-
-        return result;
-    }
-
     private void DeletePhotoFile(SlideshowImageReadModel currentPhoto)
     {
         _logger.LogInformation("Deleting photo {FileName} after presentation", currentPhoto.ImageName);
@@ -374,19 +355,5 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository, ISlidesho
         {
             _logger.LogError(e, "Failed to delete directory {Directory}", directory);
         }
-    }
-
-    private async Task MarkImageAsPresentedAsync(Guid currentId, CancellationToken cancellationToken)
-    {
-        await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
-
-        var currentImage = await dbContext.Images.FirstOrDefaultAsync(x => x.Id == currentId, cancellationToken);
-        if (currentImage is null)
-        {
-            return;
-        }
-
-        currentImage.WasPresented = true;
-        await dbContext.SaveChangesAsync(cancellationToken);
     }
 }
