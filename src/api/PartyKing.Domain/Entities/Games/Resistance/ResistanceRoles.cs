@@ -446,6 +446,7 @@ public static class ResistanceRoles
             player.MissionCard = null;
             player.PassedLeaderWindow = false;
             player.Role = null;
+            player.IsReclaimable = false;
         }
 
         game.LeaderPlayerId = null;

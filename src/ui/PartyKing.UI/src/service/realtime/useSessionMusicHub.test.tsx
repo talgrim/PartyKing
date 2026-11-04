@@ -8,6 +8,7 @@ import {
   RESISTANCE_TV_HUB_TOPICS,
   resistancePresenceKey,
   resistanceKey,
+  resistanceClaimableSeatsKey,
   resistanceLobbyKey,
   SESSION_HUB_TOPICS,
   SessionHubTopic,
@@ -113,7 +114,7 @@ describe('useSessionMusicHub, Resistance pushes', () => {
     push('ResistanceLobbyChanged');
     await wait(1000);
 
-    expect(mutated()).toEqual([resistanceLobbyKey(SESSION)]);
+    expect(mutated()).toEqual([resistanceLobbyKey(SESSION), resistanceClaimableSeatsKey(SESSION)]);
   });
 
   it('turns ResistanceOpened and ResistanceLobbyChanged of one opening into one lobby fetch', async () => {
@@ -145,7 +146,7 @@ describe('useSessionMusicHub, Resistance pushes', () => {
     push('ResistanceLobbyChanged');
     await wait(300);
 
-    expect(mutated()).toEqual([resistanceLobbyKey(SESSION)]);
+    expect(mutated()).toEqual([resistanceLobbyKey(SESSION), resistanceClaimableSeatsKey(SESSION)]);
   });
 
   it('asks the server for the topics it was given', async () => {
@@ -166,7 +167,7 @@ describe('useSessionMusicHub, Resistance pushes', () => {
 
     act(() => hub.reconnected!());
 
-    expect(mutated()).toEqual([resistanceLobbyKey(SESSION)]);
+    expect(mutated()).toEqual([resistanceLobbyKey(SESSION), resistanceClaimableSeatsKey(SESSION)]);
   });
 
   it('fetches the game and the lobby again after a reconnect of the board', async () => {
@@ -174,7 +175,7 @@ describe('useSessionMusicHub, Resistance pushes', () => {
 
     act(() => hub.reconnected!());
 
-    expect(mutated()).toEqual([resistanceKey(SESSION), resistanceLobbyKey(SESSION)]);
+    expect(mutated()).toEqual([resistanceKey(SESSION), resistanceLobbyKey(SESSION), resistanceClaimableSeatsKey(SESSION)]);
   });
 
   it('leaves a pending fetch undone when the page goes away', async () => {

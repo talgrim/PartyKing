@@ -236,7 +236,7 @@ public class RingoServiceTests
     {
         var joined = await _service.JoinAsync(_id, name, new GameCaller("guest", false), CancellationToken.None);
 
-        return new GameCaller("guest", false, joined.Value);
+        return new GameCaller("guest", false, joined.Value.PlayerId, joined.Value.Stamp);
     }
 
     [Fact]
@@ -311,7 +311,7 @@ public class RingoServiceTests
         var again = await _service.JoinAsync(_id, "Other", ola, CancellationToken.None);
         var game = await _service.GetAsync(_id, Admin, CancellationToken.None);
 
-        Assert.Equal(ola.PlayerId, again.Value);
+        Assert.Equal(ola.PlayerId, again.Value.PlayerId);
         Assert.Single(game.Value.Players);
     }
 
@@ -324,7 +324,7 @@ public class RingoServiceTests
         var game = await _service.GetAsync(_id, Admin, CancellationToken.None);
 
         var player = Assert.Single(game.Value.Players);
-        Assert.Equal(joined.Value, player.Id);
+        Assert.Equal(joined.Value.PlayerId, player.Id);
         Assert.Equal("Host (host)", player.Name);
     }
 

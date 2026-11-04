@@ -8,6 +8,7 @@ import { useViewerRole } from '@/service/endpoints/sessions/useViewerRole';
 import { SessionHubTopic } from '@/service/realtime/sessionMusicEvents';
 import { useSessionMusicHub } from '@/service/realtime/useSessionMusicHub';
 import { useTranslation } from 'react-i18next';
+import { GameSeatPicker } from './GameSeatPicker';
 
 const MAX_NAME_LENGTH = 30;
 
@@ -90,13 +91,54 @@ type Props = {
   onJoined: () => void;
   /** The board, shown once the caller joined. */
   board: ReactNode;
+  /**
+   * What lets a player return to a game that already started (Resistance): the seats the host released and how to take
+   * one over. Without it a started game is a dead end for anyone who is not a player of it.
+   */
+  returnToGame?: {
+    seats: { id: string; name: string }[] | undefined;
+    claim: (playerId: string) => Promise<void>;
+    onReload: () => void;
+  };
+};
+
+/** The session host gets their own seat back with their login, so they need no name and no release. */
+const HostRejoin = ({ join, onJoined }: Pick<FormProps, 'join' | 'onJoined'>): ReactNode => {
+  const { t } = useTranslation();
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  const rejoin = async () => {
+    setBusy(true);
+    setFailed(false);
+    try {
+      await join('');
+      onJoined();
+    } catch {
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-2 mt-4">
+      <p className="text-slate-400">{t('lobby.rejoinHostHint')}</p>
+      {failed && <p className="text-amber-500">{t('lobby.rejoinHostFailed')}</p>}
+      <div>
+        <Button variant="contained" disabled={busy} onClick={() => void rejoin()}>
+          {t('lobby.rejoinHost')}
+        </Button>
+      </div>
+    </div>
+  );
 };
 
 /**
  * Where a guest (or the host or an admin) joins an open game by name; once joined it shows the board. A game that
  * does not exist or a locked session sends the caller back to the session page.
  */
-export const GameJoin = ({ sessionId, topics, title, lobby, error, isLoading, join, onJoined, board }: Props): ReactNode => {
+export const GameJoin = ({ sessionId, topics, title, lobby, error, isLoading, join, onJoined, board, returnToGame }: Props): ReactNode => {
   const { t } = useTranslation();
   const { isHost, isAdmin } = useViewerRole(sessionId);
   const [wasJoined, setWasJoined] = useState(false);
@@ -118,12 +160,18 @@ export const GameJoin = ({ sessionId, topics, title, lobby, error, isLoading, jo
 
   if (lobby.isStarted && !wasJoined) {
     return (
-      <p className="p-4 pt-10 text-slate-200">
-        {t('lobby.started')}{' '}
-        <Link to={sessionPath(sessionId)} className="underline">
-          {t('common.backToSession')}
-        </Link>
-      </p>
+      <div className="p-4 pt-10 max-w-sm mx-auto text-slate-200">
+        <p>
+          {t('lobby.started')}{' '}
+          <Link to={sessionPath(sessionId)} className="underline">
+            {t('common.backToSession')}
+          </Link>
+        </p>
+        {isHost && <HostRejoin join={join} onJoined={onJoined} />}
+        {returnToGame && (
+          <GameSeatPicker seats={returnToGame.seats} claim={returnToGame.claim} onClaimed={onJoined} onReload={returnToGame.onReload} />
+        )}
+      </div>
     );
   }
 

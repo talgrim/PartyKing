@@ -96,6 +96,8 @@ export const ringoKey = (sessionId: string) => ['ringo', sessionId] as const;
 export const ringoLobbyKey = (sessionId: string) => ['ringo-lobby', sessionId] as const;
 export const resistanceKey = (sessionId: string) => ['resistance', sessionId] as const;
 export const resistanceLobbyKey = (sessionId: string) => ['resistance-lobby', sessionId] as const;
+/** The seats of a started game a guest may take over; follows the lobby pushes (a seat released, claimed or its player back). */
+export const resistanceClaimableSeatsKey = (sessionId: string) => ['resistance-claimable-seats', sessionId] as const;
 export const resistancePresenceKey = (sessionId: string) => ['resistance-presence', sessionId] as const;
 export const slideshowKey = (sessionId: string) => ({ endpoint: `/sessions/${sessionId}/photos/current` });
 

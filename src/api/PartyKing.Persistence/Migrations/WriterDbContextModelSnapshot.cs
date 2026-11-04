@@ -132,7 +132,16 @@ namespace PartyKing.Persistence.Migrations
                     b.Property<Guid>("PlayerId")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("ClaimStamp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsAdminSeat")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("IsOnTeam")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsReclaimable")
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTimeOffset>("JoinedAt")
@@ -558,12 +567,10 @@ namespace PartyKing.Persistence.Migrations
 
             modelBuilder.Entity("PartyKing.Domain.Entities.Sessions.Session", b =>
                 {
-                    b.HasOne("PartyKing.Domain.Entities.Spotify.SpotifyProfile", "HostProfile")
+                    b.HasOne("PartyKing.Domain.Entities.Spotify.SpotifyProfile", null)
                         .WithMany()
                         .HasForeignKey("HostProfileId")
                         .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("HostProfile");
                 });
 
             modelBuilder.Entity("PartyKing.Domain.Entities.Slideshow.SlideshowImage", b =>

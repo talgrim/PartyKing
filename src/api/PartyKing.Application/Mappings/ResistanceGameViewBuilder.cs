@@ -63,7 +63,7 @@ internal sealed class ResistanceGameViewBuilder
     {
         _view.CreatedAt = _game.CreatedAt;
         _view.IsOpen = _game.IsOpen;
-        _view.Players = _players.Select(x => new ResistancePlayerDto(x.PlayerId, x.DisplayName)).ToList();
+        _view.Players = _players.Select(x => new ResistancePlayerDto(x.PlayerId, x.DisplayName, x.IsReclaimable, x.IsManagerSeat)).ToList();
         _view.YourPlayerId = _you?.PlayerId;
         _view.MaxPlayers = ResistanceGame.MaxPlayers;
         _view.StartedAt = _game.StartedAt;

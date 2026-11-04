@@ -51,23 +51,23 @@ const PlayerRow = ({ player, onTurn, onKick }: RowProps): ReactNode => {
   );
 };
 
-type Props = {
+type Props<P extends Player> = {
   open: boolean;
   onClose: () => void;
-  players: Player[];
+  players: P[];
   /** The player whose turn it is, marked in the list; none for a game without turns. */
   currentPlayerId?: string | null;
   /** What dragging changes, e.g. "the turn order". */
   orderLabel: string;
   /** Saves the new order; rejects when the players changed meanwhile. */
-  onReorder: (reordered: Player[]) => Promise<unknown>;
-  onKick: (player: Player) => Promise<unknown>;
+  onReorder: (reordered: P[]) => Promise<unknown>;
+  onKick: (player: P) => Promise<unknown>;
   /** Fetches the game again after a failed change. */
   onReload: () => void;
 };
 
 /** Host and admins: the players of a game in order (drag to change it) and a way to kick a player. */
-export const GamePlayersDialog = ({
+export const GamePlayersDialog = <P extends Player>({
   open,
   onClose,
   players,
@@ -76,7 +76,7 @@ export const GamePlayersDialog = ({
   onReorder,
   onKick,
   onReload,
-}: Props): ReactNode => {
+}: Props<P>): ReactNode => {
   const { t } = useTranslation();
   const [message, setMessage] = useState<string>();
   const sensors = useSensors(
@@ -98,7 +98,7 @@ export const GamePlayersDialog = ({
     }
   };
 
-  const kick = async (player: Player) => {
+  const kick = async (player: P) => {
     setMessage(undefined);
     try {
       await onKick(player);

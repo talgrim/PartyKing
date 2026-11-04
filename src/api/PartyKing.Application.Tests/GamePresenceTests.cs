@@ -45,6 +45,54 @@ public class GamePresenceTests
     }
 
     [Fact]
+    public async Task Forget_DropsEveryConnectionAtOnceAndPushesTheNewList()
+    {
+        await Connect("c1");
+        await Connect("c2");
+        _notifier.PresenceChanges.Clear();
+
+        await _presence.ForgetAsync(GameKind.Resistance, _sessionId, _player);
+
+        Assert.Empty(Online());
+        Assert.Equal([], Assert.Single(_notifier.PresenceChanges).Presence.OnlinePlayerIds);
+    }
+
+    [Fact]
+    public async Task Forget_LeavesTheOtherPlayersOnline_AndALateDisconnectOfTheOldTabChangesNothing()
+    {
+        var other = Guid.NewGuid();
+        await Connect("old-tab");
+        await Connect("c2", other);
+
+        await _presence.ForgetAsync(GameKind.Resistance, _sessionId, _player);
+        _presence.Disconnect("old-tab");
+        await Task.Delay(Grace * 3);
+
+        Assert.Equal([other], Online());
+    }
+
+    [Fact]
+    public async Task Forget_AllowsThePlayerToComeBackOnANewConnection()
+    {
+        await Connect("old-tab");
+        await _presence.ForgetAsync(GameKind.Resistance, _sessionId, _player);
+
+        await Connect("new-tab");
+        _presence.Disconnect("old-tab");
+        await Task.Delay(Grace * 3);
+
+        Assert.Equal([_player], Online());
+    }
+
+    [Fact]
+    public async Task Forget_OfAPlayerWhoWasNeverOnline_PushesNothing()
+    {
+        await _presence.ForgetAsync(GameKind.Resistance, _sessionId, _player);
+
+        Assert.Empty(_notifier.PresenceChanges);
+    }
+
+    [Fact]
     public async Task Connect_MakesThePlayerOnlineAndPushesTheWholeList()
     {
         await Connect("c1");

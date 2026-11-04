@@ -4,7 +4,7 @@ import { resistancePhaseDescription } from './resistancePhase';
 const game = (count: number, extra: Partial<ResistanceGameDto> = {}): ResistanceGameDto => ({
   createdAt: '2026-10-29T10:00:00Z',
   isOpen: true,
-  players: Array.from({ length: count }, (_, i) => ({ id: `p${i}`, name: `Gracz ${i}` })),
+  players: Array.from({ length: count }, (_, i) => ({ id: `p${i}`, name: `Gracz ${i}`, isSeatReleased: false, isManagerSeat: false })),
   yourPlayerId: null,
   maxPlayers: 10,
   startedAt: null,

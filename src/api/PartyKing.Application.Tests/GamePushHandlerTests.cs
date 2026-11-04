@@ -96,6 +96,18 @@ public class GamePushHandlerTests
     }
 
     [Fact]
+    public async Task TheResistanceLobbyPush_AlsoFollowsASeatBeingReleasedOrTakenOver()
+    {
+        var handler = new ResistanceLobbyPushHandler(_resistance);
+
+        await handler.HandleAsync(new ResistanceSeatReleaseChanged(_id, Guid.NewGuid(), true), Ct);
+        await handler.HandleAsync(new ResistanceSeatClaimed(_id, Guid.NewGuid()), Ct);
+
+        Assert.Equal([_id, _id], _resistance.LobbyChanges);
+        Assert.Empty(_resistance.Changes);
+    }
+
+    [Fact]
     public async Task TheResistanceLobbyPush_IgnoresTheLobbyEventsOfRingoAndAReorder()
     {
         var handler = new ResistanceLobbyPushHandler(_resistance);

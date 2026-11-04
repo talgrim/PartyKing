@@ -29,10 +29,10 @@ public interface IResistanceLobbyService
     Task<ErrorOr<ResistanceGameDto>> OpenAsync(Guid sessionId, GameCaller caller, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Joins an open game and returns the new player's id (the caller's own one when they already joined), see
+    /// Joins an open game and returns the new player's seat (the caller's own one when they already joined), see
     /// <see cref="GameLobby{TGame,TPlayer}.JoinAsync"/>. Conflict as well when the game has 10 players.
     /// </summary>
-    Task<ErrorOr<Guid>> JoinAsync(
+    Task<ErrorOr<GameSeat>> JoinAsync(
         Guid sessionId, string? name, GameCaller caller, CancellationToken cancellationToken);
 
     /// <summary>
@@ -109,7 +109,7 @@ internal class ResistanceLobbyService : IResistanceLobbyService
     public async Task<ErrorOr<ResistanceLobbyDto>> GetLobbyAsync(
         Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
     {
-        var lobby = await _games.GetLobbyAsync(sessionId, caller.PlayerId, cancellationToken);
+        var lobby = await _games.GetLobbyAsync(sessionId, caller.PlayerId, caller.PlayerStamp, cancellationToken);
 
         return lobby is null
             ? ResistanceErrors.NoGame
@@ -176,7 +176,7 @@ internal class ResistanceLobbyService : IResistanceLobbyService
         return result.IsError ? result.Errors : View(result.Value, caller);
     }
 
-    public Task<ErrorOr<Guid>> JoinAsync(
+    public Task<ErrorOr<GameSeat>> JoinAsync(
         Guid sessionId, string? name, GameCaller caller, CancellationToken cancellationToken)
     {
         return _lobby.JoinAsync(sessionId, name, caller, cancellationToken);

@@ -37,7 +37,7 @@ internal class ResistanceGamesRepository
     /// needs four fields. <c>StartedAt != null</c> is <c>IsStarted</c> (the property itself is not mapped).
     /// </summary>
     public async Task<ResistanceLobbyState?> GetLobbyAsync(
-        Guid sessionId, Guid? playerId, CancellationToken cancellationToken)
+        Guid sessionId, Guid? playerId, Guid? playerStamp, CancellationToken cancellationToken)
     {
         await using var dbContext = await CreateReaderAsync(cancellationToken);
 
@@ -48,7 +48,7 @@ internal class ResistanceGamesRepository
                 x.CreatedAt,
                 x.IsOpen,
                 x.StartedAt != null,
-                playerId != null && x.Players.Any(p => p.PlayerId == playerId)))
+                playerId != null && x.Players.Any(p => p.PlayerId == playerId && p.ClaimStamp == playerStamp)))
             .FirstOrDefaultAsync(cancellationToken);
     }
 

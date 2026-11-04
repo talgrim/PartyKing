@@ -24,6 +24,7 @@ import {
   queueSongsKey,
   ringoKey,
   resistanceKey,
+  resistanceClaimableSeatsKey,
   resistanceLobbyKey,
   resistancePresenceKey,
   ringoLobbyKey,
@@ -81,6 +82,7 @@ const revalidateSession = (sessionId: string, topics: readonly SessionHubTopic[]
   }
   if (topics.includes('resistanceLobby')) {
     void mutate(resistanceLobbyKey(sessionId));
+    void mutate(resistanceClaimableSeatsKey(sessionId));
   }
   if (topics.includes('resistancePresence')) {
     void mutate(resistancePresenceKey(sessionId));
@@ -132,7 +134,10 @@ export const useSessionMusicHub = (
     const revalidateResistanceLobby = () => {
       clearTimeout(resistanceLobbyTimer);
       resistanceLobbyTimer = setTimeout(
-        () => void mutate(resistanceLobbyKey(sessionId)),
+        () => {
+          void mutate(resistanceLobbyKey(sessionId));
+          void mutate(resistanceClaimableSeatsKey(sessionId));
+        },
         RESISTANCE_LOBBY_REVALIDATE_DEBOUNCE_MS + Math.random() * RESISTANCE_LOBBY_REVALIDATE_JITTER_MS,
       );
     };

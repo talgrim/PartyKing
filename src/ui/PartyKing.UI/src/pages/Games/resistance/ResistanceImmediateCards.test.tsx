@@ -10,7 +10,7 @@ import { ResistanceTakeResponsibility } from './ResistanceTakeResponsibility';
 import { ResistancePlotPlayer } from './ResistancePlotPlayer';
 import { resistancePhaseDescription } from './resistancePhase';
 
-const players = ['Ala', 'Bartek', 'Celina', 'Darek', 'Ewa'].map((name, i) => ({ id: `p${i}`, name }));
+const players = ['Ala', 'Bartek', 'Celina', 'Darek', 'Ewa'].map((name, i) => ({ id: `p${i}`, name, isSeatReleased: false, isManagerSeat: false }));
 
 const game = (overrides: Partial<ResistanceGameDto> = {}): ResistanceGameDto =>
   ({

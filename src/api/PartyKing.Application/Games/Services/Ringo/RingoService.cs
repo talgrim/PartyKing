@@ -28,7 +28,7 @@ public interface IRingoService
     /// a name joins as "admin". Validation error for an empty or over-long name, Conflict while the game is closed or
     /// the name is taken, NotFound without a game.
     /// </summary>
-    Task<ErrorOr<Guid>> JoinAsync(Guid sessionId, string? name, GameCaller caller, CancellationToken cancellationToken);
+    Task<ErrorOr<GameSeat>> JoinAsync(Guid sessionId, string? name, GameCaller caller, CancellationToken cancellationToken);
 
     /// <summary>Host or admin: removes a player. NotFound for an unknown game or player.</summary>
     Task<ErrorOr<RingoGameDto>> KickAsync(Guid sessionId, Guid playerId, GameCaller caller, CancellationToken cancellationToken);
@@ -118,7 +118,7 @@ internal class RingoService : IRingoService
         return result.IsError ? result.Errors : ToDto(result.Value, caller);
     }
 
-    public Task<ErrorOr<Guid>> JoinAsync(
+    public Task<ErrorOr<GameSeat>> JoinAsync(
         Guid sessionId, string? name, GameCaller caller, CancellationToken cancellationToken)
     {
         return _lobby.JoinAsync(sessionId, name, caller, cancellationToken);

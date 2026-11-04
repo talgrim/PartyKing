@@ -1,3 +1,4 @@
+using PartyKing.Application.Games.Services.Base;
 using PartyKing.Domain.Entities.Games.Base;
 
 namespace PartyKing.API.Cookies;
@@ -21,9 +22,9 @@ public interface ISignedCookies
     /// <summary>Reads the stamp stored for the session; false when there is none or the cookie was tampered with.</summary>
     bool TryReadSessionAccess(HttpRequest request, Guid sessionId, out string stamp);
 
-    /// <summary>Remembers the player this browser joined the session's game as.</summary>
-    void GrantGamePlayer(GameKind game, Guid sessionId, Guid playerId, HttpContext context);
+    /// <summary>Remembers the seat (player and stamp) this browser joined the session's game as.</summary>
+    void GrantGamePlayer(GameKind game, Guid sessionId, GameSeat seat, HttpContext context);
 
-    /// <summary>Reads the player id stored for the session's game; false when there is none or the cookie was tampered with.</summary>
-    bool TryReadGamePlayer(GameKind game, HttpRequest request, Guid sessionId, out Guid playerId);
+    /// <summary>Reads the seat stored for the session's game; false when there is none or the cookie was tampered with.</summary>
+    bool TryReadGamePlayer(GameKind game, HttpRequest request, Guid sessionId, out GameSeat seat);
 }

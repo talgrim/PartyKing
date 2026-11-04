@@ -58,8 +58,8 @@ describe('Resistance in Polish', () => {
     render(
       <ResistancePlotLog
         players={[
-          { id: 'p1', name: 'Ala' },
-          { id: 'p2', name: 'Bartek' },
+          { id: 'p1', name: 'Ala', isSeatReleased: false, isManagerSeat: false },
+          { id: 'p2', name: 'Bartek', isSeatReleased: false, isManagerSeat: false },
         ]}
         cards={[
           {

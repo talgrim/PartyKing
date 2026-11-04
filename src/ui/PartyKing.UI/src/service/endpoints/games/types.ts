@@ -230,6 +230,16 @@ export type ResistancePlayerDto = {
   id: string;
   /** Carries the "(host)" suffix for the session host. */
   name: string;
+  /** The host or an admin released the seat, so a guest may take it over from a device that is gone. */
+  isSeatReleased: boolean;
+  /** The seat of the session host or of an admin, which is never released. */
+  isManagerSeat: boolean;
+};
+
+// Mirrors PartyKing.Contract.V1.Games.ResistanceClaimableSeatDto
+export type ResistanceClaimableSeatDto = {
+  id: string;
+  name: string;
 };
 
 // Mirrors PartyKing.Contract.V1.Games.ResistancePresenceDto
