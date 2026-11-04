@@ -40,7 +40,7 @@ public class SessionsRepositoryEventsTests : IAsyncLifetime
 
             dbContext.SpotifyProfiles.AddRange(new SpotifyProfile("host-1", "refresh-1"), new SpotifyProfile("host-2", "refresh-2"));
 
-            var session = new Session("ABC123", "Party", "hash");
+            var session = new Session(Guid.NewGuid(), "ABC123", "Party", "hash", DateTime.UtcNow);
             _sessionId = session.Id;
             dbContext.Sessions.Add(session);
             await dbContext.SaveChangesAsync();
@@ -71,7 +71,7 @@ public class SessionsRepositoryEventsTests : IAsyncLifetime
 
         var renamed = await _repository.RenameAsync(_sessionId, "  Friday  ", Ct);
 
-        Assert.True(renamed);
+        Assert.Equal(SessionRenameResult.Renamed, renamed);
         Assert.Equal("Friday", nameSeenByHandlers);
         Assert.Equal(new SessionRenamed(_sessionId, "Friday"), Assert.Single(_dispatcher.Events));
     }
@@ -81,7 +81,7 @@ public class SessionsRepositoryEventsTests : IAsyncLifetime
     {
         var renamed = await _repository.RenameAsync(Guid.NewGuid(), "Friday", Ct);
 
-        Assert.False(renamed);
+        Assert.Equal(SessionRenameResult.SessionNotFound, renamed);
         Assert.Empty(_dispatcher.Events);
     }
 
@@ -185,7 +185,7 @@ public class SessionsRepositoryEventsTests : IAsyncLifetime
         await _repository.TryClaimAsync(_sessionId, "host-1", Ct);
         await _repository.SetFallbackPlaylistAsync(_sessionId, "playlist", "Mix", false, Ct);
         _dispatcher.Events.Clear();
-        Session? seenByHandlers = new("X", "X", "X");
+        Session? seenByHandlers = null;
         _dispatcher.OnDispatch = async _ => seenByHandlers = await _repository.GetAsync(_sessionId, Ct);
 
         var deleted = await _repository.DeleteAsync(_sessionId, Ct);

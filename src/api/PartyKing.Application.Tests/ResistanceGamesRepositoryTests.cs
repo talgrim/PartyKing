@@ -37,7 +37,7 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         {
             await dbContext.Database.MigrateAsync();
 
-            var session = new Session("ABC123", "Party", "hash");
+            var session = new Session(Guid.NewGuid(), "ABC123", "Party", "hash", DateTime.UtcNow);
             _sessionId = session.Id;
             dbContext.Sessions.Add(session);
             await dbContext.SaveChangesAsync();
@@ -472,7 +472,7 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
     private async Task NewSessionAsync(string code)
     {
         await using var dbContext = await _provider.GetRequiredService<IDbContextFactory<WriterDbContext>>().CreateDbContextAsync();
-        var session = new Session(code, "Party", "hash");
+        var session = new Session(Guid.NewGuid(), code, "Party", "hash", DateTime.UtcNow);
         dbContext.Sessions.Add(session);
         await dbContext.SaveChangesAsync();
         _sessionId = session.Id;

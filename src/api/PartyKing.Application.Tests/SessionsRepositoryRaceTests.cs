@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using PartyKing.Domain.Entities.Sessions;
+using PartyKing.Domain.Enums;
 using PartyKing.Domain.Entities.Spotify;
 using PartyKing.Domain.Events.Sessions;
 using PartyKing.Infrastructure.Repositories;
@@ -42,7 +43,7 @@ public class SessionsRepositoryRaceTests : IAsyncLifetime
 
             dbContext.SpotifyProfiles.AddRange(new SpotifyProfile("host-1", "refresh-1"), new SpotifyProfile("host-2", "refresh-2"));
 
-            var session = new Session("ABC123", "Party", "hash");
+            var session = new Session(Guid.NewGuid(), "ABC123", "Party", "hash", DateTime.UtcNow);
             _sessionId = session.Id;
             dbContext.Sessions.Add(session);
             await dbContext.SaveChangesAsync();
@@ -103,14 +104,14 @@ public class SessionsRepositoryRaceTests : IAsyncLifetime
 
         var renamed = await _repository.RenameAsync(_sessionId, "Renamed", Ct);
 
-        Assert.True(renamed);
+        Assert.Equal(SessionRenameResult.Renamed, renamed);
         var session = await ReadAsync();
         Assert.Equal("Renamed", session.Name);
         Assert.Equal("host-2", session.HostProfileId);
     }
 
     [Fact]
-    public async Task Rename_OfASessionDeletedUnderIt_AnswersFalse()
+    public async Task Rename_OfASessionDeletedUnderIt_AnswersNotFound()
     {
         _interceptor.OnFirstSave = () =>
         {
@@ -123,7 +124,7 @@ public class SessionsRepositoryRaceTests : IAsyncLifetime
 
         var renamed = await _repository.RenameAsync(_sessionId, "Renamed", Ct);
 
-        Assert.False(renamed);
+        Assert.Equal(SessionRenameResult.SessionNotFound, renamed);
         Assert.Empty(_dispatcher.Events);
     }
 
