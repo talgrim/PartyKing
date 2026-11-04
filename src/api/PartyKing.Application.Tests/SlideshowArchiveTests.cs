@@ -25,7 +25,8 @@ public class SlideshowArchiveTests : IDisposable
     public SlideshowArchiveTests()
     {
         // The archive methods never touch the database
-        _files = new SlideshowImagesRepository(null!, null!, NullLogger<SlideshowImagesRepository>.Instance);
+        _files = new SlideshowImagesRepository(
+            null!, null!, NullLogger<SlideshowImagesRepository>.Instance, new RecordingDispatcher());
         _files.InitializeAsync(_root, Uploads, CancellationToken.None).GetAwaiter().GetResult();
         _service = new SlideshowArchiveService(
             new SessionAuthorizer(_sessions),
