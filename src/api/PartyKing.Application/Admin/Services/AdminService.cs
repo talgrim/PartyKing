@@ -45,9 +45,11 @@ internal class AdminService : IAdminService
         string? password,
         CancellationToken cancellationToken)
     {
-        var account = string.IsNullOrWhiteSpace(username)
+        // A blank username is nobody's; the rule (trimming) is the aggregate's
+        var normalized = AdminUsernames.Normalize(username);
+        var account = normalized.Length == 0
             ? null
-            : await _accountsRepository.GetByUsernameAsync(username.Trim(), cancellationToken);
+            : await _accountsRepository.GetByUsernameAsync(normalized, cancellationToken);
 
         var valid = _passwordHasher.Verify(password ?? string.Empty, account?.PasswordHash ?? _dummyHash);
 
@@ -73,7 +75,8 @@ internal class AdminService : IAdminService
 
         var hasHash = !string.IsNullOrWhiteSpace(_config.PasswordHash);
 
-        if (string.IsNullOrWhiteSpace(_config.Username) || (!hasHash && string.IsNullOrWhiteSpace(_config.Password)))
+        if (AdminUsernames.Validate(_config.Username) != AdminAccountFailure.None
+            || (!hasHash && string.IsNullOrWhiteSpace(_config.Password)))
         {
             _logger.LogWarning(
                 "No admin account exists. Set {Section}:Username and {Section}:Password (or {Section}:PasswordHash) " +
@@ -93,7 +96,7 @@ internal class AdminService : IAdminService
         }
 
         var passwordHash = hasHash ? _config.PasswordHash!.Trim() : _passwordHasher.Hash(_config.Password!);
-        var account = new AdminAccount(_config.Username.Trim(), passwordHash);
+        var account = AdminAccount.Create(Guid.NewGuid(), _config.Username, passwordHash).Account!;
 
         await _accountsRepository.AddAsync(account, cancellationToken);
 
