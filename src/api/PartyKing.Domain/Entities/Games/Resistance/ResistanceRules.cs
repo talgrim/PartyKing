@@ -1,8 +1,5 @@
 namespace PartyKing.Domain.Entities.Games.Resistance;
 
-/// <summary>The rules for one player count: spies, team size and fails needed for each of the five missions.</summary>
-public record ResistanceCountRules(int Spies, int[] TeamSizes, int[] RequiredFails);
-
 /// <summary>
 /// The numbers of a Resistance game by player count (5 to 10). The server configuration builds them, and a game keeps
 /// its own copy (<see cref="ResistanceGame.Rules"/>) so a configuration change never alters a game in progress.

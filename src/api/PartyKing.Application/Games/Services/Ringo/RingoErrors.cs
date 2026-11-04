@@ -15,6 +15,8 @@ internal static class RingoErrors
     {
         null => null,
         RingoFailure.NoGame => NoGame,
+        RingoFailure.InvalidCard => Error.Validation(
+            "Ringo.InvalidCard", $"The card id must be between 0 and {RingoGame.CardCount - 1}."),
         RingoFailure.NotYourTurn => Error.Conflict("Ringo.NotYourTurn", "It is another player's turn."),
         RingoFailure.GameOver => Error.Conflict("Ringo.GameOver", "The fourth king ended the game."),
         RingoFailure.CardPending => Error.Conflict(
