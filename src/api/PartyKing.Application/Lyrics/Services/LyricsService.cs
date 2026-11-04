@@ -2,7 +2,6 @@ using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Application.Ports;
 using PartyKing.Domain.Repositories;
 using ErrorOr;
-using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Sessions;
 using PartyKing.Contract.V1.Lyrics;
@@ -33,30 +32,24 @@ public interface ILyricsService
 
 internal class LyricsService : ILyricsService
 {
-    // Matches MAX_OFFSET_MS in the UI's lyricsTiming.ts
-    private const int MaxOffsetMs = 100_000;
-
     private readonly IQueueRepository _queueRepository;
     private readonly ILrclibClient _lrclibClient;
     private readonly ILyricsCache _cache;
     private readonly ILyricsOffsetsRepository _offsetsRepository;
     private readonly ISessionAuthorizer _sessionAuthorizer;
-    private readonly ILyricsNotifier _notifier;
 
     public LyricsService(
         IQueueRepository queueRepository,
         ILrclibClient lrclibClient,
         ILyricsCache cache,
         ILyricsOffsetsRepository offsetsRepository,
-        ISessionAuthorizer sessionAuthorizer,
-        ILyricsNotifier notifier)
+        ISessionAuthorizer sessionAuthorizer)
     {
         _queueRepository = queueRepository;
         _lrclibClient = lrclibClient;
         _cache = cache;
         _offsetsRepository = offsetsRepository;
         _sessionAuthorizer = sessionAuthorizer;
-        _notifier = notifier;
     }
 
     public async Task<ErrorOr<LyricsDto>> GetForPlayingSongAsync(Guid sessionId, CancellationToken cancellationToken)
@@ -110,9 +103,11 @@ internal class LyricsService : ILyricsService
         int offsetMs,
         CancellationToken cancellationToken)
     {
-        if (Math.Abs((long)offsetMs) > MaxOffsetMs)
+        // Refused before anything is looked up, like before; the rule is the aggregate's
+        var rangeFailure = LyricsOffset.Validate(offsetMs);
+        if (rangeFailure != LyricsOffsetFailure.None)
         {
-            return Error.Validation(description: $"The offset must be within {MaxOffsetMs / 1000} seconds");
+            return ToError(rangeFailure);
         }
 
         var playing = await _queueRepository.GetPlayingAsync(sessionId, cancellationToken);
@@ -121,13 +116,15 @@ internal class LyricsService : ILyricsService
             return Error.NotFound(description: "Nothing is playing");
         }
 
-        await _offsetsRepository.SaveAsync(playing.Url, offsetMs, cancellationToken);
-        await _notifier.LyricsOffsetChangedAsync(
-            sessionId,
-            new LyricsOffsetChangedDto(playing.Id, offsetMs),
-            cancellationToken);
+        // The push to the session's viewers is the handler of the LyricsOffsetChanged event
+        var failure = await _offsetsRepository.ChangeAsync(playing.Url, offsetMs, sessionId, playing.Id, cancellationToken);
 
-        return Result.Success;
+        return failure == LyricsOffsetFailure.None ? Result.Success : ToError(failure);
+    }
+
+    private static Error ToError(LyricsOffsetFailure failure)
+    {
+        return Error.Validation(description: $"The offset must be within {LyricsOffset.MaxOffsetMs / 1000} seconds");
     }
 
     private async Task<(IReadOnlyList<LyricsLine>? Lines, bool Searched)> FindAsync(

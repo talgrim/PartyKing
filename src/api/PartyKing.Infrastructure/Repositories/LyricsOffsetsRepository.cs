@@ -1,21 +1,28 @@
-using PartyKing.Application.Ports;
 using Microsoft.EntityFrameworkCore;
+using PartyKing.Application.Events;
 using PartyKing.Domain.Entities.Lyrics;
+using PartyKing.Domain.Repositories;
 using PartyKing.Persistence.Database;
 
 namespace PartyKing.Infrastructure.Repositories;
 
 internal class LyricsOffsetsRepository : ILyricsOffsetsRepository
 {
+    // The second attempt finds the row the racing save inserted; rows are never deleted, so a third is never needed
+    private const int MaxAttempts = 2;
+
     private readonly IDbContextFactory<ReaderDbContext> _readerFactory;
     private readonly IDbContextFactory<WriterDbContext> _writerFactory;
+    private readonly IDomainEventDispatcher _dispatcher;
 
     public LyricsOffsetsRepository(
         IDbContextFactory<ReaderDbContext> readerFactory,
-        IDbContextFactory<WriterDbContext> writerFactory)
+        IDbContextFactory<WriterDbContext> writerFactory,
+        IDomainEventDispatcher dispatcher)
     {
         _readerFactory = readerFactory;
         _writerFactory = writerFactory;
+        _dispatcher = dispatcher;
     }
 
     public async Task<int> GetAsync(string songUrl, CancellationToken cancellationToken)
@@ -29,18 +36,46 @@ internal class LyricsOffsetsRepository : ILyricsOffsetsRepository
             .FirstOrDefaultAsync(cancellationToken);
     }
 
-    public async Task SaveAsync(string songUrl, int offsetMs, CancellationToken cancellationToken)
+    public async Task<LyricsOffsetFailure> ChangeAsync(
+        string songUrl,
+        int offsetMs,
+        Guid sessionId,
+        int songId,
+        CancellationToken cancellationToken)
     {
-        await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
-
-        var updated = await dbContext.LyricsOffsets
-            .Where(x => x.SongUrl == songUrl)
-            .ExecuteUpdateAsync(x => x.SetProperty(o => o.OffsetMs, offsetMs), cancellationToken);
-
-        if (updated == 0)
+        for (var attempt = 1; ; attempt++)
         {
-            dbContext.LyricsOffsets.Add(new LyricsOffset { SongUrl = songUrl, OffsetMs = offsetMs });
-            await dbContext.SaveChangesAsync(cancellationToken);
+            await using var dbContext = await _writerFactory.CreateDbContextAsync(cancellationToken);
+
+            var offset = await dbContext.LyricsOffsets.FirstOrDefaultAsync(x => x.SongUrl == songUrl, cancellationToken);
+            var isNew = offset is null;
+            offset ??= new LyricsOffset(songUrl);
+
+            var failure = offset.Change(offsetMs, sessionId, songId);
+            if (failure != LyricsOffsetFailure.None)
+            {
+                return failure;
+            }
+
+            if (isNew)
+            {
+                dbContext.LyricsOffsets.Add(offset);
+            }
+
+            try
+            {
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException ex) when (isNew && ex.IsUniqueViolation() && attempt < MaxAttempts)
+            {
+                // Another save inserted the song's row between the read and ours: start again on top of it
+                continue;
+            }
+
+            // Not tied to the request: an aborted request must not drop the push of a change that is saved
+            await _dispatcher.DispatchAsync(offset.DrainEvents(), CancellationToken.None);
+
+            return LyricsOffsetFailure.None;
         }
     }
 }
