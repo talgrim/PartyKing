@@ -32,6 +32,26 @@ internal class ResistanceGamesRepository
 
     protected override GameKind Kind => GameKind.Resistance;
 
+    /// <summary>
+    /// One projection, no game graph and no shared read: the lobby is fetched by every tab on its own pushes and
+    /// needs four fields. <c>StartedAt != null</c> is <c>IsStarted</c> (the property itself is not mapped).
+    /// </summary>
+    public async Task<ResistanceLobbyState?> GetLobbyAsync(
+        Guid sessionId, Guid? playerId, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await CreateReaderAsync(cancellationToken);
+
+        return await dbContext.ResistanceGames
+            .AsNoTracking()
+            .Where(x => x.SessionId == sessionId)
+            .Select(x => new ResistanceLobbyState(
+                x.CreatedAt,
+                x.IsOpen,
+                x.StartedAt != null,
+                playerId != null && x.Players.Any(p => p.PlayerId == playerId)))
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
     protected override DbSet<ResistanceGame> Table(PartyKingDbContextBase dbContext) => dbContext.ResistanceGames;
 
     protected override DbSet<ResistancePlayer> PlayersOf(PartyKingDbContextBase dbContext) =>

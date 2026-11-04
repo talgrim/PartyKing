@@ -114,6 +114,11 @@ internal abstract class LobbyGamesRepository<TGame, TPlayer> : ILobbyGamesReposi
         return await _writerFactory.CreateDbContextAsync(cancellationToken);
     }
 
+    protected async Task<ReaderDbContext> CreateReaderAsync(CancellationToken cancellationToken)
+    {
+        return await _readerFactory.CreateDbContextAsync(cancellationToken);
+    }
+
     protected Task<TGame?> LoadAsync(WriterDbContext dbContext, Guid sessionId, CancellationToken cancellationToken)
     {
         return Games(dbContext).FirstOrDefaultAsync(x => x.SessionId == sessionId, cancellationToken);

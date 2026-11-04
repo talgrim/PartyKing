@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useSWRConfig } from 'swr';
 import { gamesApi } from '@/service/endpoints/games/gamesApi';
 import { useRingoLobby } from '@/service/endpoints/games/useRingoLobby';
-import { ringoKey, ringoLobbyKey } from '@/service/realtime/sessionMusicEvents';
+import { ringoKey, ringoLobbyKey, RINGO_JOIN_HUB_TOPICS } from '@/service/realtime/sessionMusicEvents';
 import { GameJoin } from './lobby/GameJoin';
 import { Ringo } from './Ringo';
 import { useTranslation } from 'react-i18next';
@@ -17,7 +17,7 @@ export const RingoJoin = (): ReactNode => {
 
   return (
     <GameJoin
-      topic="ringo"
+      topics={RINGO_JOIN_HUB_TOPICS}
       sessionId={sessionId}
       title={t('ringo.joinTitle')}
       lobby={lobby}

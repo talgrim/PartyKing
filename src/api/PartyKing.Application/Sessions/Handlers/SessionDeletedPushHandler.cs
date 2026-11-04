@@ -6,7 +6,7 @@ namespace PartyKing.Application.Sessions.Handlers;
 
 /// <summary>
 /// Tells the clients still connected to a deleted session that what they show is gone. The cascade delete took the queue and the
-/// games with it, so the existing pushes are enough: the game pushes make every client fetch again and get its 404, and an empty
+/// games with it, so the existing pushes are enough: the game pushes (and the Resistance lobby push, which the tabs that only show the invite listen to) make every client fetch again and get its 404, and an empty
 /// queue advance clears the song on display (the queue list follows with its next poll).
 /// </summary>
 internal sealed class SessionDeletedPushHandler : IDomainEventHandler<SessionDeleted>
@@ -26,6 +26,7 @@ internal sealed class SessionDeletedPushHandler : IDomainEventHandler<SessionDel
     {
         await _ringo.ChangedAsync(domainEvent.SessionId, cancellationToken);
         await _resistance.ChangedAsync(domainEvent.SessionId, cancellationToken);
+        await _resistance.LobbyChangedAsync(domainEvent.SessionId, cancellationToken);
         await _queue.QueueAdvancedAsync(domainEvent.SessionId, null, null, cancellationToken);
     }
 }

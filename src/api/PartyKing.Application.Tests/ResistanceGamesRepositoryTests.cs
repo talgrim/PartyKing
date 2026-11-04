@@ -469,6 +469,109 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         Assert.All(game.Players, x => Assert.True(x.Vote));
     }
 
+    private async Task<ResistanceGame> CreateLobbyAsync(int playerCount, bool isOpen)
+    {
+        var game = new ResistanceGame { SessionId = _sessionId, CreatedAt = DateTimeOffset.UtcNow, IsOpen = isOpen };
+        for (var i = 0; i < playerCount; i++)
+        {
+            game.Players.Add(new ResistancePlayer
+            {
+                SessionId = _sessionId,
+                PlayerId = Guid.NewGuid(),
+                Name = $"Player {i}",
+                NormalizedName = $"player {i}",
+                Order = i,
+            });
+        }
+
+        Assert.True(await _repository.TryCreateAsync(game, CancellationToken.None));
+
+        return game;
+    }
+
+    [Fact]
+    public async Task TheLobby_IsNullWhenTheSessionHasNoGame()
+    {
+        var lobby = await _repository.GetLobbyAsync(_sessionId, Guid.NewGuid(), CancellationToken.None);
+
+        Assert.Null(lobby);
+    }
+
+    [Fact]
+    public async Task TheLobby_ShowsTheCreationTimeAndWhetherTheGameIsOpen()
+    {
+        var game = await CreateLobbyAsync(2, isOpen: false);
+
+        var closed = await _repository.GetLobbyAsync(_sessionId, null, CancellationToken.None);
+        await _repository.OpenAsync(_sessionId, CancellationToken.None);
+        var open = await _repository.GetLobbyAsync(_sessionId, null, CancellationToken.None);
+
+        Assert.NotNull(closed);
+        Assert.False(closed.IsOpen);
+        Assert.Equal(game.CreatedAt.ToUniversalTime(), closed.CreatedAt.ToUniversalTime());
+        Assert.True(open!.IsOpen);
+    }
+
+    [Fact]
+    public async Task TheLobby_IsJoinedOnlyForAPlayerOfTheGame()
+    {
+        var game = await CreateLobbyAsync(2, isOpen: true);
+        var player = game.Players[0].PlayerId;
+
+        Assert.True((await _repository.GetLobbyAsync(_sessionId, player, CancellationToken.None))!.Joined);
+        Assert.False((await _repository.GetLobbyAsync(_sessionId, null, CancellationToken.None))!.Joined);
+        Assert.False((await _repository.GetLobbyAsync(_sessionId, Guid.NewGuid(), CancellationToken.None))!.Joined);
+    }
+
+    [Fact]
+    public async Task TheLobby_DoesNotCountAPlayerOfAnotherSessionsGame()
+    {
+        var game = await CreateLobbyAsync(2, isOpen: true);
+        var player = game.Players[0].PlayerId;
+        await NewSessionAsync("OTHER1");
+        await CreateLobbyAsync(2, isOpen: true);
+
+        var lobby = await _repository.GetLobbyAsync(_sessionId, player, CancellationToken.None);
+
+        Assert.False(lobby!.Joined);
+    }
+
+    [Fact]
+    public async Task TheLobby_SaysWhenTheGameStarted()
+    {
+        await CreateLobbyAsync(5, isOpen: true);
+        Assert.False((await _repository.GetLobbyAsync(_sessionId, null, CancellationToken.None))!.IsStarted);
+
+        var started = await StartAsync();
+        Assert.Null(started.Failure);
+        Assert.True((await _repository.GetLobbyAsync(_sessionId, null, CancellationToken.None))!.IsStarted);
+    }
+
+    /// <summary>
+    /// The projection repeats the rule of <see cref="PartyKing.Application.Games.Services.Resistance.ResistanceGameLobby.IsPlayer"/>
+    /// and the old lobby read (the whole game, then the caller's id against its players). It has to answer the same.
+    /// </summary>
+    [Fact]
+    public async Task TheLobby_AnswersLikeTheGameItIsAProjectionOf()
+    {
+        await CreateLobbyAsync(5, isOpen: true);
+        await StartAsync();
+        var game = await ReloadAsync();
+        Guid?[] callers = [null, Guid.NewGuid(), .. game.Players.Select(x => (Guid?)x.PlayerId)];
+
+        foreach (var playerId in callers)
+        {
+            var lobby = await _repository.GetLobbyAsync(_sessionId, playerId, CancellationToken.None);
+            var caller = new Application.Games.Services.Base.GameCaller(null, false, playerId);
+
+            Assert.Equal(game.IsOpen, lobby!.IsOpen);
+            Assert.Equal(game.IsStarted, lobby.IsStarted);
+            Assert.Equal(game.CreatedAt.ToUniversalTime(), lobby.CreatedAt.ToUniversalTime());
+            Assert.Equal(
+                Application.Games.Services.Resistance.ResistanceGameLobby.IsPlayer(game, caller), lobby.Joined);
+        }
+    }
+
     private async Task NewSessionAsync(string code)
     {
         await using var dbContext = await _provider.GetRequiredService<IDbContextFactory<WriterDbContext>>().CreateDbContextAsync();

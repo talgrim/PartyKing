@@ -177,6 +177,13 @@ public static class DependencyInjection
     {
         services.AddDomainEventHandler<ResistanceCreated, ResistancePushHandler>();
         services.AddDomainEventHandler<ResistanceChanged, ResistancePushHandler>();
+        services.AddDomainEventHandler<ResistanceCreated, ResistanceLobbyPushHandler>();
+        services.AddDomainEventHandler<ResistanceStarted, ResistanceLobbyPushHandler>();
+        services.AddDomainEventHandler<ResistanceRestarted, ResistanceLobbyPushHandler>();
+        services.AddDomainEventHandler<LobbyOpened, ResistanceLobbyPushHandler>();
+        services.AddDomainEventHandler<LobbyPlayerJoined, ResistanceLobbyPushHandler>();
+        services.AddDomainEventHandler<LobbyPlayerKicked, ResistanceLobbyPushHandler>();
+        services.AddDomainEventHandler<LobbyGameEnded, ResistanceLobbyPushHandler>();
         services.AddScoped<ResistanceGameLobby>();
         services.AddScoped<ResistanceActionGate>();
         services.AddScoped<IResistanceLobbyService, ResistanceLobbyService>();

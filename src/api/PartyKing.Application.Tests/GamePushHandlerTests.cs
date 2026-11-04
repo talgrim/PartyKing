@@ -73,5 +73,62 @@ public class GamePushHandlerTests
 
         Assert.Equal([_id, _id], _resistance.Changes);
         Assert.Empty(_ringo.Changes);
+        Assert.Empty(_resistance.LobbyChanges);
+    }
+
+    [Fact]
+    public async Task TheResistanceLobbyPush_FollowsTheEventsThatChangeWhatTheLobbyShows()
+    {
+        var handler = new ResistanceLobbyPushHandler(_resistance);
+
+        await handler.HandleAsync(new ResistanceCreated(_id), Ct);
+        await handler.HandleAsync(new ResistanceStarted(_id), Ct);
+        await handler.HandleAsync(new ResistanceRestarted(_id), Ct);
+        await handler.HandleAsync(new LobbyOpened(_id, GameKind.Resistance), Ct);
+        await handler.HandleAsync(new LobbyPlayerJoined(_id, GameKind.Resistance, Guid.NewGuid()), Ct);
+        await handler.HandleAsync(new LobbyPlayerKicked(_id, GameKind.Resistance, Guid.NewGuid()), Ct);
+        await handler.HandleAsync(new LobbyGameEnded(_id, GameKind.Resistance), Ct);
+
+        Assert.Equal(Enumerable.Repeat(_id, 7), _resistance.LobbyChanges);
+        Assert.Empty(_resistance.Changes);
+        Assert.Empty(_resistance.Opens);
+        Assert.Empty(_ringo.Changes);
+    }
+
+    [Fact]
+    public async Task TheResistanceLobbyPush_IgnoresTheLobbyEventsOfRingoAndAReorder()
+    {
+        var handler = new ResistanceLobbyPushHandler(_resistance);
+
+        await handler.HandleAsync(new LobbyOpened(_id, GameKind.Ringo), Ct);
+        await handler.HandleAsync(new LobbyPlayerJoined(_id, GameKind.Ringo, Guid.NewGuid()), Ct);
+        await handler.HandleAsync(new LobbyPlayerKicked(_id, GameKind.Ringo, Guid.NewGuid()), Ct);
+        await handler.HandleAsync(new LobbyGameEnded(_id, GameKind.Ringo), Ct);
+
+        Assert.Empty(_resistance.LobbyChanges);
+    }
+
+    [Fact]
+    public async Task TheActionsOfARound_PushTheGameButNotTheLobby()
+    {
+        var dispatcher = TestEvents.Dispatcher(_ringo, _resistance);
+
+        await dispatcher.DispatchAsync([new ResistanceChanged(_id), new ResistanceVoteCast(_id, Guid.NewGuid())], Ct);
+        await dispatcher.DispatchAsync([new LobbyOrderChanged(_id, GameKind.Resistance)], Ct);
+
+        Assert.Equal([_id, _id], _resistance.Changes);
+        Assert.Empty(_resistance.LobbyChanges);
+    }
+
+    [Fact]
+    public async Task ARealDispatch_OfALifecycleEvent_PushesTheGameAndTheLobby()
+    {
+        var dispatcher = TestEvents.Dispatcher(_ringo, _resistance);
+
+        await dispatcher.DispatchAsync([new ResistanceCreated(_id), new LobbyOpened(_id, GameKind.Resistance)], Ct);
+
+        Assert.Equal([_id, _id], _resistance.LobbyChanges);
+        Assert.Equal([_id, _id], _resistance.Changes);
+        Assert.Equal([_id], _resistance.Opens);
     }
 }
