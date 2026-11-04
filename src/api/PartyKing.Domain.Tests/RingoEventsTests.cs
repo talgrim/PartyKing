@@ -3,7 +3,7 @@ using PartyKing.Domain.Events;
 using PartyKing.Domain.Events.Games.Base;
 using PartyKing.Domain.Events.Games.Ringo;
 
-namespace PartyKing.Application.Tests;
+namespace PartyKing.Domain.Tests;
 
 /// <summary>The events <see cref="RingoGame"/> raises, with no database.</summary>
 public class RingoEventsTests

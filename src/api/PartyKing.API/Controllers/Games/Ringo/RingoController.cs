@@ -1,4 +1,4 @@
-using PartyKing.Application.Ports;
+using PartyKing.API.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using PartyKing.API.Authorization;
@@ -19,8 +19,8 @@ public class RingoController : LobbyGameControllerBase
         IHttpContextAccessor httpContextAccessor,
         IRingoService ringoService,
         IRingoRuleSuggestionService ruleSuggestionService,
-        ICookieAuthorizationHandler cookieAuthorizationHandler)
-        : base(httpContextAccessor, cookieAuthorizationHandler)
+        ISignedCookies cookies)
+        : base(httpContextAccessor, cookies)
     {
         _ringoService = ringoService;
         _ruleSuggestionService = ruleSuggestionService;

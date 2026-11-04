@@ -1,6 +1,6 @@
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using PartyKing.Application.Configuration;
+using PartyKing.Application.Slideshow.Models;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Contract.V1.Slideshow;
 using PartyKing.Domain.Entities.Slideshow;
@@ -40,7 +40,8 @@ public class SlideshowServiceTests
         _sessionId = _sessions.AddSession().Id;
     }
 
-    private static IFormFile File(string name, byte[] content) => new FakeFormFile(name, content);
+    private static UploadedFile File(string name, byte[] content) =>
+        new(name, content.Length, () => new MemoryStream(content));
 
     private static SlideshowImageReadResult Image(string name) =>
         new(Guid.NewGuid(), new SlideshowImageReadModel(name, $"Images/Uploaded/{name}", "image/jpeg", false));
@@ -400,23 +401,6 @@ public class SlideshowServiceTests
         await _service.DeleteSessionAsync(_sessionId);
 
         Assert.Contains(_sessionId, _scheduler.Cancelled);
-    }
-
-    private class FakeFormFile(string fileName, byte[] content) : IFormFile
-    {
-        public string ContentType => "text/html"; // whatever the client claims must not matter
-        public string ContentDisposition => string.Empty;
-        public IHeaderDictionary Headers => throw new NotSupportedException();
-        public long Length => content.Length;
-        public string Name => "files";
-        public string FileName => fileName;
-
-        public Stream OpenReadStream() => new MemoryStream(content);
-
-        public void CopyTo(Stream target) => target.Write(content);
-
-        public Task CopyToAsync(Stream target, CancellationToken cancellationToken = default) =>
-            target.WriteAsync(content, cancellationToken).AsTask();
     }
 
     private class FakeSlideshowImagesRepository : ISlideshowImagesRepository, ISlideshowSettingsRepository

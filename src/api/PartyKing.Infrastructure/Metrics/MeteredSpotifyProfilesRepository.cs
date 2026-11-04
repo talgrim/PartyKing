@@ -1,5 +1,4 @@
 using PartyKing.Application.Ports;
-using ErrorOr;
 using PartyKing.Domain.Entities.Spotify;
 using PartyKing.Domain.Results;
 using PartyKing.Infrastructure.Repositories;
@@ -21,7 +20,7 @@ internal sealed class MeteredSpotifyProfilesRepository : MeteredRepository, ISpo
         return MeasureAsync(nameof(CreateProfileAsync), () => _inner.CreateProfileAsync(result, cancellationToken));
     }
 
-    public Task<ErrorOr<SpotifyProfile>> GetProfileAsync(string id, CancellationToken cancellationToken)
+    public Task<SpotifyProfile?> GetProfileAsync(string id, CancellationToken cancellationToken)
     {
         return MeasureAsync(nameof(GetProfileAsync), () => _inner.GetProfileAsync(id, cancellationToken));
     }

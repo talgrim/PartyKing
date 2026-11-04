@@ -1,3 +1,4 @@
+using PartyKing.API.Cookies;
 using PartyKing.Application.Ports;
 using PartyKing.API.Authentication;
 using PartyKing.Application.Games.Services.Base;
@@ -14,13 +15,13 @@ public abstract class GameControllerBase : CoreController
     public const string SuggestionsRateLimitPolicy = "game-suggestions";
 
     protected GameControllerBase(
-        IHttpContextAccessor httpContextAccessor, ICookieAuthorizationHandler cookieAuthorizationHandler)
+        IHttpContextAccessor httpContextAccessor, ISignedCookies cookies)
         : base(httpContextAccessor)
     {
-        Cookies = cookieAuthorizationHandler;
+        Cookies = cookies;
     }
 
-    protected ICookieAuthorizationHandler Cookies { get; }
+    protected ISignedCookies Cookies { get; }
 
     /// <summary>The caller as host and admin; with <paramref name="game"/> also as that game's player.</summary>
     protected async Task<GameCaller> ReadCallerAsync(Guid sessionId, GameKind? game = null)

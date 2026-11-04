@@ -1,3 +1,4 @@
+using PartyKing.API.Cookies;
 using PartyKing.Application.Ports;
 using Microsoft.AspNetCore.Mvc;
 using PartyKing.API.Authentication;
@@ -10,16 +11,16 @@ namespace PartyKing.API.Controllers;
 public class QueueController : CoreController
 {
     private readonly IQueueService _queueService;
-    private readonly ICookieAuthorizationHandler _cookieAuthorizationHandler;
+    private readonly ISignedCookies _cookies;
 
     public QueueController(
         IHttpContextAccessor httpContextAccessor,
         IQueueService queueService,
-        ICookieAuthorizationHandler cookieAuthorizationHandler)
+        ISignedCookies cookies)
         : base(httpContextAccessor)
     {
         _queueService = queueService;
-        _cookieAuthorizationHandler = cookieAuthorizationHandler;
+        _cookies = cookies;
     }
 
     [HttpPost("sessions/{sessionId:guid}/songs")]
@@ -73,7 +74,7 @@ public class QueueController : CoreController
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> RemoveSong(Guid sessionId, int songId, CancellationToken cancellationToken)
     {
-        var caller = await HttpContext.ReadSessionCallerAsync(_cookieAuthorizationHandler);
+        var caller = await HttpContext.ReadSessionCallerAsync(_cookies);
 
         var result = await _queueService.RemoveAsync(sessionId, songId, caller, cancellationToken);
 

@@ -1,3 +1,4 @@
+using PartyKing.API.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using PartyKing.API.Authorization;
@@ -14,15 +15,18 @@ public class AdminController : CoreController
 
     private readonly IAdminService _adminService;
     private readonly ISessionAdminService _sessionAdminService;
+    private readonly ISignedCookies _cookies;
 
     public AdminController(
         IHttpContextAccessor httpContextAccessor,
         IAdminService adminService,
-        ISessionAdminService sessionAdminService)
+        ISessionAdminService sessionAdminService,
+        ISignedCookies cookies)
         : base(httpContextAccessor)
     {
         _adminService = adminService;
         _sessionAdminService = sessionAdminService;
+        _cookies = cookies;
     }
 
     [HttpPost("admin/login")]
@@ -32,14 +36,21 @@ public class AdminController : CoreController
     {
         var result = await _adminService.LoginAsync(request.Username, request.Password, cancellationToken);
 
-        return result.Match(_ => NoContent(), Problem);
+        if (result.IsError)
+        {
+            return Problem(result.Errors);
+        }
+
+        _cookies.GrantAdmin(result.Value, HttpContext);
+
+        return NoContent();
     }
 
     [HttpPost("admin/logout")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public IActionResult Logout()
     {
-        _adminService.Logout();
+        _cookies.RevokeAdmin(HttpContext);
 
         return NoContent();
     }

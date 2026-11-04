@@ -1,6 +1,6 @@
 using PartyKing.Domain.Entities.Games.Resistance;
 
-namespace PartyKing.Application.Tests;
+namespace PartyKing.Domain.Tests;
 
 /// <summary>The rules that decide what a Resistance game shows to everybody.</summary>
 public class ResistanceRolesViewRulesTests

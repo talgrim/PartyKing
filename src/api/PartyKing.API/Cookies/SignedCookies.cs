@@ -1,12 +1,9 @@
-using PartyKing.Application.Ports;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Http;
 using PartyKing.Domain.Entities.Games.Base;
-using PartyKing.Infrastructure.Authentication;
 
-namespace PartyKing.Infrastructure.Authorization;
+namespace PartyKing.API.Cookies;
 
-internal class CookieAuthorizationHandler : ICookieAuthorizationHandler
+internal class SignedCookies : ISignedCookies
 {
     private static readonly int UserExpirationTime = (int)TimeSpan.FromDays(30).TotalSeconds;
     private static readonly int AdminExpirationTime = (int)TimeSpan.FromHours(12).TotalSeconds;
@@ -20,7 +17,7 @@ internal class CookieAuthorizationHandler : ICookieAuthorizationHandler
     private readonly IDataProtector _sessionAccessProtector;
     private readonly Dictionary<GameKind, (string CookieName, IDataProtector Protector)> _gamePlayerCookies;
 
-    public CookieAuthorizationHandler(IDataProtectionProvider dataProtectionProvider)
+    public SignedCookies(IDataProtectionProvider dataProtectionProvider)
     {
         _userProtector = dataProtectionProvider.CreateProtector("PartyKing.UserCookie");
         _adminProtector = dataProtectionProvider.CreateProtector("PartyKing.AdminCookie");
@@ -28,37 +25,31 @@ internal class CookieAuthorizationHandler : ICookieAuthorizationHandler
         _gamePlayerCookies = new()
         {
             [GameKind.Ringo] = (
-                Constants.RingoPlayerCookieName, dataProtectionProvider.CreateProtector("PartyKing.RingoPlayerCookie")),
+                CookieNames.RingoPlayer, dataProtectionProvider.CreateProtector("PartyKing.RingoPlayerCookie")),
             [GameKind.Resistance] = (
-                Constants.ResistancePlayerCookieName,
+                CookieNames.ResistancePlayer,
                 dataProtectionProvider.CreateProtector("PartyKing.ResistancePlayerCookie")),
         };
     }
 
-    public void Authorize(string profileId, HttpContext? httpContext)
+    public void GrantHost(string profileId, HttpContext context)
     {
-        var context = Require(httpContext);
-
         // Signed, so a client can't claim to be another host by editing the cookie
         context.Response.Cookies.Append(
-            Constants.UserCookieName,
+            CookieNames.User,
             _userProtector.Protect(profileId),
             GetOptions(UserExpirationTime, context));
     }
 
-    public void Authorize(string spotifyAccessToken, int expiresIn, HttpContext? httpContext)
+    public void GrantSpotifyAccessToken(string spotifyAccessToken, int expiresIn, HttpContext context)
     {
-        var context = Require(httpContext);
-
-        context.Response.Cookies.Append(Constants.AuthCookieName, spotifyAccessToken, GetOptions(expiresIn, context));
+        context.Response.Cookies.Append(CookieNames.Auth, spotifyAccessToken, GetOptions(expiresIn, context));
     }
 
-    public void AuthorizeAdmin(Guid adminId, HttpContext? httpContext)
+    public void GrantAdmin(Guid adminId, HttpContext context)
     {
-        var context = Require(httpContext);
-
         context.Response.Cookies.Append(
-            Constants.AdminCookieName,
+            CookieNames.Admin,
             _adminProtector.Protect(adminId.ToString()),
             GetOptions(AdminExpirationTime, context));
     }
@@ -67,7 +58,7 @@ internal class CookieAuthorizationHandler : ICookieAuthorizationHandler
     {
         profileId = string.Empty;
 
-        if (!request.Cookies.TryGetValue(Constants.UserCookieName, out var protectedValue))
+        if (!request.Cookies.TryGetValue(CookieNames.User, out var protectedValue))
         {
             return false;
         }
@@ -79,7 +70,7 @@ internal class CookieAuthorizationHandler : ICookieAuthorizationHandler
     {
         adminId = Guid.Empty;
 
-        if (!request.Cookies.TryGetValue(Constants.AdminCookieName, out var protectedValue))
+        if (!request.Cookies.TryGetValue(CookieNames.Admin, out var protectedValue))
         {
             return false;
         }
@@ -87,22 +78,20 @@ internal class CookieAuthorizationHandler : ICookieAuthorizationHandler
         return TryUnprotect(_adminProtector, protectedValue, out var value) && Guid.TryParse(value, out adminId);
     }
 
-    public void SignOutAdmin(HttpContext? httpContext)
+    public void RevokeAdmin(HttpContext context)
     {
-        Require(httpContext).Response.Cookies.Delete(Constants.AdminCookieName, new CookieOptions { Path = "/" });
+        context.Response.Cookies.Delete(CookieNames.Admin, new CookieOptions { Path = "/" });
     }
 
-    public void GrantSessionAccess(Guid sessionId, string stamp, HttpContext? httpContext)
+    public void GrantSessionAccess(Guid sessionId, string stamp, HttpContext context)
     {
-        var context = Require(httpContext);
-
         var unlocked = ReadSessionAccess(context.Request)
             .Where(x => x.SessionId != sessionId)
             .Append((SessionId: sessionId, Stamp: stamp))
             .TakeLast(MaxUnlockedSessions);
 
         context.Response.Cookies.Append(
-            Constants.SessionAccessCookieName,
+            CookieNames.SessionAccess,
             _sessionAccessProtector.Protect(string.Join(';', unlocked.Select(x => $"{x.SessionId:N}:{x.Stamp}"))),
             GetOptions(SessionAccessExpirationTime, context));
     }
@@ -114,9 +103,8 @@ internal class CookieAuthorizationHandler : ICookieAuthorizationHandler
         return stamp.Length > 0;
     }
 
-    public void GrantGamePlayer(GameKind game, Guid sessionId, Guid playerId, HttpContext? httpContext)
+    public void GrantGamePlayer(GameKind game, Guid sessionId, Guid playerId, HttpContext context)
     {
-        var context = Require(httpContext);
         var (cookieName, protector) = _gamePlayerCookies[game];
 
         var players = ReadGamePlayers(game, context.Request)
@@ -159,7 +147,7 @@ internal class CookieAuthorizationHandler : ICookieAuthorizationHandler
 
     private IEnumerable<(Guid SessionId, string Stamp)> ReadSessionAccess(HttpRequest request)
     {
-        if (!request.Cookies.TryGetValue(Constants.SessionAccessCookieName, out var protectedValue)
+        if (!request.Cookies.TryGetValue(CookieNames.SessionAccess, out var protectedValue)
             || !TryUnprotect(_sessionAccessProtector, protectedValue, out var value))
         {
             yield break;
@@ -192,11 +180,6 @@ internal class CookieAuthorizationHandler : ICookieAuthorizationHandler
         {
             return false;
         }
-    }
-
-    private static HttpContext Require(HttpContext? httpContext)
-    {
-        return httpContext ?? throw new InvalidOperationException("Null HTTP context when trying to authorize");
     }
 
     private static CookieOptions GetOptions(int expirationSeconds, HttpContext context)

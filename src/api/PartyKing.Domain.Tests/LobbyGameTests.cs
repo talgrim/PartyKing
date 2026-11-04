@@ -2,7 +2,7 @@ using PartyKing.Domain.Entities.Games.Base;
 using PartyKing.Domain.Entities.Games.Resistance;
 using PartyKing.Domain.Entities.Games.Ringo;
 
-namespace PartyKing.Application.Tests;
+namespace PartyKing.Domain.Tests;
 
 /// <summary>The lobby rules every game shares (open, join, kick, reorder), with no database.</summary>
 public class LobbyGameTests

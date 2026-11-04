@@ -87,7 +87,12 @@ internal class SlideshowImagesRepository : ISlideshowImagesRepository, ISlidesho
 
     public async Task AddSlideshowImageAsync(SlideshowImageWriteModel slideshowImage, CancellationToken cancellationToken)
     {
-        var image = new SlideshowImage(slideshowImage);
+        var image = new SlideshowImage(
+            slideshowImage.SessionId,
+            slideshowImage.Extension,
+            slideshowImage.ContentType,
+            slideshowImage.Path,
+            slideshowImage.DeleteAfterPresentation);
 
         Directory.CreateDirectory(Path.Combine(_rootPath, slideshowImage.Path));
 

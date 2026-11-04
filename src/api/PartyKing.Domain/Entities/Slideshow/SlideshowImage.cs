@@ -6,13 +6,19 @@ public class SlideshowImage
     {
     }
 
-    public SlideshowImage(SlideshowImageWriteModel writeModel)
+    /// <param name="directory">Directory of the image relative to the web root, using '/' so it works as a URL as well.</param>
+    public SlideshowImage(
+        Guid sessionId,
+        string extension,
+        string contentType,
+        string directory,
+        bool deleteAfterPresentation)
     {
-        SessionId = writeModel.SessionId;
-        ImageName = $"{Id}{writeModel.Extension}";
-        ImageUrl = writeModel.GetFullPath(ImageName);
-        ContentType = writeModel.ContentType;
-        DeleteAfterPresentation = writeModel.DeleteAfterPresentation;
+        SessionId = sessionId;
+        ImageName = $"{Id}{extension}";
+        ImageUrl = $"{directory}/{ImageName}";
+        ContentType = contentType;
+        DeleteAfterPresentation = deleteAfterPresentation;
     }
 
     public Guid Id { get; set; } = Guid.CreateVersion7();

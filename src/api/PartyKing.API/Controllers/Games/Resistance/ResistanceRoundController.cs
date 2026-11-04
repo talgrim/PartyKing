@@ -1,4 +1,4 @@
-using PartyKing.Application.Ports;
+using PartyKing.API.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using PartyKing.API.Authorization;
 using PartyKing.Application.Games.Services.Resistance;
@@ -14,8 +14,8 @@ public class ResistanceRoundController : ResistanceControllerBase
         IHttpContextAccessor httpContextAccessor,
         IResistanceRoundService roundService,
         IResistancePlotCardService plotCardService,
-        ICookieAuthorizationHandler cookieAuthorizationHandler)
-        : base(httpContextAccessor, cookieAuthorizationHandler)
+        ISignedCookies cookies)
+        : base(httpContextAccessor, cookies)
     {
         Rounds = roundService;
         PlotCards = plotCardService;

@@ -1,4 +1,4 @@
-using PartyKing.Application.Ports;
+using PartyKing.API.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using PartyKing.API.Authorization;
 using PartyKing.Application.Games.Services.Base;
@@ -15,8 +15,8 @@ public class GamesController : GameControllerBase
     public GamesController(
         IHttpContextAccessor httpContextAccessor,
         IGameService gameService,
-        ICookieAuthorizationHandler cookieAuthorizationHandler)
-        : base(httpContextAccessor, cookieAuthorizationHandler)
+        ISignedCookies cookies)
+        : base(httpContextAccessor, cookies)
     {
         _gameService = gameService;
     }

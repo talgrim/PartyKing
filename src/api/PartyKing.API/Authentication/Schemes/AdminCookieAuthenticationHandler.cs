@@ -1,4 +1,4 @@
-using PartyKing.Application.Ports;
+using PartyKing.API.Cookies;
 using System.Diagnostics;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
@@ -7,11 +7,11 @@ using Microsoft.Extensions.Options;
 using PartyKing.API.Metrics;
 using PartyKing.Application.Admin.Services;
 
-namespace PartyKing.API.Authentication.Cookie;
+namespace PartyKing.API.Authentication.Schemes;
 
 public class AdminCookieAuthenticationHandler : AuthenticationHandler<CookieAuthenticationOptions>
 {
-    private readonly ICookieAuthorizationHandler _cookieAuthorizationHandler;
+    private readonly ISignedCookies _cookies;
     private readonly AuthorizationMetrics _metrics;
     private readonly IAdminService _adminService;
 
@@ -19,13 +19,13 @@ public class AdminCookieAuthenticationHandler : AuthenticationHandler<CookieAuth
         IOptionsMonitor<CookieAuthenticationOptions> options,
         ILoggerFactory logger,
         UrlEncoder encoder,
-        ICookieAuthorizationHandler cookieAuthorizationHandler,
+        ISignedCookies cookies,
         IAdminService adminService,
         AuthorizationMetrics metrics)
         : base(options, logger, encoder)
     {
         _metrics = metrics;
-        _cookieAuthorizationHandler = cookieAuthorizationHandler;
+        _cookies = cookies;
         _adminService = adminService;
     }
 
@@ -41,7 +41,7 @@ public class AdminCookieAuthenticationHandler : AuthenticationHandler<CookieAuth
 
     private async Task<AuthenticateResult> AuthenticateAsync()
     {
-        if (!_cookieAuthorizationHandler.TryReadAdminId(Request, out var adminId))
+        if (!_cookies.TryReadAdminId(Request, out var adminId))
         {
             return AuthenticateResult.Fail("Admin cookie is missing or invalid");
         }

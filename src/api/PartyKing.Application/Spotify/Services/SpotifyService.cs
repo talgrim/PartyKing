@@ -1,9 +1,9 @@
 using PartyKing.Application.Ports;
 using PartyKing.Domain.Repositories;
 using ErrorOr;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using PartyKing.Application.Mappings;
+using PartyKing.Application.Spotify.Models;
 using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Contract.V1.Spotify;
 using PartyKing.Domain.Enums;
@@ -15,8 +15,11 @@ public interface ISpotifyService
 {
     /// <summary>Login URL for becoming (or, for the current host, logging in again as) the host of a session.</summary>
     Task<ErrorOr<Uri>> GetHostLoginUrlAsync(Guid sessionId, CancellationToken cancellationToken);
-    Task<ErrorOr<UserDto>> AuthenticateByCodeAsync(string code, string state, CancellationToken cancellationToken);
-    Task<ErrorOr<string>> AuthenticateByProfileIdAsync(string id, CancellationToken cancellationToken);
+    /// <summary>Completes the host login and claims the session; the caller stores the login in cookies.</summary>
+    Task<ErrorOr<HostLogin>> AuthenticateByCodeAsync(string code, string state, CancellationToken cancellationToken);
+
+    /// <summary>Refreshes the access token of a host that is already known; the caller stores it in a cookie.</summary>
+    Task<ErrorOr<SpotifyAccessGrant>> AuthenticateByProfileIdAsync(string id, CancellationToken cancellationToken);
     Task<ErrorOr<IReadOnlyList<SpotifyTrackDto>>> SearchTracksAsync(
         Guid sessionId,
         string query,
@@ -28,8 +31,6 @@ internal class SpotifyService : ISpotifyService
     private static readonly TimeSpan StateLifetime = TimeSpan.FromMinutes(10);
 
     private readonly ISpotifyIntegrationClient _spotifyClient;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly ICookieAuthorizationHandler _cookieAuthorizationHandler;
     private readonly ISpotifyProfilesRepository _spotifyProfilesRepository;
     private readonly IHostTokenProvider _hostTokenProvider;
     private readonly ISessionsRepository _sessionsRepository;
@@ -38,8 +39,6 @@ internal class SpotifyService : ISpotifyService
 
     public SpotifyService(
         ISpotifyIntegrationClient spotifyClient,
-        IHttpContextAccessor httpContextAccessor,
-        ICookieAuthorizationHandler cookieAuthorizationHandler,
         ISpotifyProfilesRepository spotifyProfilesRepository,
         IHostTokenProvider hostTokenProvider,
         ISessionsRepository sessionsRepository,
@@ -47,8 +46,6 @@ internal class SpotifyService : ISpotifyService
         ILogger<SpotifyService> logger)
     {
         _spotifyClient = spotifyClient;
-        _httpContextAccessor = httpContextAccessor;
-        _cookieAuthorizationHandler = cookieAuthorizationHandler;
         _spotifyProfilesRepository = spotifyProfilesRepository;
         _hostTokenProvider = hostTokenProvider;
         _sessionsRepository = sessionsRepository;
@@ -72,7 +69,7 @@ internal class SpotifyService : ISpotifyService
         return _spotifyClient.GetAuthenticationUri(state);
     }
 
-    public async Task<ErrorOr<UserDto>> AuthenticateByCodeAsync(
+    public async Task<ErrorOr<HostLogin>> AuthenticateByCodeAsync(
         string code,
         string state,
         CancellationToken cancellationToken)
@@ -112,30 +109,21 @@ internal class SpotifyService : ISpotifyService
 
         _logger.LogInformation("A host logged in to session {SessionId}", sessionId);
 
-        Authorize(result);
-
-        return new UserDto
-        {
-            Id = result.ProfileId,
-            AccessToken = result.AccessToken,
-            SessionId = sessionId.Value
-        };
+        return new HostLogin(result.ProfileId, result.AccessToken, result.ExpiresIn, sessionId.Value);
     }
 
-    public async Task<ErrorOr<string>> AuthenticateByProfileIdAsync(string id, CancellationToken cancellationToken)
+    public async Task<ErrorOr<SpotifyAccessGrant>> AuthenticateByProfileIdAsync(string id, CancellationToken cancellationToken)
     {
-        var profileResult = await _spotifyProfilesRepository.GetProfileAsync(id, cancellationToken);
+        var profile = await _spotifyProfilesRepository.GetProfileAsync(id, cancellationToken);
 
-        if (profileResult.IsError)
+        if (profile is null)
         {
-            return profileResult.FirstError;
+            return SpotifyErrors.ProfileNotFound(id);
         }
 
-        var result = await _spotifyClient.ReAuthenticateAsync(profileResult.Value.RefreshToken, cancellationToken);
+        var result = await _spotifyClient.ReAuthenticateAsync(profile.RefreshToken, cancellationToken);
 
-        _cookieAuthorizationHandler.Authorize(result.AccessToken, result.ExpiresIn, _httpContextAccessor.HttpContext);
-
-        return result.AccessToken;
+        return new SpotifyAccessGrant(result.AccessToken, result.ExpiresIn);
     }
 
     public async Task<ErrorOr<IReadOnlyList<SpotifyTrackDto>>> SearchTracksAsync(
@@ -157,12 +145,5 @@ internal class SpotifyService : ISpotifyService
         var songs = await _spotifyClient.SearchTracksAsync(token.Value, query.Trim(), cancellationToken);
 
         return songs.Select(x => x.ToDto()).ToList();
-    }
-
-    private void Authorize(AuthenticationResult result)
-    {
-        var context = _httpContextAccessor.HttpContext;
-        _cookieAuthorizationHandler.Authorize(result.ProfileId, context);
-        _cookieAuthorizationHandler.Authorize(result.AccessToken, result.ExpiresIn, context);
     }
 }

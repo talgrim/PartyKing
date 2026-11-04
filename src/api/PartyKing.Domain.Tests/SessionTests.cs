@@ -1,7 +1,7 @@
 using PartyKing.Domain.Entities.Sessions;
 using PartyKing.Domain.Events.Sessions;
 
-namespace PartyKing.Application.Tests;
+namespace PartyKing.Domain.Tests;
 
 public class SessionTests
 {

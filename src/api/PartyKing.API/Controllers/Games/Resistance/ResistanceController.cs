@@ -1,4 +1,4 @@
-using PartyKing.Application.Ports;
+using PartyKing.API.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using PartyKing.API.Authorization;
@@ -15,8 +15,8 @@ public class ResistanceController : ResistanceControllerBase
         IHttpContextAccessor httpContextAccessor,
         IResistanceLobbyService lobbyService,
         IResistanceRoundService roundService,
-        ICookieAuthorizationHandler cookieAuthorizationHandler)
-        : base(httpContextAccessor, cookieAuthorizationHandler)
+        ISignedCookies cookies)
+        : base(httpContextAccessor, cookies)
     {
         Lobby = lobbyService;
         Rounds = roundService;

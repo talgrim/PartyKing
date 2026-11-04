@@ -1,13 +1,13 @@
+using PartyKing.API.Cookies;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.DataProtection;
 using PartyKing.API.Authentication;
-using PartyKing.API.Authentication.Cookie;
+using PartyKing.API.Authentication.Schemes;
 using PartyKing.API.Hubs.Notifiers;
 using PartyKing.API.Metrics;
 using PartyKing.Application;
 using PartyKing.Application.Realtime;
 using PartyKing.Infrastructure;
-using PartyKing.Infrastructure.Authentication;
 using PartyKing.Infrastructure.Llm;
 using PartyKing.Infrastructure.Lyrics;
 using PartyKing.Infrastructure.Spotify;
@@ -69,10 +69,12 @@ public static class DependencyInjection
 
     private static void AddAuthorization(this IServiceCollection services)
     {
+        services.AddSingleton<ISignedCookies, SignedCookies>();
+
         services
             .AddAuthentication()
-            .AddScheme<CookieAuthenticationOptions, CookieAuthenticationHandler>(Constants.Scheme, null)
-            .AddScheme<CookieAuthenticationOptions, AdminCookieAuthenticationHandler>(Constants.AdminScheme, null);
+            .AddScheme<CookieAuthenticationOptions, CookieAuthenticationHandler>(SchemeNames.Host, null)
+            .AddScheme<CookieAuthenticationOptions, AdminCookieAuthenticationHandler>(SchemeNames.Admin, null);
 
         services
             .AddAuthorizationBuilder()
@@ -82,7 +84,7 @@ public static class DependencyInjection
             })
             .AddPolicy(Policies.Admin, policy =>
             {
-                policy.AddAuthenticationSchemes(Constants.AdminScheme);
+                policy.AddAuthenticationSchemes(SchemeNames.Admin);
                 policy.RequireAuthenticatedUser();
             });
     }

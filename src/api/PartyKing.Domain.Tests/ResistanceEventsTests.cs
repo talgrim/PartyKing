@@ -2,7 +2,7 @@ using PartyKing.Domain.Entities.Games.Resistance;
 using PartyKing.Domain.Events;
 using PartyKing.Domain.Events.Games.Resistance;
 
-namespace PartyKing.Application.Tests;
+namespace PartyKing.Domain.Tests;
 
 /// <summary>The events <see cref="ResistanceGame"/> raises, with no database.</summary>
 public class ResistanceEventsTests
