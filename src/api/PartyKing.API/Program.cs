@@ -131,8 +131,15 @@ if (app.Environment.IsDevelopment())
     app.UseMiddleware<DevPersonaMiddleware>();
 }
 
+// The e2e suite logs in and unlocks sessions from one IP far more often than the limits allow. Without the
+// middleware the [EnableRateLimiting] attributes do nothing. Honoured in Development only, so a stray setting
+// can never lift the limits of a deployed instance.
+if (!(app.Environment.IsDevelopment() && app.Configuration.GetValue<bool>("RateLimiting:Disabled")))
+{
+    app.UseRateLimiter();
+}
+
 app
-    .UseRateLimiter()
     .UseAuthentication()
     .UseAuthorization()
     .UseErrorHandling()
