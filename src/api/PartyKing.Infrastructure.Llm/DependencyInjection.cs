@@ -25,8 +25,13 @@ public static class DependencyInjection
             {
                 var options = provider.GetRequiredService<IOptions<LlmConfiguration>>().Value;
 
+                if (string.IsNullOrWhiteSpace(options.ApiKey))
+                {
+                    return new UnavailableChatClient();
+                }
+
                 var client = new OpenAIClient(
-                    new ApiKeyCredential(options.ApiKey ?? string.Empty),
+                    new ApiKeyCredential(options.ApiKey),
                     new OpenAIClientOptions
                     {
                         Endpoint = new Uri(options.BaseUrl),
