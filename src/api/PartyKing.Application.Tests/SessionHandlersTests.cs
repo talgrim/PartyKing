@@ -50,6 +50,7 @@ public class SessionHandlersTests
 
         Assert.Equal([SessionId], ringo.Changes);
         Assert.Equal([SessionId], resistance.Changes);
+        Assert.Equal([SessionId], resistance.LobbyChanges);
         Assert.Equal((SessionId, (int?)null, (QueueItemDto?)null), Assert.Single(queue.QueueAdvanced));
         Assert.Empty(ringo.Opens);
         Assert.Empty(resistance.Opens);

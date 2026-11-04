@@ -107,11 +107,25 @@ public class SignalRNotifierTests
         Assert.All(_hub.Sent, x => Assert.Empty(x.Args));
     }
 
+    [Fact]
+    public async Task ResistanceNotifier_PushesTheLobbyChangeToTheLobbyTopicOnly()
+    {
+        IResistanceNotifier notifier = new SignalRResistanceNotifier(_hub);
+
+        await notifier.LobbyChangedAsync(_sessionId, default);
+
+        var sent = Assert.Single(_hub.Sent);
+        Assert.Equal(SessionMusicHubEvents.ResistanceLobbyChanged, sent.Method);
+        Assert.Equal(Group(SessionHubTopic.ResistanceLobby), sent.Group);
+        Assert.Empty(sent.Args);
+    }
+
     [Theory]
-    [InlineData(null, "Music,Slideshow,Ringo,Resistance")]
-    [InlineData("", "Music,Slideshow,Ringo,Resistance")]
+    [InlineData(null, "Music,Slideshow,Ringo,Resistance,ResistanceLobby")]
+    [InlineData("", "Music,Slideshow,Ringo,Resistance,ResistanceLobby")]
     [InlineData("ringo", "Ringo")]
     [InlineData("Music, resistance,music", "Music,Resistance")]
+    [InlineData("resistanceLobby,ringo", "ResistanceLobby,Ringo")]
     public void Topics_AreParsedFromTheQuery(string? value, string expected)
     {
         Assert.True(SessionHubTopics.TryParse(value, out var topics));
@@ -135,7 +149,7 @@ public class SignalRNotifierTests
             [
                 "SongAdded", "SongRemoved", "QueueAdvanced", "PlayerStateChanged", "PlayerCommand",
                 "FallbackErrorChanged", "LyricsOffsetChanged", "SlideChanged", "RingoChanged", "RingoOpened",
-                "ResistanceChanged", "ResistanceOpened"
+                "ResistanceChanged", "ResistanceOpened", "ResistanceLobbyChanged"
             ],
             typeof(SessionMusicHubEvents).GetFields().Select(x => (string)x.GetRawConstantValue()!));
     }

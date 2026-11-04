@@ -58,6 +58,13 @@ internal static class TestEvents
         services.AddScoped<IDomainEventHandler<RingoTurnPassed>, RingoPushHandler>();
         services.AddScoped<IDomainEventHandler<ResistanceCreated>, ResistancePushHandler>();
         services.AddScoped<IDomainEventHandler<ResistanceChanged>, ResistancePushHandler>();
+        services.AddScoped<IDomainEventHandler<ResistanceCreated>, ResistanceLobbyPushHandler>();
+        services.AddScoped<IDomainEventHandler<ResistanceStarted>, ResistanceLobbyPushHandler>();
+        services.AddScoped<IDomainEventHandler<ResistanceRestarted>, ResistanceLobbyPushHandler>();
+        services.AddScoped<IDomainEventHandler<LobbyOpened>, ResistanceLobbyPushHandler>();
+        services.AddScoped<IDomainEventHandler<LobbyPlayerJoined>, ResistanceLobbyPushHandler>();
+        services.AddScoped<IDomainEventHandler<LobbyPlayerKicked>, ResistanceLobbyPushHandler>();
+        services.AddScoped<IDomainEventHandler<LobbyGameEnded>, ResistanceLobbyPushHandler>();
 
         return new DomainEventDispatcher(
             services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),
