@@ -8,7 +8,7 @@ import unusedImports from 'eslint-plugin-unused-imports';
 import prettier from 'eslint-config-prettier';
 
 export default tseslint.config(
-  { ignores: ['dist', 'coverage', 'node_modules', 'public'] },
+  { ignores: ['dist', 'coverage', 'node_modules', 'public', 'e2e/.work', 'playwright-report', 'test-results'] },
 
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -55,6 +55,17 @@ export default tseslint.config(
   {
     files: ['*.{js,mjs,ts}'],
     languageOptions: { globals: { ...globals.node } },
+  },
+
+  // The e2e suite runs on Playwright in Node: its fixtures' `use` is not a React hook and their first argument is
+  // an (often empty) destructured fixture object
+  {
+    files: ['e2e/**/*.{ts,mjs}', 'playwright.config.ts'],
+    languageOptions: { globals: { ...globals.node } },
+    rules: {
+      'react-hooks/rules-of-hooks': 'off',
+      'no-empty-pattern': 'off',
+    },
   },
 
   // The code style is not enforced by ESLint, so formatting rules stay out of the way
