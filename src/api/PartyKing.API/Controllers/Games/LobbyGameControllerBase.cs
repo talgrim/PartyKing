@@ -1,5 +1,5 @@
+using PartyKing.API.Cookies;
 using PartyKing.Application.Games.Services.Base;
-using PartyKing.Application.Ports;
 using PartyKing.Domain.Entities.Games.Base;
 
 namespace PartyKing.API.Controllers.Games;
@@ -8,8 +8,8 @@ namespace PartyKing.API.Controllers.Games;
 public abstract class LobbyGameControllerBase : GameControllerBase
 {
     protected LobbyGameControllerBase(
-        IHttpContextAccessor httpContextAccessor, ICookieAuthorizationHandler cookieAuthorizationHandler)
-        : base(httpContextAccessor, cookieAuthorizationHandler)
+        IHttpContextAccessor httpContextAccessor, ISignedCookies cookies)
+        : base(httpContextAccessor, cookies)
     {
     }
 

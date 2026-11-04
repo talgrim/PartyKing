@@ -2,11 +2,11 @@
 using PartyKing.Application.Ports;
 using PartyKing.Domain.Repositories;
 using ErrorOr;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using PartyKing.Application.Configuration;
 using PartyKing.Application.Mappings;
 using PartyKing.Application.Realtime;
+using PartyKing.Application.Slideshow.Models;
 using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Application.System;
 using PartyKing.Contract.V1.Slideshow;
@@ -24,7 +24,7 @@ public interface ISlideshowService
         CancellationToken cancellationToken);
     Task UploadImagesAsync(
         Guid sessionId,
-        IFormFile[] files,
+        IReadOnlyList<UploadedFile> files,
         bool deleteAfterPresentation,
         CancellationToken cancellationToken);
 
@@ -126,15 +126,15 @@ internal class SlideshowService : ISlideshowService
 
     public async Task UploadImagesAsync(
         Guid sessionId,
-        IFormFile[] files,
+        IReadOnlyList<UploadedFile> files,
         bool deleteAfterPresentation,
         CancellationToken cancellationToken)
     {
         // Validate everything first so a bad file doesn't leave the rest of the batch half stored
-        var validated = new List<(IFormFile File, ValidatedImage Image)>();
+        var validated = new List<(UploadedFile File, ValidatedImage Image)>();
         foreach (var file in files)
         {
-            await using var content = file.OpenReadStream();
+            await using var content = file.OpenRead();
             var image = await UploadedImageValidator.ValidateAsync(file.FileName, file.Length, content, cancellationToken);
             validated.Add((file, image));
         }
@@ -361,12 +361,12 @@ internal class SlideshowService : ISlideshowService
 
     private async Task UploadImageAsync(
         Guid sessionId,
-        IFormFile file,
+        UploadedFile file,
         ValidatedImage image,
         bool deleteAfterPresentation,
         CancellationToken cancellationToken)
     {
-        await using var content = file.OpenReadStream();
+        await using var content = file.OpenRead();
 
         await _imagesRepository.AddSlideshowImageAsync(CreateModel(), cancellationToken);
 

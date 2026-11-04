@@ -1,4 +1,4 @@
-using PartyKing.Application.Ports;
+using PartyKing.API.Cookies;
 using System.ComponentModel.DataAnnotations;
 using ErrorOr;
 using Microsoft.AspNetCore.Mvc;
@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using PartyKing.API.Authentication;
 using PartyKing.API.Authorization;
 using PartyKing.Application.Sessions.Services;
+using PartyKing.Application.Slideshow.Models;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Contract.V1.Slideshow;
 
@@ -22,7 +23,7 @@ public class SlideshowController : CoreController
     private readonly ISlideshowService _slideshowService;
     private readonly ISlideshowArchiveService _archiveService;
     private readonly ISessionAuthorizer _sessionAuthorizer;
-    private readonly ICookieAuthorizationHandler _cookieAuthorizationHandler;
+    private readonly ISignedCookies _cookies;
     private readonly ILogger<SlideshowController> _logger;
 
     public SlideshowController(
@@ -30,14 +31,14 @@ public class SlideshowController : CoreController
         ISlideshowService slideshowService,
         ISlideshowArchiveService archiveService,
         ISessionAuthorizer sessionAuthorizer,
-        ICookieAuthorizationHandler cookieAuthorizationHandler,
+        ISignedCookies cookies,
         ILogger<SlideshowController> logger)
         : base(httpContextAccessor)
     {
         _slideshowService = slideshowService;
         _archiveService = archiveService;
         _sessionAuthorizer = sessionAuthorizer;
-        _cookieAuthorizationHandler = cookieAuthorizationHandler;
+        _cookies = cookies;
         _logger = logger;
     }
 
@@ -54,7 +55,9 @@ public class SlideshowController : CoreController
     {
         try
         {
-            await _slideshowService.UploadImagesAsync(sessionId, files, deleteAfterPresentation, cancellationToken);
+            var uploads = files.Select(x => new UploadedFile(x.FileName, x.Length, x.OpenReadStream)).ToList();
+
+            await _slideshowService.UploadImagesAsync(sessionId, uploads, deleteAfterPresentation, cancellationToken);
             return Ok();
         }
         catch (InvalidUploadException e)
@@ -121,7 +124,7 @@ public class SlideshowController : CoreController
     [ProducesResponseType<SlideshowPhotoCountDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetPhotoCount(Guid sessionId, CancellationToken cancellationToken)
     {
-        var caller = await HttpContext.ReadSessionCallerAsync(_cookieAuthorizationHandler);
+        var caller = await HttpContext.ReadSessionCallerAsync(_cookies);
         var result = await _archiveService.CountPhotosAsync(sessionId, caller, cancellationToken);
 
         return result.Match(Ok, Problem);
@@ -135,7 +138,7 @@ public class SlideshowController : CoreController
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> DownloadPhotos(Guid sessionId, CancellationToken cancellationToken)
     {
-        var caller = await HttpContext.ReadSessionCallerAsync(_cookieAuthorizationHandler);
+        var caller = await HttpContext.ReadSessionCallerAsync(_cookies);
         var result = await _archiveService.CreateArchiveAsync(sessionId, caller, cancellationToken);
 
         if (result.IsError)
@@ -159,7 +162,7 @@ public class SlideshowController : CoreController
         Guid sessionId,
         CancellationToken cancellationToken)
     {
-        var caller = await HttpContext.ReadSessionCallerAsync(_cookieAuthorizationHandler);
+        var caller = await HttpContext.ReadSessionCallerAsync(_cookies);
 
         return await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, caller, cancellationToken);
     }

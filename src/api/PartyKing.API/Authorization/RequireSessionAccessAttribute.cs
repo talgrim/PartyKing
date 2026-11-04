@@ -1,4 +1,4 @@
-using PartyKing.Application.Ports;
+using PartyKing.API.Cookies;
 using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -16,14 +16,14 @@ public class RequireSessionAccessAttribute() : TypeFilterAttribute(typeof(Sessio
 internal class SessionAccessFilter : IAsyncAuthorizationFilter
 {
     private readonly ISessionAccessService _accessService;
-    private readonly ICookieAuthorizationHandler _cookieAuthorizationHandler;
+    private readonly ISignedCookies _cookies;
     private readonly AuthorizationMetrics _metrics;
 
-    public SessionAccessFilter(ISessionAccessService accessService, ICookieAuthorizationHandler cookieAuthorizationHandler,
+    public SessionAccessFilter(ISessionAccessService accessService, ISignedCookies cookies,
         AuthorizationMetrics metrics)
     {
         _accessService = accessService;
-        _cookieAuthorizationHandler = cookieAuthorizationHandler;
+        _cookies = cookies;
         _metrics = metrics;
     }
 
@@ -31,7 +31,7 @@ internal class SessionAccessFilter : IAsyncAuthorizationFilter
     {
         var startTimestamp = Stopwatch.GetTimestamp();
         var hasAccess = Guid.TryParse(context.RouteData.Values["sessionId"]?.ToString(), out var sessionId)
-            && _cookieAuthorizationHandler.TryReadSessionAccess(context.HttpContext.Request, sessionId, out var stamp)
+            && _cookies.TryReadSessionAccess(context.HttpContext.Request, sessionId, out var stamp)
             && await _accessService.HasAccessAsync(sessionId, stamp, context.HttpContext.RequestAborted);
 
         var durationMs = Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds;

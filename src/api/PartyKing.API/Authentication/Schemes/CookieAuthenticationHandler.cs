@@ -1,4 +1,4 @@
-using PartyKing.Application.Ports;
+using PartyKing.API.Cookies;
 using System.Diagnostics;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
@@ -6,14 +6,13 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 using PartyKing.API.Metrics;
 using PartyKing.Application.Spotify.Services;
-using PartyKing.Infrastructure.Authentication;
 
-namespace PartyKing.API.Authentication.Cookie;
+namespace PartyKing.API.Authentication.Schemes;
 
 public class CookieAuthenticationHandler : AuthenticationHandler<CookieAuthenticationOptions>
 {
     private readonly ISpotifyService _spotifyService;
-    private readonly ICookieAuthorizationHandler _cookieAuthorizationHandler;
+    private readonly ISignedCookies _cookies;
     private readonly AuthorizationMetrics _metrics;
 
     public CookieAuthenticationHandler(
@@ -21,13 +20,13 @@ public class CookieAuthenticationHandler : AuthenticationHandler<CookieAuthentic
         ILoggerFactory logger,
         UrlEncoder encoder,
         ISpotifyService spotifyService,
-        ICookieAuthorizationHandler cookieAuthorizationHandler,
+        ISignedCookies cookies,
         AuthorizationMetrics metrics)
         : base(options, logger, encoder)
     {
         _metrics = metrics;
         _spotifyService = spotifyService;
-        _cookieAuthorizationHandler = cookieAuthorizationHandler;
+        _cookies = cookies;
     }
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
@@ -43,12 +42,12 @@ public class CookieAuthenticationHandler : AuthenticationHandler<CookieAuthentic
     private async Task<AuthenticateResult> AuthenticateAsync()
     {
         // The profile id comes from the signed cookie, never from anything the client can edit
-        if (!_cookieAuthorizationHandler.TryReadProfileId(Request, out var profileId))
+        if (!_cookies.TryReadProfileId(Request, out var profileId))
         {
             return AuthenticateResult.Fail("Authentication cookie is missing or invalid");
         }
 
-        if (!Request.Cookies.TryGetValue(Constants.AuthCookieName, out var spotifyAccessToken))
+        if (!Request.Cookies.TryGetValue(CookieNames.Auth, out var spotifyAccessToken))
         {
             var result = await _spotifyService.AuthenticateByProfileIdAsync(profileId, CancellationToken.None);
 
@@ -57,7 +56,8 @@ public class CookieAuthenticationHandler : AuthenticationHandler<CookieAuthentic
                 return AuthenticateResult.Fail(result.FirstError.Description);
             }
 
-            spotifyAccessToken = result.Value;
+            _cookies.GrantSpotifyAccessToken(result.Value.AccessToken, result.Value.ExpiresIn, Context);
+            spotifyAccessToken = result.Value.AccessToken;
         }
 
         var claims = CreateClaims(profileId, spotifyAccessToken);

@@ -1,5 +1,4 @@
 using PartyKing.Application.Ports;
-using ErrorOr;
 using Microsoft.EntityFrameworkCore;
 using PartyKing.Domain.Entities.Spotify;
 using PartyKing.Domain.Results;
@@ -45,17 +44,10 @@ internal class SpotifyProfilesRepository : ISpotifyProfilesRepository
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<ErrorOr<SpotifyProfile>> GetProfileAsync(string id, CancellationToken cancellationToken)
+    public async Task<SpotifyProfile?> GetProfileAsync(string id, CancellationToken cancellationToken)
     {
         await using var dbContext = await _readerDbContextFactory.CreateDbContextAsync(cancellationToken);
 
-        var profile = await dbContext.SpotifyProfiles.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-
-        if (profile is null)
-        {
-            return Error.NotFound(description: $"Profile with ID {id} was not found in the database");
-        }
-
-        return profile;
+        return await dbContext.SpotifyProfiles.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
     }
 }

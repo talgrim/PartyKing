@@ -1,3 +1,4 @@
+using PartyKing.API.Cookies;
 using PartyKing.Application.Ports;
 using Microsoft.AspNetCore.SignalR;
 using PartyKing.API.Authentication;
@@ -20,18 +21,18 @@ public class SessionHub : Hub
 
     private readonly ISessionAccessService _accessService;
     private readonly ISessionAuthorizer _sessionAuthorizer;
-    private readonly ICookieAuthorizationHandler _cookieAuthorizationHandler;
+    private readonly ISignedCookies _cookies;
     private readonly ISlideshowService _slideshowService;
 
     public SessionHub(
         ISessionAccessService accessService,
         ISessionAuthorizer sessionAuthorizer,
-        ICookieAuthorizationHandler cookieAuthorizationHandler,
+        ISignedCookies cookies,
         ISlideshowService slideshowService)
     {
         _accessService = accessService;
         _sessionAuthorizer = sessionAuthorizer;
-        _cookieAuthorizationHandler = cookieAuthorizationHandler;
+        _cookies = cookies;
         _slideshowService = slideshowService;
     }
 
@@ -41,7 +42,7 @@ public class SessionHub : Hub
             ?? throw new HubException("HTTP context is required");
 
         if (!Guid.TryParse(http.Request.Query["sessionId"], out var sessionId)
-            || !_cookieAuthorizationHandler.TryReadSessionAccess(http.Request, sessionId, out var stamp)
+            || !_cookies.TryReadSessionAccess(http.Request, sessionId, out var stamp)
             || !await _accessService.HasAccessAsync(sessionId, stamp, Context.ConnectionAborted))
         {
             Context.Abort();
@@ -78,7 +79,7 @@ public class SessionHub : Hub
             ?? throw new HubException("HTTP context is required");
         var sessionId = (Guid)Context.Items[SessionIdItem]!;
 
-        var caller = await http.ReadSessionCallerAsync(_cookieAuthorizationHandler);
+        var caller = await http.ReadSessionCallerAsync(_cookies);
 
         if ((await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, caller, Context.ConnectionAborted)).IsError)
         {

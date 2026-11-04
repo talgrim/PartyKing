@@ -1,4 +1,4 @@
-using PartyKing.Application.Ports;
+using PartyKing.API.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using PartyKing.API.Authorization;
@@ -15,8 +15,8 @@ public class NeverHaveIEverController : GameControllerBase
     public NeverHaveIEverController(
         IHttpContextAccessor httpContextAccessor,
         INeverHaveIEverSuggestionService suggestionService,
-        ICookieAuthorizationHandler cookieAuthorizationHandler)
-        : base(httpContextAccessor, cookieAuthorizationHandler)
+        ISignedCookies cookies)
+        : base(httpContextAccessor, cookies)
     {
         _suggestionService = suggestionService;
     }

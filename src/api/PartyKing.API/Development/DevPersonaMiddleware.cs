@@ -1,6 +1,6 @@
+using PartyKing.API.Cookies;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Primitives;
-using PartyKing.Infrastructure.Authentication;
 
 namespace PartyKing.API.Development;
 
@@ -16,15 +16,15 @@ public sealed partial class DevPersonaMiddleware
 
     private static readonly string[] HiddenCookies =
     [
-        Constants.UserCookieName,
-        Constants.AuthCookieName,
-        Constants.AdminCookieName,
+        CookieNames.User,
+        CookieNames.Auth,
+        CookieNames.Admin,
     ];
 
     private static readonly string[] PerPersonaCookies =
     [
-        Constants.RingoPlayerCookieName,
-        Constants.ResistancePlayerCookieName,
+        CookieNames.RingoPlayer,
+        CookieNames.ResistancePlayer,
     ];
 
     private readonly RequestDelegate _next;

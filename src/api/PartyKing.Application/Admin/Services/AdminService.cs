@@ -1,7 +1,5 @@
-using PartyKing.Application.Ports;
 using PartyKing.Domain.Repositories;
 using ErrorOr;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PartyKing.Application.Configuration;
@@ -11,8 +9,8 @@ namespace PartyKing.Application.Admin.Services;
 
 public interface IAdminService
 {
-    Task<ErrorOr<Success>> LoginAsync(string? username, string? password, CancellationToken cancellationToken);
-    void Logout();
+    /// <summary>Checks the credentials and returns the id of the admin account; the caller signs the admin in.</summary>
+    Task<ErrorOr<Guid>> LoginAsync(string? username, string? password, CancellationToken cancellationToken);
     Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken);
 
     /// <summary>Creates the first admin from configuration when no admin account exists.</summary>
@@ -23,8 +21,6 @@ internal class AdminService : IAdminService
 {
     private readonly IAdminAccountsRepository _accountsRepository;
     private readonly IPasswordHasher _passwordHasher;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly ICookieAuthorizationHandler _cookieAuthorizationHandler;
     private readonly AdminConfiguration _config;
     private readonly ILogger<AdminService> _logger;
 
@@ -34,21 +30,17 @@ internal class AdminService : IAdminService
     public AdminService(
         IAdminAccountsRepository accountsRepository,
         IPasswordHasher passwordHasher,
-        IHttpContextAccessor httpContextAccessor,
-        ICookieAuthorizationHandler cookieAuthorizationHandler,
         IOptions<AdminConfiguration> config,
         ILogger<AdminService> logger)
     {
         _accountsRepository = accountsRepository;
         _passwordHasher = passwordHasher;
-        _httpContextAccessor = httpContextAccessor;
-        _cookieAuthorizationHandler = cookieAuthorizationHandler;
         _config = config.Value;
         _logger = logger;
         _dummyHash = passwordHasher.Hash(Guid.NewGuid().ToString());
     }
 
-    public async Task<ErrorOr<Success>> LoginAsync(
+    public async Task<ErrorOr<Guid>> LoginAsync(
         string? username,
         string? password,
         CancellationToken cancellationToken)
@@ -64,14 +56,7 @@ internal class AdminService : IAdminService
             return Error.Unauthorized(description: "Invalid username or password");
         }
 
-        _cookieAuthorizationHandler.AuthorizeAdmin(account.Id, _httpContextAccessor.HttpContext);
-
-        return Result.Success;
-    }
-
-    public void Logout()
-    {
-        _cookieAuthorizationHandler.SignOutAdmin(_httpContextAccessor.HttpContext);
+        return account.Id;
     }
 
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken)
