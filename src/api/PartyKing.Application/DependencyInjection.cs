@@ -87,6 +87,7 @@ public static class DependencyInjection
     private static void RegisterAdmin(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
+        services.AddSingleton<AdminDummyHash>();
         services.AddScoped<IAdminService, AdminService>();
         services.Configure<AdminConfiguration>(configuration.GetSection(AdminConfiguration.SectionName));
     }
