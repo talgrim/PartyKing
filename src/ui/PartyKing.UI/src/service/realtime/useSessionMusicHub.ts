@@ -39,8 +39,12 @@ const hubUrl = (sessionId: string, topics: readonly SessionHubTopic[]) => {
 /** A burst of pushes (everyone voting at once) is answered with one refetch per client instead of one per push. */
 const RESISTANCE_REVALIDATE_DEBOUNCE_MS = 250;
 
-/** Each client waits a random extra moment, so a push doesn't make every client fetch in the same instant. */
-const RESISTANCE_REVALIDATE_JITTER_MS = 500;
+/**
+ * Each client waits a random extra moment, so a push doesn't make every client fetch in the same instant. It was 500 ms
+ * while a fetch cost about 55 ms of server CPU (a hash built on every request, since fixed): the spread kept the
+ * machine from being swamped, but a vote took up to 750 ms to show. A fetch is about 1 ms now, so 100 ms is enough.
+ */
+const RESISTANCE_REVALIDATE_JITTER_MS = 100;
 
 /**
  * The lobby changes a few times per game, and `ResistanceOpened` and `ResistanceLobbyChanged` arrive together when an
