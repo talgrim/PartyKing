@@ -2,9 +2,18 @@ import { ReactNode, useState } from 'react';
 import CloseIcon from '@mui/icons-material/Close';
 import { Dialog, DialogContent, DialogTitle } from '@mui/material';
 import { gamesApi } from '@/service/endpoints/games/gamesApi';
-import { ResistanceReverserOptions, ResistanceReverserSides } from '@/service/endpoints/games/types';
+import { ResistanceAssassinOptions, ResistanceReverserOptions, ResistanceReverserSides } from '@/service/endpoints/games/types';
 import { useResistanceGame } from '@/service/endpoints/games/useResistanceGame';
 import { useTranslation } from 'react-i18next';
+import { assassinCharactersProblem } from './resistance/assassinCharacters';
+
+/** The optional characters of the Assassin module: the option name of the request and its flag in the rules. */
+const ASSASSIN_OPTIONS = [
+  { option: 'bodyGuard', flag: 'bodyGuardEnabled' },
+  { option: 'deepCover', flag: 'deepCoverEnabled' },
+  { option: 'blindSpy', flag: 'blindSpyEnabled' },
+  { option: 'falseCommander', flag: 'falseCommanderEnabled' },
+] as const;
 
 type Props = {
   sessionId: string;
@@ -70,10 +79,10 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
     }
   };
 
-  const setAssassin = async (enabled: boolean) => {
+  const setAssassin = async (enabled: boolean, options?: ResistanceAssassinOptions) => {
     setMessage(undefined);
     try {
-      await mutate(gamesApi.setResistanceAssassin(sessionId, enabled), { revalidate: false });
+      await mutate(gamesApi.setResistanceAssassin(sessionId, enabled, options), { revalidate: false });
     } catch {
       setMessage(t('resistance.settings.assassinFailed'));
     }
@@ -81,6 +90,7 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
 
   // The Assassin does not combine with Blind Spies, the Reverser or the Defectors: each is greyed out while the other is on
   const assassinOn = game?.rules.assassinEnabled ?? false;
+  const assassinProblem = game === undefined ? null : assassinCharactersProblem(game);
   const assassinBlocked = game?.rules.blindSpiesEnabled || game?.rules.reverserEnabled || game?.rules.defectorEnabled;
 
   const defectorChoiceDisabled = game === undefined || started || !game.rules.defectorEnabled;
@@ -242,6 +252,18 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
             />
             {t('resistance.settings.assassin.toggle')}
           </label>
+          {ASSASSIN_OPTIONS.map(({ option, flag }) => (
+            <label key={option} className={`flex items-center gap-2 text-sm ${assassinOn ? 'text-slate-200' : 'text-slate-500'}`}>
+              <input
+                type="checkbox"
+                checked={game?.rules[flag] ?? false}
+                disabled={game === undefined || started || !assassinOn}
+                onChange={(event) => void setAssassin(true, { [option]: event.target.checked })}
+              />
+              {t(`resistance.settings.assassin.${option}`)}
+            </label>
+          ))}
+          {assassinProblem && <p className="text-sm text-amber-500">{t(`resistance.settings.assassin.${assassinProblem}`)}</p>}
         </SettingsSection>
         {message && <p className="text-amber-500">{message}</p>}
       </DialogContent>

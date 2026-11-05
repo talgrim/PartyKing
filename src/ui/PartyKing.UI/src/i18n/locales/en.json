@@ -431,7 +431,12 @@
       "fellowDefector": "The other Defector is {{name}}.",
       "commander": "You are the Commander: you know who the spies are. If the Resistance wins three missions, the Assassin will try to name you, so do not give yourself away.",
       "commanderSpiesList": "Spies you know",
-      "assassin": "You are the Assassin: if the Resistance wins three missions, you get one last chance. Talk it over with the other spies, then name the player you take for the Commander."
+      "assassin": "You are the Assassin: if the Resistance wins three missions, you get one last chance. Talk it over with the other spies, then name the player you take for the Commander.",
+      "bodyGuard": "You are the Body Guard: the Commander is one of these players, but you cannot tell which (a spy, the False Commander, may look like the Commander to you).",
+      "commanderCandidatesList": "Possible Commanders",
+      "deepCover": "You are Deep Cover, a spy: the Commander does not see you among the spies. The other spies know you as usual.",
+      "blindSpy": "You are the Blind Spy: you do not know who the other spies are, and they do not know you. The Commander does see you.",
+      "falseCommander": "You are the False Commander, a spy: the Body Guard takes you for the Commander. The other spies know you as usual."
     },
     "missionCard": {
       "success": "Success",
@@ -450,7 +455,11 @@
       "reverser": "Reverser",
       "defector": "Defector",
       "commander": "Commander",
-      "assassin": "Assassin"
+      "assassin": "Assassin",
+      "bodyGuard": "Body Guard",
+      "deepCover": "Deep Cover",
+      "blindSpy": "Blind Spy",
+      "falseCommander": "False Commander"
     },
     "vote": {
       "approve": "Approve",
@@ -501,8 +510,14 @@
       "assassinFailed": "Could not change the Assassin setting.",
       "assassin": {
         "title": "Assassin",
-        "description": "A module in which a secret Commander (Resistance) and a secret Assassin (spy) are dealt. The Commander knows who the spies are. After the Resistance wins three missions the Spies get one last chance: the Assassin, after talking it over with the other spies outside the app, names the player they take for the Commander. If right, the Spies win; if wrong, the Resistance wins. Three failed missions still win the game for the Spies. Does not combine with Blind Spies, the Reverser or the Defectors.",
-        "toggle": "Enable Assassin"
+        "description": "A module in which a secret Commander (Resistance) and a secret Assassin (spy) are dealt. The Commander knows who the spies are. After the Resistance wins three missions the Spies get one last chance: the Assassin, after talking it over with the other spies outside the app, names the player they take for the Commander. If right, the Spies win; if wrong, the Resistance wins. Three failed missions still win the game for the Spies. Does not combine with Blind Spies, the Reverser or the Defectors. Optional characters (best one at a time): the Body Guard knows the Commander (with 5 players needs Deep Cover or the False Commander), Deep Cover is a spy the Commander does not see, the Blind Spy knows no spy and is known to none, the False Commander looks like the Commander to the Body Guard. The Assassin takes one spy seat, the other spy characters the rest.",
+        "toggle": "Enable Assassin",
+        "bodyGuard": "Body Guard",
+        "deepCover": "Deep Cover",
+        "blindSpy": "Blind Spy",
+        "falseCommander": "False Commander",
+        "tooManySpyCharacters": "There are too few spies for these characters: the Assassin takes one spy seat, and Deep Cover, the Blind Spy and the False Commander one each.",
+        "bodyGuardNeedsCover": "With 5 players the Body Guard needs Deep Cover or the False Commander."
       }
     },
     "controls": {
@@ -773,7 +788,11 @@
       "reverser": "REVERSER",
       "defector": "DEFECTOR",
       "commander": "COMMANDER",
-      "assassin": "ASSASSIN"
+      "assassin": "ASSASSIN",
+      "bodyGuard": "BODY GUARD",
+      "deepCover": "DEEP COVER",
+      "blindSpy": "BLIND SPY",
+      "falseCommander": "FALSE COMMANDER"
     },
     "rules": {
       "goal": {
@@ -845,7 +864,7 @@
       },
       "assassin": {
         "title": "Assassin (module)",
-        "text": "When the host enables the module, a secret Commander is dealt among the Resistance and a secret Assassin among the Spies. The Commander knows who the spies are. If the Spies fail three missions they win as usual. If the Resistance wins three missions, the game is not over yet: the Spies talk it over outside the app and the Assassin names the player they take for the Commander. If they are right, the Spies win; otherwise the Resistance wins. The module does not combine with Blind Spies, the Reverser or the Defectors."
+        "text": "When the host enables the module, a secret Commander is dealt among the Resistance and a secret Assassin among the Spies. The Commander knows who the spies are. If the Spies fail three missions they win as usual. If the Resistance wins three missions, the game is not over yet: the Spies talk it over outside the app and the Assassin names the player they take for the Commander. If they are right, the Spies win; otherwise the Resistance wins. The module does not combine with Blind Spies, the Reverser or the Defectors. Optional characters: the Body Guard (Resistance) knows the Commander, and with 5 players needs Deep Cover or the False Commander; Deep Cover (spy) is not seen by the Commander; the Blind Spy (spy) knows no other spy and is not known by them, though the Commander sees them; the False Commander (spy) looks like the Commander to the Body Guard. They are best played one at a time, and the Assassin takes one spy seat, so with 5 or 6 players only one spy character fits."
       }
     },
     "phase": {
@@ -972,7 +991,11 @@
       },
       "assassin": {
         "commander": "Your secret character card: you are the Commander of the Resistance and you know who the spies are. If the Resistance wins three missions, the Assassin tries to name you.",
-        "assassin": "Your secret character card: you are the Assassin, a spy. If the Resistance wins three missions, you name the player you take for the Commander; if you are right, the Spies win."
+        "assassin": "Your secret character card: you are the Assassin, a spy. If the Resistance wins three missions, you name the player you take for the Commander; if you are right, the Spies win.",
+        "bodyGuard": "Your secret character card: you are the Body Guard of the Resistance. The Commander is one of two players you see, because the False Commander, if played, looks like the Commander to you.",
+        "deepCover": "Your secret character card: you are Deep Cover, a spy the Commander does not see.",
+        "blindSpy": "Your secret character card: you are the Blind Spy. You know no other spy and they do not know you, but the Commander sees you.",
+        "falseCommander": "Your secret character card: you are the False Commander, a spy the Body Guard takes for the Commander."
       }
     },
     "assassin": {

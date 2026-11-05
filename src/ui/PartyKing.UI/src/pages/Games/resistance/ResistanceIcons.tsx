@@ -561,6 +561,62 @@ export const AssassinCardIcon = ({ className, title }: IconProps): ReactNode => 
   </Svg>
 );
 
+/** Assassin module: the Body Guard (a Resistance figure with a shield, who knows the Commander). */
+export const BodyGuardCardIcon = ({ className, title }: IconProps): ReactNode => (
+  <Svg viewBox="0 0 100 140" className={className} title={title}>
+    <CardFrame fill={COLORS.ink} stroke={COLORS.gold} />
+    <circle cx="50" cy="56" r="34" fill={COLORS.resistance} fillOpacity="0.18" />
+    <Person x={50} y={52} scale={1.1} fill={COLORS.resistance} />
+    <path d="M32 82 L68 82 L68 98 Q68 110 50 116 Q32 110 32 98 Z" fill={COLORS.ink} stroke={COLORS.gold} strokeWidth="3" strokeLinejoin="round" />
+    <path d="M50 88 L50 108 M40 96 L60 96" stroke={COLORS.gold} strokeWidth="3" strokeLinecap="round" />
+    <text x="50" y="132" textAnchor="middle" fontSize="8" fontWeight="700" fill={COLORS.gold} fontFamily="sans-serif">
+      <T k="resistance.icons.bodyGuard" />
+    </text>
+  </Svg>
+);
+
+/** Assassin module: Deep Cover (a spy figure in a hat and a mask, whom the Commander does not see). */
+export const DeepCoverCardIcon = ({ className, title }: IconProps): ReactNode => (
+  <Svg viewBox="0 0 100 140" className={className} title={title}>
+    <CardFrame fill={COLORS.ink} stroke={COLORS.gold} />
+    <circle cx="50" cy="56" r="34" fill={COLORS.spy} fillOpacity="0.18" />
+    <Person x={50} y={58} scale={1.2} fill={COLORS.spy} />
+    <path d="M30 40 L70 40 M36 40 L38 28 L62 28 L64 40" fill={COLORS.ink} stroke={COLORS.paper} strokeWidth="3" strokeLinejoin="round" />
+    <path d="M38 52 L62 52" stroke={COLORS.paper} strokeWidth="4" strokeLinecap="round" />
+    <text x="50" y="126" textAnchor="middle" fontSize="9" fontWeight="700" fill={COLORS.gold} fontFamily="sans-serif">
+      <T k="resistance.icons.deepCover" />
+    </text>
+  </Svg>
+);
+
+/** Assassin module: the Blind Spy (a spy figure with a crossed-out eye, who knows no other spy). */
+export const BlindSpyCardIcon = ({ className, title }: IconProps): ReactNode => (
+  <Svg viewBox="0 0 100 140" className={className} title={title}>
+    <CardFrame fill={COLORS.ink} stroke={COLORS.gold} />
+    <circle cx="50" cy="56" r="34" fill={COLORS.spy} fillOpacity="0.18" />
+    <Person x={50} y={58} scale={1.2} fill={COLORS.spy} />
+    <path d="M30 50 Q50 34 70 50 Q50 66 30 50 Z" fill={COLORS.ink} stroke={COLORS.paper} strokeWidth="3" />
+    <circle cx="50" cy="50" r="5" fill={COLORS.paper} />
+    <path d="M28 70 L72 30" stroke={COLORS.gold} strokeWidth="5" strokeLinecap="round" />
+    <text x="50" y="126" textAnchor="middle" fontSize="9" fontWeight="700" fill={COLORS.gold} fontFamily="sans-serif">
+      <T k="resistance.icons.blindSpy" />
+    </text>
+  </Svg>
+);
+
+/** Assassin module: the False Commander (a spy figure with the Commander's star drawn in outline only). */
+export const FalseCommanderCardIcon = ({ className, title }: IconProps): ReactNode => (
+  <Svg viewBox="0 0 100 140" className={className} title={title}>
+    <CardFrame fill={COLORS.ink} stroke={COLORS.gold} />
+    <circle cx="50" cy="56" r="34" fill={COLORS.spy} fillOpacity="0.18" />
+    <Person x={50} y={58} scale={1.2} fill={COLORS.spy} />
+    <path d="M50 18 L54.7 29 L66.5 30.2 L57.6 38 L60.3 49.5 L50 43.5 L39.7 49.5 L42.4 38 L33.5 30.2 L45.3 29 Z" fill="none" stroke={COLORS.gold} strokeWidth="2.5" strokeDasharray="4 3" />
+    <text x="50" y="126" textAnchor="middle" fontSize="7.5" fontWeight="700" fill={COLORS.gold} fontFamily="sans-serif">
+      <T k="resistance.icons.falseCommander" />
+    </text>
+  </Svg>
+);
+
 export type MissionResult = 'success' | 'fail' | null;
 
 type MissionBoardProps = {
