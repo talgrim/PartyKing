@@ -3,6 +3,8 @@ using PartyKing.Application.Mappings;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Player.Services;
 using PartyKing.Application.Realtime;
+using PartyKing.Application.Sessions;
+using PartyKing.Application.Sessions.Services;
 using PartyKing.Contract.V1.Enums;
 using PartyKing.Contract.V1.Player;
 using PartyKing.Domain.Entities.Queue;
@@ -14,6 +16,8 @@ namespace PartyKing.Application.Tests;
 public class PlayerServiceTests
 {
     private const string HostId = "host-profile";
+
+    private static readonly SessionCaller Admin = new(null, true);
 
     private readonly FakeClock _clock = new();
     private readonly FakeSessionsRepository _sessions = new();
@@ -27,7 +31,7 @@ public class PlayerServiceTests
     public PlayerServiceTests()
     {
         _store = new PlayerStateStore(_clock);
-        _service = new PlayerService(_sessions, _queue, _store, _notifier, new NullPlayerConnectionWatchdog(), _advancer, new FallbackStatusStore(_notifier, NullLogger<FallbackStatusStore>.Instance), NullLogger<PlayerService>.Instance);
+        _service = new PlayerService(_sessions, new SessionAuthorizer(_sessions), _queue, _store, _notifier, new NullPlayerConnectionWatchdog(), _advancer, new FallbackStatusStore(_notifier, NullLogger<FallbackStatusStore>.Instance), NullLogger<PlayerService>.Instance);
         _session = _sessions.AddSession(HostId);
     }
 
@@ -153,7 +157,7 @@ public class PlayerServiceTests
     public async Task ReportState_ByTheHost_ConnectsThePlayerAndReturnsTheAdminsCommand()
     {
         await _service.ReportStateAsync(_session.Id, HostId, new PlayerStateRequestDto(1, false), CancellationToken.None);
-        await _service.SendCommandAsync(_session.Id, PlayerCommand.Pause, CancellationToken.None);
+        await _service.SendCommandAsync(_session.Id, PlayerCommand.Pause, Admin, CancellationToken.None);
 
         var result = await _service.ReportStateAsync(
             _session.Id, HostId, new PlayerStateRequestDto(1, false), CancellationToken.None);
@@ -215,16 +219,51 @@ public class PlayerServiceTests
     {
         await _service.ReportStateAsync(_session.Id, HostId, new PlayerStateRequestDto(1, false), CancellationToken.None);
 
-        var result = await _service.SendCommandAsync(_session.Id, PlayerCommand.Pause, CancellationToken.None);
+        var result = await _service.SendCommandAsync(_session.Id, PlayerCommand.Pause, Admin, CancellationToken.None);
 
         Assert.False(result.IsError);
         Assert.Single(_notifier.PlayerCommands, x => x.SessionId == _session.Id && x.Command.Command == PlayerCommand.Pause);
     }
 
     [Fact]
+    public async Task SendCommand_ByTheHost_PushesTheCommand()
+    {
+        await _service.ReportStateAsync(_session.Id, HostId, new PlayerStateRequestDto(1, false), CancellationToken.None);
+
+        var result = await _service.SendCommandAsync(
+            _session.Id, PlayerCommand.Resume, new SessionCaller(HostId, false), CancellationToken.None);
+
+        Assert.False(result.IsError);
+        Assert.Single(_notifier.PlayerCommands, x => x.Command.Command == PlayerCommand.Resume);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("another-profile")]
+    public async Task SendCommand_ByAnyoneElse_IsForbiddenAndPushesNothing(string? profileId)
+    {
+        await _service.ReportStateAsync(_session.Id, HostId, new PlayerStateRequestDto(1, false), CancellationToken.None);
+
+        var result = await _service.SendCommandAsync(
+            _session.Id, PlayerCommand.Pause, new SessionCaller(profileId, false), CancellationToken.None);
+
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, result.FirstError.Type);
+        Assert.Empty(_notifier.PlayerCommands);
+    }
+
+    [Fact]
+    public async Task SendCommand_ToAnUnknownSession_IsNotFound()
+    {
+        var result = await _service.SendCommandAsync(
+            Guid.NewGuid(), PlayerCommand.Pause, Admin, CancellationToken.None);
+
+        Assert.Equal(ErrorOr.ErrorType.NotFound, result.FirstError.Type);
+    }
+
+    [Fact]
     public async Task SendCommand_WithoutAConnectedPlayer_PushesNothing()
     {
-        await _service.SendCommandAsync(_session.Id, PlayerCommand.Pause, CancellationToken.None);
+        await _service.SendCommandAsync(_session.Id, PlayerCommand.Pause, Admin, CancellationToken.None);
 
         Assert.Empty(_notifier.PlayerCommands);
     }
@@ -232,7 +271,7 @@ public class PlayerServiceTests
     [Fact]
     public async Task SendCommand_WithoutAConnectedPlayer_IsAConflict()
     {
-        var result = await _service.SendCommandAsync(_session.Id, PlayerCommand.Pause, CancellationToken.None);
+        var result = await _service.SendCommandAsync(_session.Id, PlayerCommand.Pause, Admin, CancellationToken.None);
 
         Assert.Equal(ErrorOr.ErrorType.Conflict, result.FirstError.Type);
     }

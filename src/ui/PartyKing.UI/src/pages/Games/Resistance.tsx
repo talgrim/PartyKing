@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { mutate as mutateGlobal } from 'swr';
 import Button from '@mui/material/Button';
@@ -16,7 +16,9 @@ import { ResistancePlotLog } from './resistance/ResistancePlotLog';
 import { ResistancePhaseBanner } from '@/pages/Games/resistance/ResistancePhaseBanner';
 import { ResistancePlayerView } from '@/pages/Games/resistance/ResistancePlayerView';
 import { ResistanceTvBoard } from '@/pages/Games/resistance/ResistanceTvBoard';
+import { ResistanceQueuePanel } from '@/pages/Games/resistance/ResistanceQueuePanel';
 import { ResistanceViewSwitch } from '@/pages/Games/resistance/ResistanceViewSwitch';
+import { ResistanceView, useResistanceView } from '@/pages/Games/resistance/useResistanceView';
 import { resistancePhaseDescription } from '@/pages/Games/resistance/resistancePhase';
 import { resistanceRules } from '@/pages/Games/resistance/resistanceRules';
 import { missionBoardFor } from '@/pages/Games/resistance/resistanceTeams';
@@ -32,7 +34,12 @@ import { gamesApi } from '@/service/endpoints/games/gamesApi';
 import { useResistanceGame } from '@/service/endpoints/games/useResistanceGame';
 import { useResistancePresence } from '@/service/endpoints/games/useResistancePresence';
 import { useViewerRole } from '@/service/endpoints/sessions/useViewerRole';
-import { RESISTANCE_HUB_TOPICS, RESISTANCE_TV_HUB_TOPICS, resistanceLobbyKey } from '@/service/realtime/sessionMusicEvents';
+import {
+  RESISTANCE_HUB_TOPICS,
+  RESISTANCE_TV_HUB_TOPICS,
+  resistanceLobbyKey,
+  withMusicTopic,
+} from '@/service/realtime/sessionMusicEvents';
 import { useSessionMusicHub } from '@/service/realtime/useSessionMusicHub';
 import { usePersistedFlag } from '@/utils/usePersistedFlag';
 import { ResistanceGameSettings } from './ResistanceGameSettings';
@@ -40,8 +47,12 @@ import { ResistanceSeatsDialog } from '@/pages/Games/resistance/ResistanceSeatsD
 import { ResistanceSettings } from './ResistanceSettings';
 import { useTranslation } from 'react-i18next';
 
-/** From this width a player has room for their own view and the board side by side, so there is no switch. */
+/**
+ * From this width a player has room for their own view next to the board, so the switch only chooses what the right
+ * column shows: the board or the music queue.
+ */
 const WIDE_QUERY = '(min-width: 1024px)';
+const WIDE_VIEWS: readonly ResistanceView[] = ['board', 'queue'];
 
 /**
  * The Resistance page: the mission board for the players who joined so far, the players around the edge and the
@@ -58,8 +69,10 @@ const WIDE_QUERY = '(min-width: 1024px)';
  * Two layouts share the page. The TV layout (`?tv=1` for the host and admins, and for a host or admin who is not
  * playing) has the manager controls, the board in the middle and the players around the edge, and never shows the
  * viewer's role or "Ty", since it is meant for a big screen. Everyone else gets a phone layout: a player switches
- * between their own view (the default, with the role card) and the board with the player list; the choice is kept in
- * `localStorage`; from 1024 px wide a player sees both at once, without the switch. Observers only get the board.
+ * between their own view (the default, with the role card), the board with the player list and the music queue; the
+ * choice is kept in `localStorage`; from 1024 px wide a player always sees their own view and the switch picks the
+ * board or the queue next to it. The host and admins who are not playing get a "Queue" button in the TV navigation
+ * that opens the queue in a dialog. Observers only get the board.
  */
 export const Resistance = (): ReactNode => {
   const { t } = useTranslation();
@@ -69,12 +82,13 @@ export const Resistance = (): ReactNode => {
   const { isHost, isAdmin } = useViewerRole(sessionId);
   const [searchParams] = useSearchParams();
   const wide = useMediaQuery(WIDE_QUERY);
-  const [boardView, setBoardView] = usePersistedFlag('partyking.resistanceBoardView', false);
+  const [view, setView] = useResistanceView();
   const [logHidden, setLogHidden] = usePersistedFlag('partyking.resistanceLogHidden', false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [managingPlayers, setManagingPlayers] = useState(false);
   const [seatsOpen, setSeatsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [queueOpen, setQueueOpen] = useState(false);
   const [wasPlayer, setWasPlayer] = useState(false);
   const [confirmingEnd, setConfirmingEnd] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
@@ -93,13 +107,15 @@ export const Resistance = (): ReactNode => {
   // The TV view also follows who is connected; any other view is a player's (or observer's) own page and counts as
   // that player being online. The TV tab shares the player's cookie, so it must not, not even before the viewer's
   // role is known (`?tv=1` is the TV tab's own flag).
-  useSessionMusicHub(
-    sessionId,
-    game !== undefined,
-    undefined,
-    tvLayout ? RESISTANCE_TV_HUB_TOPICS : RESISTANCE_HUB_TOPICS,
-    { presence: !tvLayout && searchParams.get('tv') !== '1' },
-  );
+  // Whoever has the music queue (a player, the host and admins) also hears the music pushes.
+  const hasQueue = isPlayer || canManage;
+  const hubTopics = useMemo(() => {
+    const base = tvLayout ? RESISTANCE_TV_HUB_TOPICS : RESISTANCE_HUB_TOPICS;
+    return hasQueue ? withMusicTopic(base) : base;
+  }, [tvLayout, hasQueue]);
+  useSessionMusicHub(sessionId, game !== undefined, undefined, hubTopics, {
+    presence: !tvLayout && searchParams.get('tv') !== '1',
+  });
   const presence = useResistancePresence(sessionId, tvLayout && game !== undefined);
 
   // No lobby yet (or not open to guests): the games list for the host and admins, the session page for the rest
@@ -107,9 +123,11 @@ export const Resistance = (): ReactNode => {
     return <Navigate to={canManage ? sessionGamesPath(sessionId) : sessionPath(sessionId)} replace />;
   }
 
-  const showSwitch = isPlayer && !tv && !wide;
-  const showPlayerView = isPlayer && !tv && (wide || !boardView);
-  const showBoard = !showPlayerView || wide;
+  const showSwitch = isPlayer && !tv;
+  const showPlayerView = isPlayer && !tv && (wide || view === 'player');
+  // From 1024 px wide the player view is always there, so the right column is the board unless the queue is chosen
+  const showQueue = isPlayer && !tv && view === 'queue';
+  const showBoard = !showQueue && (!showPlayerView || wide);
   // The TV tab shares the player's cookies, so it must not show the role or the "Ty" badge of whoever is logged in
   const shownGame = game && tv ? { ...game, yourPlayerId: null, yourRole: null, fellowSpies: null, yourVote: null, yourMissionCard: null, yourPlotCards: [], yourReveals: [], yourPeeks: [] } : game;
 
@@ -361,6 +379,15 @@ export const Resistance = (): ReactNode => {
               ]}
             />
             {managerControls}
+            {game && (
+              <button
+                type="button"
+                onClick={() => setQueueOpen(true)}
+                className="px-3 py-2 text-slate-200 bg-slate-900 rounded-md hover:bg-slate-700 cursor-pointer"
+              >
+                {t('resistance.controls.queue')}
+              </button>
+            )}
             {playerCount}
             {message && <span className="text-amber-500">{message}</span>}
             {trailingButtons}
@@ -369,7 +396,16 @@ export const Resistance = (): ReactNode => {
       ) : (
         <nav className="flex flex-wrap items-center gap-2">
           <PageNavigation links={[back]} />
-          {showSwitch && <ResistanceViewSwitch showBoard={boardView} onChange={setBoardView} />}
+          {showSwitch &&
+            (wide ? (
+              <ResistanceViewSwitch
+                value={view === 'queue' ? 'queue' : 'board'}
+                onChange={setView}
+                views={WIDE_VIEWS}
+              />
+            ) : (
+              <ResistanceViewSwitch value={view} onChange={setView} />
+            ))}
           {playerCount}
           {message && <span className="text-amber-500">{message}</span>}
           {canManage && (
@@ -446,6 +482,11 @@ export const Resistance = (): ReactNode => {
                 <ResistanceCompactBoard game={game} board={board} />
               </div>
             )}
+            {showQueue && (
+              <div className={wide ? 'flex-1 min-w-0' : undefined}>
+                <ResistanceQueuePanel sessionId={sessionId} />
+              </div>
+            )}
           </div>
         </>
       )}
@@ -467,6 +508,26 @@ export const Resistance = (): ReactNode => {
       )}
 
       {canManage && <ResistanceGameSettings sessionId={sessionId} open={settingsOpen} onClose={() => setSettingsOpen(false)} />}
+
+      {tvLayout && game && (
+        <Dialog
+          open={queueOpen}
+          onClose={() => setQueueOpen(false)}
+          fullWidth
+          maxWidth="sm"
+          aria-labelledby="resistance-queue-title"
+          slotProps={{ paper: { className: 'bg-slate-800! text-slate-200!' } }}
+        >
+          <DialogTitle id="resistance-queue-title">{t('resistance.queue.title')}</DialogTitle>
+          {/* Room for the search results, which drop below the form */}
+          <DialogContent className="min-h-[60vh]">
+            <ResistanceQueuePanel sessionId={sessionId} />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setQueueOpen(false)}>{t('common.close')}</Button>
+          </DialogActions>
+        </Dialog>
+      )}
 
       <Dialog
         open={confirmingEnd}

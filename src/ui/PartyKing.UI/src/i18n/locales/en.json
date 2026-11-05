@@ -449,6 +449,7 @@
       "label": "Game controls",
       "show": "Controls",
       "openTv": "Open TV view",
+      "queue": "Queue",
       "showLog": "Show log",
       "hideLog": "Hide log",
       "restart": "Restart game",
@@ -505,7 +506,11 @@
     "viewSwitch": {
       "label": "View",
       "player": "Player",
-      "board": "Board"
+      "board": "Board",
+      "queue": "Queue"
+    },
+    "queue": {
+      "title": "Music queue"
     },
     "board": {
       "title": "Mission board",

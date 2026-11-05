@@ -457,6 +457,7 @@
       "label": "Sterowanie grą",
       "show": "Sterowanie",
       "openTv": "Otwórz widok na telewizor",
+      "queue": "Kolejka",
       "showLog": "Pokaż log",
       "hideLog": "Ukryj log",
       "restart": "Zagraj ponownie",
@@ -513,7 +514,11 @@
     "viewSwitch": {
       "label": "Widok",
       "player": "Gracz",
-      "board": "Plansza"
+      "board": "Plansza",
+      "queue": "Kolejka"
+    },
+    "queue": {
+      "title": "Kolejka muzyki"
     },
     "board": {
       "title": "Plansza misji",
