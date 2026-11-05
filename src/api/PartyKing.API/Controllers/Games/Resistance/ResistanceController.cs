@@ -107,6 +107,22 @@ public class ResistanceController : ResistanceControllerBase
         return result.Match(Ok, Problem);
     }
 
+    /// <summary>
+    /// Host or admin: switches the Reverser module on or off and optionally chooses which sides get a Reverser (Both,
+    /// Resistance or Spy; omitted keeps the choice). 409 once the game has started.
+    /// </summary>
+    [HttpPut("rules/reverser")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> SetReverser(
+        Guid sessionId, [FromBody] ResistanceReverserRequestDto request, CancellationToken cancellationToken)
+    {
+        var result = await Lobby.SetReverserAsync(
+            sessionId, request.Enabled, request.Sides, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
     /// <summary>Admin only: opens the Resistance game to guests (idempotent), 403 for the host.</summary>
     [HttpPost("open")]
     [RequireSessionAccess]

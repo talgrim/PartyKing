@@ -77,6 +77,7 @@ internal sealed class ResistanceGameViewBuilder
     {
         _view.YourRole = _yourRole?.ToDto();
         _view.FellowSpies = BuildFellowSpies();
+        _view.YourCharacter = _game is { IsStarted: true, Rules.ReverserEnabled: true } ? _you?.Character.ToDto() : null;
         _view.RevealedRoles = BuildRevealedRoles();
 
         return this;
@@ -112,10 +113,10 @@ internal sealed class ResistanceGameViewBuilder
     {
         _view.RequiredFails = _game.IsStarted ? _game.Rules.RequiredFails(_game.Players.Count, _game.MissionNumber) : null;
         _view.PlayedMissionPlayerIds = PlayerIds(x => x.MissionCard is not null);
-        _view.YourMissionCard = _you?.MissionCard;
+        _view.YourMissionCard = _you?.MissionCard?.ToDto();
         _view.MissionResults = BuildMissionResults();
         _view.OpenMissionPlayerId = _openMissionPlayerId;
-        _view.OpenMissionCard = _players.FirstOrDefault(x => x.PlayerId == _openMissionPlayerId)?.MissionCard;
+        _view.OpenMissionCard = _players.FirstOrDefault(x => x.PlayerId == _openMissionPlayerId)?.MissionCard?.ToDto();
         _view.YourPeeks = BuildYourPeeks();
 
         return this;
@@ -184,7 +185,7 @@ internal sealed class ResistanceGameViewBuilder
             return null;
         }
 
-        return _players.Select(x => new ResistanceRevealedRoleDto(x.PlayerId, x.Role!.Value.ToDto())).ToList();
+        return _players.Select(x => new ResistanceRevealedRoleDto(x.PlayerId, x.Role!.Value.ToDto(), x.Character.ToDto())).ToList();
     }
 
     private static ResistanceRulesDto BuildRules(ResistanceGame game)
@@ -196,14 +197,16 @@ internal sealed class ResistanceGameViewBuilder
 
         return new ResistanceRulesDto(
             playerCounts, game.Rules.PlotCardsEnabled, game.Rules.PlotCardsPerRound(game.Players.Count),
-            game.Rules.InquisitorEnabled, game.Rules.BlindSpiesEnabled);
+            game.Rules.InquisitorEnabled, game.Rules.BlindSpiesEnabled,
+            game.Rules.ReverserEnabled, game.Rules.ReverserSides.ToDto());
     }
 
     private List<ResistanceMissionResultDto> BuildMissionResults()
     {
         return _game.MissionResults
             .OrderBy(x => x.MissionNumber)
-            .Select(x => new ResistanceMissionResultDto(x.MissionNumber, x.Succeeded, x.FailCount, x.TeamPlayerIds))
+            .Select(x => new ResistanceMissionResultDto(
+                x.MissionNumber, x.Succeeded, _game.Rules.ReverserEnabled ? null : x.FailCount, x.TeamPlayerIds))
             .ToList();
     }
 
@@ -216,7 +219,7 @@ internal sealed class ResistanceGameViewBuilder
         }
 
         return ResistanceRoles.PeekedCards(_game, you.PlayerId)
-            .Select(x => new ResistanceMissionPeekDto(x.PlayerId, x.Success))
+            .Select(x => new ResistanceMissionPeekDto(x.PlayerId, x.Card.ToDto()))
             .ToList();
     }
 

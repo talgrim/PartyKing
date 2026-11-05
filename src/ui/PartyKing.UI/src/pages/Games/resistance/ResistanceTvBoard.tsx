@@ -37,10 +37,10 @@ export const ResistanceTvBoard = ({ game, board, banner, yourPlayerId, onlinePla
   // The number only advances on "Next", so a result for the current mission exists exactly until then, in whatever phase.
   const finished = game?.missionResults.find((result) => result.missionNumber === game.missionNumber);
   const openPlayer = game?.players.find((player) => player.id === game.openMissionPlayerId);
-  const open = openPlayer && game?.openMissionCard != null ? { name: openPlayer.name, success: game.openMissionCard } : null;
+  const open = openPlayer && game?.openMissionCard != null ? { name: openPlayer.name, card: game.openMissionCard } : null;
   const cards = finished && team.length > 0 ? { count: team.length, fails: finished.failCount } : null;
   // While the mission is played the openly played card is already public, the rest stay hidden until the mission ends
-  const showCards = cards ?? (game?.phase === 'PlayingMission' && open ? { count: 1, fails: open.success ? 0 : 1 } : null);
+  const showCards = cards ?? (game?.phase === 'PlayingMission' && open ? { count: 1, fails: open.card === 'Success' ? 0 : 1 } : null);
 
   return (
     <>

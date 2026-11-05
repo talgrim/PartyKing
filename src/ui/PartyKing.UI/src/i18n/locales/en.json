@@ -423,11 +423,16 @@
       "show": "Show your role",
       "fellowSpies": "Your fellow spies",
       "fellowSpiesList": "Fellow spies",
-      "blindSpies": "Blind Spies: you do not know who the other spies are."
+      "blindSpies": "Blind Spies: you do not know who the other spies are.",
+      "reverser": "You are a Reverser: you may play a Reverse card, which turns the result of the mission around."
     },
     "missionCard": {
       "success": "Success",
-      "fail": "Fail"
+      "fail": "Fail",
+      "reverse": "Reverse"
+    },
+    "characters": {
+      "reverser": "Reverser"
     },
     "vote": {
       "approve": "Approve",
@@ -456,6 +461,16 @@
         "title": "Blind Spies",
         "description": "A variant in which the spies do not get to know each other. Each spy only knows their own role, so a spy has to work out who is on their side. Nothing in the app stops the spies from talking, so agree not to.",
         "toggle": "Enable Blind Spies"
+      },
+      "reverserFailed": "Could not change the Reverser setting.",
+      "reverser": {
+        "title": "Reverser",
+        "description": "A module in which a secret Reverser character is dealt, by default to one player among the Resistance and one among the Spies (you can choose just one side). A Reverser on the mission team also holds a Reverse card, which turns the result of the mission around: a mission that would fail succeeds, and one that would succeed fails. Two Reverse cards cancel out. A Reverser who is a spy can never play Fail. The number of Fail cards is no longer announced.",
+        "toggle": "Enable Reverser",
+        "sides": "Who gets a Reverser",
+        "sidesBoth": "Both sides (the Resistance and the Spies)",
+        "sidesResistance": "Only the Resistance",
+        "sidesSpy": "Only the Spies"
       }
     },
     "controls": {
@@ -564,7 +579,8 @@
       "inquisitor": "Inquisitor"
     },
     "missionCards": {
-      "title": "Mission cards"
+      "title": "Mission cards",
+      "hidden": "Hidden mission card"
     },
     "teamCards": {
       "label": "Team",
@@ -591,7 +607,8 @@
       "label": "Mission",
       "title": "Play a mission card",
       "played": "Card played: {{card}}. Waiting for the other team members.",
-      "hint": "The card is secret, everyone only sees the number of Fail cards. A played card can't be changed."
+      "hint": "The card is secret, everyone only sees the number of Fail cards. A played card can't be changed.",
+      "hintReverser": "The card is secret and so is the number of Fail cards, everyone only sees whether the mission succeeded. A played card can't be changed."
     },
     "plotWindow": {
       "label": "Playing cards",
@@ -697,6 +714,7 @@
       "reject": "REJECT",
       "success": "SUCCESS",
       "fail": "FAIL",
+      "reverse": "REVERSE",
       "plot": "PLOT",
       "mission": "MISSION {{n}}",
       "twoFails": "2 FAILS",
@@ -775,6 +793,10 @@
         "title": "Blind Spies (variant)",
         "text": "When the host enables the variant, the spies are not shown to each other at the start of the game: a spy sees only their own role and has to guess who the other spies are."
       },
+      "reverser": {
+        "title": "Reverser (module)",
+        "text": "When the host enables the module, secret Reversers are dealt: by default one among the Resistance and one among the Spies, or only on the side the host chose. A Reverser on a mission team may play a Reverse card instead of Success. An odd number of Reverse cards turns the result of the mission around (it fails if it would have succeeded and the other way round), two cancel out; on the mission that needs two Fails, one Fail with one Reverse is a failure. A spy Reverser plays Success or Reverse, never Fail. Only whether the mission succeeded is announced, not the number of Fail cards."
+      },
       "inquisitor": {
         "title": "Inquisitor (module)",
         "text": "When the host enables the module, a public Inquisitor token starts with the player to the right of the first leader. After missions 2, 3 and 4 the holder picks a player who never held the token and privately sees whether that player is a Spy or Resistance; the token passes to the examined player. The Inquisitor may say anything about the result, and nobody can check it. The module is skipped when the game ends after mission 3 or 4."
@@ -814,6 +836,7 @@
       "playingMission": "The team ({{names}}) was approved ({{tally}}) and is on {{mission}}. {{progress}}{{rule}}{{mine}}{{open}}",
       "missionSucceeded": "The mission succeeded",
       "missionFailed": "The mission failed (Fail cards: {{count}})",
+      "missionFailedHidden": "The mission failed",
       "peekWindow": "{{outcome}}. Score: {{score}}. Before the leader moves on, the players decide whether to play Plot cards. Confirmed: {{passed}}/{{count}}.{{mine}}",
       "nextClick": "Click “Next”",
       "nextWait": "The leader or the host will click “Next”",

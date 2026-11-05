@@ -115,7 +115,12 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
         }
 
         // A copy, so the caller's object is neither changed nor shared with the game
-        Rules = rules.Clone(Rules.PlotCardsEnabled, Rules.InquisitorEnabled, Rules.BlindSpiesEnabled);
+        Rules = rules.Clone(
+            Rules.PlotCardsEnabled,
+            Rules.InquisitorEnabled,
+            Rules.BlindSpiesEnabled,
+            Rules.ReverserEnabled,
+            Rules.ReverserSides);
 
         return Succeeded();
     }
@@ -271,11 +276,11 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
     }
 
     /// <summary>
-    /// A member of the approved team secretly plays a Success or Fail card; it can't be changed. The card that
-    /// completes the team is resolved right away: the mission fails when the Fail cards reach the rules' requirement,
+    /// A member of the approved team secretly plays a Success, Fail or (a Reverser only) Reverse card; it can't be
+    /// changed. The card that completes the team is resolved right away (see <see cref="ResistanceMissionRules"/>),
     /// and the third success or failure ends the game.
     /// </summary>
-    public ResistanceOutcome PlayMissionCard(Guid? callerPlayerId, bool success)
+    public ResistanceOutcome PlayMissionCard(Guid? callerPlayerId, ResistanceMissionCardKind card)
     {
         if (Inactive() is { } inactive)
         {
@@ -303,12 +308,22 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
             return ResistanceOutcome.Failed(ResistanceFailure.AlreadyPlayed, this);
         }
 
-        if (!success && player.Role == ResistanceRole.Resistance)
+        if (card == ResistanceMissionCardKind.Reverse && player.Character != ResistanceCharacter.Reverser)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.NotReverser, this);
+        }
+
+        if (card == ResistanceMissionCardKind.Fail && player.Role == ResistanceRole.Resistance)
         {
             return ResistanceOutcome.Failed(ResistanceFailure.MustSucceed, this);
         }
 
-        player.MissionCard = success;
+        if (card == ResistanceMissionCardKind.Fail && player.Character == ResistanceCharacter.Reverser)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.ReverserCannotFail, this);
+        }
+
+        player.MissionCard = card;
         Raise(new ResistanceMissionCardPlayed(SessionId, player.PlayerId));
         if (ResistanceRoles.AllCardsPlayed(this))
         {
@@ -369,6 +384,23 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
 
         // Rules is a JSON column compared by reference, so assign a copy to have the change detected.
         Rules = Rules.Clone(blindSpiesEnabled: enabled);
+
+        return Succeeded();
+    }
+
+    /// <summary>
+    /// Switches the Reverser module on or off in the rules and, when <paramref name="sides"/> is given, chooses which
+    /// sides get a Reverser (otherwise the choice stays). Allowed until the game starts, open or not.
+    /// </summary>
+    public ResistanceOutcome SetReverser(bool enabled, ResistanceReverserSides? sides = null)
+    {
+        if (IsStarted)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.ReverserLocked, this);
+        }
+
+        // Rules is a JSON column compared by reference, so assign a copy to have the change detected.
+        Rules = Rules.Clone(reverserEnabled: enabled, reverserSides: sides);
 
         return Succeeded();
     }

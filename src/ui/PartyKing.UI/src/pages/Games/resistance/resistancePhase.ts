@@ -1,5 +1,6 @@
 import { i18n } from '@/i18n';
 import { ResistanceGameDto } from '@/service/endpoints/games/types';
+import { MISSION_CARD_KEYS } from './missionCardKeys';
 import { IMMEDIATE_PLOT_CARDS } from './resistancePlotCards';
 import { MIN_PLAYERS } from './resistanceTeams';
 
@@ -125,7 +126,7 @@ export const resistancePhaseDescription = (
           ? ` ${t('resistance.phase.mustPlayOpen', { name: openName })}`
           : ` ${t('resistance.phase.playedOpen', {
               name: openName,
-              card: t(game.openMissionCard ? 'resistance.missionCard.success' : 'resistance.missionCard.fail'),
+              card: t(MISSION_CARD_KEYS[game.openMissionCard]),
             })}`;
 
       return t('resistance.phase.playingMission', { names: names.join(', '), tally, mission, progress, rule, mine, open });
@@ -134,7 +135,9 @@ export const resistancePhaseDescription = (
     const last = results.find((result) => result.missionNumber === game.missionNumber);
     const outcome = last?.succeeded
       ? t('resistance.phase.missionSucceeded')
-      : t('resistance.phase.missionFailed', { count: last?.failCount ?? 0 });
+      : last?.failCount == null
+        ? t('resistance.phase.missionFailedHidden')
+        : t('resistance.phase.missionFailed', { count: last.failCount });
 
     if (game.phase === 'PeekWindow') {
       return t('resistance.phase.peekWindow', { outcome, score, passed, count, mine: confirmation(game) });
@@ -162,7 +165,7 @@ export const resistancePhaseDescription = (
     if (game.phase === 'MissionResult') {
       const next = t(youLead || viewer.canManage ? 'resistance.phase.nextClick' : 'resistance.phase.nextWait');
       const fails =
-        last?.succeeded && last.failCount > 0 ? ` ${t('resistance.phase.failCardsNote', { count: last.failCount })}` : '';
+        last?.succeeded && last.failCount != null && last.failCount > 0 ? ` ${t('resistance.phase.failCardsNote', { count: last.failCount })}` : '';
 
       return t('resistance.phase.missionResult', { outcome, fails, score, next });
     }

@@ -1,6 +1,7 @@
 using PartyKing.Domain.Repositories;
 using ErrorOr;
 using PartyKing.Application.Games.Services.Base;
+using PartyKing.Application.Mappings;
 using PartyKing.Application.System;
 using PartyKing.Contract.V1.Games.Resistance;
 using PartyKing.Domain.Entities.Games.Resistance;
@@ -39,12 +40,13 @@ public interface IResistanceRoundService
         Guid sessionId, bool approve, GameCaller caller, CancellationToken cancellationToken);
 
     /// <summary>
-    /// A member of the approved team secretly plays Success (true) or Fail (false), once. Forbidden for anyone who did
-    /// not join, who is not on the team, or is a member of the resistance playing Fail; Conflict before the start, when
-    /// no approved team is playing, when the caller already played, and when the game is over.
+    /// A member of the approved team secretly plays Success, Fail or Reverse, once. Forbidden for anyone who did not
+    /// join, who is not on the team, is a member of the resistance playing Fail, is not a Reverser playing Reverse or
+    /// is a spy Reverser playing Fail; Conflict before the start, when no approved team is playing, when the caller
+    /// already played, and when the game is over.
     /// </summary>
     Task<ErrorOr<ResistanceGameDto>> PlayMissionCardAsync(
-        Guid sessionId, bool success, GameCaller caller, CancellationToken cancellationToken);
+        Guid sessionId, ResistanceMissionCardKindDto card, GameCaller caller, CancellationToken cancellationToken);
 
     /// <summary>
     /// Moves on after a finished mission (next leader, next mission). The leader, the host and admins may; Forbidden
@@ -131,7 +133,7 @@ internal class ResistanceRoundService : IResistanceRoundService
     }
 
     public Task<ErrorOr<ResistanceGameDto>> PlayMissionCardAsync(
-        Guid sessionId, bool success, GameCaller caller, CancellationToken cancellationToken)
+        Guid sessionId, ResistanceMissionCardKindDto card, GameCaller caller, CancellationToken cancellationToken)
     {
         return _gate.RunAsPlayerAsync(
             sessionId,
@@ -140,7 +142,7 @@ internal class ResistanceRoundService : IResistanceRoundService
                 sessionId,
                 nameof(PlayMissionCardAsync),
                 ResistanceOutcome.NoGame,
-                game => game.PlayMissionCard(caller.PlayerId, success),
+                game => game.PlayMissionCard(caller.PlayerId, card.ToDomain()),
                 cancellationToken),
             cancellationToken);
     }

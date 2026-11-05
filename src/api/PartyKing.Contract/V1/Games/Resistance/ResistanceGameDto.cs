@@ -33,6 +33,9 @@ public class ResistanceGameDto
     /// <summary>The other spies' player ids. Set only for a spy; everybody else gets null.</summary>
     public IReadOnlyList<Guid>? FellowSpies { get; set; }
 
+    /// <summary>The caller's own character (Reverser module); null when the module is off or the caller does not play.</summary>
+    public ResistanceCharacterDto? YourCharacter { get; set; }
+
     /// <summary>The number of the mission being played.</summary>
     public int MissionNumber { get; set; }
 
@@ -75,8 +78,8 @@ public class ResistanceGameDto
     /// <summary>Who has played a mission card, not which card.</summary>
     public IReadOnlyList<Guid> PlayedMissionPlayerIds { get; set; } = [];
 
-    /// <summary>The caller's own mission card (true = Success); null if they have not played one.</summary>
-    public bool? YourMissionCard { get; set; }
+    /// <summary>The caller's own mission card; null if they have not played one.</summary>
+    public ResistanceMissionCardKindDto? YourMissionCard { get; set; }
 
     /// <summary>
     /// The finished missions: only the number of Fail cards is public, never who played them. Three successes or
@@ -105,8 +108,8 @@ public class ResistanceGameDto
     /// <summary>The team member In the Spotlight forces to play their mission card openly this mission.</summary>
     public Guid? OpenMissionPlayerId { get; set; }
 
-    /// <summary>The forced player's card (true = Success). Public once they have played it.</summary>
-    public bool? OpenMissionCard { get; set; }
+    /// <summary>The forced player's card. Public once they have played it.</summary>
+    public ResistanceMissionCardKindDto? OpenMissionCard { get; set; }
 
     /// <summary>
     /// Who confirmed in the leader, confidence or peek window (a playable plot card is out there), never who holds a card.

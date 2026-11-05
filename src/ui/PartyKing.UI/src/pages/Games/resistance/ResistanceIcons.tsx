@@ -255,6 +255,19 @@ export const MissionFailCardIcon = ({ className, title, ...button }: IconProps &
   </Svg>
 );
 
+/** Mission card: Reverse (Reverser module, turns the result of the mission around; only a Reverser may play it). */
+export const MissionReverseCardIcon = ({ className, title, ...button }: IconProps & ButtonProps): ReactNode => (
+  <Svg viewBox="0 0 100 140" className={className} title={title} {...button}>
+    <CardFrame fill={COLORS.ink} stroke={COLORS.gold} />
+    <path d="M50 22 L82 34 L82 70 Q82 96 50 112 Q18 96 18 70 L18 34 Z" fill={COLORS.muted} stroke={COLORS.paper} strokeWidth="3" strokeLinejoin="round" />
+    <path d="M30 56 L64 56 M64 56 L55 47 M64 56 L55 65" fill="none" stroke={COLORS.gold} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M70 78 L36 78 M36 78 L45 69 M36 78 L45 87" fill="none" stroke={COLORS.paper} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+    <text x="50" y="130" textAnchor="middle" fontSize="11" fontWeight="700" fill={COLORS.gold} fontFamily="sans-serif">
+      <T k="resistance.icons.reverse" />
+    </text>
+  </Svg>
+);
+
 /** Generic plot card (expansion): a sealed scroll with a question mark. */
 export const PlotCardIcon = ({ className, title }: IconProps): ReactNode => (
   <Svg viewBox="0 0 100 140" className={className} title={title}>

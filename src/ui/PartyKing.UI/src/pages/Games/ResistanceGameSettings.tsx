@@ -2,6 +2,7 @@ import { ReactNode, useState } from 'react';
 import CloseIcon from '@mui/icons-material/Close';
 import { Dialog, DialogContent, DialogTitle } from '@mui/material';
 import { gamesApi } from '@/service/endpoints/games/gamesApi';
+import { ResistanceReverserSides } from '@/service/endpoints/games/types';
 import { useResistanceGame } from '@/service/endpoints/games/useResistanceGame';
 import { useTranslation } from 'react-i18next';
 
@@ -31,7 +32,7 @@ const SettingsSection = ({ title, description, children }: SectionProps): ReactN
 
 /**
  * Host and admins: switches the optional modules of the game on and off, one section per module with a short description.
- * The plot cards add-on, the Inquisitor module and the Blind Spies variant exist. The modules can be changed until the game starts.
+ * The plot cards add-on, the Inquisitor and Reverser modules and the Blind Spies variant exist. The modules can be changed until the game starts.
  */
 export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): ReactNode => {
   const { t } = useTranslation();
@@ -64,6 +65,15 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
       await mutate(gamesApi.setResistanceBlindSpies(sessionId, enabled), { revalidate: false });
     } catch {
       setMessage(t('resistance.settings.blindSpiesFailed'));
+    }
+  };
+
+  const setReverser = async (enabled: boolean, sides?: ResistanceReverserSides) => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.setResistanceReverser(sessionId, enabled, sides), { revalidate: false });
+    } catch {
+      setMessage(t('resistance.settings.reverserFailed'));
     }
   };
 
@@ -131,6 +141,33 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
               onChange={(event) => void setBlindSpies(event.target.checked)}
             />
             {t('resistance.settings.blindSpies.toggle')}
+          </label>
+        </SettingsSection>
+        <SettingsSection
+          title={t('resistance.settings.reverser.title')}
+          description={t('resistance.settings.reverser.description')}
+        >
+          <label className="flex items-center gap-2 text-slate-200">
+            <input
+              type="checkbox"
+              checked={game?.rules.reverserEnabled ?? false}
+              disabled={game === undefined || started}
+              onChange={(event) => void setReverser(event.target.checked)}
+            />
+            {t('resistance.settings.reverser.toggle')}
+          </label>
+          <label className="flex flex-col gap-1 text-sm text-slate-200">
+            {t('resistance.settings.reverser.sides')}
+            <select
+              value={game?.rules.reverserSides ?? 'Both'}
+              disabled={game === undefined || started || !game.rules.reverserEnabled}
+              onChange={(event) => void setReverser(true, event.target.value as ResistanceReverserSides)}
+              className="rounded bg-slate-700 p-1 text-slate-100"
+            >
+              <option value="Both">{t('resistance.settings.reverser.sidesBoth')}</option>
+              <option value="Resistance">{t('resistance.settings.reverser.sidesResistance')}</option>
+              <option value="Spy">{t('resistance.settings.reverser.sidesSpy')}</option>
+            </select>
           </label>
         </SettingsSection>
         {message && <p className="text-amber-500">{message}</p>}

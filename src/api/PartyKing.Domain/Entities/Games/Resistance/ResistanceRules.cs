@@ -22,6 +22,15 @@ public class ResistanceRules
     /// </summary>
     public bool BlindSpiesEnabled { get; set; }
 
+    /// <summary>
+    /// Whether the Reverser module is played: a Reverser on each side may play a Reverse card, which turns the result of
+    /// the mission around. Off by default; only editable before the game starts.
+    /// </summary>
+    public bool ReverserEnabled { get; set; }
+
+    /// <summary>Which sides get a Reverser while <see cref="ReverserEnabled"/>. Both by default; only editable before the game starts.</summary>
+    public ResistanceReverserSides ReverserSides { get; set; }
+
     /// <summary>How many copies of each plot card the deck holds (15 cards in all).</summary>
     public Dictionary<ResistancePlotCardType, int> PlotDeck { get; set; } = DefaultPlotDeck();
 
@@ -30,13 +39,19 @@ public class ResistanceRules
     /// always a new instance, which the JSON column needs to detect a change. Every property must be copied here.
     /// </summary>
     public ResistanceRules Clone(
-        bool? plotCardsEnabled = null, bool? inquisitorEnabled = null, bool? blindSpiesEnabled = null) => new()
+        bool? plotCardsEnabled = null,
+        bool? inquisitorEnabled = null,
+        bool? blindSpiesEnabled = null,
+        bool? reverserEnabled = null,
+        ResistanceReverserSides? reverserSides = null) => new()
     {
         PlayerCounts = PlayerCounts.ToDictionary(
             x => x.Key, x => new ResistanceCountRules(x.Value.Spies, [.. x.Value.TeamSizes], [.. x.Value.RequiredFails])),
         PlotCardsEnabled = plotCardsEnabled ?? PlotCardsEnabled,
         InquisitorEnabled = inquisitorEnabled ?? InquisitorEnabled,
         BlindSpiesEnabled = blindSpiesEnabled ?? BlindSpiesEnabled,
+        ReverserEnabled = reverserEnabled ?? ReverserEnabled,
+        ReverserSides = reverserSides ?? ReverserSides,
         PlotDeck = new Dictionary<ResistancePlotCardType, int>(PlotDeck),
     };
 

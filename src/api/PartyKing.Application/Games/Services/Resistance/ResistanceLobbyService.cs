@@ -63,6 +63,17 @@ public interface IResistanceLobbyService
     Task<ErrorOr<ResistanceGameDto>> SetBlindSpiesAsync(
         Guid sessionId, bool enabled, GameCaller caller, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Host or admin: switches the Reverser module on or off and, when <paramref name="sides"/> is given, chooses
+    /// which sides get a Reverser. NotFound without a game, Conflict once the game has started.
+    /// </summary>
+    Task<ErrorOr<ResistanceGameDto>> SetReverserAsync(
+        Guid sessionId,
+        bool enabled,
+        ResistanceReverserSidesDto? sides,
+        GameCaller caller,
+        CancellationToken cancellationToken);
+
     /// <summary>Host or admin: removes a player. NotFound for an unknown game or player.</summary>
     Task<ErrorOr<ResistanceGameDto>> KickAsync(
         Guid sessionId, Guid playerId, GameCaller caller, CancellationToken cancellationToken);
@@ -208,6 +219,25 @@ internal class ResistanceLobbyService : IResistanceLobbyService
                 nameof(SetBlindSpiesAsync),
                 ResistanceOutcome.NoGame,
                 game => game.SetBlindSpies(enabled),
+                cancellationToken),
+            cancellationToken);
+    }
+
+    public Task<ErrorOr<ResistanceGameDto>> SetReverserAsync(
+        Guid sessionId,
+        bool enabled,
+        ResistanceReverserSidesDto? sides,
+        GameCaller caller,
+        CancellationToken cancellationToken)
+    {
+        return _gate.RunAsManagerAsync(
+            sessionId,
+            caller,
+            () => _games.UpdateAsync(
+                sessionId,
+                nameof(SetReverserAsync),
+                ResistanceOutcome.NoGame,
+                game => game.SetReverser(enabled, sides?.ToDomain()),
                 cancellationToken),
             cancellationToken);
     }

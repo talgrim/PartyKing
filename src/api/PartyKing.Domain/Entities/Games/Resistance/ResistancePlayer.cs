@@ -30,10 +30,16 @@ public class ResistancePlayer : LobbyPlayer, ILobbyPlayerFactory<ResistancePlaye
     public bool? Vote { get; internal set; }
 
     /// <summary>
-    /// The card the player secretly played on the approved team (true is Success, false is Fail); null until they
-    /// played. Never sent to anyone else, and cleared when the next team is picked.
+    /// The card the player secretly played on the approved team; null until they played. Never sent to anyone else
+    /// (but for the one In the Spotlight shows), and cleared when the next team is picked.
     /// </summary>
-    public bool? MissionCard { get; internal set; }
+    public ResistanceMissionCardKind? MissionCard { get; internal set; }
+
+    /// <summary>
+    /// The player's special character, dealt at the start together with the <see cref="Role"/> and secret like it.
+    /// <see cref="ResistanceCharacter.Standard"/> unless a module deals characters.
+    /// </summary>
+    public ResistanceCharacter Character { get; internal set; }
 
     /// <summary>
     /// Whether the host or an admin released the seat, so a guest may take it over from a device that is gone (see
