@@ -1,6 +1,6 @@
 # Resistance: implementation notes
 
-The game rules (Polish) are in `resistance.md` next to this file; card texts and decisions are also in `CLAUDE.local.md`. The shared lobby, `ResistanceOutcome` and the write lock are in `games-lobby.md`; the domain events and pushes are in `../architecture/domain-events-and-realtime.md`.
+The game rules (Polish) are in `resistance-rules.md` next to this file; card texts and decisions are also in `CLAUDE.local.md`. The shared lobby, `ResistanceOutcome` and the write lock are in `games-lobby.md`; the domain events and pushes are in `../architecture/domain-events-and-realtime.md`.
 
 ## Contents
 
@@ -88,7 +88,7 @@ All nine plot cards are playable.
 
 ### Dealing
 
-- `ResistanceRules.PlotCardsEnabled` (default off, kept by `RefreshRulesAsync`) is switched by `PUT rules/plot-cards` (host or admin, 409 `RulesLocked` once open; the "Plot cards" checkbox in `ResistanceManagerControls`).
+- `ResistanceRules.PlotCardsEnabled` (default off, kept by `RefreshRulesAsync`) is switched by `PUT rules/plot-cards` (host or admin, 409 `RulesLocked` once open; the "Enable Plot cards" checkbox in the "Game settings" dialog, `ResistanceGameSettings`).
 - `PlotDeck` is the 15-card deck; `PlotCardsPerRound` is 1 for 5-6 players, 2 for 7-8, 3 for 9-10. `ResistancePlotCard` rows (`Location` Deck/Drawn/Hand, `DeckOrder`, `HolderPlayerId`) are built and shuffled by `ResistanceRoles.BuildPlotDeck` on `Deal`.
 - `ResistanceRoles.BeginMission` draws at the start of each mission (not after a rejected vote) and enters `DealingCards`; `SelectTeamAsync` answers 409 `CardsNotDealt` until the leader deals.
 - `PUT cards/deal` (`{assignments:[{cardId,playerId}]}`, leader only) gives every drawn card except Establish Confidence (which stays with the leader) to another player.

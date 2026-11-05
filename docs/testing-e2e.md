@@ -1,6 +1,6 @@
 # E2E tests (Playwright, Chromium)
 
-From `src/ui/PartyKing.UI`: `npm run e2e`, about 1.5 min, 22 tests. First time only: `npx playwright install chromium`. Typecheck the suite with `npx tsc -p e2e/tsconfig.json`; `vite.config.ts` keeps `e2e` and `playwright.config.*` out of vitest.
+From `src/ui/PartyKing.UI`: `npm run e2e`, about 3 min, 34 tests. First time only: `npx playwright install chromium`. Typecheck the suite with `npx tsc -p e2e/tsconfig.json`; `vite.config.ts` keeps `e2e` and `playwright.config.*` out of vitest.
 
 ## Setup
 
@@ -16,7 +16,7 @@ From `src/ui/PartyKing.UI`: `npm run e2e`, about 1.5 min, 22 tests. First time o
 
 - `createSession` creates sessions through the admin API and deletes them after the test; `unlockSession` types the password.
 - `openAdmin` / `openGuest` give each player their own browser context (own cookies, so own player identity; no `?persona=` needed).
-- `e2e/fixtures/resistance.ts`: `startResistanceGame` — the admin creates, opens and starts a game with five guests.
+- `e2e/fixtures/resistance.ts`: `startResistanceGame(session, openers, { players })` — the admin creates, opens and starts a game with 5 to 10 guests; the helpers for playing it are under "Resistance helpers".
 
 ## Specs
 
@@ -27,19 +27,26 @@ From `src/ui/PartyKing.UI`: `npm run e2e`, about 1.5 min, 22 tests. First time o
 - `join-qr.spec.ts`: the token is read from the `join-token` response, because the dialog shows only a QR image; a guest opening `?join=<token>` gets in; a bad token shows the password form.
 - `guest-access.spec.ts`: a guest has no settings or QR button, and `/s/:id/games` redirects to the session.
 - `photos-admin.spec.ts`: an admin sees the empty slideshow and a disabled "Download as ZIP"; after an upload, the photo in the slideshow, the count in Session settings and a real zip download. The slideshow `img` has no alt text, so it is found by `.photos-slideshow img`.
-- `resistance-lobby.spec.ts`: an admin creates and opens the game, five guests join and the admin starts it; each player gets a role card, the admin none, a latecomer is told it started.
+- `resistance-lobby.spec.ts`: an admin creates and opens the game, five guests join and the admin starts it; each player gets a role card, the admin none, a latecomer is told it started. A taken name is refused, and a kicked player is told.
 - `ringo-lobby.spec.ts`: two guests join, only the player on turn can flip, the flip and "Continue" work. Ringo's cards are scattered at random and overlap, so the spec sends the click to the element (`dispatchEvent('click')`) and not through the pointer.
-- `resistance-round.spec.ts`: a full game of three successful missions to "Game over", and a rejected team that passes the lead on.
+- `resistance-round.spec.ts`: a full game of three successful missions to "Game over", and a rejected team that passes the lead on, the team picker (leader only, exact size) and a tied vote at six players.
+- `resistance-spies-win.spec.ts`: three failed missions (banner, revealed roles on the admin's board), five rejected teams in a row, and the Fail card being disabled for the Resistance.
+- `resistance-hidden-info.spec.ts`: only spies are told who the spies are (screen and API), the admin and a watching guest get no role, an admin who plays gets none on `?tv=1`, votes stay secret until the last one and can be changed until then.
+- `resistance-lifecycle.spec.ts`: restart a finished game with the same players; "End game" asks first, then sends everybody away.
 - `resistance-seat-takeover.spec.ts`: the host releases the seat of a player whose context was closed (needs the presence grace of 10 s, so the test waits up to 30 s for the button to enable); a new context claims it from the "Back in the game" picker; an unreleased seat is not offered.
-- Not covered: anything needing Spotify or YouTube (host login, the player, search), the plot cards add-on, and a game won by the spies.
+- Not covered: anything needing Spotify or YouTube (host login, the player, search), the plot cards add-on (needs a seeded deal or a configurable plot deck), the two-fails rule of mission 4 (7+ players), reordering the seats, and the Polish texts of a game.
 
 ## Resistance helpers
 
-Roles and the first leader are random, so the helpers read them from the players' screens:
-- The leader is the one who has the "Submit the team for a vote" button; a spy is the one who sees "Your fellow spies" after turning the role card.
-- The team picker's checkbox is covered by a tick, so the test taps the player's name inside the "Pick the team" group.
+Roles and the first leader are random, so the helpers first find out who is who:
+- `viewOf(page, session)` / `viewOfPlayer(setup, name)` read `GET /sessions/:id/games/resistance` with that player's own cookies (they are shared across ports on 127.0.0.1). It is exactly the player's view of the game, so it also proves what a player must not know (`votes`, `fellowSpies`, `yourRole` of someone else). Use it to find who has to act (`waitForLeader`, `spyNames`, `waitForPhase`); the acting itself goes through the UI.
+- `waitForPhase` polls, because a click returns before the server has answered. Call it (or `waitForLeader`) between steps and not `isVisible()`.
+- `submitTeam`, `vote`, `voteAll`, `continueMission`, `rejectTeams` and `playMission(setup, 'success' | 'fail')` play a round. A failed mission puts as many spies on the team as it needs Fail cards.
+- The team picker's checkbox is covered by a tick, so the tests tap the player's name inside the "Pick the team" group. Once the team is full the other checkboxes are disabled.
 - The Approve/Reject/Success/Fail cards are `role="button"` SVGs inside the "Voting" and "Mission" regions.
 - The mission panel disappears with the last card, so the tests do not wait for "Card played".
+- `?tv=1` only means something to the host and admins; a plain player with it gets the player view.
+- The game-over banner text comes from `resistancePhase.ts`; an expansion that changes it also changes the specs that assert it.
 
 ## CI
 

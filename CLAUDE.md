@@ -37,7 +37,7 @@ Frontend (from `src/ui/PartyKing.UI`):
 - `npm run build`
 - `npm run lint` runs ESLint (flat config in `eslint.config.js`: `typescript-eslint` recommended, react-hooks, react-refresh, import and unused-imports rules; formatting is not enforced). `npx eslint --fix` removes unused imports.
 - `npm test` runs `vitest run`, takes ~15s. To run a single test: `npx vitest run src/path/to/file.test.ts`. Tests run in jsdom with `testSetup.ts` (jest-dom matchers).
-- E2E tests (Playwright, Chromium): `npm run e2e` from `src/ui/PartyKing.UI`, takes ~1.5 min. First time only: `npx playwright install chromium`. It starts its own API and Vite, so stop your dev servers first (ports 4200 and 2137). Details and the spec inventory: `docs/testing-e2e.md`.
+- E2E tests (Playwright, Chromium): `npm run e2e` from `src/ui/PartyKing.UI`, takes ~3 min. First time only: `npx playwright install chromium`. It starts its own API and Vite, so stop your dev servers first (ports 4200 and 2137). Details and the spec inventory: `docs/testing-e2e.md`.
 
 ## Architecture
 
@@ -68,7 +68,7 @@ Path-scoped rules in `.claude/rules/` remind you to read the matching file when 
 | Slideshow, photo upload, archive | `docs/features/slideshow.md` |
 | Games hub, lobby layer, Ringo, Never have I ever, LLM | `docs/games/games-lobby.md` |
 | Resistance implementation (presence, seats, phases, plot cards, views) | `docs/games/resistance-implementation.md` |
-| Resistance rules and expansions (Polish) | `docs/games/resistance.md` |
+| Resistance rules and expansions (Polish) | `docs/games/resistance-rules.md` |
 | Frontend structure, polling, i18n | `docs/frontend.md` |
 | E2E suite | `docs/testing-e2e.md` |
 | Docker, Fly.io, nginx, secrets | `docs/deployment.md` |

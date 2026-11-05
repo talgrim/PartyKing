@@ -7,4 +7,4 @@ paths:
   - "src/ui/PartyKing.UI/e2e/**/resistance*"
 ---
 
-You are touching Resistance. The game rules (Polish) are in `docs/games/resistance.md`; read them too when you change what a rule does. Read `docs/games/resistance-implementation.md` first: it holds the details that are deliberately not in `CLAUDE.md`. If you change behaviour it describes, update it in the same change.
+You are touching Resistance. The game rules (Polish) are in `docs/games/resistance-rules.md`; read them too when you change what a rule does. Read `docs/games/resistance-implementation.md` first: it holds the details that are deliberately not in `CLAUDE.md`. If you change behaviour it describes, update it in the same change.
