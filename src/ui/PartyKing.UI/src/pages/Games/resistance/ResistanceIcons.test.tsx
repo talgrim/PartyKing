@@ -3,6 +3,8 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import {
   CardBackIcon,
+  DefectorCardIcon,
+  InquisitorCardIcon,
   LeaderTokenIcon,
   MissionBoardIcon,
   MissionFailCardIcon,
@@ -18,6 +20,7 @@ import {
   PlotSpotlightCardIcon,
   PlotStrongLeaderCardIcon,
   PlotTakeResponsibilityCardIcon,
+  ReverserCardIcon,
   SpyCardIcon,
   TeamTokenIcon,
   VoteApproveCardIcon,
@@ -44,6 +47,9 @@ const cards = {
   PlotOpinionMakerCardIcon,
   PlotOpenUpCardIcon,
   PlotTakeResponsibilityCardIcon,
+  InquisitorCardIcon,
+  ReverserCardIcon,
+  DefectorCardIcon,
 };
 
 describe('ResistanceIcons', () => {
