@@ -96,6 +96,7 @@ public static class DependencyInjection
     private static void RegisterSystem(this IServiceCollection services)
     {
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
+        services.AddSingleton<IRandomProvider, SharedRandomProvider>();
     }
 
     private static void RegisterDomainEvents(this IServiceCollection services)
