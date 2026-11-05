@@ -9,15 +9,16 @@ The game rules (Polish) are in `resistance-rules.md` next to this file; card tex
 - Rules snapshot
 - Round flow: start, roles, team, vote, missions, restart
 - Plot cards (add-on): deal, Opinion Maker, immediate cards, windows
+- Inquisitor (module): token, Inquisition phase, private result
 - Presence (TV view)
 - Seat takeover
 - Views and UI
 
 ## Model and endpoints
 
-- `ResistanceGame` (key `SessionId`; `CreatedAt`, `IsOpen`, `StartedAt`, `LeaderPlayerId`, `Phase`, `MissionNumber`, `RejectedTeams`, `Winner`, `Rules`) owns `ResistancePlayer` rows (`Role`, `IsOnTeam`, `Vote`, `MissionCard`, `PassedLeaderWindow`, `IsReclaimable`), `ResistanceMissionResults` and `ResistancePlotCard` rows. `MinPlayers` 5, `MaxPlayers` 10 (a full lobby answers 409 `Resistance.Full`).
-- `ResistancePhase`: `SelectingTeam`, `Voting`, `PlayingMission`, `MissionResult`, `GameOver`, the unused `VoteResult` kept for stable numbers (a migration moved games parked in it to `SelectingTeam` with the same leader), and the appended plot-card phases `DealingCards`, `ResolvingCards`, `LeaderWindow`, `ConfidenceWindow`, `PeekWindow`. The lobby is `StartedAt == null`. Phases are stored as ints, so only append.
-- Controllers share the route `games/resistance` behind `ResistanceControllerBase`: `ResistanceController` (lobby and lifecycle; it also calls the round service for start and restart), `ResistanceRoundController` (team, vote, mission, continue, window pass), `ResistancePlotCardsController` (everything under `cards/` plus `rules/plot-cards`) and `ResistanceSeatsController`.
+- `ResistanceGame` (key `SessionId`; `CreatedAt`, `IsOpen`, `StartedAt`, `LeaderPlayerId`, `Phase`, `MissionNumber`, `RejectedTeams`, `Winner`, `Rules`, and for the Inquisitor `InquisitorPlayerId` / `InquisitionExaminerPlayerId`) owns `ResistancePlayer` rows (`Role`, `IsOnTeam`, `Vote`, `MissionCard`, `PassedLeaderWindow`, `IsReclaimable`, `WasInquisitor`), `ResistanceMissionResults` and `ResistancePlotCard` rows. `MinPlayers` 5, `MaxPlayers` 10 (a full lobby answers 409 `Resistance.Full`).
+- `ResistancePhase`: `SelectingTeam`, `Voting`, `PlayingMission`, `MissionResult`, `GameOver`, the unused `VoteResult` kept for stable numbers (a migration moved games parked in it to `SelectingTeam` with the same leader), and the appended plot-card phases `DealingCards`, `ResolvingCards`, `LeaderWindow`, `ConfidenceWindow`, `PeekWindow`, and the Inquisitor phase `Inquisition`. The lobby is `StartedAt == null`. Phases are stored as ints, so only append.
+- Controllers share the route `games/resistance` behind `ResistanceControllerBase`: `ResistanceController` (lobby and lifecycle; it also calls the round service for start and restart), `ResistanceRoundController` (team, vote, mission, continue, window pass), `ResistancePlotCardsController` (everything under `cards/` plus `rules/plot-cards`), `ResistanceInquisitorController` (`rules/inquisitor`, `inquisitor/examine`, `inquisitor/confirm`) and `ResistanceSeatsController`.
 - Lobby endpoints:
   - `GET` — host, admin and joined players; guests who unlocked the session observe once the game is open (404 before).
   - `GET lobby` → `{createdAt, isOpen, isStarted, joined}`. `IResistanceGamesRepository.GetLobbyAsync(sessionId, playerId, playerStamp)` projects those fields with one `AsNoTracking` query into a `ResistanceLobbyState` (null without a game) and does not use the shared read, because every tab asks for the lobby on its pushes (it shows as `operation="GetLobbyAsync"` in the repository histogram). `joined` follows `GameLobby.IsPlayer`: the host and admins are not players by role.
@@ -26,11 +27,12 @@ The game rules (Polish) are in `resistance-rules.md` next to this file; card tex
 
 ## Services
 
-`Application/Games/Services/Resistance` has three scoped services that match the controllers:
+`Application/Games/Services/Resistance` has four scoped services that match the controllers:
 
-- `IResistanceLobbyService`: get, lobby, create, open, join, rules, plot-cards switch, kick, reorder, end.
+- `IResistanceLobbyService`: get, lobby, create, open, join, rules, plot-cards and Inquisitor switches, kick, reorder, end.
 - `IResistanceRoundService`: start, restart, team, vote, mission card, continue.
 - `IResistancePlotCardService`: deal, play, confirm, take responsibility, take lead, peek, no confidence, pass window.
+- `IResistanceInquisitorService`: examine, confirm.
 - `ResistanceActionGate` (composition, not a base class, so it can be tested alone) runs a player or manager action: access check (`RunAsPlayerAsync`: caller must be allowed and a game must exist; `RunAsManagerAsync`: host or admin), the action on the game through `UpdateAsync`, the failure-to-error mapping, and the caller's view.
 - `ResistanceErrors` holds the shared errors and `From(outcome)`, one error per `ResistanceFailure`, pinned by the golden table in `ResistanceFailureErrorsTests`. Codes and messages are matched by the UI and tests: keep them stable.
 
@@ -148,6 +150,18 @@ Overheard Conversation, Establish Confidence and Open Up (`ResistanceRoles.IsImm
 - The mission cards stay in `ResistancePlayer.MissionCard` until "Dalej". `PUT cards/{id}/peek` (`{targetPlayerId}`, holder only) is `ResistanceGame.PeekMissionCard`. Errors: 403 `NotYourCard`, 404 `UnknownCard`, 409 `CardState`, 409 `WrongPhase` / `CardNotPlayableNow` outside `PeekWindow`; 400 `InvalidTarget` for your own card, a player who played no card, or a player whose card the caller already looked at (a different holder may look at the same card; `ResistanceRoles.CanPeek`).
 - The play is public (the log names holder and target, `Played`, already confirmed); the card seen is the private `yourPeeks` (`ResistanceRoles.PeekedCards`, only in `MissionResult`, blanked in the TV tab).
 - A mission that ends the game leaves no window to peek (`GameOver`, 409 `GameOver`), and "Dalej" clears the cards, so a peek must happen before it. UI: `ResistanceCloseEye`.
+
+## Inquisitor (module)
+
+The Hostile Intent module; rules in `resistance-rules.md`. Off by default.
+
+- `ResistanceRules.InquisitorEnabled` is switched by `PUT rules/inquisitor` (host or admin, 409 `RulesLocked` once the game has started, so it can be switched while the game is open; the "Enable Inquisitor" checkbox in "Game settings"). `Clone(plotCardsEnabled, inquisitorEnabled)` keeps the other flag, `RefreshRules` keeps both.
+- **Token**: `ResistanceRoles.Deal` gives it to the player at `Order - 1` (wrapping) from the random first leader, our reading of "to the right of the first leader" (the lead passes to `Order + 1`). `ResistanceGame.InquisitorPlayerId` is the holder; `ResistancePlayer.WasInquisitor` marks everybody who held it (the first holder too), and those players cannot be examined. `Restart` clears both through `ResistanceRoles.Reset`.
+- **Phase**: `ResistanceRoles.AfterMissionResolved` runs where a resolved mission used to set `MissionResult`: after the peek window ends (`AfterWindow`) or at once without a playable card. It enters `Inquisition` for missions 2 to 4 when the module is on; a mission that ends the game never gets there, and mission 5 has none. `Inquisition` is not a confirmation window (`IsConfirmationWindow` leaves it out) and `Take Responsibility` is not allowed in it (explicit allow-list).
+- **Flow**: `PUT inquisitor/examine` (`{targetPlayerId}`, `ResistanceGame.Examine`) by the holder: the token passes to the target at once (public), `InquisitionExaminerPlayerId` remembers the examiner. `PUT inquisitor/confirm` (`ConfirmInquisition`) by that examiner clears it and sets `MissionResult`, so "Dalej" stays hidden until then. The examined player does nothing; there is no escape hatch for an absent holder (the host frees the seat, as in the plot-card windows). Errors: 403 `NotInquisitor`, 409 `NotInquisition` / `AlreadyExamined` / `NotExamined`, 400 `InvalidTarget` (yourself, a past holder, or an unknown player).
+- **Views**: public `inquisitorPlayerId`, `pastInquisitorPlayerIds`, `inquisitionExaminerPlayerId`, `inquisitionExaminedPlayerId` and `rules.inquisitorEnabled`; the private `yourInquisition` (`{playerId, role}`) goes only to the examiner while the phase is `Inquisition` and is computed from `Role`, so nothing secret is stored and a seat takeover is safe. The TV tab blanks it. The mission's `yourPeeks` stay visible during `Inquisition`.
+- **Event**: `ResistanceInquisitorTokenPassed(from, to)` carries who, never the loyalty.
+- **UI**: `ResistanceInquisitor` (picker, then the loyalty with a note that nobody can check it, then "I've seen it"; others see nothing), a violet "Inquisitor" badge in `ResistancePlayerMarks`, the `Inquisition` line in `resistancePhase.ts` (names the holder and the examined player, never the loyalty) and an "Inquisitor (module)" section in the rules dialog. `ResistanceTvBoard` keeps the mission cards visible during the phase.
 
 ## Presence (TV view)
 
