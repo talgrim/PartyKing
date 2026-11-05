@@ -205,6 +205,57 @@ public class ResistanceGamePlotCardTests
     }
 
     [Fact]
+    public void TakeResponsibility_StealingACardOfATypeYouHold_KeepsBothCardsPlayable()
+    {
+        _game.Phase = ResistancePhase.PeekWindow;
+        var thief = _game.Players[1];
+        var victim = _game.Players[2];
+        var member = _game.Players[3];
+        member.MissionCard = true;
+        var steal = AddCard(ResistancePlotCardType.TakeResponsibility, ResistancePlotCardLocation.Hand, thief);
+        var own = AddCard(ResistancePlotCardType.KeepingCloseEye, ResistancePlotCardLocation.Hand, thief);
+        var stolen = AddCard(ResistancePlotCardType.KeepingCloseEye, ResistancePlotCardLocation.Hand, victim);
+
+        var outcome = _game.TakeResponsibility(thief.PlayerId, steal.CardId, victim.PlayerId, null, Now, new Random(1));
+
+        Assert.Null(outcome.Failure);
+        Assert.Equal(thief.PlayerId, stolen.HolderPlayerId);
+        Assert.Equal(
+            2,
+            _game.PlotCards.Count(x => x.HolderPlayerId == thief.PlayerId
+                                       && x.Type == ResistancePlotCardType.KeepingCloseEye
+                                       && x.Location == ResistancePlotCardLocation.Hand));
+
+        Assert.Null(_game.PeekMissionCard(thief.PlayerId, own.CardId, member.PlayerId, Now).Failure);
+        Assert.Equal(ResistancePlotCardLocation.Hand, stolen.Location);
+        Assert.Equal(thief.PlayerId, stolen.HolderPlayerId);
+    }
+
+    [Fact]
+    public void PeekMissionCard_ADifferentPlayerMaySeeTheSameCard_ButNotTheSamePlayerTwice()
+    {
+        _game.Phase = ResistancePhase.PeekWindow;
+        _game.MissionResults.Add(new ResistanceMissionResult { MissionNumber = _game.MissionNumber, Succeeded = false });
+        var first = _game.Players[3];
+        var second = _game.Players[4];
+        var member = _game.Players[1];
+        member.MissionCard = false;
+        var firstCard = AddCard(ResistancePlotCardType.KeepingCloseEye, ResistancePlotCardLocation.Hand, first);
+        var firstSpare = AddCard(ResistancePlotCardType.KeepingCloseEye, ResistancePlotCardLocation.Hand, first);
+        var secondCard = AddCard(ResistancePlotCardType.KeepingCloseEye, ResistancePlotCardLocation.Hand, second);
+
+        Assert.Null(_game.PeekMissionCard(first.PlayerId, firstCard.CardId, member.PlayerId, Now).Failure);
+        Assert.Null(_game.PeekMissionCard(second.PlayerId, secondCard.CardId, member.PlayerId, Now).Failure);
+
+        Assert.Equal(
+            ResistanceFailure.InvalidTarget,
+            _game.PeekMissionCard(first.PlayerId, firstSpare.CardId, member.PlayerId, Now).Failure);
+        Assert.Equal(ResistancePlotCardLocation.Hand, firstSpare.Location);
+        Assert.Equal(member.PlayerId, Assert.Single(ResistanceRoles.PeekedCards(_game, first.PlayerId)).PlayerId);
+        Assert.Equal(member.PlayerId, Assert.Single(ResistanceRoles.PeekedCards(_game, second.PlayerId)).PlayerId);
+    }
+
+    [Fact]
     public void TakeResponsibility_IsRefusedMidVoteAndForBadTargets()
     {
         var holder = _game.Players[1];

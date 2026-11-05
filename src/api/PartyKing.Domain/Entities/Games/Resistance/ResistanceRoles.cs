@@ -8,6 +8,11 @@ public static class ResistanceRoles
     /// <summary>Missions one side has to win to win the game.</summary>
     public const int MissionsToWin = 3;
 
+    /// <summary>The Inquisitor examines right after these missions (2 to 4), three times in all.</summary>
+    public const int FirstInquisitionMission = 2;
+
+    public const int LastInquisitionMission = 4;
+
     /// <summary>Teams rejected in a row in one mission that give the spies the win.</summary>
     public const int MaxRejectedTeams = 5;
 
@@ -56,7 +61,7 @@ public static class ResistanceRoles
 
     /// <summary>
     /// Whether <paramref name="target"/>'s mission card of the finished mission can be peeked at (in the peek window): it was played,
-    /// is not the peeker's own and no Keeping a Close Eye looked at it yet.
+    /// is not the peeker's own and the peeker has not looked at it yet (other players may look at the same card).
     /// </summary>
     public static bool CanPeek(ResistanceGame game, Guid peeker, Guid target)
     {
@@ -66,13 +71,14 @@ public static class ResistanceRoles
                && !game.PlotCards.Any(x => x.Type == ResistancePlotCardType.KeepingCloseEye
                                            && x.Location == ResistancePlotCardLocation.Played
                                            && x.PlayedInMission == game.MissionNumber
+                                           && x.HolderPlayerId == peeker
                                            && x.TargetPlayerId == target);
     }
 
     /// <summary>The mission cards <paramref name="peeker"/> looked at this mission (player id, true = Success); private to them.</summary>
     public static IEnumerable<(Guid PlayerId, bool Success)> PeekedCards(ResistanceGame game, Guid peeker)
     {
-        return game.Phase is not (ResistancePhase.PeekWindow or ResistancePhase.MissionResult)
+        return !game.IsMissionResolved
             ? []
             : game.PlotCards
                 .Where(x => x.Type == ResistancePlotCardType.KeepingCloseEye
@@ -154,7 +160,7 @@ public static class ResistanceRoles
 
         if (game.Phase == ResistancePhase.PeekWindow)
         {
-            game.Phase = ResistancePhase.MissionResult;
+            AfterMissionResolved(game);
             return;
         }
 
@@ -428,7 +434,28 @@ public static class ResistanceRoles
             return;
         }
 
-        game.Phase = ResistancePhase.MissionResult;
+        AfterMissionResolved(game);
+    }
+
+    /// <summary>
+    /// The outcome of a mission that did not end the game is public and its windows are over: the Inquisitor, when the
+    /// module is on, examines after missions 2, 3 and 4; then the "Dalej" step.
+    /// </summary>
+    private static void AfterMissionResolved(ResistanceGame game)
+    {
+        game.Phase = game.Rules.InquisitorEnabled && game.InquisitorPlayerId is not null
+                                                  && game.MissionNumber is >= FirstInquisitionMission and <= LastInquisitionMission
+            ? ResistancePhase.Inquisition
+            : ResistancePhase.MissionResult;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="target"/> may be examined by <paramref name="examiner"/>: another player who never held
+    /// the Inquisitor token.
+    /// </summary>
+    public static bool CanExamine(ResistanceGame game, Guid examiner, Guid target)
+    {
+        return target != examiner && game.Players.Any(x => x.PlayerId == target && !x.WasInquisitor);
     }
 
     /// <summary>Clears everything a game accumulated (results, rejections, teams, votes, cards, winner) but keeps the players and rules.</summary>
@@ -447,10 +474,27 @@ public static class ResistanceRoles
             player.PassedLeaderWindow = false;
             player.Role = null;
             player.IsReclaimable = false;
+            player.WasInquisitor = false;
         }
 
         game.LeaderPlayerId = null;
+        game.InquisitorPlayerId = null;
+        game.InquisitionExaminerPlayerId = null;
         game.PlotCards.Clear();
+    }
+
+    /// <summary>The token starts with the player to the right of the first leader: the one before them in seating order.</summary>
+    private static void GiveInquisitorToken(ResistanceGame game)
+    {
+        if (!game.Rules.InquisitorEnabled)
+        {
+            return;
+        }
+
+        var seats = game.Players.OrderBy(x => x.Order).ToList();
+        var holder = seats[(seats.FindIndex(x => x.PlayerId == game.LeaderPlayerId) + seats.Count - 1) % seats.Count];
+        holder.WasInquisitor = true;
+        game.InquisitorPlayerId = holder.PlayerId;
     }
 
     /// <summary>Gives every player a random role, picks a random first leader and starts the first mission.</summary>
@@ -465,6 +509,7 @@ public static class ResistanceRoles
         }
 
         game.ChangeLeader(game.Players[random.Next(game.Players.Count)].PlayerId);
+        GiveInquisitorToken(game);
         BuildPlotDeck(game, random);
         BeginMission(game);
     }

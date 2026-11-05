@@ -4,10 +4,10 @@ Aggregates raise domain events; handlers in Application react to them, mostly by
 
 ## Domain events
 
-- Game aggregates derive from `AggregateRoot` (`Domain/Entities/Base`: protected `Raise`, public `DrainEvents()`; the pending list is a private field, so EF never maps it) and raise `IDomainEvent` records, grouped like the entities in `Domain/Events/Games/{Base,Ringo,Resistance}` (the plot-cards add-on in `ResistanceEvents.PlotCards.cs`).
+- Game aggregates derive from `AggregateRoot` (`Domain/Entities/Base`: protected `Raise`, public `DrainEvents()`; the pending list is a private field, so EF never maps it) and raise `IDomainEvent` records, grouped like the entities in `Domain/Events/Games/{Base,Ringo,Resistance}` (the plot-cards add-on in `ResistanceEvents.PlotCards.cs`, the Inquisitor module in `ResistanceEvents.Inquisitor.cs`).
 - Lobby: `LobbyOpened`, `LobbyPlayerJoined`, `LobbyPlayerKicked`, `LobbyOrderChanged`, `LobbyGameEnded`, each with the game's `Kind` (abstract on `LobbyGame`).
 - Ringo: `RingoStarted`, `RingoCardFlipped`, `RingoGameOver`, `RingoTurnPassed`.
-- Resistance: `ResistanceCreated`, `ResistanceStarted`, `ResistanceRestarted`, `ResistanceTeamSubmitted`, `ResistanceVoteCast`, `ResistanceTeamApproved`, `ResistanceTeamRejected`, `ResistanceMissionCardPlayed`, `ResistanceMissionCompleted`, `ResistanceLeaderChanged`, `ResistanceGameOver`, `ResistancePlotCardPlayed`, plus the seat events (see `../games/resistance-implementation.md`) and the catch-all `ResistanceChanged`, which every successful action raises through `ResistanceGame.Succeeded()`.
+- Resistance: `ResistanceCreated`, `ResistanceStarted`, `ResistanceRestarted`, `ResistanceTeamSubmitted`, `ResistanceVoteCast`, `ResistanceTeamApproved`, `ResistanceTeamRejected`, `ResistanceMissionCardPlayed`, `ResistanceMissionCompleted`, `ResistanceLeaderChanged`, `ResistanceGameOver`, `ResistancePlotCardPlayed`, `ResistanceInquisitorTokenPassed` (who examined whom, never the loyalty), plus the seat events (see `../games/resistance-implementation.md`) and the catch-all `ResistanceChanged`, which every successful action raises through `ResistanceGame.Succeeded()`.
 - No event carries a secret: `ResistanceVoteCast` names the voter, not the vote; `ResistanceMissionCardPlayed` not the card.
 - `ResistanceRoles` (static) raises through `game.Publish` and passes the lead with `game.ChangeLeader`.
 

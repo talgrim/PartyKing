@@ -127,4 +127,22 @@ public enum ResistanceFailure
 
     /// <summary>A device of the player is connected, so the seat is not free (to release it, or to take it over).</summary>
     SeatOnline,
+
+    /// <summary>The Inquisitor module is switched only before the game starts.</summary>
+    InquisitorLocked,
+
+    /// <summary>Nobody is being examined: the game is not in the Inquisition step.</summary>
+    NotInquisition,
+
+    /// <summary>The caller does not hold the Inquisitor token (to examine), or is not the one who examined (to confirm).</summary>
+    NotInquisitor,
+
+    /// <summary>The player to examine is the holder, held the token before, or is not a player.</summary>
+    InvalidExamineTarget,
+
+    /// <summary>The holder already picked the player to examine; only the confirmation is left.</summary>
+    AlreadyExamined,
+
+    /// <summary>The holder has not picked a player to examine yet, so there is nothing to confirm.</summary>
+    NotExamined,
 }

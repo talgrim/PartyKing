@@ -102,7 +102,7 @@ public class ResistancePlotCardsController : ResistanceControllerBase
     /// <summary>
     /// The holder of Keeping a Close Eye looks at a team member's mission card once the mission is played (until
     /// "Dalej"). 403 for anyone else, 404 for an unknown card, 409 outside that step or once played, 400 for your own
-    /// card, a player who did not play or a card someone already looked at.
+    /// card, a player who did not play or a card you already looked at.
     /// </summary>
     [HttpPut("cards/{cardId:int}/peek")]
     [RequireSessionAccess]

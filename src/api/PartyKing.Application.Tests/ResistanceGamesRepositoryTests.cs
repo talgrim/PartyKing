@@ -393,6 +393,62 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task TheInquisitor_SurvivesReloadsThroughMissionTwoAndTheExamination()
+    {
+        await CreateLobbyAsync(5, isOpen: true);
+        var switched = await _repository.UpdateAsync(
+            _sessionId, "SetInquisitorAsync", ResistanceOutcome.NoGame, game => game.SetInquisitor(true), CancellationToken.None);
+        Assert.Null(switched.Failure);
+        Assert.True((await ReloadAsync()).Rules.InquisitorEnabled);
+
+        Assert.Null((await StartAsync()).Failure);
+        var started = await ReloadAsync();
+        _players = started.Players.OrderBy(x => x.Order).Select(x => x.PlayerId).ToList();
+        var holder = started.InquisitorPlayerId!.Value;
+        Assert.Equal([holder], started.Players.Where(x => x.WasInquisitor).Select(x => x.PlayerId));
+
+        await PlayApprovedMissionAsync();
+        Assert.Equal(ResistancePhase.MissionResult, (await ReloadAsync()).Phase);
+        Assert.Null((await ContinueAsync((await ReloadAsync()).LeaderPlayerId, isManager: true)).Failure);
+        await PlayApprovedMissionAsync();
+
+        var inquisition = await ReloadAsync();
+        Assert.Equal(ResistancePhase.Inquisition, inquisition.Phase);
+        var target = _players.First(x => x != holder);
+        var examined = await _repository.UpdateAsync(
+            _sessionId, "ExamineAsync", ResistanceOutcome.NoGame, game => game.Examine(holder, target), CancellationToken.None);
+        Assert.Null(examined.Failure);
+
+        var after = await ReloadAsync();
+        Assert.Equal(target, after.InquisitorPlayerId);
+        Assert.Equal(holder, after.InquisitionExaminerPlayerId);
+        Assert.Equal(target, after.InquisitionExaminedPlayerId);
+        Assert.Equal(2, after.Players.Count(x => x.WasInquisitor));
+
+        var confirmed = await _repository.UpdateAsync(
+            _sessionId, "ConfirmInquisitionAsync", ResistanceOutcome.NoGame, game => game.ConfirmInquisition(holder), CancellationToken.None);
+        Assert.Null(confirmed.Failure);
+        var done = await ReloadAsync();
+        Assert.Equal(ResistancePhase.MissionResult, done.Phase);
+        Assert.Null(done.InquisitionExaminerPlayerId);
+        Assert.Equal(target, done.InquisitorPlayerId);
+    }
+
+    /// <summary>The leader picks a team that everybody approves and whose members all play Success.</summary>
+    private async Task PlayApprovedMissionAsync()
+    {
+        var current = await ReloadAsync();
+        var size = current.Rules.TeamSize(5, current.MissionNumber);
+        var team = _players.Take(size).ToList();
+        Assert.Null((await SelectTeamAsync(current.LeaderPlayerId, team)).Failure);
+        await VoteAsync(true, true, true, true, true);
+        foreach (var member in team)
+        {
+            Assert.Null((await PlayMissionCardAsync(member, success: true)).Failure);
+        }
+    }
+
+    [Fact]
     public async Task TheFifthRejectedTeamInARow_EndsTheGameWithTheSpiesWinning()
     {
         var ct = CancellationToken.None;

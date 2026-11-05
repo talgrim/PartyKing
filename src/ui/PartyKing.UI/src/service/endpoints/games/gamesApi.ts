@@ -155,6 +155,24 @@ export const gamesApi = {
       withCredentials: true,
     }) as unknown as Promise<ResistanceGameDto>,
 
+  /** Host or admin: switches the Inquisitor module on or off; 409 once the game has started. */
+  setResistanceInquisitor: (sessionId: string, enabled: boolean) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/rules/inquisitor`, { enabled }, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
+  /** The Inquisitor token holder picks a player who never held it; the token passes to them. 403 for anyone else, 409 outside the Inquisition, 400 for a player who can't be examined. */
+  examineResistancePlayer: (sessionId: string, targetPlayerId: string) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/inquisitor/examine`, { targetPlayerId }, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
+  /** The examiner confirms having seen the loyalty, which ends the Inquisition. 403 for anyone else, 409 before a player was picked. */
+  confirmResistanceInquisition: (sessionId: string) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/inquisitor/confirm`, undefined, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
   /** The holder plays an immediate plot card on a player (a neighbour for Overheard Conversation); 403 for anyone else, 409 outside the playing phase or once played, 400 for a wrong target. */
   playResistancePlotCard: (sessionId: string, cardId: number, targetPlayerId: string) =>
     axios.put(`/sessions/${sessionId}/games/resistance/cards/${cardId}/play`, { targetPlayerId }, {

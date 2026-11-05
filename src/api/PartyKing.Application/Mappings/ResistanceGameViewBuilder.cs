@@ -43,6 +43,7 @@ internal sealed class ResistanceGameViewBuilder
             .WithVotes()
             .WithMission()
             .WithPlotCards()
+            .WithInquisitor()
             .Build();
     }
 
@@ -134,6 +135,18 @@ internal sealed class ResistanceGameViewBuilder
         return this;
     }
 
+    /// <summary>The Inquisitor module: the public token and the examination, and the examiner's own private result.</summary>
+    private ResistanceGameViewBuilder WithInquisitor()
+    {
+        _view.InquisitorPlayerId = _game.InquisitorPlayerId;
+        _view.PastInquisitorPlayerIds = PlayerIds(x => x.WasInquisitor);
+        _view.InquisitionExaminerPlayerId = _game.InquisitionExaminerPlayerId;
+        _view.InquisitionExaminedPlayerId = _game.InquisitionExaminedPlayerId;
+        _view.YourInquisition = BuildYourInquisition();
+
+        return this;
+    }
+
     /// <summary>The ids of the players who match, in seat order.</summary>
     private List<Guid> PlayerIds(Func<ResistancePlayer, bool> predicate)
     {
@@ -178,7 +191,9 @@ internal sealed class ResistanceGameViewBuilder
             .Select(x => new ResistanceCountRulesDto(x.Key, x.Value.Spies, x.Value.TeamSizes, x.Value.RequiredFails))
             .ToList();
 
-        return new ResistanceRulesDto(playerCounts, game.Rules.PlotCardsEnabled, game.Rules.PlotCardsPerRound(game.Players.Count));
+        return new ResistanceRulesDto(
+            playerCounts, game.Rules.PlotCardsEnabled, game.Rules.PlotCardsPerRound(game.Players.Count),
+            game.Rules.InquisitorEnabled);
     }
 
     private List<ResistanceMissionResultDto> BuildMissionResults()
@@ -279,6 +294,23 @@ internal sealed class ResistanceGameViewBuilder
         }
 
         return reveals;
+    }
+
+    /// <summary>
+    /// Only the player who examined sees the loyalty, and only until they confirm (the examiner is cleared then). The
+    /// token has already moved on, so the examined player is the new holder.
+    /// </summary>
+    private ResistanceInquisitionDto? BuildYourInquisition()
+    {
+        if (_you is not { } you
+            || _game.Phase != ResistancePhase.Inquisition
+            || _game.InquisitionExaminerPlayerId != you.PlayerId
+            || _game.InquisitionExaminedPlayerId is not { } examinedId)
+        {
+            return null;
+        }
+
+        return new ResistanceInquisitionDto(examinedId, _players.First(x => x.PlayerId == examinedId).Role!.Value.ToDto());
     }
 
     /// <summary>Who confirmed in a window, never who holds a card.</summary>

@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { MissionFailCardIcon, MissionSuccessCardIcon } from './ResistanceIcons';
+import { ResistanceTvPanel } from './ResistanceTvPanel';
 import { useTranslation } from 'react-i18next';
 
 type Props = {
@@ -23,11 +24,10 @@ export const ResistanceMissionCards = ({ cardCount, failCount, open = null }: Pr
   const hiddenFails = open && !open.success ? Math.max(failCount - 1, 0) : failCount;
 
   return (
-    <section aria-label={t('resistance.missionCards.title')} className="flex flex-col items-center gap-2 shrink-0">
-      <h2 className="text-[clamp(1.1rem,2.6vh,2rem)] font-semibold uppercase tracking-wide text-slate-300">{t('resistance.missionCards.title')}</h2>
-      <ul className="flex flex-wrap justify-center gap-3">
+    <ResistanceTvPanel label={t('resistance.missionCards.title')} title={t('resistance.missionCards.title')}>
+      <ul className="flex flex-1 flex-wrap content-center justify-center gap-2">
         {open && (
-          <li className="flex w-[8vw] min-w-20 max-w-36 flex-col items-center gap-1">
+          <li className="flex w-[6vw] min-w-20 max-w-32 flex-col items-center gap-1">
             {open.success ? (
               <MissionSuccessCardIcon title={t('resistance.missionCard.success')} className={CARD_SIZE} />
             ) : (
@@ -37,7 +37,7 @@ export const ResistanceMissionCards = ({ cardCount, failCount, open = null }: Pr
           </li>
         )}
         {Array.from({ length: hidden }, (_, i) => (
-          <li key={i} className="flex w-[8vw] min-w-20 max-w-36 flex-col items-center">
+          <li key={i} className="flex w-[6vw] min-w-20 max-w-32 flex-col items-center">
             {i < hiddenFails ? (
               <MissionFailCardIcon title={t('resistance.missionCard.fail')} className={CARD_SIZE} />
             ) : (
@@ -46,6 +46,6 @@ export const ResistanceMissionCards = ({ cardCount, failCount, open = null }: Pr
           </li>
         ))}
       </ul>
-    </section>
+    </ResistanceTvPanel>
   );
 };

@@ -49,6 +49,13 @@ public interface IResistanceLobbyService
     Task<ErrorOr<ResistanceGameDto>> SetPlotCardsAsync(
         Guid sessionId, bool enabled, GameCaller caller, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Host or admin: switches the Inquisitor module on or off. NotFound without a game, Conflict once the game has
+    /// started.
+    /// </summary>
+    Task<ErrorOr<ResistanceGameDto>> SetInquisitorAsync(
+        Guid sessionId, bool enabled, GameCaller caller, CancellationToken cancellationToken);
+
     /// <summary>Host or admin: removes a player. NotFound for an unknown game or player.</summary>
     Task<ErrorOr<ResistanceGameDto>> KickAsync(
         Guid sessionId, Guid playerId, GameCaller caller, CancellationToken cancellationToken);
@@ -164,6 +171,21 @@ internal class ResistanceLobbyService : IResistanceLobbyService
                 nameof(SetPlotCardsAsync),
                 ResistanceOutcome.NoGame,
                 game => game.SetPlotCards(enabled),
+                cancellationToken),
+            cancellationToken);
+    }
+
+    public Task<ErrorOr<ResistanceGameDto>> SetInquisitorAsync(
+        Guid sessionId, bool enabled, GameCaller caller, CancellationToken cancellationToken)
+    {
+        return _gate.RunAsManagerAsync(
+            sessionId,
+            caller,
+            () => _games.UpdateAsync(
+                sessionId,
+                nameof(SetInquisitorAsync),
+                ResistanceOutcome.NoGame,
+                game => game.SetInquisitor(enabled),
                 cancellationToken),
             cancellationToken);
     }

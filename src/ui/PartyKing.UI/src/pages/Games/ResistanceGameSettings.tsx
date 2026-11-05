@@ -31,7 +31,7 @@ const SettingsSection = ({ title, description, children }: SectionProps): ReactN
 
 /**
  * Host and admins: switches the optional modules of the game on and off, one section per module with a short description.
- * Only the plot cards add-on exists for now. The modules can be changed until the game starts.
+ * The plot cards add-on and the Inquisitor module exist. The modules can be changed until the game starts.
  */
 export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): ReactNode => {
   const { t } = useTranslation();
@@ -46,6 +46,15 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
       await mutate(gamesApi.setResistancePlotCards(sessionId, enabled), { revalidate: false });
     } catch {
       setMessage(t('resistance.settings.plotCardsFailed'));
+    }
+  };
+
+  const setInquisitor = async (enabled: boolean) => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.setResistanceInquisitor(sessionId, enabled), { revalidate: false });
+    } catch {
+      setMessage(t('resistance.settings.inquisitorFailed'));
     }
   };
 
@@ -85,6 +94,20 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
               onChange={(event) => void setPlotCards(event.target.checked)}
             />
             {t('resistance.settings.plotCards.toggle')}
+          </label>
+        </SettingsSection>
+        <SettingsSection
+          title={t('resistance.settings.inquisitor.title')}
+          description={t('resistance.settings.inquisitor.description')}
+        >
+          <label className="flex items-center gap-2 text-slate-200">
+            <input
+              type="checkbox"
+              checked={game?.rules.inquisitorEnabled ?? false}
+              disabled={game === undefined || started}
+              onChange={(event) => void setInquisitor(event.target.checked)}
+            />
+            {t('resistance.settings.inquisitor.toggle')}
           </label>
         </SettingsSection>
         {message && <p className="text-amber-500">{message}</p>}

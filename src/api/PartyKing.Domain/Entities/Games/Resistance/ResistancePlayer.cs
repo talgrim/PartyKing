@@ -41,6 +41,12 @@ public class ResistancePlayer : LobbyPlayer, ILobbyPlayerFactory<ResistancePlaye
     /// </summary>
     public bool IsReclaimable { get; internal set; }
 
+    /// <summary>
+    /// Inquisitor module: whether the player holds or held the token, so nobody can examine them any more. Public:
+    /// the token passes openly. Cleared when the game restarts.
+    /// </summary>
+    public bool WasInquisitor { get; internal set; }
+
     /// <summary>Whether the player confirmed in the open <see cref="ResistancePhase.LeaderWindow"/> that they do not play a card.</summary>
     public bool PassedLeaderWindow { get; internal set; }
 }

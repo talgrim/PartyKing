@@ -295,7 +295,7 @@ public partial class ResistanceGame
 
     /// <summary>
     /// After a mission is played (until "Dalej") the holder of Keeping a Close Eye looks at one team member's mission
-    /// card; a card can be looked at by one player only and never your own. The play is public, the card is not.
+    /// card; never your own and never one you already looked at (several players may look at the same card). The play is public, the card is not.
     /// </summary>
     public ResistanceOutcome PeekMissionCard(
         Guid? callerPlayerId, int cardId, Guid targetPlayerId, DateTimeOffset playedAt)
