@@ -59,12 +59,15 @@ internal class ResistanceRoundService : IResistanceRoundService
     private readonly ResistanceActionGate _gate;
     private readonly IResistanceGamesRepository _games;
     private readonly IDateTimeProvider _clock;
+    private readonly IRandomProvider _random;
 
-    public ResistanceRoundService(ResistanceActionGate gate, IResistanceGamesRepository games, IDateTimeProvider clock)
+    public ResistanceRoundService(
+        ResistanceActionGate gate, IResistanceGamesRepository games, IDateTimeProvider clock, IRandomProvider random)
     {
         _gate = gate;
         _games = games;
         _clock = clock;
+        _random = random;
     }
 
     public Task<ErrorOr<ResistanceGameDto>> StartAsync(
@@ -77,7 +80,7 @@ internal class ResistanceRoundService : IResistanceRoundService
                 sessionId,
                 nameof(StartAsync),
                 ResistanceOutcome.NoGame,
-                game => game.Start(_clock.UtcNow, Random.Shared),
+                game => game.Start(_clock.UtcNow, _random.Create()),
                 cancellationToken),
             cancellationToken);
     }

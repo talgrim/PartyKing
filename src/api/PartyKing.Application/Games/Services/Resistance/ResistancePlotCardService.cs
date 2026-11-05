@@ -56,13 +56,15 @@ internal class ResistancePlotCardService : IResistancePlotCardService
     private readonly ResistanceActionGate _gate;
     private readonly IResistanceGamesRepository _games;
     private readonly IDateTimeProvider _clock;
+    private readonly IRandomProvider _random;
 
     public ResistancePlotCardService(
-        ResistanceActionGate gate, IResistanceGamesRepository games, IDateTimeProvider clock)
+        ResistanceActionGate gate, IResistanceGamesRepository games, IDateTimeProvider clock, IRandomProvider random)
     {
         _gate = gate;
         _games = games;
         _clock = clock;
+        _random = random;
     }
 
     public Task<ErrorOr<ResistanceGameDto>> DealPlotCardsAsync(
@@ -113,7 +115,7 @@ internal class ResistancePlotCardService : IResistancePlotCardService
             caller,
             nameof(TakeResponsibilityAsync),
             game => game.TakeResponsibility(
-                caller.PlayerId, cardId, targetPlayerId, takeOpinionMaker, _clock.UtcNow, Random.Shared),
+                caller.PlayerId, cardId, targetPlayerId, takeOpinionMaker, _clock.UtcNow, _random.Create()),
             cancellationToken);
     }
 
