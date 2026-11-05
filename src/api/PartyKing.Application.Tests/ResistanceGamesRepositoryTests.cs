@@ -517,6 +517,56 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Assassin_SurvivesReloads_TheGuessIsStored_AndRestartClearsIt()
+    {
+        await CreateLobbyAsync(5, isOpen: true);
+        var switched = await _repository.UpdateAsync(
+            _sessionId, "SetAssassinAsync", ResistanceOutcome.NoGame, game => game.SetAssassin(true), CancellationToken.None);
+        Assert.Null(switched.Failure);
+        Assert.True((await ReloadAsync()).Rules.AssassinEnabled);
+
+        Assert.Null((await StartAsync()).Failure);
+        var started = await ReloadAsync();
+        var assassin = Assert.Single(started.Players, x => x.Character == ResistanceCharacter.Assassin && x.Role == ResistanceRole.Spy);
+        var commander = Assert.Single(started.Players, x => x.Character == ResistanceCharacter.Commander && x.Role == ResistanceRole.Resistance);
+
+        var waiting = await _repository.UpdateAsync(
+            _sessionId,
+            "test",
+            ResistanceOutcome.NoGame,
+            game =>
+            {
+                game.Phase = ResistancePhase.Assassination;
+
+                return ResistanceOutcome.Success(game);
+            },
+            CancellationToken.None);
+        Assert.Null(waiting.Failure);
+        var pending = await ReloadAsync();
+        Assert.Equal(ResistancePhase.Assassination, pending.Phase);
+        Assert.Null(pending.Winner);
+
+        var guessed = await _repository.UpdateAsync(
+            _sessionId,
+            "AssassinateAsync",
+            ResistanceOutcome.NoGame,
+            game => game.Assassinate(assassin.PlayerId, commander.PlayerId),
+            CancellationToken.None);
+        Assert.Null(guessed.Failure);
+        var over = await ReloadAsync();
+        Assert.Equal(ResistancePhase.GameOver, over.Phase);
+        Assert.Equal(ResistanceRole.Spy, over.Winner);
+        Assert.Equal(commander.PlayerId, over.AssassinationTargetPlayerId);
+
+        var restarted = await _repository.UpdateAsync(
+            _sessionId, "RestartAsync", ResistanceOutcome.NoGame, game => game.Restart(), CancellationToken.None);
+        Assert.Null(restarted.Failure);
+        var reset = await ReloadAsync();
+        Assert.Null(reset.AssassinationTargetPlayerId);
+        Assert.True(reset.Rules.AssassinEnabled);
+    }
+
+    [Fact]
     public async Task AReverseCard_IsStoredAsItsOwnKind_AndReversesTheStoredResult()
     {
         await CreateLobbyAsync(5, isOpen: true);

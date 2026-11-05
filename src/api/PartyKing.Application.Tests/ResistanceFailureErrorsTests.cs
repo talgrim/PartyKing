@@ -100,6 +100,20 @@ public class ResistanceFailureErrorsTests
             ErrorType.Conflict,
             "Resistance.RulesLocked",
             "The Defectors can only be switched before the game starts."),
+        [ResistanceFailure.AssassinLocked] = new(
+            ErrorType.Conflict,
+            "Resistance.RulesLocked",
+            "The Assassin can only be switched before the game starts."),
+        [ResistanceFailure.AssassinConflict] = new(
+            ErrorType.Conflict,
+            "Resistance.AssassinConflict",
+            "The Assassin does not combine with the Defectors, the Reverser or Blind Spies."),
+        [ResistanceFailure.NotAssassination] = new(
+            ErrorType.Conflict, "Resistance.NotAssassination", "The Assassin is not choosing now."),
+        [ResistanceFailure.NotAssassin] = new(
+            ErrorType.Forbidden, "Resistance.NotAssassin", "Only the Assassin names the Commander."),
+        [ResistanceFailure.InvalidAssassinationTarget] = new(
+            ErrorType.Validation, "Resistance.InvalidTarget", "That player can't be named."),
         [ResistanceFailure.GameOver] = new(ErrorType.Conflict, "Resistance.GameOver", "The game is over."),
         [ResistanceFailure.NoGame] = new(ErrorType.NotFound, "Resistance.NotFound", "The session has no Resistance game."),
         [ResistanceFailure.NotLeaderToDeal] = new(

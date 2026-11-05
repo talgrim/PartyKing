@@ -72,6 +72,10 @@ internal sealed class FakeResistanceLobbyService : IResistanceLobbyService
         Guid sessionId, bool enabled, bool? knowEachOther, GameCaller caller, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
 
+    public Task<ErrorOr<ResistanceGameDto>> SetAssassinAsync(
+        Guid sessionId, bool enabled, GameCaller caller, CancellationToken cancellationToken) =>
+        throw new NotSupportedException();
+
     public Task<ErrorOr<ResistanceGameDto>> KickAsync(
         Guid sessionId, Guid playerId, GameCaller caller, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
@@ -194,6 +198,15 @@ internal sealed class FakeResistanceInquisitorService : FakeResistanceCalls, IRe
     }
 }
 
+internal sealed class FakeResistanceAssassinService : FakeResistanceCalls, IResistanceAssassinService
+{
+    public Task<ErrorOr<ResistanceGameDto>> AssassinateAsync(
+        Guid sessionId, Guid targetPlayerId, GameCaller caller, CancellationToken cancellationToken)
+    {
+        return Record($"assassinate-{targetPlayerId}", sessionId, null, caller);
+    }
+}
+
 internal sealed class FakeResistancePresenceService : IResistancePresenceService
 {
     public ErrorOr<ResistancePresenceDto> Result { get; set; } = new ResistancePresenceDto([]);
@@ -227,7 +240,7 @@ internal sealed class FakeResistanceSeatService : IResistanceSeatService
     {
         LastRelease = (playerId, released, caller);
 
-        return Task.FromResult(ErrorOrFactory.From(new ResistanceGameDto { Rules = new ResistanceRulesDto([], false, 1, false, false, false, ResistanceReverserSidesDto.Both, true, false, false) }));
+        return Task.FromResult(ErrorOrFactory.From(new ResistanceGameDto { Rules = new ResistanceRulesDto([], false, 1, false, false, false, ResistanceReverserSidesDto.Both, true, false, false, false) }));
     }
 
     public Task<ErrorOr<GameSeat>> ClaimAsync(Guid sessionId, Guid playerId, CancellationToken cancellationToken)

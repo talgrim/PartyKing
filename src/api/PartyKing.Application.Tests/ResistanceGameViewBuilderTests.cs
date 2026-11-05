@@ -142,6 +142,81 @@ public class ResistanceGameViewBuilderTests
         Assert.Equal([Ids[3]], View(game, 4).FellowSpies);
     }
 
+    private static ResistanceGame AssassinGame(ResistancePhase phase = ResistancePhase.SelectingTeam)
+    {
+        var game = NewGame(phase);
+        game.Rules.AssassinEnabled = true;
+        Seat(game, 2).Character = ResistanceCharacter.Commander;
+        Seat(game, 3).Character = ResistanceCharacter.Assassin;
+
+        return game;
+    }
+
+    [Fact]
+    public void FellowSpies_WithTheAssassinModule_TheCommanderSeesEverySpyAndNobodySeesTheCommander()
+    {
+        var game = AssassinGame();
+
+        Assert.Equal([Ids[3], Ids[4]], View(game, 2).FellowSpies);
+        Assert.Equal([Ids[4]], View(game, 3).FellowSpies);
+        Assert.Equal([Ids[3]], View(game, 4).FellowSpies);
+        Assert.Null(View(game, 0).FellowSpies);
+        Assert.Null(View(game, 1).FellowSpies);
+        Assert.Null(View(game, null).FellowSpies);
+    }
+
+    [Fact]
+    public void FellowSpies_BeforeTheStart_AreNullForTheCommander()
+    {
+        var game = AssassinGame();
+        game.StartedAt = null;
+
+        Assert.Null(View(game, 2).FellowSpies);
+    }
+
+    [Fact]
+    public void YourCharacter_WithTheAssassinModule_IsSeenOnlyByItsOwner()
+    {
+        var game = AssassinGame();
+
+        Assert.Equal(ResistanceCharacterDto.Commander, View(game, 2).YourCharacter);
+        Assert.Equal(ResistanceCharacterDto.Assassin, View(game, 3).YourCharacter);
+        Assert.Equal(ResistanceCharacterDto.Standard, View(game, 0).YourCharacter);
+        Assert.Null(View(game, null).YourCharacter);
+    }
+
+    [Fact]
+    public void TheAssassination_ShowsNoWinnerAndNoRevealedRolesToAnyone()
+    {
+        var game = AssassinGame(ResistancePhase.Assassination);
+
+        foreach (var seat in new int?[] { null, 0, 2, 3, 4 })
+        {
+            var view = View(game, seat);
+
+            Assert.Equal(ResistancePhaseDto.Assassination, view.Phase);
+            Assert.Null(view.Winner);
+            Assert.Null(view.RevealedRoles);
+            Assert.Null(view.AssassinationTargetPlayerId);
+        }
+    }
+
+    [Fact]
+    public void AfterTheGuess_TheTargetTheWinnerAndEveryRoleArePublic()
+    {
+        var game = AssassinGame(ResistancePhase.GameOver);
+        game.Winner = ResistanceRole.Resistance;
+        game.AssassinationTargetPlayerId = Ids[1];
+
+        var view = View(game, null);
+
+        Assert.Equal(Ids[1], view.AssassinationTargetPlayerId);
+        Assert.Equal(ResistanceRoleDto.Resistance, view.Winner);
+        Assert.Contains(view.RevealedRoles!, x => x.PlayerId == Ids[2] && x.Character == ResistanceCharacterDto.Commander);
+        Assert.Contains(view.RevealedRoles!, x => x.PlayerId == Ids[3] && x.Character == ResistanceCharacterDto.Assassin);
+        Assert.True(view.Rules.AssassinEnabled);
+    }
+
     [Fact]
     public void YourCharacter_WithTheReverserModule_IsSeenOnlyByItsOwner()
     {
