@@ -37,7 +37,7 @@ Frontend (from `src/ui/PartyKing.UI`):
 - `npm run build`
 - `npm run lint` runs ESLint (flat config in `eslint.config.js`: `typescript-eslint` recommended, react-hooks, react-refresh, import and unused-imports rules; formatting is not enforced). `npx eslint --fix` removes unused imports.
 - `npm test` runs `vitest run`, takes ~15s. To run a single test: `npx vitest run src/path/to/file.test.ts`. Tests run in jsdom with `testSetup.ts` (jest-dom matchers).
-- E2E tests (Playwright, Chromium): `npm run e2e` from `src/ui/PartyKing.UI`, takes ~3 min. First time only: `npx playwright install chromium`. It starts its own API and Vite, so stop your dev servers first (ports 4200 and 2137). Details and the spec inventory: `docs/testing-e2e.md`.
+- E2E tests (Playwright, Chromium): `npm run e2e` from `src/ui/PartyKing.UI`, takes ~4 min, so run it only once a feature is finished (before creating the PR), not after every change. First time only: `npx playwright install chromium`. It starts its own API and Vite, so stop your dev servers first (ports 4200 and 2137). Details and the spec inventory: `docs/testing-e2e.md`.
 
 ## Architecture
 

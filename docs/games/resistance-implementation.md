@@ -88,7 +88,7 @@ All nine plot cards are playable.
 
 ### Dealing
 
-- `ResistanceRules.PlotCardsEnabled` (default off, kept by `RefreshRulesAsync`) is switched by `PUT rules/plot-cards` (host or admin, 409 `RulesLocked` once open; the "Enable Plot cards" checkbox in the "Game settings" dialog, `ResistanceGameSettings`).
+- `ResistanceRules.PlotCardsEnabled` (default off, kept by `RefreshRulesAsync`) is switched by `PUT rules/plot-cards` (host or admin, 409 `PlotCardsLocked` once the game has started, so it can be switched while the game is open; the "Enable Plot cards" checkbox in the "Game settings" dialog, `ResistanceGameSettings`).
 - `PlotDeck` is the 15-card deck; `PlotCardsPerRound` is 1 for 5-6 players, 2 for 7-8, 3 for 9-10. `ResistancePlotCard` rows (`Location` Deck/Drawn/Hand, `DeckOrder`, `HolderPlayerId`) are built and shuffled by `ResistanceRoles.BuildPlotDeck` on `Deal`.
 - `ResistanceRoles.BeginMission` draws at the start of each mission (not after a rejected vote) and enters `DealingCards`; `SelectTeamAsync` answers 409 `CardsNotDealt` until the leader deals.
 - `PUT cards/deal` (`{assignments:[{cardId,playerId}]}`, leader only) gives every drawn card except Establish Confidence (which stays with the leader) to another player.

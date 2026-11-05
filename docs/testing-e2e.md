@@ -1,6 +1,6 @@
 # E2E tests (Playwright, Chromium)
 
-From `src/ui/PartyKing.UI`: `npm run e2e`, about 3 min, 34 tests. First time only: `npx playwright install chromium`. Typecheck the suite with `npx tsc -p e2e/tsconfig.json`; `vite.config.ts` keeps `e2e` and `playwright.config.*` out of vitest.
+From `src/ui/PartyKing.UI`: `npm run e2e`, about 4 min, 37 tests. First time only: `npx playwright install chromium`. Typecheck the suite with `npx tsc -p e2e/tsconfig.json`; `vite.config.ts` keeps `e2e` and `playwright.config.*` out of vitest.
 
 ## Setup
 
@@ -33,8 +33,9 @@ From `src/ui/PartyKing.UI`: `npm run e2e`, about 3 min, 34 tests. First time onl
 - `resistance-spies-win.spec.ts`: three failed missions (banner, revealed roles on the admin's board), five rejected teams in a row, and the Fail card being disabled for the Resistance.
 - `resistance-hidden-info.spec.ts`: only spies are told who the spies are (screen and API), the admin and a watching guest get no role, an admin who plays gets none on `?tv=1`, votes stay secret until the last one and can be changed until then.
 - `resistance-lifecycle.spec.ts`: restart a finished game with the same players; "End game" asks first, then sends everybody away.
+- `resistance-plot-cards.spec.ts`: the add-on turned on with `startResistanceGame(..., {plotCards: true})`. Five players: the leader deals the drawn Open Up, its holder plays it, the target confirms the identity card; on the next mission a Strong Leader takes the lead in the Leader window after a rejected team. Seven players: an Opinion Maker votes first and a No Confidence card rejects the approved team in the Confidence window (counts as a rejected team).
 - `resistance-seat-takeover.spec.ts`: the host releases the seat of a player whose context was closed (needs the presence grace of 10 s, so the test waits up to 30 s for the button to enable); a new context claims it from the "Back in the game" picker; an unreleased seat is not offered.
-- Not covered: anything needing Spotify or YouTube (host login, the player, search), the plot cards add-on (the deal is seeded now, so the specs can be written), the two-fails rule of mission 4 (7+ players), reordering the seats, and the Polish texts of a game.
+- Not covered: anything needing Spotify or YouTube (host login, the player, search), the Plot cards not named above (Overheard Conversation, Establish Confidence, Keeping a Close Eye, In the Spotlight, Take Responsibility), the two-fails rule of mission 4 (7+ players), reordering the seats, and the Polish texts of a game.
 
 ## Resistance helpers
 
@@ -51,3 +52,11 @@ Roles and the first leader are seeded in e2e but depend on the player count and 
 ## CI
 
 The `e2e` job of `ci.yml`: setup-dotnet and setup-node, `npx playwright install --with-deps chromium`, `npm run e2e`. With `CI` set Playwright retries a failure once and writes an HTML report, uploaded with the traces as an artifact on failure. `deploy.yml` reuses `ci.yml`, so a failing e2e job also blocks a deploy.
+
+### Plot cards
+
+The deck is always the same 15 cards; what is drawn depends on the seeded `Random` (`Resistance__Seed=1`, see Setup) and on the number of players, which is why a spec states the player count and checks what the leader drew (`waitForDealing` returns `drawn`) before it relies on it. With the current seed (cards per round: 1 for 5-6 players, 2 for 7-8, 3 for 9-10):
+- 5 players: Open Up on mission 1, Strong Leader on mission 2.
+- 7 players: Opinion Maker and No Confidence on mission 1.
+
+If the deal code changes, the `drawn` assertion fails first; read the new order from the leader's view (`yourPlotCards`, `toDeal`) and adjust the specs. Helpers: `startResistanceGame(..., {plotCards: true})` / `enableModule(admin, 'Plot cards')` (the checkbox only ticks after the server answers), `waitForDealing`, `dealPlotCards(leader, {OpenUp: 'Bartek'})`. `playMission`, `submitTeam` and `voteAll` do not know the windows: once a playable card is in a hand, a rejected team opens the Leader window and an approved one the Confidence window, and every player has to pass (or play) before the game goes on.
