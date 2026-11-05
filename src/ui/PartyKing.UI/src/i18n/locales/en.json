@@ -449,6 +449,8 @@
       "label": "Game controls",
       "show": "Controls",
       "openTv": "Open TV view",
+      "showLog": "Show log",
+      "hideLog": "Hide log",
       "restart": "Restart game",
       "end": "End game",
       "start": "Start game",

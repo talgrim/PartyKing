@@ -38,7 +38,7 @@ export const ResistancePlotLog = ({ cards, players }: Props): ReactNode => {
   return (
     <section aria-label={t('resistance.log.title')} className="w-full rounded-xl bg-slate-900 p-3 ring-1 ring-slate-700">
       <h2 className="mb-1 text-sm font-semibold text-slate-300">{t('resistance.log.title')}</h2>
-      <ul className="flex flex-col gap-1 text-sm text-slate-200">
+      <ul className="flex max-h-[4.25rem] flex-col gap-1 overflow-y-auto pr-1 text-sm text-slate-200">
         {cards.map((card) => (
           <li key={card.id}>
             <span className="text-slate-500">{t('resistance.log.mission', { n: card.missionNumber })}</span>

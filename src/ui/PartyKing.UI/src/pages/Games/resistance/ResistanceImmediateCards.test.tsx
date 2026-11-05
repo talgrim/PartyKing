@@ -144,6 +144,22 @@ describe('ResistancePlotLog', () => {
     expect(screen.getByRole('listitem').textContent).toContain('Bartek played “No Confidence”');
   });
 
+  it('scrolls once more than three rows are played', () => {
+    const cards = [1, 2, 3, 4, 5].map((id) => ({
+      id,
+      type: 'OpenUp' as const,
+      holderPlayerId: 'p1',
+      targetPlayerId: 'p2',
+      missionNumber: 1,
+      isConfirmed: true,
+    }));
+    render(<ResistancePlotLog players={players} cards={cards} />);
+
+    const list = screen.getByRole('list');
+    expect(screen.getAllByRole('listitem')).toHaveLength(5);
+    expect(list).toHaveClass('max-h-[4.25rem]', 'overflow-y-auto');
+  });
+
   it('renders nothing before any card is played', () => {
     const { container } = render(<ResistancePlotLog players={players} cards={[]} />);
 
