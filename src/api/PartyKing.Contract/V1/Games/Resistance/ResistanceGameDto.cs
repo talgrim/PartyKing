@@ -30,8 +30,35 @@ public class ResistanceGameDto
     /// <summary>The caller's secret role. Set only for a player of a started game; observers get null.</summary>
     public ResistanceRoleDto? YourRole { get; set; }
 
-    /// <summary>The other spies' player ids. Set only for a spy; everybody else gets null.</summary>
+    /// <summary>
+    /// The spies the caller knows: the other spies' player ids for a spy, every spy's for the Commander (Assassin
+    /// module). Everybody else gets null.
+    /// </summary>
     public IReadOnlyList<Guid>? FellowSpies { get; set; }
+
+    /// <summary>
+    /// Assassin module: for the Body Guard, the players one of whom is the Commander (the Commander and the False
+    /// Commander look alike to them); null for everybody else.
+    /// </summary>
+    public IReadOnlyList<Guid>? YourCommanderCandidates { get; set; }
+
+    /// <summary>
+    /// The caller's own character (Reverser, Defector and Assassin modules); null when none is played or the caller does not
+    /// play.
+    /// </summary>
+    public ResistanceCharacterDto? YourCharacter { get; set; }
+
+    /// <summary>
+    /// The other Defector's player id. Set only for a Defector in a game where the Defectors know each other; everybody
+    /// else gets null.
+    /// </summary>
+    public Guid? FellowDefectorId { get; set; }
+
+    /// <summary>
+    /// The switch cards flipped so far, in order, true for Change Allegiance (Defector module). Public: the cards are
+    /// flipped openly at the start of the missions 3 to 5. Empty until the first flip, and when the module is off.
+    /// </summary>
+    public IReadOnlyList<bool> DefectorFlips { get; set; } = [];
 
     /// <summary>The number of the mission being played.</summary>
     public int MissionNumber { get; set; }
@@ -63,6 +90,12 @@ public class ResistanceGameDto
     /// <summary>Whether the team was approved. Appears together with <see cref="Votes"/>.</summary>
     public bool? VoteApproved { get; set; }
 
+    /// <summary>
+    /// Assassin module: the player the Assassin named as the Commander. Public once they did, which is when the game
+    /// ends; null before that and without the module.
+    /// </summary>
+    public Guid? AssassinationTargetPlayerId { get; set; }
+
     /// <summary>Every player's role. Appears only when the game is over.</summary>
     public IReadOnlyList<ResistanceRevealedRoleDto>? RevealedRoles { get; set; }
 
@@ -75,8 +108,8 @@ public class ResistanceGameDto
     /// <summary>Who has played a mission card, not which card.</summary>
     public IReadOnlyList<Guid> PlayedMissionPlayerIds { get; set; } = [];
 
-    /// <summary>The caller's own mission card (true = Success); null if they have not played one.</summary>
-    public bool? YourMissionCard { get; set; }
+    /// <summary>The caller's own mission card; null if they have not played one.</summary>
+    public ResistanceMissionCardKindDto? YourMissionCard { get; set; }
 
     /// <summary>
     /// The finished missions: only the number of Fail cards is public, never who played them. Three successes or
@@ -105,8 +138,8 @@ public class ResistanceGameDto
     /// <summary>The team member In the Spotlight forces to play their mission card openly this mission.</summary>
     public Guid? OpenMissionPlayerId { get; set; }
 
-    /// <summary>The forced player's card (true = Success). Public once they have played it.</summary>
-    public bool? OpenMissionCard { get; set; }
+    /// <summary>The forced player's card. Public once they have played it.</summary>
+    public ResistanceMissionCardKindDto? OpenMissionCard { get; set; }
 
     /// <summary>
     /// Who confirmed in the leader, confidence or peek window (a playable plot card is out there), never who holds a card.

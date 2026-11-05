@@ -1,5 +1,5 @@
 import { axios } from '@/service/request';
-import { GameDto, GameSuggestionsDto, ResistanceClaimableSeatDto, ResistanceGameDto, ResistanceLobbyDto, ResistancePresenceDto, RingoGameDto, RingoLobbyDto } from './types';
+import { GameDto, GameSuggestionsDto, ResistanceAssassinOptions, ResistanceClaimableSeatDto, ResistanceGameDto, ResistanceLobbyDto, ResistanceMissionCardKind, ResistancePresenceDto, ResistanceReverserOptions, RingoGameDto, RingoLobbyDto } from './types';
 
 /** Development only (the multi-player Resistance page): acts as another dev persona than this tab's, see `devPersona`. */
 const personaHeaders = (persona?: string) => (persona ? { 'X-Dev-Persona': persona } : undefined);
@@ -161,6 +161,36 @@ export const gamesApi = {
       withCredentials: true,
     }) as unknown as Promise<ResistanceGameDto>,
 
+  /** Host or admin: switches the Blind Spies variant on or off; 409 once the game has started. */
+  setResistanceBlindSpies: (sessionId: string, enabled: boolean) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/rules/blind-spies`, { enabled }, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
+  /** Host or admin: switches the Reverser module on or off and optionally chooses which sides get a Reverser and whether a spy Reverser knows the other spies (omitted keeps the choice); 409 once the game has started. */
+  setResistanceReverser: (sessionId: string, enabled: boolean, options: ResistanceReverserOptions = {}) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/rules/reverser`, { enabled, ...options }, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
+  /** Host or admin: switches the Defector module on or off and optionally whether the two Defectors know each other (omitted keeps the choice); 409 once the game has started. */
+  setResistanceDefector: (sessionId: string, enabled: boolean, knowEachOther?: boolean) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/rules/defector`, { enabled, knowEachOther }, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
+  /** Host or admin: switches the Assassin module on or off and, while it is on, its optional characters (omitted keeps the choice); 409 once the game has started or while the Defector, the Reverser or Blind Spies are on. */
+  setResistanceAssassin: (sessionId: string, enabled: boolean, options: ResistanceAssassinOptions = {}) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/rules/assassin`, { enabled, ...options }, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
+  /** The Assassin names the player they take for the Commander, which ends the game. 403 for anyone else, 409 outside the Assassination, 400 for a player who can't be named. */
+  assassinateResistancePlayer: (sessionId: string, targetPlayerId: string) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/assassin/target`, { targetPlayerId }, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
   /** The Inquisitor token holder picks a player who never held it; the token passes to them. 403 for anyone else, 409 outside the Inquisition, 400 for a player who can't be examined. */
   examineResistancePlayer: (sessionId: string, targetPlayerId: string) =>
     axios.put(`/sessions/${sessionId}/games/resistance/inquisitor/examine`, { targetPlayerId }, {
@@ -227,9 +257,9 @@ export const gamesApi = {
       withCredentials: true,
     }) as unknown as Promise<ResistanceGameDto>,
 
-  /** A team member plays a mission card (Success or Fail); 403 unless on the team (a Resistance member can only succeed), 409 when played already or no mission is on. */
-  playResistanceMissionCard: (sessionId: string, success: boolean) =>
-    axios.put(`/sessions/${sessionId}/games/resistance/mission`, { success }, {
+  /** A team member plays a mission card (Success, Fail or Reverse); 403 unless on the team (a Resistance member can only succeed, only a Reverser reverses and a spy Reverser never fails), 409 when played already or no mission is on. */
+  playResistanceMissionCard: (sessionId: string, card: ResistanceMissionCardKind) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/mission`, { card }, {
       withCredentials: true,
     }) as unknown as Promise<ResistanceGameDto>,
 

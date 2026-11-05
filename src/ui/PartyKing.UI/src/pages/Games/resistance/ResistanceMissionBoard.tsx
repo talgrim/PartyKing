@@ -15,10 +15,12 @@ type Props = {
   missionResults?: readonly ResistanceMissionResultDto[];
   /** The players of the game, to name each finished mission's team. */
   players?: readonly Pick<ResistancePlayerDto, 'id' | 'name'>[];
+  /** Defector module: the switch cards flipped so far, true for Change Allegiance (the server sends none while it is off). */
+  defectorFlips?: readonly boolean[];
 };
 
 /** The mission board of the current game with the result of every finished mission. */
-export const ResistanceMissionBoard = ({ board, className, currentMission = null, rejectedTeams = 0, missionResults = [], players = [] }: Props): ReactNode => {
+export const ResistanceMissionBoard = ({ board, className, currentMission = null, rejectedTeams = 0, missionResults = [], players = [], defectorFlips = [] }: Props): ReactNode => {
   const { t } = useTranslation();
 
   return (
@@ -40,6 +42,7 @@ export const ResistanceMissionBoard = ({ board, className, currentMission = null
     rejectedTeams={rejectedTeams}
     fourthMissionNeedsTwoFails={board.fourthMissionNeedsTwoFails}
     dimmed={board.provisional}
+    defectorFlips={defectorFlips}
   />
   );
 };

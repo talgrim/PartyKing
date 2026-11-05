@@ -97,6 +97,401 @@ public class ResistanceGameViewBuilderTests
     }
 
     [Fact]
+    public void FellowSpies_WithBlindSpies_AreAnEmptyListForSpiesAndStillNullForTheRest()
+    {
+        var game = NewGame();
+        game.Rules.BlindSpiesEnabled = true;
+
+        Assert.Empty(View(game, 3).FellowSpies!);
+        Assert.Empty(View(game, 4).FellowSpies!);
+        Assert.Null(View(game, 0).FellowSpies);
+        Assert.Null(View(game, null).FellowSpies);
+        Assert.True(View(game, 3).Rules.BlindSpiesEnabled);
+        Assert.False(View(NewGame(), 3).Rules.BlindSpiesEnabled);
+    }
+
+    [Fact]
+    public void FellowSpies_WithAHiddenReverserSpy_LeaveThemOutOfTheRevealBothWays()
+    {
+        var game = NewGame();
+        game.Rules.ReverserEnabled = true;
+        Seat(game, 3).Character = ResistanceCharacter.Reverser;
+
+        // By default the Reverser takes part in the reveal
+        Assert.Equal([Ids[4]], View(game, 3).FellowSpies);
+        Assert.Equal([Ids[3]], View(game, 4).FellowSpies);
+        Assert.True(View(game, 3).Rules.ReverserSpyKnowsSpies);
+
+        game.Rules.ReverserSpyKnowsSpies = false;
+
+        Assert.Empty(View(game, 3).FellowSpies!);
+        Assert.Empty(View(game, 4).FellowSpies!);
+        Assert.Null(View(game, 0).FellowSpies);
+        Assert.False(View(game, 3).Rules.ReverserSpyKnowsSpies);
+    }
+
+    [Fact]
+    public void FellowSpies_WithTheSwitchOffButNoSpyReverser_AreUnchanged()
+    {
+        var game = NewGame();
+        game.Rules.ReverserEnabled = true;
+        game.Rules.ReverserSpyKnowsSpies = false;
+        Seat(game, 1).Character = ResistanceCharacter.Reverser;
+
+        Assert.Equal([Ids[4]], View(game, 3).FellowSpies);
+        Assert.Equal([Ids[3]], View(game, 4).FellowSpies);
+    }
+
+    private static ResistanceGame AssassinGame(ResistancePhase phase = ResistancePhase.SelectingTeam)
+    {
+        var game = NewGame(phase);
+        game.Rules.AssassinEnabled = true;
+        Seat(game, 2).Character = ResistanceCharacter.Commander;
+        Seat(game, 3).Character = ResistanceCharacter.Assassin;
+
+        return game;
+    }
+
+    [Fact]
+    public void FellowSpies_WithTheAssassinModule_TheCommanderSeesEverySpyAndNobodySeesTheCommander()
+    {
+        var game = AssassinGame();
+
+        Assert.Equal([Ids[3], Ids[4]], View(game, 2).FellowSpies);
+        Assert.Equal([Ids[4]], View(game, 3).FellowSpies);
+        Assert.Equal([Ids[3]], View(game, 4).FellowSpies);
+        Assert.Null(View(game, 0).FellowSpies);
+        Assert.Null(View(game, 1).FellowSpies);
+        Assert.Null(View(game, null).FellowSpies);
+    }
+
+    [Fact]
+    public void FellowSpies_WithDeepCover_TheCommanderDoesNotSeeThemButTheSpiesDo()
+    {
+        var game = AssassinGame();
+        Seat(game, 4).Character = ResistanceCharacter.DeepCover;
+
+        Assert.Equal([Ids[3]], View(game, 2).FellowSpies);
+        Assert.Equal([Ids[4]], View(game, 3).FellowSpies);
+        Assert.Equal([Ids[3]], View(game, 4).FellowSpies);
+    }
+
+    [Fact]
+    public void FellowSpies_WithABlindSpy_NeitherTheySeeNorAreSeenBySpiesButTheCommanderSeesThem()
+    {
+        var game = AssassinGame();
+        Seat(game, 4).Character = ResistanceCharacter.BlindSpy;
+
+        Assert.Empty(View(game, 4).FellowSpies!);
+        Assert.Empty(View(game, 3).FellowSpies!);
+        Assert.Equal([Ids[3], Ids[4]], View(game, 2).FellowSpies);
+        Assert.Null(View(game, 0).FellowSpies);
+    }
+
+    [Fact]
+    public void YourCommanderCandidates_TheBodyGuardSeesTheCommanderAndTheFalseCommanderAlike_NobodyElseSeesAny()
+    {
+        var game = AssassinGame();
+        Seat(game, 1).Character = ResistanceCharacter.BodyGuard;
+        Seat(game, 4).Character = ResistanceCharacter.FalseCommander;
+
+        Assert.Equal([Ids[2], Ids[4]], View(game, 1).YourCommanderCandidates);
+        foreach (var seat in new int?[] { null, 0, 2, 3, 4 })
+        {
+            Assert.Null(View(game, seat).YourCommanderCandidates);
+        }
+    }
+
+    [Fact]
+    public void YourCommanderCandidates_BeforeTheStartOrWithoutTheModule_AreNull()
+    {
+        var game = AssassinGame();
+        Seat(game, 1).Character = ResistanceCharacter.BodyGuard;
+        game.StartedAt = null;
+        Assert.Null(View(game, 1).YourCommanderCandidates);
+
+        game.StartedAt = DateTimeOffset.UnixEpoch;
+        game.Rules.AssassinEnabled = false;
+        Assert.Null(View(game, 1).YourCommanderCandidates);
+    }
+
+    [Fact]
+    public void Rules_TellWhichOptionalCharactersArePlayed()
+    {
+        var game = AssassinGame();
+        game.Rules.BodyGuardEnabled = true;
+        game.Rules.FalseCommanderEnabled = true;
+
+        var rules = View(game, null).Rules;
+
+        Assert.True(rules.BodyGuardEnabled);
+        Assert.True(rules.FalseCommanderEnabled);
+        Assert.False(rules.DeepCoverEnabled);
+        Assert.False(rules.BlindSpyEnabled);
+    }
+
+    [Fact]
+    public void FellowSpies_BeforeTheStart_AreNullForTheCommander()
+    {
+        var game = AssassinGame();
+        game.StartedAt = null;
+
+        Assert.Null(View(game, 2).FellowSpies);
+    }
+
+    [Fact]
+    public void YourCharacter_WithTheAssassinModule_IsSeenOnlyByItsOwner()
+    {
+        var game = AssassinGame();
+
+        Assert.Equal(ResistanceCharacterDto.Commander, View(game, 2).YourCharacter);
+        Assert.Equal(ResistanceCharacterDto.Assassin, View(game, 3).YourCharacter);
+        Assert.Equal(ResistanceCharacterDto.Standard, View(game, 0).YourCharacter);
+        Assert.Null(View(game, null).YourCharacter);
+    }
+
+    [Fact]
+    public void TheAssassination_ShowsNoWinnerAndNoRevealedRolesToAnyone()
+    {
+        var game = AssassinGame(ResistancePhase.Assassination);
+
+        foreach (var seat in new int?[] { null, 0, 2, 3, 4 })
+        {
+            var view = View(game, seat);
+
+            Assert.Equal(ResistancePhaseDto.Assassination, view.Phase);
+            Assert.Null(view.Winner);
+            Assert.Null(view.RevealedRoles);
+            Assert.Null(view.AssassinationTargetPlayerId);
+        }
+    }
+
+    [Fact]
+    public void AfterTheGuess_TheTargetTheWinnerAndEveryRoleArePublic()
+    {
+        var game = AssassinGame(ResistancePhase.GameOver);
+        game.Winner = ResistanceRole.Resistance;
+        game.AssassinationTargetPlayerId = Ids[1];
+
+        var view = View(game, null);
+
+        Assert.Equal(Ids[1], view.AssassinationTargetPlayerId);
+        Assert.Equal(ResistanceRoleDto.Resistance, view.Winner);
+        Assert.Contains(view.RevealedRoles!, x => x.PlayerId == Ids[2] && x.Character == ResistanceCharacterDto.Commander);
+        Assert.Contains(view.RevealedRoles!, x => x.PlayerId == Ids[3] && x.Character == ResistanceCharacterDto.Assassin);
+        Assert.True(view.Rules.AssassinEnabled);
+    }
+
+    [Fact]
+    public void YourCharacter_WithTheReverserModule_IsSeenOnlyByItsOwner()
+    {
+        var game = NewGame();
+        game.Rules.ReverserEnabled = true;
+        Seat(game, 1).Character = ResistanceCharacter.Reverser;
+        Seat(game, 3).Character = ResistanceCharacter.Reverser;
+
+        Assert.Equal(ResistanceCharacterDto.Reverser, View(game, 1).YourCharacter);
+        Assert.Equal(ResistanceCharacterDto.Reverser, View(game, 3).YourCharacter);
+        Assert.Equal(ResistanceCharacterDto.Standard, View(game, 0).YourCharacter);
+        Assert.Equal(ResistanceCharacterDto.Standard, View(game, 4).YourCharacter);
+        Assert.Null(View(game, null).YourCharacter);
+        Assert.True(View(game, 0).Rules.ReverserEnabled);
+    }
+
+    [Fact]
+    public void YourCharacter_WithTheDefectorModule_IsSeenOnlyByItsOwner_AndTheRulesArePublic()
+    {
+        var game = NewGame();
+        game.Rules.DefectorEnabled = true;
+        game.Rules.DefectorsKnowEachOther = true;
+        Seat(game, 1).Character = ResistanceCharacter.Defector;
+        Seat(game, 3).Character = ResistanceCharacter.Defector;
+
+        Assert.Equal(ResistanceCharacterDto.Defector, View(game, 1).YourCharacter);
+        Assert.Equal(ResistanceCharacterDto.Defector, View(game, 3).YourCharacter);
+        Assert.Equal(ResistanceCharacterDto.Standard, View(game, 0).YourCharacter);
+        Assert.Null(View(game, null).YourCharacter);
+        foreach (var seat in new int?[] { 0, 3, null })
+        {
+            Assert.True(View(game, seat).Rules.DefectorEnabled);
+            Assert.True(View(game, seat).Rules.DefectorsKnowEachOther);
+        }
+
+        Assert.False(View(NewGame(), 0).Rules.DefectorEnabled);
+        Assert.False(View(NewGame(), 0).Rules.DefectorsKnowEachOther);
+    }
+
+    [Fact]
+    public void FellowDefector_IsSeenOnlyByADefector_AndOnlyWithTheVariant()
+    {
+        var game = NewGame();
+        game.Rules.DefectorEnabled = true;
+        Seat(game, 1).Character = ResistanceCharacter.Defector;
+        Seat(game, 3).Character = ResistanceCharacter.Defector;
+
+        foreach (var seat in new int?[] { 0, 1, 3, 4, null })
+        {
+            Assert.Null(View(game, seat).FellowDefectorId);
+        }
+
+        game.Rules.DefectorsKnowEachOther = true;
+
+        Assert.Equal(Ids[3], View(game, 1).FellowDefectorId);
+        Assert.Equal(Ids[1], View(game, 3).FellowDefectorId);
+        foreach (var seat in new int?[] { 0, 2, 4, null })
+        {
+            Assert.Null(View(game, seat).FellowDefectorId);
+        }
+
+        Assert.Null(View(NewGame(started: false), 1).FellowDefectorId);
+    }
+
+    [Fact]
+    public void DefectorFlips_ArePublic_AndNeverShowTheCardsStillInTheDeck()
+    {
+        var game = NewGame();
+        game.Rules.DefectorEnabled = true;
+        game.DefectorDeck = "NCNCN";
+
+        foreach (var seat in new int?[] { 0, 3, null })
+        {
+            Assert.Empty(View(game, seat).DefectorFlips);
+        }
+
+        game.MissionNumber = 4;
+
+        foreach (var seat in new int?[] { 0, 3, null })
+        {
+            Assert.Equal([false, true], View(game, seat).DefectorFlips);
+        }
+
+        Assert.DoesNotContain("NCNCN", JsonSerializer.Serialize(View(game, 0)));
+    }
+
+    [Fact]
+    public void DefectorFlips_WithTheModuleOff_AreEmpty()
+    {
+        var game = NewGame();
+        game.DefectorDeck = "NCNCN";
+        game.MissionNumber = 5;
+
+        Assert.Empty(View(game, 0).DefectorFlips);
+    }
+
+    [Fact]
+    public void ASwitchedDefector_ShowsTheirNewSide_ToThemselvesAndInTheEndReveal()
+    {
+        var game = NewGame(ResistancePhase.GameOver);
+        game.Rules.DefectorEnabled = true;
+        Seat(game, 2).Character = ResistanceCharacter.Defector;
+        Seat(game, 3).Character = ResistanceCharacter.Defector;
+        Seat(game, 2).Role = ResistanceRole.Spy;
+        Seat(game, 3).Role = ResistanceRole.Resistance;
+        game.DefectorDeck = "CNNNN";
+        game.MissionNumber = 3;
+
+        Assert.Equal(ResistanceRoleDto.Spy, View(game, 2).YourRole);
+        Assert.Equal(ResistanceRoleDto.Resistance, View(game, 3).YourRole);
+        var revealed = View(game, 0).RevealedRoles!;
+        Assert.Equal(ResistanceRoleDto.Spy, revealed.Single(x => x.PlayerId == Ids[2]).Role);
+        Assert.Equal(ResistanceCharacterDto.Defector, revealed.Single(x => x.PlayerId == Ids[2]).Character);
+        Assert.Equal(ResistanceRoleDto.Resistance, revealed.Single(x => x.PlayerId == Ids[3]).Role);
+    }
+
+    [Fact]
+    public void FellowSpies_WithDefectors_FollowTheReveal_AndTheSwitch()
+    {
+        var game = NewGame();
+        game.Rules.DefectorEnabled = true;
+        Seat(game, 1).Character = ResistanceCharacter.Defector;
+        Seat(game, 4).Character = ResistanceCharacter.Defector;
+        game.DefectorDeck = "CNNNN";
+
+        // Before a switch: the spy Defector (seat 4) is known to the other spy but knows no spy
+        Assert.Equal([Ids[4]], View(game, 3).FellowSpies);
+        Assert.Empty(View(game, 4).FellowSpies!);
+        Assert.Null(View(game, 1).FellowSpies);
+
+        // After it: seat 4 is on the resistance side and seat 1 among the spies, whom nobody knows
+        game.MissionNumber = 3;
+        Seat(game, 4).Role = ResistanceRole.Resistance;
+        Seat(game, 1).Role = ResistanceRole.Spy;
+
+        Assert.Empty(View(game, 3).FellowSpies!);
+        Assert.Empty(View(game, 1).FellowSpies!);
+        Assert.Null(View(game, 4).FellowSpies);
+    }
+
+    [Theory]
+    [InlineData(ResistanceReverserSides.Both, ResistanceReverserSidesDto.Both)]
+    [InlineData(ResistanceReverserSides.Resistance, ResistanceReverserSidesDto.Resistance)]
+    [InlineData(ResistanceReverserSides.Spy, ResistanceReverserSidesDto.Spy)]
+    public void TheReverserSides_ArePartOfThePublicRules(ResistanceReverserSides sides, ResistanceReverserSidesDto expected)
+    {
+        var game = NewGame();
+        game.Rules.ReverserEnabled = true;
+        game.Rules.ReverserSides = sides;
+
+        foreach (var seat in new int?[] { 0, 3, null })
+        {
+            Assert.Equal(expected, View(game, seat).Rules.ReverserSides);
+        }
+    }
+
+    [Fact]
+    public void YourCharacter_WithoutTheModuleOrBeforeTheStart_IsNull()
+    {
+        Assert.Null(View(NewGame(), 1).YourCharacter);
+        Assert.False(View(NewGame(), 1).Rules.ReverserEnabled);
+
+        var lobby = NewGame(started: false);
+        lobby.Rules.ReverserEnabled = true;
+        Assert.Null(View(lobby, 1).YourCharacter);
+    }
+
+    [Fact]
+    public void RevealedRoles_AtTheEnd_ListTheCharactersToo()
+    {
+        var game = NewGame(ResistancePhase.GameOver);
+        game.Rules.ReverserEnabled = true;
+        Seat(game, 2).Character = ResistanceCharacter.Reverser;
+
+        var revealed = View(game, 0).RevealedRoles!;
+
+        Assert.Equal(ResistanceCharacterDto.Reverser, revealed.Single(x => x.PlayerId == Ids[2]).Character);
+        Assert.Equal(1, revealed.Count(x => x.Character == ResistanceCharacterDto.Reverser));
+    }
+
+    [Fact]
+    public void TheFailAndReverseCards_OfAFinishedMission_ArePublicButNotWhoPlayedThem()
+    {
+        var game = NewGame(ResistancePhase.MissionResult);
+        game.Rules.ReverserEnabled = true;
+        game.MissionResults.Add(new ResistanceMissionResult { MissionNumber = 1, Succeeded = true, FailCount = 1, ReverseCount = 1 });
+
+        foreach (var seat in new int?[] { 0, 3, null })
+        {
+            var result = View(game, seat).MissionResults.Single();
+            Assert.Equal((1, 1), (result.FailCount, result.ReverseCount));
+        }
+    }
+
+    [Fact]
+    public void YourMissionCard_ShowsAReverseCardOnlyToItsPlayer()
+    {
+        var game = NewGame(ResistancePhase.PlayingMission);
+        Seat(game, 1).MissionCard = ResistanceMissionCardKind.Reverse;
+
+        Assert.Equal(ResistanceMissionCardKindDto.Reverse, View(game, 1).YourMissionCard);
+        foreach (var seat in new int?[] { 0, 2, 3, 4, null })
+        {
+            Assert.Null(View(game, seat).YourMissionCard);
+        }
+
+        Assert.Equal([Ids[1]], View(game, 0).PlayedMissionPlayerIds);
+    }
+
+    [Fact]
     public void RoleAndSpies_AreHiddenBeforeTheStart()
     {
         var game = NewGame(started: false);
@@ -197,15 +592,15 @@ public class ResistanceGameViewBuilderTests
         var game = NewGame(ResistancePhase.PlayingMission);
         Seat(game, 0).IsOnTeam = true;
         Seat(game, 3).IsOnTeam = true;
-        Seat(game, 0).MissionCard = true;
-        Seat(game, 3).MissionCard = false;
+        Seat(game, 0).MissionCard = ResistanceMissionCardKind.Success;
+        Seat(game, 3).MissionCard = ResistanceMissionCardKind.Fail;
 
         var resistance = View(game, 0);
         var spy = View(game, 3);
         var observer = View(game, null);
 
-        Assert.Equal(true, resistance.YourMissionCard);
-        Assert.Equal(false, spy.YourMissionCard);
+        Assert.Equal(ResistanceMissionCardKindDto.Success, resistance.YourMissionCard);
+        Assert.Equal(ResistanceMissionCardKindDto.Fail, spy.YourMissionCard);
         Assert.Null(observer.YourMissionCard);
         Assert.Null(View(game, 1).YourMissionCard);
         Assert.Equal([Ids[0], Ids[3]], observer.PlayedMissionPlayerIds);
@@ -216,13 +611,13 @@ public class ResistanceGameViewBuilderTests
     public void ForcedOpenCard_IsPublicOnlyForTheCurrentMission()
     {
         var game = NewGame(ResistancePhase.PlayingMission);
-        Seat(game, 3).MissionCard = false;
+        Seat(game, 3).MissionCard = ResistanceMissionCardKind.Fail;
         Card(game, 1, ResistancePlotCardType.InTheSpotlight, ResistancePlotCardLocation.Played, holder: 1, target: 3);
 
         var current = View(game, null);
 
         Assert.Equal(Ids[3], current.OpenMissionPlayerId);
-        Assert.Equal(false, current.OpenMissionCard);
+        Assert.Equal(ResistanceMissionCardKindDto.Fail, current.OpenMissionCard);
 
         game.MissionNumber = 2;
         var next = View(game, null);
@@ -457,7 +852,7 @@ public class ResistanceGameViewBuilderTests
             game.MissionResults.Add(new ResistanceMissionResult { MissionNumber = 1, Succeeded = false, FailCount = 1 });
         }
 
-        Seat(game, 3).MissionCard = false;
+        Seat(game, 3).MissionCard = ResistanceMissionCardKind.Fail;
         Card(game, 1, ResistancePlotCardType.KeepingCloseEye, ResistancePlotCardLocation.Played, holder: 1, target: 3, confirmed: true);
 
         var peeker = View(game, 1).YourPeeks;
@@ -465,7 +860,7 @@ public class ResistanceGameViewBuilderTests
         if (visible)
         {
             var peek = Assert.Single(peeker);
-            Assert.Equal((Ids[3], false), (peek.PlayerId, peek.Success));
+            Assert.Equal((Ids[3], ResistanceMissionCardKindDto.Fail), (peek.PlayerId, peek.Card));
         }
         else
         {
@@ -511,7 +906,7 @@ public class ResistanceGameViewBuilderTests
 
                 Seat(game, 0).IsOnTeam = true;
                 Seat(game, 3).IsOnTeam = true;
-                Seat(game, 0).MissionCard = true;
+                Seat(game, 0).MissionCard = ResistanceMissionCardKind.Success;
                 Card(game, 1, ResistancePlotCardType.InTheSpotlight, ResistancePlotCardLocation.Played, holder: 1, target: 3, confirmed: true);
 
                 return game;
@@ -528,8 +923,8 @@ public class ResistanceGameViewBuilderTests
                 });
                 Seat(game, 0).IsOnTeam = true;
                 Seat(game, 3).IsOnTeam = true;
-                Seat(game, 0).MissionCard = true;
-                Seat(game, 3).MissionCard = false;
+                Seat(game, 0).MissionCard = ResistanceMissionCardKind.Success;
+                Seat(game, 3).MissionCard = ResistanceMissionCardKind.Fail;
                 Seat(game, 1).PassedLeaderWindow = true;
                 Card(game, 1, ResistancePlotCardType.KeepingCloseEye, ResistancePlotCardLocation.Played, holder: 1, target: 3, confirmed: true);
                 Card(game, 2, ResistancePlotCardType.KeepingCloseEye, ResistancePlotCardLocation.Hand, holder: 2);

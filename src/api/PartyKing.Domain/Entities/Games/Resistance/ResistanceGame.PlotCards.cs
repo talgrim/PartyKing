@@ -5,6 +5,23 @@ namespace PartyKing.Domain.Entities.Games.Resistance;
 /// <summary>The plot cards add-on of <see cref="ResistanceGame"/>: dealing the cards, playing them and the windows around them.</summary>
 public partial class ResistanceGame
 {
+    /// <summary>The plot cards of the add-on (deck, drawn and in hands); empty when the add-on is off.</summary>
+    public List<ResistancePlotCard> PlotCards { get; internal set; } = [];
+
+    /// <summary>Switches the plot cards add-on on or off in the rules. Allowed until the game starts, open or not.</summary>
+    public ResistanceOutcome SetPlotCards(bool enabled)
+    {
+        if (IsStarted)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.PlotCardsLocked, this);
+        }
+
+        // Rules is a JSON column compared by reference, so assign a copy to have the change detected.
+        Rules = Rules.Clone(enabled);
+
+        return Succeeded();
+    }
+
     /// <summary>
     /// The leader hands the cards drawn for this mission to the other players (every card but Establish Confidence,
     /// which the leader keeps), which moves the game on to picking the team.

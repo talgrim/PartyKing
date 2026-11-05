@@ -1,5 +1,6 @@
 import { i18n } from '@/i18n';
 import { ResistanceGameDto } from '@/service/endpoints/games/types';
+import { MISSION_CARD_KEYS } from './missionCardKeys';
 import { IMMEDIATE_PLOT_CARDS } from './resistancePlotCards';
 import { MIN_PLAYERS } from './resistanceTeams';
 
@@ -61,8 +62,11 @@ export const resistancePhaseDescription = (
     const passed = game.leaderWindowPassedPlayerIds.length;
 
     if (game.phase === 'GameOver') {
+      const named = game.players.find((player) => player.id === game.assassinationTargetPlayerId)?.name;
       const why =
-        game.winner === 'Spy'
+        named != null
+          ? t(game.winner === 'Spy' ? 'resistance.phase.whyAssassinHit' : 'resistance.phase.whyAssassinMissed', { name: named })
+          : game.winner === 'Spy'
           ? game.rejectedTeams >= MAX_REJECTED_TEAMS
             ? t('resistance.phase.whyRejected', { max: MAX_REJECTED_TEAMS })
             : t('resistance.phase.whyFailed')
@@ -70,6 +74,10 @@ export const resistancePhaseDescription = (
       const winner = t(game.winner === 'Spy' ? 'resistance.phase.spiesWon' : 'resistance.phase.resistanceWon');
 
       return t('resistance.phase.gameOver', { winner, why, score });
+    }
+
+    if (game.phase === 'Assassination') {
+      return t('resistance.phase.assassination', { score });
     }
 
     if (game.phase === 'DealingCards') {
@@ -125,16 +133,18 @@ export const resistancePhaseDescription = (
           ? ` ${t('resistance.phase.mustPlayOpen', { name: openName })}`
           : ` ${t('resistance.phase.playedOpen', {
               name: openName,
-              card: t(game.openMissionCard ? 'resistance.missionCard.success' : 'resistance.missionCard.fail'),
+              card: t(MISSION_CARD_KEYS[game.openMissionCard]),
             })}`;
 
       return t('resistance.phase.playingMission', { names: names.join(', '), tally, mission, progress, rule, mine, open });
     }
 
     const last = results.find((result) => result.missionNumber === game.missionNumber);
-    const outcome = last?.succeeded
-      ? t('resistance.phase.missionSucceeded')
-      : t('resistance.phase.missionFailed', { count: last?.failCount ?? 0 });
+    const reversed = last != null && last.reverseCount > 0 ? ` ${t('resistance.phase.reverseCardsNote', { count: last.reverseCount })}` : '';
+    const outcome =
+      (last?.succeeded
+        ? t('resistance.phase.missionSucceeded')
+        : t('resistance.phase.missionFailed', { count: last?.failCount ?? 0 })) + reversed;
 
     if (game.phase === 'PeekWindow') {
       return t('resistance.phase.peekWindow', { outcome, score, passed, count, mine: confirmation(game) });

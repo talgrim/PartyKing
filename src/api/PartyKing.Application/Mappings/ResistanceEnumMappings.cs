@@ -13,4 +13,14 @@ internal static partial class ResistanceEnumMappings
     public static partial ResistancePhaseDto ToDto(this ResistancePhase phase);
 
     public static partial ResistancePlotCardTypeDto ToDto(this ResistancePlotCardType type);
+
+    public static partial ResistanceCharacterDto ToDto(this ResistanceCharacter character);
+
+    public static partial ResistanceMissionCardKindDto ToDto(this ResistanceMissionCardKind card);
+
+    public static partial ResistanceReverserSidesDto ToDto(this ResistanceReverserSides sides);
+
+    public static partial ResistanceReverserSides ToDomain(this ResistanceReverserSidesDto sides);
+
+    public static partial ResistanceMissionCardKind ToDomain(this ResistanceMissionCardKindDto card);
 }

@@ -1,5 +1,6 @@
 import { KeyboardEvent, ReactNode } from 'react';
 import { ParseKeys } from 'i18next';
+import Tooltip from '@mui/material/Tooltip';
 import { useTranslation } from 'react-i18next';
 import { ResistanceMissionTeamInfo } from './ResistanceMissionTeamInfo';
 
@@ -255,6 +256,19 @@ export const MissionFailCardIcon = ({ className, title, ...button }: IconProps &
   </Svg>
 );
 
+/** Mission card: Reverse (Reverser module, turns the result of the mission around; only a Reverser may play it). */
+export const MissionReverseCardIcon = ({ className, title, ...button }: IconProps & ButtonProps): ReactNode => (
+  <Svg viewBox="0 0 100 140" className={className} title={title} {...button}>
+    <CardFrame fill={COLORS.ink} stroke={COLORS.gold} />
+    <path d="M50 22 L82 34 L82 70 Q82 96 50 112 Q18 96 18 70 L18 34 Z" fill={COLORS.muted} stroke={COLORS.paper} strokeWidth="3" strokeLinejoin="round" />
+    <path d="M30 56 L64 56 M64 56 L55 47 M64 56 L55 65" fill="none" stroke={COLORS.gold} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M70 78 L36 78 M36 78 L45 69 M36 78 L45 87" fill="none" stroke={COLORS.paper} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+    <text x="50" y="130" textAnchor="middle" fontSize="11" fontWeight="700" fill={COLORS.gold} fontFamily="sans-serif">
+      <T k="resistance.icons.reverse" />
+    </text>
+  </Svg>
+);
+
 /** Generic plot card (expansion): a sealed scroll with a question mark. */
 export const PlotCardIcon = ({ className, title }: IconProps): ReactNode => (
   <Svg viewBox="0 0 100 140" className={className} title={title}>
@@ -399,6 +413,210 @@ export const PlotTakeResponsibilityCardIcon = ({ className, title }: IconProps):
   </PlotCardFace>
 );
 
+/**
+ * The face of a Defector switch card (100x140): a Resistance and a spy figure, with arrows that swap them (Change
+ * Allegiance) or an equals sign (No Change). It has no text, so it reads at the small size it has on the mission board.
+ */
+const DefectorSwitchCardFace = ({ change }: { change: boolean }): ReactNode => (
+  <>
+    <CardFrame fill={COLORS.ink} stroke={change ? COLORS.gold : COLORS.muted} />
+    <circle cx="50" cy="36" r="19" fill={COLORS.resistance} />
+    <Person x={50} y={37} scale={0.55} fill={COLORS.paper} />
+    <circle cx="50" cy="104" r="19" fill={COLORS.spy} />
+    <Person x={50} y={105} scale={0.55} fill={COLORS.paper} />
+    {change ? (
+      <>
+        <path d="M34 58 L34 82 M34 82 L27 74 M34 82 L41 74" fill="none" stroke={COLORS.gold} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M66 82 L66 58 M66 58 L59 66 M66 58 L73 66" fill="none" stroke={COLORS.gold} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+      </>
+    ) : (
+      <path d="M34 65 L66 65 M34 77 L66 77" fill="none" stroke={COLORS.paper} strokeWidth="5" strokeLinecap="round" />
+    )}
+  </>
+);
+
+/** The first mission whose start flips a switch card (Defector module), as an index. */
+export const FIRST_FLIP_MISSION_INDEX = 2;
+
+/** A switch card on its own, e.g. next to the phase banner. */
+export const DefectorSwitchCardIcon = ({ className, title, change }: IconProps & { change: boolean }): ReactNode => (
+  <Svg viewBox="0 0 100 140" className={className} title={title}>
+    <DefectorSwitchCardFace change={change} />
+  </Svg>
+);
+
+/** What a flipped switch card did, for the tooltip on the card (here and next to the phase banner). */
+export const DefectorFlipTooltipContent = ({ missionNumber, change }: { missionNumber: number; change: boolean }): ReactNode => {
+  const { t } = useTranslation();
+
+  return (
+    <div className="px-1 py-0.5">
+      <div className="mb-1 text-sm font-bold">
+        {t(change ? 'resistance.defectorFlips.change' : 'resistance.defectorFlips.noChange', { mission: missionNumber })}
+      </div>
+      <div className="text-sm">{t(change ? 'resistance.defectorFlips.changeInfo' : 'resistance.defectorFlips.noChangeInfo')}</div>
+    </div>
+  );
+};
+
+/** A flipped switch card in the upper left corner of a mission disc (the disc's centre is `cx`); hover or tap says what it did. */
+const DefectorFlipMark = ({ cx, missionNumber, change }: { cx: number; missionNumber: number; change: boolean }): ReactNode => {
+  const { t } = useTranslation();
+  const label = t(change ? 'resistance.defectorFlips.change' : 'resistance.defectorFlips.noChange', { mission: missionNumber });
+
+  return (
+    <Tooltip
+      arrow
+      placement="bottom"
+      enterTouchDelay={0}
+      leaveTouchDelay={4000}
+      title={<DefectorFlipTooltipContent missionNumber={missionNumber} change={change} />}
+    >
+      <g
+        role="img"
+        tabIndex={0}
+        aria-label={label}
+        transform={`translate(${cx - 51} 10) scale(0.34)`}
+        style={{ cursor: 'help', outline: 'none' }}
+      >
+        <DefectorSwitchCardFace change={change} />
+      </g>
+    </Tooltip>
+  );
+};
+
+const INQUISITOR_VIOLET = '#6d28d9';
+
+/** Inquisitor module: the token card of the player who holds it right now (a magnifying glass over a person). */
+export const InquisitorCardIcon = ({ className, title }: IconProps): ReactNode => (
+  <Svg viewBox="0 0 100 140" className={className} title={title}>
+    <CardFrame fill="#2e1065" stroke={INQUISITOR_VIOLET} />
+    <circle cx="50" cy="56" r="34" fill={INQUISITOR_VIOLET} fillOpacity="0.3" />
+    <Person x={46} y={52} scale={1.1} fill={COLORS.paper} />
+    <circle cx="58" cy="62" r="19" fill={COLORS.ink} fillOpacity="0.45" stroke={COLORS.gold} strokeWidth="4" />
+    <path d="M71 76 L86 92" stroke={COLORS.gold} strokeWidth="7" strokeLinecap="round" />
+    <text x="50" y="124" textAnchor="middle" fontSize="9.5" fontWeight="700" fill={COLORS.gold} fontFamily="sans-serif">
+      <T k="resistance.icons.inquisitor" />
+    </text>
+  </Svg>
+);
+
+/** Reverser module: the character card of a Reverser (a person with the turn-around arrows). */
+export const ReverserCardIcon = ({ className, title }: IconProps): ReactNode => (
+  <Svg viewBox="0 0 100 140" className={className} title={title}>
+    <CardFrame fill={COLORS.ink} stroke={COLORS.gold} />
+    <circle cx="50" cy="56" r="34" fill={COLORS.gold} fillOpacity="0.12" />
+    <Person x={50} y={50} scale={1.1} fill={COLORS.paper} />
+    <path d="M26 84 L64 84 M64 84 L55 75 M64 84 L55 93" fill="none" stroke={COLORS.gold} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M74 98 L36 98 M36 98 L45 89 M36 98 L45 107" fill="none" stroke={COLORS.paper} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+    <text x="50" y="126" textAnchor="middle" fontSize="9.5" fontWeight="700" fill={COLORS.gold} fontFamily="sans-serif">
+      <T k="resistance.icons.reverser" />
+    </text>
+  </Svg>
+);
+
+/** Defector module: the character card of a Defector (a figure split into the Resistance and the spy side, with a swap arrow). */
+export const DefectorCardIcon = ({ className, title }: IconProps): ReactNode => (
+  <Svg viewBox="0 0 100 140" className={className} title={title}>
+    <CardFrame fill={COLORS.ink} stroke={COLORS.gold} />
+    <circle cx="50" cy="56" r="34" fill={COLORS.gold} fillOpacity="0.12" />
+    <g transform="translate(50 52) scale(1.4)">
+      <path d="M0 -24 A10 10 0 0 0 0 -4 Z M-22 22 C-22 2 -12 -3 0 -3 L0 22 Z" fill={COLORS.resistance} />
+      <path d="M0 -24 A10 10 0 0 1 0 -4 Z M22 22 C22 2 12 -3 0 -3 L0 22 Z" fill={COLORS.spy} />
+    </g>
+    <path d="M50 20 L50 84" stroke={COLORS.gold} strokeWidth="2" strokeDasharray="4 3" />
+    <path d="M28 96 L72 96 M72 96 L63 87 M72 96 L63 105" fill="none" stroke={COLORS.gold} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+    <text x="50" y="126" textAnchor="middle" fontSize="9.5" fontWeight="700" fill={COLORS.gold} fontFamily="sans-serif">
+      <T k="resistance.icons.defector" />
+    </text>
+  </Svg>
+);
+
+/** Assassin module: the character card of the Commander (a Resistance figure with a star, who sees the spies). */
+export const CommanderCardIcon = ({ className, title }: IconProps): ReactNode => (
+  <Svg viewBox="0 0 100 140" className={className} title={title}>
+    <CardFrame fill={COLORS.ink} stroke={COLORS.gold} />
+    <circle cx="50" cy="56" r="34" fill={COLORS.resistance} fillOpacity="0.18" />
+    <Person x={50} y={58} scale={1.2} fill={COLORS.resistance} />
+    <path d="M50 18 L54.7 29 L66.5 30.2 L57.6 38 L60.3 49.5 L50 43.5 L39.7 49.5 L42.4 38 L33.5 30.2 L45.3 29 Z" fill={COLORS.gold} />
+    <path d="M30 100 Q50 88 70 100 Q50 110 30 100 Z M50 94 L50 106" fill="none" stroke={COLORS.paper} strokeWidth="3" strokeLinejoin="round" />
+    <text x="50" y="126" textAnchor="middle" fontSize="9.5" fontWeight="700" fill={COLORS.gold} fontFamily="sans-serif">
+      <T k="resistance.icons.commander" />
+    </text>
+  </Svg>
+);
+
+/** Assassin module: the character card of the Assassin (a spy figure with a dagger, who names the Commander). */
+export const AssassinCardIcon = ({ className, title }: IconProps): ReactNode => (
+  <Svg viewBox="0 0 100 140" className={className} title={title}>
+    <CardFrame fill={COLORS.ink} stroke={COLORS.gold} />
+    <circle cx="50" cy="56" r="34" fill={COLORS.spy} fillOpacity="0.18" />
+    <Person x={44} y={58} scale={1.2} fill={COLORS.spy} />
+    <path d="M74 24 L74 78" stroke={COLORS.paper} strokeWidth="5" strokeLinecap="round" />
+    <path d="M66 78 L82 78" stroke={COLORS.gold} strokeWidth="5" strokeLinecap="round" />
+    <path d="M74 78 L74 90" stroke={COLORS.gold} strokeWidth="5" strokeLinecap="round" />
+    <text x="50" y="126" textAnchor="middle" fontSize="9.5" fontWeight="700" fill={COLORS.gold} fontFamily="sans-serif">
+      <T k="resistance.icons.assassin" />
+    </text>
+  </Svg>
+);
+
+/** Assassin module: the Body Guard (a Resistance figure with a shield, who knows the Commander). */
+export const BodyGuardCardIcon = ({ className, title }: IconProps): ReactNode => (
+  <Svg viewBox="0 0 100 140" className={className} title={title}>
+    <CardFrame fill={COLORS.ink} stroke={COLORS.gold} />
+    <circle cx="50" cy="56" r="34" fill={COLORS.resistance} fillOpacity="0.18" />
+    <Person x={50} y={52} scale={1.1} fill={COLORS.resistance} />
+    <path d="M32 82 L68 82 L68 98 Q68 110 50 116 Q32 110 32 98 Z" fill={COLORS.ink} stroke={COLORS.gold} strokeWidth="3" strokeLinejoin="round" />
+    <path d="M50 88 L50 108 M40 96 L60 96" stroke={COLORS.gold} strokeWidth="3" strokeLinecap="round" />
+    <text x="50" y="132" textAnchor="middle" fontSize="8" fontWeight="700" fill={COLORS.gold} fontFamily="sans-serif">
+      <T k="resistance.icons.bodyGuard" />
+    </text>
+  </Svg>
+);
+
+/** Assassin module: Deep Cover (a spy figure in a hat and a mask, whom the Commander does not see). */
+export const DeepCoverCardIcon = ({ className, title }: IconProps): ReactNode => (
+  <Svg viewBox="0 0 100 140" className={className} title={title}>
+    <CardFrame fill={COLORS.ink} stroke={COLORS.gold} />
+    <circle cx="50" cy="56" r="34" fill={COLORS.spy} fillOpacity="0.18" />
+    <Person x={50} y={58} scale={1.2} fill={COLORS.spy} />
+    <path d="M30 40 L70 40 M36 40 L38 28 L62 28 L64 40" fill={COLORS.ink} stroke={COLORS.paper} strokeWidth="3" strokeLinejoin="round" />
+    <path d="M38 52 L62 52" stroke={COLORS.paper} strokeWidth="4" strokeLinecap="round" />
+    <text x="50" y="126" textAnchor="middle" fontSize="9" fontWeight="700" fill={COLORS.gold} fontFamily="sans-serif">
+      <T k="resistance.icons.deepCover" />
+    </text>
+  </Svg>
+);
+
+/** Assassin module: the Blind Spy (a spy figure with a crossed-out eye, who knows no other spy). */
+export const BlindSpyCardIcon = ({ className, title }: IconProps): ReactNode => (
+  <Svg viewBox="0 0 100 140" className={className} title={title}>
+    <CardFrame fill={COLORS.ink} stroke={COLORS.gold} />
+    <circle cx="50" cy="56" r="34" fill={COLORS.spy} fillOpacity="0.18" />
+    <Person x={50} y={58} scale={1.2} fill={COLORS.spy} />
+    <path d="M30 50 Q50 34 70 50 Q50 66 30 50 Z" fill={COLORS.ink} stroke={COLORS.paper} strokeWidth="3" />
+    <circle cx="50" cy="50" r="5" fill={COLORS.paper} />
+    <path d="M28 70 L72 30" stroke={COLORS.gold} strokeWidth="5" strokeLinecap="round" />
+    <text x="50" y="126" textAnchor="middle" fontSize="9" fontWeight="700" fill={COLORS.gold} fontFamily="sans-serif">
+      <T k="resistance.icons.blindSpy" />
+    </text>
+  </Svg>
+);
+
+/** Assassin module: the False Commander (a spy figure with the Commander's star drawn in outline only). */
+export const FalseCommanderCardIcon = ({ className, title }: IconProps): ReactNode => (
+  <Svg viewBox="0 0 100 140" className={className} title={title}>
+    <CardFrame fill={COLORS.ink} stroke={COLORS.gold} />
+    <circle cx="50" cy="56" r="34" fill={COLORS.spy} fillOpacity="0.18" />
+    <Person x={50} y={58} scale={1.2} fill={COLORS.spy} />
+    <path d="M50 18 L54.7 29 L66.5 30.2 L57.6 38 L60.3 49.5 L50 43.5 L39.7 49.5 L42.4 38 L33.5 30.2 L45.3 29 Z" fill="none" stroke={COLORS.gold} strokeWidth="2.5" strokeDasharray="4 3" />
+    <text x="50" y="126" textAnchor="middle" fontSize="7.5" fontWeight="700" fill={COLORS.gold} fontFamily="sans-serif">
+      <T k="resistance.icons.falseCommander" />
+    </text>
+  </Svg>
+);
+
 export type MissionResult = 'success' | 'fail' | null;
 
 type MissionBoardProps = {
@@ -416,12 +634,15 @@ type MissionBoardProps = {
   fourthMissionNeedsTwoFails: boolean;
   /** Draws the team sizes faded: they are only a guess until enough players joined. */
   dimmed?: boolean;
+  /** Defector module: the switch cards flipped so far, true for Change Allegiance; the first one belongs to mission 3. */
+  defectorFlips?: readonly boolean[];
   className?: string;
   title?: string;
 };
 
 const MISSIONS = 5;
 const MAX_REJECTIONS = 5;
+
 
 /** The mission track (five discs with team size and outcome) plus the rejected-teams tracker. */
 export const MissionBoardIcon = ({
@@ -432,6 +653,7 @@ export const MissionBoardIcon = ({
   rejectedTeams,
   fourthMissionNeedsTwoFails,
   dimmed = false,
+  defectorFlips = [],
   className,
   title,
 }: MissionBoardProps): ReactNode => (
@@ -442,6 +664,8 @@ export const MissionBoardIcon = ({
       const result = results[i] ?? null;
       const fill = result === 'success' ? COLORS.success : result === 'fail' ? COLORS.fail : '#1e293b';
       const isCurrent = currentMission === i;
+      // Before mission 3 the index is negative, so there is no card
+      const flip = defectorFlips[i - FIRST_FLIP_MISSION_INDEX];
       return (
         <g key={i}>
           <circle
@@ -476,6 +700,7 @@ export const MissionBoardIcon = ({
               <T k="resistance.icons.twoFails" />
             </text>
           )}
+          {flip !== undefined && <DefectorFlipMark cx={cx} missionNumber={i + 1} change={flip} />}
           {result !== null && (teams[i]?.length ?? 0) > 0 && (
             <ResistanceMissionTeamInfo cx={cx + 34} cy={34} missionNumber={i + 1} succeeded={result === 'success'} names={teams[i] ?? []} />
           )}

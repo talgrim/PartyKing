@@ -43,6 +43,7 @@ const game = (overrides: Partial<ResistanceGameDto> = {}): ResistanceGameDto =>
     inquisitionExaminerPlayerId: null,
     inquisitionExaminedPlayerId: null,
     yourInquisition: null,
+    assassinationTargetPlayerId: null,
     ...overrides,
   }) as unknown as ResistanceGameDto;
 
@@ -237,7 +238,7 @@ describe('In the Spotlight', () => {
   it('names the forced player and then their open card in the phase line', () => {
     const viewer = { canManage: false, isAdmin: false };
     const before = resistancePhaseDescription(mission({ openMissionPlayerId: 'p1' }), viewer, 2);
-    const after = resistancePhaseDescription(mission({ openMissionPlayerId: 'p1', openMissionCard: false }), viewer, 2);
+    const after = resistancePhaseDescription(mission({ openMissionPlayerId: 'p1', openMissionCard: 'Fail' }), viewer, 2);
 
     expect(before).toContain('Bartek must play their mission card openly');
     expect(after).toContain('Bartek played their card openly: Fail');
@@ -404,7 +405,7 @@ describe('Keeping a Close Eye', () => {
   });
 
   it('shows the card that was seen and hides the picker outside the mission result', () => {
-    const seen = render(<ResistanceCloseEye game={afterMission({ yourPlotCards: [], yourPeeks: [{ playerId: 'p2', success: false }] })} onPeek={vi.fn()} />);
+    const seen = render(<ResistanceCloseEye game={afterMission({ yourPlotCards: [], yourPeeks: [{ playerId: 'p2', card: 'Fail' }] })} onPeek={vi.fn()} />);
     expect(seen.getByText('Celina played: Fail')).toBeInTheDocument();
     seen.unmount();
 

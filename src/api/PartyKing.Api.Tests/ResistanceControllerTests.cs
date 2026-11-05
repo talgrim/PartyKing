@@ -19,11 +19,13 @@ public class ResistanceControllerTests
     private readonly FakeResistanceRoundService _roundService = new();
     private readonly FakeResistancePlotCardService _plotCardService = new();
     private readonly FakeResistanceInquisitorService _inquisitorService = new();
+    private readonly FakeResistanceAssassinService _assassinService = new();
     private readonly FakeResistancePresenceService _presenceService = new();
     private readonly ResistanceController _lifecycle;
     private readonly ResistanceRoundController _round;
     private readonly ResistancePlotCardsController _plotCards;
     private readonly ResistanceInquisitorController _inquisitor;
+    private readonly ResistanceAssassinController _assassin;
 
     public ResistanceControllerTests()
     {
@@ -41,6 +43,7 @@ public class ResistanceControllerTests
         _round = new ResistanceRoundController(accessor, _roundService, _plotCardService, cookies) { ControllerContext = context };
         _plotCards = new ResistancePlotCardsController(accessor, _plotCardService, _lobbyService, cookies) { ControllerContext = context };
         _inquisitor = new ResistanceInquisitorController(accessor, _inquisitorService, _lobbyService, cookies) { ControllerContext = context };
+        _assassin = new ResistanceAssassinController(accessor, _assassinService, _lobbyService, cookies) { ControllerContext = context };
     }
 
     [Fact]
@@ -94,9 +97,9 @@ public class ResistanceControllerTests
         _roundService.Result = game;
 
         var result = await _round.PlayMissionCard(
-            _sessionId, new ResistanceMissionCardRequestDto(false), CancellationToken.None);
+            _sessionId, new ResistanceMissionCardRequestDto(ResistanceMissionCardKindDto.Fail), CancellationToken.None);
 
-        Assert.Equal(("mission", _sessionId, false, _playerId), _roundService.LastCall);
+        Assert.Equal(("mission", _sessionId, ResistanceMissionCardKindDto.Fail, _playerId), _roundService.LastCall);
         Assert.Same(game, Assert.IsType<OkObjectResult>(result).Value);
     }
 
@@ -107,7 +110,7 @@ public class ResistanceControllerTests
         _roundService.Result = error;
 
         var result = await _round.PlayMissionCard(
-            _sessionId, new ResistanceMissionCardRequestDto(true), CancellationToken.None);
+            _sessionId, new ResistanceMissionCardRequestDto(ResistanceMissionCardKindDto.Success), CancellationToken.None);
 
         Assert.Equal(status, Assert.IsType<ObjectResult>(result).StatusCode);
     }
@@ -250,6 +253,30 @@ public class ResistanceControllerTests
         Assert.Equal(StatusCodes.Status403Forbidden, Assert.IsType<ObjectResult>(result).StatusCode);
     }
 
+    [Fact]
+    public async Task Assassinate_PassesTheCookiesPlayerAndTheTargetToTheService()
+    {
+        var target = Guid.NewGuid();
+        _assassinService.Result = Game();
+
+        var result = await _assassin.Assassinate(
+            _sessionId, new ResistanceAssassinateRequestDto(target), CancellationToken.None);
+
+        Assert.Equal(($"assassinate-{target}", _sessionId, null, _playerId), _assassinService.LastCall);
+        Assert.IsType<OkObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task Assassinate_MapsServiceErrorsToTheirStatusCodes()
+    {
+        _assassinService.Result = Error.Forbidden("Resistance.NotAssassin", "x");
+
+        var result = await _assassin.Assassinate(
+            _sessionId, new ResistanceAssassinateRequestDto(Guid.NewGuid()), CancellationToken.None);
+
+        Assert.Equal(StatusCodes.Status403Forbidden, Assert.IsType<ObjectResult>(result).StatusCode);
+    }
+
     public static TheoryData<Error, int> Errors => new()
     {
         { Error.Forbidden("Resistance.NotPlayer", "x"), StatusCodes.Status403Forbidden },
@@ -264,7 +291,7 @@ public class ResistanceControllerTests
         IsOpen = true,
         MaxPlayers = 10,
         MissionNumber = 1,
-        Rules = new ResistanceRulesDto([], false, 1, false)
+        Rules = new ResistanceRulesDto([], false, 1, false, false, false, ResistanceReverserSidesDto.Both, true, false, false, false, false, false, false, false)
     };
 
     /// <summary>Only the player cookie of the Resistance game is read; the rest is not used by the controller.</summary>

@@ -3,7 +3,7 @@ import { ResistanceGameDto } from '@/service/endpoints/games/types';
 import { ResistancePlayers } from '../ResistancePlayers';
 import { ResistanceMissionBoard } from './ResistanceMissionBoard';
 import { ResistanceMissionCards } from './ResistanceMissionCards';
-import { PlotOpinionMakerCardIcon } from './ResistanceIcons';
+import { InquisitorCardIcon, PlotOpinionMakerCardIcon } from './ResistanceIcons';
 import { ResistancePlayerMarks } from './ResistancePlayerMarks';
 import { ResistanceTeamCards } from './ResistanceTeamCards';
 import { ResistanceVoteCards } from './ResistanceVoteCards';
@@ -37,10 +37,10 @@ export const ResistanceTvBoard = ({ game, board, banner, yourPlayerId, onlinePla
   // The number only advances on "Next", so a result for the current mission exists exactly until then, in whatever phase.
   const finished = game?.missionResults.find((result) => result.missionNumber === game.missionNumber);
   const openPlayer = game?.players.find((player) => player.id === game.openMissionPlayerId);
-  const open = openPlayer && game?.openMissionCard != null ? { name: openPlayer.name, success: game.openMissionCard } : null;
-  const cards = finished && team.length > 0 ? { count: team.length, fails: finished.failCount } : null;
+  const open = openPlayer && game?.openMissionCard != null ? { name: openPlayer.name, card: game.openMissionCard } : null;
+  const cards = finished && team.length > 0 ? { count: team.length, fails: finished.failCount, reverses: finished.reverseCount } : null;
   // While the mission is played the openly played card is already public, the rest stay hidden until the mission ends
-  const showCards = cards ?? (game?.phase === 'PlayingMission' && open ? { count: 1, fails: open.success ? 0 : 1 } : null);
+  const showCards = cards ?? (game?.phase === 'PlayingMission' && open ? { count: 1, fails: open.card === 'Fail' ? 1 : 0, reverses: open.card === 'Reverse' ? 1 : 0 } : null);
 
   return (
     <>
@@ -54,15 +54,17 @@ export const ResistanceTvBoard = ({ game, board, banner, yourPlayerId, onlinePla
             rejectedTeams={game?.rejectedTeams}
             missionResults={game?.missionResults}
             players={game?.players}
+            defectorFlips={game?.defectorFlips}
           />
         </div>
+        {/* Above the players (z-30), so a card shown by a seat never covers the team, the votes or the mission cards */}
         {(team.length > 0 || votes || showCards) && (
-          <div className="flex w-full shrink-0 flex-wrap items-stretch justify-center gap-3">
+          <div className="relative z-40 flex w-full shrink-0 flex-wrap items-stretch justify-center gap-3">
             {team.length > 0 && (
               <ResistanceTeamCards members={team} missionNumber={game!.missionNumber} leaderId={game!.leaderPlayerId} />
             )}
             {votes && <ResistanceVoteCards players={game!.players} votes={votes} />}
-            {showCards && <ResistanceMissionCards cardCount={showCards.count} failCount={showCards.fails} open={open} />}
+            {showCards && <ResistanceMissionCards cardCount={showCards.count} failCount={showCards.fails} reverseCount={showCards.reverses} open={open} />}
           </div>
         )}
       </div>
@@ -74,11 +76,20 @@ export const ResistanceTvBoard = ({ game, board, banner, yourPlayerId, onlinePla
           leaderId={game.leaderPlayerId}
           onlinePlayerIds={onlinePlayerIds}
           marks={(playerId) => <ResistancePlayerMarks game={game} playerId={playerId} />}
-          beside={(playerId) =>
-            game.opinionMakerPlayerIds.includes(playerId) ? (
-              <PlotOpinionMakerCardIcon className="w-full" title={t('resistance.marks.opinionMaker')} />
-            ) : null
-          }
+          beside={(playerId) => {
+            const maker = game.opinionMakerPlayerIds.includes(playerId);
+            const inquisitor = game.inquisitorPlayerId === playerId;
+            if (!maker && !inquisitor) return null;
+            // Two cards sit side by side, so each is a little narrower to keep them out of the board
+            const size = maker && inquisitor ? 'w-[4vw] min-w-10' : 'w-[5vw] min-w-12';
+
+            return (
+              <span className="flex gap-1">
+                {maker && <PlotOpinionMakerCardIcon className={size} title={t('resistance.marks.opinionMaker')} />}
+                {inquisitor && <InquisitorCardIcon className={size} title={t('resistance.marks.inquisitor')} />}
+              </span>
+            );
+          }}
         />
       )}
     </>

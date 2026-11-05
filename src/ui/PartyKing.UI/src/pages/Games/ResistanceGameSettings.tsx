@@ -2,8 +2,18 @@ import { ReactNode, useState } from 'react';
 import CloseIcon from '@mui/icons-material/Close';
 import { Dialog, DialogContent, DialogTitle } from '@mui/material';
 import { gamesApi } from '@/service/endpoints/games/gamesApi';
+import { ResistanceAssassinOptions, ResistanceReverserOptions, ResistanceReverserSides } from '@/service/endpoints/games/types';
 import { useResistanceGame } from '@/service/endpoints/games/useResistanceGame';
 import { useTranslation } from 'react-i18next';
+import { assassinCharactersProblem } from './resistance/assassinCharacters';
+
+/** The optional characters of the Assassin module: the option name of the request and its flag in the rules. */
+const ASSASSIN_OPTIONS = [
+  { option: 'bodyGuard', flag: 'bodyGuardEnabled' },
+  { option: 'deepCover', flag: 'deepCoverEnabled' },
+  { option: 'blindSpy', flag: 'blindSpyEnabled' },
+  { option: 'falseCommander', flag: 'falseCommanderEnabled' },
+] as const;
 
 type Props = {
   sessionId: string;
@@ -31,7 +41,7 @@ const SettingsSection = ({ title, description, children }: SectionProps): ReactN
 
 /**
  * Host and admins: switches the optional modules of the game on and off, one section per module with a short description.
- * The plot cards add-on and the Inquisitor module exist. The modules can be changed until the game starts.
+ * The plot cards add-on, the Inquisitor and Reverser modules and the Blind Spies variant exist. The modules can be changed until the game starts.
  */
 export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): ReactNode => {
   const { t } = useTranslation();
@@ -39,6 +49,8 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
   const [message, setMessage] = useState<string>();
 
   const started = game?.startedAt != null;
+  // The sides only matter while the module is on, and like every setting they lock when the game starts
+  const sidesDisabled = game === undefined || started || !game.rules.reverserEnabled;
 
   const setPlotCards = async (enabled: boolean) => {
     setMessage(undefined);
@@ -58,6 +70,49 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
     }
   };
 
+  const setBlindSpies = async (enabled: boolean) => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.setResistanceBlindSpies(sessionId, enabled), { revalidate: false });
+    } catch {
+      setMessage(t('resistance.settings.blindSpiesFailed'));
+    }
+  };
+
+  const setAssassin = async (enabled: boolean, options?: ResistanceAssassinOptions) => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.setResistanceAssassin(sessionId, enabled, options), { revalidate: false });
+    } catch {
+      setMessage(t('resistance.settings.assassinFailed'));
+    }
+  };
+
+  // The Assassin does not combine with Blind Spies, the Reverser or the Defectors: each is greyed out while the other is on
+  const assassinOn = game?.rules.assassinEnabled ?? false;
+  const assassinProblem = game === undefined ? null : assassinCharactersProblem(game);
+  const assassinBlocked = game?.rules.blindSpiesEnabled || game?.rules.reverserEnabled || game?.rules.defectorEnabled;
+
+  const defectorChoiceDisabled = game === undefined || started || !game.rules.defectorEnabled;
+
+  const setDefector = async (enabled: boolean, knowEachOther?: boolean) => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.setResistanceDefector(sessionId, enabled, knowEachOther), { revalidate: false });
+    } catch {
+      setMessage(t('resistance.settings.defectorFailed'));
+    }
+  };
+
+  const setReverser = async (enabled: boolean, options?: ResistanceReverserOptions) => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.setResistanceReverser(sessionId, enabled, options), { revalidate: false });
+    } catch {
+      setMessage(t('resistance.settings.reverserFailed'));
+    }
+  };
+
   return (
     <Dialog
       open={open}
@@ -65,8 +120,9 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
       aria-labelledby="resistance-settings-title"
       fullWidth
       maxWidth="sm"
-      // MUI's emotion styles are unlayered and beat Tailwind's layered utilities, hence the important modifier
-      slotProps={{ paper: { className: 'bg-slate-800! text-slate-200! rounded-xl!' } }}
+      // MUI's emotion styles are unlayered and beat Tailwind's layered utilities, hence the important modifier; from
+      // 1024 px wide the dialog grows from MUI's "sm" (600 px) to 56rem
+      slotProps={{ paper: { className: 'bg-slate-800! text-slate-200! rounded-xl! lg:max-w-4xl!' } }}
     >
       <DialogTitle id="resistance-settings-title" className="flex! items-center justify-between text-xl! font-semibold!">
         {t('resistance.settings.title')}
@@ -109,6 +165,105 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
             />
             {t('resistance.settings.inquisitor.toggle')}
           </label>
+        </SettingsSection>
+        <SettingsSection
+          title={t('resistance.settings.blindSpies.title')}
+          description={t('resistance.settings.blindSpies.description')}
+        >
+          <label className="flex items-center gap-2 text-slate-200">
+            <input
+              type="checkbox"
+              checked={game?.rules.blindSpiesEnabled ?? false}
+              disabled={game === undefined || started || assassinOn}
+              onChange={(event) => void setBlindSpies(event.target.checked)}
+            />
+            {t('resistance.settings.blindSpies.toggle')}
+          </label>
+        </SettingsSection>
+        <SettingsSection
+          title={t('resistance.settings.reverser.title')}
+          description={t('resistance.settings.reverser.description')}
+        >
+          <label className="flex items-center gap-2 text-slate-200">
+            <input
+              type="checkbox"
+              checked={game?.rules.reverserEnabled ?? false}
+              disabled={game === undefined || started || assassinOn}
+              onChange={(event) => void setReverser(event.target.checked)}
+            />
+            {t('resistance.settings.reverser.toggle')}
+          </label>
+          <label className={`flex flex-col gap-1 text-sm ${sidesDisabled ? 'text-slate-500' : 'text-slate-200'}`}>
+            {t('resistance.settings.reverser.sides')}
+            <select
+              value={game?.rules.reverserSides ?? 'Both'}
+              disabled={sidesDisabled}
+              onChange={(event) => void setReverser(true, { sides: event.target.value as ResistanceReverserSides })}
+              className="rounded bg-slate-700 p-1 text-slate-100 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500 disabled:opacity-60"
+            >
+              <option value="Both">{t('resistance.settings.reverser.sidesBoth')}</option>
+              <option value="Resistance">{t('resistance.settings.reverser.sidesResistance')}</option>
+              <option value="Spy">{t('resistance.settings.reverser.sidesSpy')}</option>
+            </select>
+          </label>
+          <label className={`flex items-center gap-2 text-sm ${sidesDisabled ? 'text-slate-500' : 'text-slate-200'}`}>
+            <input
+              type="checkbox"
+              checked={game?.rules.reverserSpyKnowsSpies ?? true}
+              disabled={sidesDisabled}
+              onChange={(event) => void setReverser(true, { spyKnowsSpies: event.target.checked })}
+            />
+            {t('resistance.settings.reverser.spyKnowsSpies')}
+          </label>
+        </SettingsSection>
+        <SettingsSection
+          title={t('resistance.settings.defector.title')}
+          description={t('resistance.settings.defector.description')}
+        >
+          <label className="flex items-center gap-2 text-slate-200">
+            <input
+              type="checkbox"
+              checked={game?.rules.defectorEnabled ?? false}
+              disabled={game === undefined || started || assassinOn}
+              onChange={(event) => void setDefector(event.target.checked)}
+            />
+            {t('resistance.settings.defector.toggle')}
+          </label>
+          <label className={`flex items-center gap-2 text-sm ${defectorChoiceDisabled ? 'text-slate-500' : 'text-slate-200'}`}>
+            <input
+              type="checkbox"
+              checked={game?.rules.defectorsKnowEachOther ?? false}
+              disabled={defectorChoiceDisabled}
+              onChange={(event) => void setDefector(true, event.target.checked)}
+            />
+            {t('resistance.settings.defector.knowEachOther')}
+          </label>
+        </SettingsSection>
+        <SettingsSection
+          title={t('resistance.settings.assassin.title')}
+          description={t('resistance.settings.assassin.description')}
+        >
+          <label className="flex items-center gap-2 text-slate-200">
+            <input
+              type="checkbox"
+              checked={assassinOn}
+              disabled={game === undefined || started || (!assassinOn && !!assassinBlocked)}
+              onChange={(event) => void setAssassin(event.target.checked)}
+            />
+            {t('resistance.settings.assassin.toggle')}
+          </label>
+          {ASSASSIN_OPTIONS.map(({ option, flag }) => (
+            <label key={option} className={`flex items-center gap-2 text-sm ${assassinOn ? 'text-slate-200' : 'text-slate-500'}`}>
+              <input
+                type="checkbox"
+                checked={game?.rules[flag] ?? false}
+                disabled={game === undefined || started || !assassinOn}
+                onChange={(event) => void setAssassin(true, { [option]: event.target.checked })}
+              />
+              {t(`resistance.settings.assassin.${option}`)}
+            </label>
+          ))}
+          {assassinProblem && <p className="text-sm text-amber-500">{t(`resistance.settings.assassin.${assassinProblem}`)}</p>}
         </SettingsSection>
         {message && <p className="text-amber-500">{message}</p>}
       </DialogContent>

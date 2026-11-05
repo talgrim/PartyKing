@@ -106,8 +106,10 @@ public abstract class ResistanceServiceTestBase
         await VoteAsync(callers, Enumerable.Repeat(true, callers.Count).ToArray());
         foreach (var caller in team)
         {
-            var success = roles[caller.PlayerId!.Value] == ResistanceRoleDto.Resistance;
-            Assert.False((await _roundService.PlayMissionCardAsync(_id, success, caller, ct)).IsError);
+            var card = roles[caller.PlayerId!.Value] == ResistanceRoleDto.Resistance
+                ? ResistanceMissionCardKindDto.Success
+                : ResistanceMissionCardKindDto.Fail;
+            Assert.False((await _roundService.PlayMissionCardAsync(_id, card, caller, ct)).IsError);
         }
     }
 

@@ -75,8 +75,8 @@ public static class ResistanceRoles
                                            && x.TargetPlayerId == target);
     }
 
-    /// <summary>The mission cards <paramref name="peeker"/> looked at this mission (player id, true = Success); private to them.</summary>
-    public static IEnumerable<(Guid PlayerId, bool Success)> PeekedCards(ResistanceGame game, Guid peeker)
+    /// <summary>The mission cards <paramref name="peeker"/> looked at this mission (player id, card); private to them.</summary>
+    public static IEnumerable<(Guid PlayerId, ResistanceMissionCardKind Card)> PeekedCards(ResistanceGame game, Guid peeker)
     {
         return !game.IsMissionResolved
             ? []
@@ -86,7 +86,7 @@ public static class ResistanceRoles
                             && x.PlayedInMission == game.MissionNumber
                             && x.HolderPlayerId == peeker && x.TargetPlayerId is not null)
                 .Select(x => (x.TargetPlayerId!.Value,
-                    game.Players.First(p => p.PlayerId == x.TargetPlayerId).MissionCard == true));
+                    game.Players.First(p => p.PlayerId == x.TargetPlayerId).MissionCard!.Value));
     }
 
     /// <summary>
@@ -197,6 +197,7 @@ public static class ResistanceRoles
     public static void BeginMission(ResistanceGame game)
     {
         game.Phase = ResistancePhase.SelectingTeam;
+        FlipDefectorCard(game);
         if (!game.Rules.PlotCardsEnabled)
         {
             return;
@@ -209,6 +210,25 @@ public static class ResistanceRoles
         }
 
         DrawPlotCards(game);
+    }
+
+    /// <summary>
+    /// Defector module: from the third mission on, the card on top of the switch deck is flipped as the mission begins;
+    /// Change Allegiance puts both Defectors on the other side, so the win checks and the mission card rules follow
+    /// from <see cref="ResistancePlayer.Role"/> at once. A rejected team does not begin a mission, so it flips nothing.
+    /// </summary>
+    private static void FlipDefectorCard(ResistanceGame game)
+    {
+        var index = game.MissionNumber - ResistanceGame.DefectorFirstFlipMission;
+        if (index < 0 || index >= game.DefectorDeck.Length || game.DefectorDeck[index] != 'C')
+        {
+            return;
+        }
+
+        foreach (var defector in game.Players.Where(x => x.Character == ResistanceCharacter.Defector))
+        {
+            defector.SwitchAllegiance();
+        }
     }
 
     private static void DrawPlotCards(ResistanceGame game)
@@ -401,24 +421,37 @@ public static class ResistanceRoles
     }
 
     /// <summary>
-    /// Applies the complete set of cards: the mission fails when the Fail cards reach the rules' requirement, the
-    /// outcome (the number of Fail cards only) is recorded, and the third success or failure ends the game.
+    /// Applies the complete set of cards (see <see cref="ResistanceMissionRules"/>): the outcome and the number of
+    /// Fail and Reverse cards are recorded (the played cards are shown to everybody without who played them, as when
+    /// the cards are revealed shuffled at the table), and the third success or failure ends the game.
     /// </summary>
     public static void ResolveMission(ResistanceGame game)
     {
-        var fails = game.Players.Count(x => x.IsOnTeam && x.MissionCard == false);
-        var succeeded = fails < game.Rules.RequiredFails(game.Players.Count, game.MissionNumber);
+        var cards = game.Players.Where(x => x.IsOnTeam).Select(x => x.MissionCard!.Value).ToList();
+        var fails = cards.Count(x => x == ResistanceMissionCardKind.Fail);
+        var reverses = cards.Count(x => x == ResistanceMissionCardKind.Reverse);
+        var succeeded = ResistanceMissionRules.HasSucceeded(cards, game.Rules.RequiredFails(game.Players.Count, game.MissionNumber));
 
         game.MissionResults.Add(new ResistanceMissionResult
         {
             SessionId = game.SessionId,
             MissionNumber = game.MissionNumber,
             FailCount = fails,
+            ReverseCount = reverses,
             Succeeded = succeeded,
             TeamPlayerIds = game.Players.Where(x => x.IsOnTeam).OrderBy(x => x.Order).Select(x => x.PlayerId).ToList(),
         });
 
-        game.Publish(new ResistanceMissionCompleted(game.SessionId, game.MissionNumber, succeeded, fails));
+        game.Publish(new ResistanceMissionCompleted(game.SessionId, game.MissionNumber, succeeded, fails, reverses));
+
+        // Assassin module: the third success is not the end yet, the Assassin still names the Commander. Nothing else
+        // happens in between (no peek window, no Inquisition), as after any mission that decides the game.
+        if (game.Rules.AssassinEnabled && game.ResistanceScore >= MissionsToWin)
+        {
+            game.Phase = ResistancePhase.Assassination;
+            return;
+        }
+
         if (game.ResistanceScore >= MissionsToWin || game.SpyScore >= MissionsToWin)
         {
             game.Phase = ResistancePhase.GameOver;
@@ -475,12 +508,15 @@ public static class ResistanceRoles
             player.Role = null;
             player.IsReclaimable = false;
             player.WasInquisitor = false;
+            player.Character = ResistanceCharacter.Standard;
         }
 
         game.LeaderPlayerId = null;
         game.InquisitorPlayerId = null;
         game.InquisitionExaminerPlayerId = null;
         game.PlotCards.Clear();
+        game.DefectorDeck = string.Empty;
+        game.AssassinationTargetPlayerId = null;
     }
 
     /// <summary>The token starts with the player to the right of the first leader: the one before them in seating order.</summary>
@@ -497,6 +533,61 @@ public static class ResistanceRoles
         game.InquisitorPlayerId = holder.PlayerId;
     }
 
+    /// <summary>
+    /// Defector module: one Defector on each side, taken from the players still without a character (there are always
+    /// some, as a side has at least two spies and three members of the resistance and takes one Reverser at most), and a
+    /// shuffled switch deck.
+    /// </summary>
+    private static void DealDefectors(ResistanceGame game, List<ResistancePlayer> shuffled, Random random)
+    {
+        game.DefectorDeck = string.Empty;
+        if (!game.Rules.DefectorEnabled)
+        {
+            return;
+        }
+
+        foreach (var side in new[] { ResistanceRole.Spy, ResistanceRole.Resistance })
+        {
+            shuffled.First(x => x.Role == side && x.Character == ResistanceCharacter.Standard)
+                .Character = ResistanceCharacter.Defector;
+        }
+
+        var cards = Enumerable.Repeat('N', ResistanceGame.DefectorDeckSize - 2).Concat(['C', 'C']);
+        game.DefectorDeck = new string(cards.OrderBy(_ => random.Next()).ToArray());
+    }
+
+    /// <summary>
+    /// Assassin module: the Assassin is the first spy and the Commander the first resistance member of the shuffle
+    /// (no extra draw, so a game without the module deals as before). The module does not combine with the other
+    /// characters, so every player is still a standard one here.
+    /// </summary>
+    private static void DealAssassin(ResistanceGame game, List<ResistancePlayer> shuffled)
+    {
+        game.AssassinationTargetPlayerId = null;
+        if (!game.Rules.AssassinEnabled)
+        {
+            return;
+        }
+
+        shuffled.First(x => x.Role == ResistanceRole.Spy && x.Character == ResistanceCharacter.Standard)
+            .Character = ResistanceCharacter.Assassin;
+        shuffled.First(x => x.Role == ResistanceRole.Resistance && x.Character == ResistanceCharacter.Standard)
+            .Character = ResistanceCharacter.Commander;
+
+        // The optional characters take the next standard players of their side; the start already checked they fit
+        var optional = new (bool Enabled, ResistanceRole Side, ResistanceCharacter Character)[]
+        {
+            (game.Rules.BodyGuardEnabled, ResistanceRole.Resistance, ResistanceCharacter.BodyGuard),
+            (game.Rules.DeepCoverEnabled, ResistanceRole.Spy, ResistanceCharacter.DeepCover),
+            (game.Rules.BlindSpyEnabled, ResistanceRole.Spy, ResistanceCharacter.BlindSpy),
+            (game.Rules.FalseCommanderEnabled, ResistanceRole.Spy, ResistanceCharacter.FalseCommander),
+        };
+        foreach (var (enabled, side, character) in optional.Where(x => x.Enabled))
+        {
+            shuffled.First(x => x.Role == side && x.Character == ResistanceCharacter.Standard).Character = character;
+        }
+    }
+
     /// <summary>Gives every player a random role, picks a random first leader and starts the first mission.</summary>
     public static void Deal(ResistanceGame game, Random random)
     {
@@ -506,7 +597,28 @@ public static class ResistanceRoles
         for (var i = 0; i < shuffled.Count; i++)
         {
             shuffled[i].Role = i < spies ? ResistanceRole.Spy : ResistanceRole.Resistance;
+            shuffled[i].Character = ResistanceCharacter.Standard;
         }
+
+        if (game.Rules.ReverserEnabled)
+        {
+            // The shuffle is random, so the first of a side is a random member of it
+            var sides = game.Rules.ReverserSides;
+            if (sides != ResistanceReverserSides.Resistance)
+            {
+                shuffled.First(x => x.Role == ResistanceRole.Spy && x.Character == ResistanceCharacter.Standard)
+                    .Character = ResistanceCharacter.Reverser;
+            }
+
+            if (sides != ResistanceReverserSides.Spy)
+            {
+                shuffled.First(x => x.Role == ResistanceRole.Resistance && x.Character == ResistanceCharacter.Standard)
+                    .Character = ResistanceCharacter.Reverser;
+            }
+        }
+
+        DealDefectors(game, shuffled, random);
+        DealAssassin(game, shuffled);
 
         game.ChangeLeader(game.Players[random.Next(game.Players.Count)].PlayerId);
         GiveInquisitorToken(game);

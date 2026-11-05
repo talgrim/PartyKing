@@ -16,6 +16,62 @@ public class ResistanceRules
     /// <summary>Whether the Inquisitor module (Hostile Intent) is played. Off by default; only editable before the game starts.</summary>
     public bool InquisitorEnabled { get; set; }
 
+    /// <summary>
+    /// Whether the Blind Spies variant is played: the spies do not get to know each other. Off by default; only editable
+    /// before the game starts.
+    /// </summary>
+    public bool BlindSpiesEnabled { get; set; }
+
+    /// <summary>
+    /// Whether the Reverser module is played: a Reverser on each side may play a Reverse card, which turns the result of
+    /// the mission around. Off by default; only editable before the game starts.
+    /// </summary>
+    public bool ReverserEnabled { get; set; }
+
+    /// <summary>Which sides get a Reverser while <see cref="ReverserEnabled"/>. Both by default; only editable before the game starts.</summary>
+    public ResistanceReverserSides ReverserSides { get; set; }
+
+    /// <summary>
+    /// Whether a spy Reverser takes part in the spies' reveal while <see cref="ReverserEnabled"/>: they know the other
+    /// spies and the other spies know them. When off, the Reverser spy keeps their eyes closed, so neither knows the
+    /// other. On by default (also for rules saved before this setting existed); only editable before the game starts.
+    /// </summary>
+    public bool ReverserSpyKnowsSpies { get; set; } = true;
+
+    /// <summary>
+    /// Whether the Defector module (Hidden Agenda) is played: a Defector on each side, whose allegiance may switch at
+    /// the start of the missions 3 to 5. Off by default; only editable before the game starts.
+    /// </summary>
+    public bool DefectorEnabled { get; set; }
+
+    /// <summary>
+    /// Whether the two Defectors know each other while <see cref="DefectorEnabled"/> (the variant for large groups).
+    /// Off by default; only editable before the game starts.
+    /// </summary>
+    public bool DefectorsKnowEachOther { get; set; }
+
+    /// <summary>
+    /// Whether the Assassin module (Hidden Agenda) is played: a Commander and an Assassin replace one standard player on
+    /// each side, and after the third successful mission the Assassin names the Commander. Off by default; only
+    /// editable before the game starts, and not together with the Defector, the Reverser or Blind Spies.
+    /// </summary>
+    public bool AssassinEnabled { get; set; }
+
+    /// <summary>Assassin module, optional character: a Body Guard among the resistance. Only while <see cref="AssassinEnabled"/>.</summary>
+    public bool BodyGuardEnabled { get; set; }
+
+    /// <summary>Assassin module, optional character: a spy the Commander does not see. Only while <see cref="AssassinEnabled"/>.</summary>
+    public bool DeepCoverEnabled { get; set; }
+
+    /// <summary>Assassin module, optional character: a spy who knows no spy and is known to none. Only while <see cref="AssassinEnabled"/>.</summary>
+    public bool BlindSpyEnabled { get; set; }
+
+    /// <summary>Assassin module, optional character: a spy the Body Guard takes for the Commander. Only while <see cref="AssassinEnabled"/>.</summary>
+    public bool FalseCommanderEnabled { get; set; }
+
+    /// <summary>How many of the optional spy characters (Deep Cover, Blind Spy, False Commander) are switched on.</summary>
+    public int OptionalSpyCharacters => (DeepCoverEnabled ? 1 : 0) + (BlindSpyEnabled ? 1 : 0) + (FalseCommanderEnabled ? 1 : 0);
+
     /// <summary>How many copies of each plot card the deck holds (15 cards in all).</summary>
     public Dictionary<ResistancePlotCardType, int> PlotDeck { get; set; } = DefaultPlotDeck();
 
@@ -23,12 +79,36 @@ public class ResistanceRules
     /// A deep copy, so a game never shares dictionaries or arrays with the object it was built from. The result is
     /// always a new instance, which the JSON column needs to detect a change. Every property must be copied here.
     /// </summary>
-    public ResistanceRules Clone(bool? plotCardsEnabled = null, bool? inquisitorEnabled = null) => new()
+    public ResistanceRules Clone(
+        bool? plotCardsEnabled = null,
+        bool? inquisitorEnabled = null,
+        bool? blindSpiesEnabled = null,
+        bool? reverserEnabled = null,
+        ResistanceReverserSides? reverserSides = null,
+        bool? reverserSpyKnowsSpies = null,
+        bool? defectorEnabled = null,
+        bool? defectorsKnowEachOther = null,
+        bool? assassinEnabled = null,
+        bool? bodyGuardEnabled = null,
+        bool? deepCoverEnabled = null,
+        bool? blindSpyEnabled = null,
+        bool? falseCommanderEnabled = null) => new()
     {
         PlayerCounts = PlayerCounts.ToDictionary(
             x => x.Key, x => new ResistanceCountRules(x.Value.Spies, [.. x.Value.TeamSizes], [.. x.Value.RequiredFails])),
         PlotCardsEnabled = plotCardsEnabled ?? PlotCardsEnabled,
         InquisitorEnabled = inquisitorEnabled ?? InquisitorEnabled,
+        BlindSpiesEnabled = blindSpiesEnabled ?? BlindSpiesEnabled,
+        ReverserEnabled = reverserEnabled ?? ReverserEnabled,
+        ReverserSides = reverserSides ?? ReverserSides,
+        ReverserSpyKnowsSpies = reverserSpyKnowsSpies ?? ReverserSpyKnowsSpies,
+        DefectorEnabled = defectorEnabled ?? DefectorEnabled,
+        DefectorsKnowEachOther = defectorsKnowEachOther ?? DefectorsKnowEachOther,
+        AssassinEnabled = assassinEnabled ?? AssassinEnabled,
+        BodyGuardEnabled = bodyGuardEnabled ?? BodyGuardEnabled,
+        DeepCoverEnabled = deepCoverEnabled ?? DeepCoverEnabled,
+        BlindSpyEnabled = blindSpyEnabled ?? BlindSpyEnabled,
+        FalseCommanderEnabled = falseCommanderEnabled ?? FalseCommanderEnabled,
         PlotDeck = new Dictionary<ResistancePlotCardType, int>(PlotDeck),
     };
 

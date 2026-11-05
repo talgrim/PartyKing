@@ -17,7 +17,8 @@ export const ResistancePlayerMarks = ({ game, playerId }: Props): ReactNode => {
   const { t } = useTranslation();
   const votesShown = game.phase === 'SelectingTeam' || game.phase === 'PlayingMission';
   const vote = votesShown ? game.votes?.find((x) => x.playerId === playerId) : undefined;
-  const role = game.revealedRoles?.find((x) => x.playerId === playerId)?.role;
+  const revealed = game.revealedRoles?.find((x) => x.playerId === playerId);
+  const role = revealed?.role;
   const maker = game.opinionMakerPlayerIds.includes(playerId);
   // A revealed Opinion Maker vote replaces the plain "voted" tick while the vote is on
   const makerVote = game.phase === 'Voting' ? game.opinionMakerVotes.find((x) => x.playerId === playerId) : undefined;
@@ -68,6 +69,30 @@ export const ResistancePlayerMarks = ({ game, playerId }: Props): ReactNode => {
         <span className={`${badge} ${vote.approve ? 'bg-emerald-400 text-slate-900' : 'bg-rose-400 text-slate-900'}`}>
           {vote.approve ? t('resistance.vote.for') : t('resistance.vote.against')}
         </span>
+      )}
+      {revealed?.character === 'Reverser' && (
+        <span className={`${badge} bg-slate-600 text-white`}>{t('resistance.characters.reverser')}</span>
+      )}
+      {revealed?.character === 'Defector' && (
+        <span className={`${badge} bg-slate-600 text-white`}>{t('resistance.characters.defector')}</span>
+      )}
+      {revealed?.character === 'Commander' && (
+        <span className={`${badge} bg-slate-600 text-white`}>{t('resistance.characters.commander')}</span>
+      )}
+      {revealed?.character === 'Assassin' && (
+        <span className={`${badge} bg-slate-600 text-white`}>{t('resistance.characters.assassin')}</span>
+      )}
+      {revealed?.character === 'BodyGuard' && (
+        <span className={`${badge} bg-slate-600 text-white`}>{t('resistance.characters.bodyGuard')}</span>
+      )}
+      {revealed?.character === 'DeepCover' && (
+        <span className={`${badge} bg-slate-600 text-white`}>{t('resistance.characters.deepCover')}</span>
+      )}
+      {revealed?.character === 'BlindSpy' && (
+        <span className={`${badge} bg-slate-600 text-white`}>{t('resistance.characters.blindSpy')}</span>
+      )}
+      {revealed?.character === 'FalseCommander' && (
+        <span className={`${badge} bg-slate-600 text-white`}>{t('resistance.characters.falseCommander')}</span>
       )}
       {role && (
         <span className={`${badge} ${role === 'Spy' ? 'bg-rose-700 text-white' : 'bg-sky-700 text-white'}`}>

@@ -31,7 +31,8 @@ export const ResistanceManagerControls = ({ game, isAdmin, onManagePlayers, onMa
   const enough = game.players.length >= MIN_PLAYERS;
 
   const missionOver = game.phase === 'MissionResult';
-  const gameOver = game.phase === 'GameOver';
+  // A game waiting for the Assassin can be restarted too, so an absent Assassin never strands it
+  const gameOver = game.phase === 'GameOver' || game.phase === 'Assassination';
 
   return (
     <>

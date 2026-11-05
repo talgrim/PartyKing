@@ -50,7 +50,16 @@ jobs:
           cache: npm
           cache-dependency-path: src/ui/PartyKing.UI/package-lock.json
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - id: playwright
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      # No --with-deps: the runner already has every library Chromium needs, and that flag only adds CJK and X11 fonts
+      # through apt (over 5 minutes). With the cache this is a no-op. If a runner image ever misses a library, Chromium
+      # fails to start; add the flag back then.
+      - run: npx playwright install chromium
       # Playwright starts the API (dotnet run) and Vite itself; see playwright.config.ts
       - run: npm run e2e
       - uses: actions/upload-artifact@v4

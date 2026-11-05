@@ -172,12 +172,12 @@ public class ResistancePlotCardServiceTests : ResistanceServiceTestBase
         var bystander = callers.First(x => x.PlayerId == players[2].PlayerId);
 
         var before = (await _lobbyService.GetAsync(_id, bystander, ct)).Value;
-        players[1].MissionCard = false;
+        players[1].MissionCard = ResistanceMissionCardKind.Fail;
         var after = (await _lobbyService.GetAsync(_id, bystander, ct)).Value;
 
         Assert.Equal(players[1].PlayerId, before.OpenMissionPlayerId);
         Assert.Null(before.OpenMissionCard);
-        Assert.Equal(false, after.OpenMissionCard);
+        Assert.Equal(ResistanceMissionCardKindDto.Fail, after.OpenMissionCard);
         Assert.Null(after.YourMissionCard);
     }
 }

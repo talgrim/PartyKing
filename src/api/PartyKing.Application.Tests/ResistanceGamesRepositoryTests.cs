@@ -119,7 +119,8 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
             _sessionId,
             "PlayMissionCardAsync",
             ResistanceOutcome.NoGame,
-            game => game.PlayMissionCard(player, success),
+            game => game.PlayMissionCard(
+                player, success ? ResistanceMissionCardKind.Success : ResistanceMissionCardKind.Fail),
             CancellationToken.None);
     }
 
@@ -444,8 +445,199 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         await VoteAsync(true, true, true, true, true);
         foreach (var member in team)
         {
-            Assert.Null((await PlayMissionCardAsync(member, success: true)).Failure);
+            Assert.Null((await PlayMissionCardAsync(member, true)).Failure);
         }
+    }
+
+    [Fact]
+    public async Task BlindSpies_SurvivesReloadsAndTheStartOfTheGame()
+    {
+        await CreateLobbyAsync(5, isOpen: true);
+        var switched = await _repository.UpdateAsync(
+            _sessionId, "SetBlindSpiesAsync", ResistanceOutcome.NoGame, game => game.SetBlindSpies(true), CancellationToken.None);
+        Assert.Null(switched.Failure);
+        Assert.True((await ReloadAsync()).Rules.BlindSpiesEnabled);
+
+        Assert.Null((await StartAsync()).Failure);
+        Assert.True((await ReloadAsync()).Rules.BlindSpiesEnabled);
+
+        var locked = await _repository.UpdateAsync(
+            _sessionId, "SetBlindSpiesAsync", ResistanceOutcome.NoGame, game => game.SetBlindSpies(false), CancellationToken.None);
+        Assert.Equal(ResistanceFailure.BlindSpiesLocked, locked.Failure);
+        Assert.True((await ReloadAsync()).Rules.BlindSpiesEnabled);
+    }
+
+    [Fact]
+    public async Task Reverser_SurvivesReloadsAndTheStartDealsTheCharacters()
+    {
+        await CreateLobbyAsync(5, isOpen: true);
+        var switched = await _repository.UpdateAsync(
+            _sessionId, "SetReverserAsync", ResistanceOutcome.NoGame, game => game.SetReverser(true), CancellationToken.None);
+        Assert.Null(switched.Failure);
+        Assert.True((await ReloadAsync()).Rules.ReverserEnabled);
+        Assert.Equal(ResistanceReverserSides.Both, (await ReloadAsync()).Rules.ReverserSides);
+
+        Assert.Null((await StartAsync()).Failure);
+        var started = await ReloadAsync();
+        Assert.True(started.Rules.ReverserEnabled);
+        Assert.Single(started.Players, x => x.Character == ResistanceCharacter.Reverser && x.Role == ResistanceRole.Spy);
+        Assert.Single(started.Players, x => x.Character == ResistanceCharacter.Reverser && x.Role == ResistanceRole.Resistance);
+
+        var locked = await _repository.UpdateAsync(
+            _sessionId, "SetReverserAsync", ResistanceOutcome.NoGame, game => game.SetReverser(false), CancellationToken.None);
+        Assert.Equal(ResistanceFailure.ReverserLocked, locked.Failure);
+        Assert.True((await ReloadAsync()).Rules.ReverserEnabled);
+    }
+
+    [Fact]
+    public async Task Defector_SurvivesReloads_TheStartDealsTheDefectorsAndTheDeck_AndRestartClearsThem()
+    {
+        await CreateLobbyAsync(5, isOpen: true);
+        var switched = await _repository.UpdateAsync(
+            _sessionId,
+            "SetDefectorAsync",
+            ResistanceOutcome.NoGame,
+            game => game.SetDefector(true, defectorsKnowEachOther: true),
+            CancellationToken.None);
+        Assert.Null(switched.Failure);
+        Assert.True((await ReloadAsync()).Rules.DefectorEnabled);
+        Assert.True((await ReloadAsync()).Rules.DefectorsKnowEachOther);
+
+        Assert.Null((await StartAsync()).Failure);
+        var started = await ReloadAsync();
+        Assert.Single(started.Players, x => x.Character == ResistanceCharacter.Defector && x.Role == ResistanceRole.Spy);
+        Assert.Single(started.Players, x => x.Character == ResistanceCharacter.Defector && x.Role == ResistanceRole.Resistance);
+        Assert.Equal(5, started.DefectorDeck.Length);
+        Assert.Equal(2, started.DefectorDeck.Count(x => x == 'C'));
+
+        var locked = await _repository.UpdateAsync(
+            _sessionId, "SetDefectorAsync", ResistanceOutcome.NoGame, game => game.SetDefector(false), CancellationToken.None);
+        Assert.Equal(ResistanceFailure.DefectorLocked, locked.Failure);
+        Assert.True((await ReloadAsync()).Rules.DefectorEnabled);
+    }
+
+    [Fact]
+    public async Task Assassin_SurvivesReloads_TheGuessIsStored_AndRestartClearsIt()
+    {
+        await CreateLobbyAsync(5, isOpen: true);
+        var switched = await _repository.UpdateAsync(
+            _sessionId, "SetAssassinAsync", ResistanceOutcome.NoGame, game => game.SetAssassin(true), CancellationToken.None);
+        Assert.Null(switched.Failure);
+        Assert.True((await ReloadAsync()).Rules.AssassinEnabled);
+
+        Assert.Null((await StartAsync()).Failure);
+        var started = await ReloadAsync();
+        var assassin = Assert.Single(started.Players, x => x.Character == ResistanceCharacter.Assassin && x.Role == ResistanceRole.Spy);
+        var commander = Assert.Single(started.Players, x => x.Character == ResistanceCharacter.Commander && x.Role == ResistanceRole.Resistance);
+
+        var waiting = await _repository.UpdateAsync(
+            _sessionId,
+            "test",
+            ResistanceOutcome.NoGame,
+            game =>
+            {
+                game.Phase = ResistancePhase.Assassination;
+
+                return ResistanceOutcome.Success(game);
+            },
+            CancellationToken.None);
+        Assert.Null(waiting.Failure);
+        var pending = await ReloadAsync();
+        Assert.Equal(ResistancePhase.Assassination, pending.Phase);
+        Assert.Null(pending.Winner);
+
+        var guessed = await _repository.UpdateAsync(
+            _sessionId,
+            "AssassinateAsync",
+            ResistanceOutcome.NoGame,
+            game => game.Assassinate(assassin.PlayerId, commander.PlayerId),
+            CancellationToken.None);
+        Assert.Null(guessed.Failure);
+        var over = await ReloadAsync();
+        Assert.Equal(ResistancePhase.GameOver, over.Phase);
+        Assert.Equal(ResistanceRole.Spy, over.Winner);
+        Assert.Equal(commander.PlayerId, over.AssassinationTargetPlayerId);
+
+        var restarted = await _repository.UpdateAsync(
+            _sessionId, "RestartAsync", ResistanceOutcome.NoGame, game => game.Restart(), CancellationToken.None);
+        Assert.Null(restarted.Failure);
+        var reset = await ReloadAsync();
+        Assert.Null(reset.AssassinationTargetPlayerId);
+        Assert.True(reset.Rules.AssassinEnabled);
+    }
+
+    [Fact]
+    public async Task AReverseCard_IsStoredAsItsOwnKind_AndReversesTheStoredResult()
+    {
+        await CreateLobbyAsync(5, isOpen: true);
+        await _repository.UpdateAsync(
+            _sessionId, "SetReverserAsync", ResistanceOutcome.NoGame, game => game.SetReverser(true), CancellationToken.None);
+        await StartAsync();
+        var current = await ReloadAsync();
+        _players = current.Players.OrderBy(x => x.Order).Select(x => x.PlayerId).ToList();
+        var reverser = current.Players.Single(x => x.Character == ResistanceCharacter.Reverser && x.Role == ResistanceRole.Resistance);
+        var other = current.Players.First(x => x.PlayerId != reverser.PlayerId);
+        Assert.Null((await SelectTeamAsync(current.LeaderPlayerId, [reverser.PlayerId, other.PlayerId])).Failure);
+        await VoteAsync(true, true, true, true, true);
+
+        Assert.Null((await PlayCardAsync(reverser.PlayerId, ResistanceMissionCardKind.Reverse)).Failure);
+        Assert.Null((await PlayCardAsync(other.PlayerId, ResistanceMissionCardKind.Success)).Failure);
+
+        var after = await ReloadAsync();
+        Assert.Equal(ResistanceMissionCardKind.Reverse, after.Players.Single(x => x.PlayerId == reverser.PlayerId).MissionCard);
+        Assert.Equal(ResistanceMissionCardKind.Success, after.Players.Single(x => x.PlayerId == other.PlayerId).MissionCard);
+        var result = Assert.Single(after.MissionResults);
+        Assert.False(result.Succeeded);
+        Assert.Equal((0, 1), (result.FailCount, result.ReverseCount));
+    }
+
+    [Fact]
+    public async Task TheReverserSides_SurviveReloads_AndDecideWhoGetsTheCharacter()
+    {
+        await CreateLobbyAsync(5, isOpen: true);
+        var switched = await _repository.UpdateAsync(
+            _sessionId,
+            "SetReverserAsync",
+            ResistanceOutcome.NoGame,
+            game => game.SetReverser(true, ResistanceReverserSides.Spy),
+            CancellationToken.None);
+        Assert.Null(switched.Failure);
+        Assert.Equal(ResistanceReverserSides.Spy, (await ReloadAsync()).Rules.ReverserSides);
+
+        Assert.Null((await StartAsync()).Failure);
+        var started = await ReloadAsync();
+        Assert.Equal(ResistanceReverserSides.Spy, started.Rules.ReverserSides);
+        var reversers = started.Players.Where(x => x.Character == ResistanceCharacter.Reverser).ToList();
+        Assert.Equal(ResistanceRole.Spy, Assert.Single(reversers).Role);
+    }
+
+    [Fact]
+    public async Task TheReverserSpyKnowsSpiesSetting_SurvivesReloads()
+    {
+        await CreateLobbyAsync(5, isOpen: true);
+        Assert.True((await ReloadAsync()).Rules.ReverserSpyKnowsSpies);
+
+        var switched = await _repository.UpdateAsync(
+            _sessionId,
+            "SetReverserAsync",
+            ResistanceOutcome.NoGame,
+            game => game.SetReverser(true, spyKnowsSpies: false),
+            CancellationToken.None);
+
+        Assert.Null(switched.Failure);
+        Assert.False((await ReloadAsync()).Rules.ReverserSpyKnowsSpies);
+        Assert.Null((await StartAsync()).Failure);
+        Assert.False((await ReloadAsync()).Rules.ReverserSpyKnowsSpies);
+    }
+
+    private Task<ResistanceOutcome> PlayCardAsync(Guid player, ResistanceMissionCardKind card)
+    {
+        return _repository.UpdateAsync(
+            _sessionId,
+            "PlayMissionCardAsync",
+            ResistanceOutcome.NoGame,
+            game => game.PlayMissionCard(player, card),
+            CancellationToken.None);
     }
 
     [Fact]

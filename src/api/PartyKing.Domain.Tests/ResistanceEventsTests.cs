@@ -155,7 +155,7 @@ public class ResistanceEventsTests
         var game = NewGame(ResistancePhase.PlayingMission);
         var spy = game.Players[0];
 
-        game.PlayMissionCard(spy.PlayerId, success: false);
+        game.PlayMissionCard(spy.PlayerId, ResistanceMissionCardKind.Fail);
 
         IDomainEvent[] expected = [new ResistanceMissionCardPlayed(game.SessionId, spy.PlayerId), new ResistanceChanged(game.SessionId)];
         Assert.Equal(expected, game.DrainEvents());
@@ -166,11 +166,11 @@ public class ResistanceEventsTests
     {
         var game = NewGame(ResistancePhase.PlayingMission);
 
-        game.PlayMissionCard(game.Players[0].PlayerId, success: false);
-        game.PlayMissionCard(game.Players[2].PlayerId, success: true);
+        game.PlayMissionCard(game.Players[0].PlayerId, ResistanceMissionCardKind.Fail);
+        game.PlayMissionCard(game.Players[2].PlayerId, ResistanceMissionCardKind.Success);
 
         var completed = game.DrainEvents().OfType<ResistanceMissionCompleted>().Single();
-        Assert.Equal(new ResistanceMissionCompleted(game.SessionId, 1, false, 1), completed);
+        Assert.Equal(new ResistanceMissionCompleted(game.SessionId, 1, false, 1, 0), completed);
     }
 
     [Fact]
@@ -183,8 +183,8 @@ public class ResistanceEventsTests
         }
 
         game.MissionNumber = 3;
-        game.PlayMissionCard(game.Players[0].PlayerId, success: true);
-        game.PlayMissionCard(game.Players[2].PlayerId, success: true);
+        game.PlayMissionCard(game.Players[0].PlayerId, ResistanceMissionCardKind.Success);
+        game.PlayMissionCard(game.Players[2].PlayerId, ResistanceMissionCardKind.Success);
 
         var events = game.DrainEvents();
         Assert.Equal(new ResistanceGameOver(game.SessionId, ResistanceRole.Resistance), events.OfType<ResistanceGameOver>().Single());

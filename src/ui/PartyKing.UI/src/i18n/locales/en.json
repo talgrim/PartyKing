@@ -422,11 +422,44 @@
       "hide": "Hide your role",
       "show": "Show your role",
       "fellowSpies": "Your fellow spies",
-      "fellowSpiesList": "Fellow spies"
+      "fellowSpiesList": "Fellow spies",
+      "blindSpies": "Blind Spies: you do not know who the other spies are.",
+      "reverser": "You are a Reverser: you may play a Reverse card, which turns the result of the mission around.",
+      "hiddenReverserSpy": "Reverser spy: you keep your eyes closed in the reveal, so you do not know the other spies and they do not know you.",
+      "defector": "You are a Defector: your side can change when a switch card is flipped at the start of mission 3, 4 or 5. Look at your card again after every flip.",
+      "defectorSpy": "As a Defector you do not know who the other spies are.",
+      "fellowDefector": "The other Defector is {{name}}.",
+      "commander": "You are the Commander: you know who the spies are. If the Resistance wins three missions, the Assassin will try to name you, so do not give yourself away.",
+      "commanderSpiesList": "Spies you know",
+      "assassin": "You are the Assassin: if the Resistance wins three missions, you get one last chance. Talk it over with the other spies, then name the player you take for the Commander.",
+      "bodyGuard": "You are the Body Guard: the Commander is one of these players, but you cannot tell which (a spy, the False Commander, may look like the Commander to you).",
+      "commanderCandidatesList": "Possible Commanders",
+      "deepCover": "You are Deep Cover, a spy: the Commander does not see you among the spies. The other spies know you as usual.",
+      "blindSpy": "You are the Blind Spy: you do not know who the other spies are, and they do not know you. The Commander does see you.",
+      "falseCommander": "You are the False Commander, a spy: the Body Guard takes you for the Commander. The other spies know you as usual."
     },
     "missionCard": {
       "success": "Success",
-      "fail": "Fail"
+      "fail": "Fail",
+      "reverse": "Reverse"
+    },
+    "defectorFlips": {
+      "noChange": "Mission {{mission}}: No Change",
+      "change": "Mission {{mission}}: Change Allegiance",
+      "latestNoChange": "Latest switch card (mission {{mission}}): No Change",
+      "latestChange": "Latest switch card (mission {{mission}}): Change Allegiance",
+      "noChangeInfo": "Switch card: nobody changes sides.",
+      "changeInfo": "Switch card: both Defectors changed sides. Nobody is told who they are."
+    },
+    "characters": {
+      "reverser": "Reverser",
+      "defector": "Defector",
+      "commander": "Commander",
+      "assassin": "Assassin",
+      "bodyGuard": "Body Guard",
+      "deepCover": "Deep Cover",
+      "blindSpy": "Blind Spy",
+      "falseCommander": "False Commander"
     },
     "vote": {
       "approve": "Approve",
@@ -449,6 +482,42 @@
         "title": "Inquisitor",
         "description": "A module in which a public token passes between players. After missions 2, 3 and 4 the token holder picks a player who never held it, privately learns whether they are a Spy or Resistance, and the token passes to that player. The Inquisitor may tell the others anything about it. Works best with 7 or more players.",
         "toggle": "Enable Inquisitor"
+      },
+      "blindSpiesFailed": "Could not change the Blind Spies setting.",
+      "blindSpies": {
+        "title": "Blind Spies",
+        "description": "A variant in which the spies do not get to know each other. Each spy only knows their own role, so a spy has to work out who is on their side. Nothing in the app stops the spies from talking, so agree not to.",
+        "toggle": "Enable Blind Spies"
+      },
+      "reverserFailed": "Could not change the Reverser setting.",
+      "reverser": {
+        "title": "Reverser",
+        "description": "A module in which a secret Reverser character is dealt, by default to one player among the Resistance and one among the Spies (you can choose just one side). A Reverser on the mission team also holds a Reverse card, which turns the result of the mission around: a mission that would fail succeeds, and one that would succeed fails. Two Reverse cards cancel out. A Reverser who is a spy can never play Fail. The played cards, Reverse included, are shown without saying who played them.",
+        "toggle": "Enable Reverser",
+        "sides": "Who gets a Reverser",
+        "sidesBoth": "Both sides (the Resistance and the Spies)",
+        "sidesResistance": "Only the Resistance",
+        "sidesSpy": "Only the Spies",
+        "spyKnowsSpies": "Spy Reverser knows the other spies"
+      },
+      "defectorFailed": "Could not change the Defector setting.",
+      "defector": {
+        "title": "Defector",
+        "description": "A module in which two secret Defectors are dealt, one on the Resistance side and one among the Spies. At the start of missions 3, 4 and 5 a switch card is flipped for everyone to see: on Change Allegiance both Defectors change sides (they have to play by the rules of their new side and the win conditions follow), on No Change nothing happens. Nobody is told who the Defectors are, only that a switch happened. The Defector spy does not know the other spies, but they know him as long as he is among them.",
+        "toggle": "Enable Defectors",
+        "knowEachOther": "The Defectors know each other"
+      },
+      "assassinFailed": "Could not change the Assassin setting.",
+      "assassin": {
+        "title": "Assassin",
+        "description": "A module in which a secret Commander (Resistance) and a secret Assassin (spy) are dealt. The Commander knows who the spies are. After the Resistance wins three missions the Spies get one last chance: the Assassin, after talking it over with the other spies outside the app, names the player they take for the Commander. If right, the Spies win; if wrong, the Resistance wins. Three failed missions still win the game for the Spies. Does not combine with Blind Spies, the Reverser or the Defectors. Optional characters (best one at a time): the Body Guard knows the Commander (with 5 players needs Deep Cover or the False Commander), Deep Cover is a spy the Commander does not see, the Blind Spy knows no spy and is known to none, the False Commander looks like the Commander to the Body Guard. The Assassin takes one spy seat, the other spy characters the rest.",
+        "toggle": "Enable Assassin",
+        "bodyGuard": "Body Guard",
+        "deepCover": "Deep Cover",
+        "blindSpy": "Blind Spy",
+        "falseCommander": "False Commander",
+        "tooManySpyCharacters": "There are too few spies for these characters: the Assassin takes one spy seat, and Deep Cover, the Blind Spy and the False Commander one each.",
+        "bodyGuardNeedsCover": "With 5 players the Body Guard needs Deep Cover or the False Commander."
       }
     },
     "controls": {
@@ -503,7 +572,8 @@
       "rules": "Rules",
       "rulesTitle": "Resistance rules",
       "endTitle": "End the game?",
-      "endBody": "The players are sent away and the game can't be resumed. A new one can be created afterwards."
+      "endBody": "The players are sent away and the game can't be resumed. A new one can be created afterwards.",
+      "iconGuide": "Icon guide"
     },
     "errors": {
       "open": "Could not open the game.",
@@ -523,7 +593,8 @@
       "restart": "Could not restart the game.",
       "end": "Could not end the game.",
       "examine": "Could not examine the player.",
-      "confirmInquisition": "Could not confirm."
+      "confirmInquisition": "Could not confirm.",
+      "assassinate": "Could not name the player."
     },
     "viewSwitch": {
       "label": "View",
@@ -584,7 +655,8 @@
       "label": "Mission",
       "title": "Play a mission card",
       "played": "Card played: {{card}}. Waiting for the other team members.",
-      "hint": "The card is secret, everyone only sees the number of Fail cards. A played card can't be changed."
+      "hint": "The card is secret, everyone only sees the number of Fail cards. A played card can't be changed.",
+      "hintReverser": "The card is secret until the mission ends, then all the played cards are shown without saying who played them. Only a Reverser can play the Reverse card. A played card can't be changed."
     },
     "plotWindow": {
       "label": "Playing cards",
@@ -690,6 +762,7 @@
       "reject": "REJECT",
       "success": "SUCCESS",
       "fail": "FAIL",
+      "reverse": "REVERSE",
       "plot": "PLOT",
       "mission": "MISSION {{n}}",
       "twoFails": "2 FAILS",
@@ -710,7 +783,16 @@
       "opinionMaker2": "MAKER",
       "openUp1": "OPEN UP",
       "takeResponsibility1": "TAKE",
-      "takeResponsibility2": "RESPONSIBILITY"
+      "takeResponsibility2": "RESPONSIBILITY",
+      "inquisitor": "INQUISITOR",
+      "reverser": "REVERSER",
+      "defector": "DEFECTOR",
+      "commander": "COMMANDER",
+      "assassin": "ASSASSIN",
+      "bodyGuard": "BODY GUARD",
+      "deepCover": "DEEP COVER",
+      "blindSpy": "BLIND SPY",
+      "falseCommander": "FALSE COMMANDER"
     },
     "rules": {
       "goal": {
@@ -764,9 +846,25 @@
         "title": "End of the game",
         "text": "The Resistance wins after 3 successful missions. The Spies win after 3 failed missions or when 5 teams in a row are rejected in one mission."
       },
+      "blindSpies": {
+        "title": "Blind Spies (variant)",
+        "text": "When the host enables the variant, the spies are not shown to each other at the start of the game: a spy sees only their own role and has to guess who the other spies are."
+      },
+      "reverser": {
+        "title": "Reverser (module)",
+        "text": "When the host enables the module, secret Reversers are dealt: by default one among the Resistance and one among the Spies, or only on the side the host chose. A Reverser on a mission team may play a Reverse card instead of Success. An odd number of Reverse cards turns the result of the mission around (it fails if it would have succeeded and the other way round), two cancel out; on the mission that needs two Fails, one Fail with one Reverse is a failure. A spy Reverser plays Success or Reverse, never Fail. Once the mission ends, the played cards (Fail and Reverse ones too) are shown without saying who played them."
+      },
+      "defector": {
+        "title": "Defectors (module)",
+        "text": "When the host enables the module, two secret Defectors are dealt: one on the Resistance side and one among the Spies. A deck of five switch cards (three No Change, two Change Allegiance) is shuffled, and at the start of missions 3, 4 and 5 one card is flipped for everyone to see. On Change Allegiance both Defectors change sides: the former spy is now Resistance and plays only Success, the former Resistance Defector is now a spy and may play Fail, and the win conditions follow the new sides. A Defector spy keeps their eyes closed in the reveal, so they know no spy, while the other spies know them as long as they are among them. The Defector who started on the Resistance side is never known to the spies. With the variant the host may choose, the Defectors know each other. Revealed identities show the current side, never the character."
+      },
       "inquisitor": {
         "title": "Inquisitor (module)",
         "text": "When the host enables the module, a public Inquisitor token starts with the player to the right of the first leader. After missions 2, 3 and 4 the holder picks a player who never held the token and privately sees whether that player is a Spy or Resistance; the token passes to the examined player. The Inquisitor may say anything about the result, and nobody can check it. The module is skipped when the game ends after mission 3 or 4."
+      },
+      "assassin": {
+        "title": "Assassin (module)",
+        "text": "When the host enables the module, a secret Commander is dealt among the Resistance and a secret Assassin among the Spies. The Commander knows who the spies are. If the Spies fail three missions they win as usual. If the Resistance wins three missions, the game is not over yet: the Spies talk it over outside the app and the Assassin names the player they take for the Commander. If they are right, the Spies win; otherwise the Resistance wins. The module does not combine with Blind Spies, the Reverser or the Defectors. Optional characters: the Body Guard (Resistance) knows the Commander, and with 5 players needs Deep Cover or the False Commander; Deep Cover (spy) is not seen by the Commander; the Blind Spy (spy) knows no other spy and is not known by them, though the Commander sees them; the False Commander (spy) looks like the Commander to the Body Guard. They are best played one at a time, and the Assassin takes one spy seat, so with 5 or 6 players only one spy character fits."
       }
     },
     "phase": {
@@ -807,6 +905,7 @@
       "nextClick": "Click “Next”",
       "nextWait": "The leader or the host will click “Next”",
       "failCardsNote": "(Fail cards: {{count}})",
+      "reverseCardsNote": "(Reverse cards: {{count}})",
       "missionResult": "{{outcome}}{{fails}}. Score: {{score}}. {{next}} to start the next mission.",
       "voted": "Voted: {{voted}}/{{count}}.",
       "voteNow": "Vote: approve or reject the team.",
@@ -831,7 +930,10 @@
       "inquisitionPickYou": "You hold the Inquisitor token: pick a player who never held it to examine.",
       "inquisitionPick": "{{name}} holds the Inquisitor token and picks a player to examine.",
       "inquisitionSeenYou": "You examined {{target}}, who now holds the token. Look at the result and confirm.",
-      "inquisitionSeen": "{{name}} examined {{target}}, who now holds the Inquisitor token, and is looking at the result."
+      "inquisitionSeen": "{{name}} examined {{target}}, who now holds the Inquisitor token, and is looking at the result.",
+      "assassination": "The Resistance won three missions ({{score}}), but the Spies have one last chance: the Assassin is choosing the player they take for the Commander.",
+      "whyAssassinHit": "the Assassin named {{name}}, who is the Commander",
+      "whyAssassinMissed": "the Assassin named {{name}}, who is not the Commander"
     },
     "inquisitor": {
       "title": "Inquisitor",
@@ -842,6 +944,66 @@
       "result": "{{name}} is",
       "private": "Only you can see this. You may tell the others anything; nobody can check it.",
       "seen": "I've seen it"
+    },
+    "iconGuide": {
+      "title": "Icon guide",
+      "back": "Back to the game",
+      "intro": "Every icon and card the Resistance game shows, grouped by the base game and the modules the host can switch on.",
+      "moduleNote": "Module: appears only when the host has enabled it.",
+      "base": {
+        "title": "Base game",
+        "cardBack": {
+          "name": "Card back",
+          "meaning": "Your role card, face down. Tap it to see your role; tap again to hide it."
+        },
+        "spy": "Your role card: you are a Spy. You know the other spies (unless the Blind Spies variant is on), and you may play Success or Fail on a mission.",
+        "resistance": "Your role card: you are in the Resistance. You do not know who the spies are and you may only play Success.",
+        "spyMarker": {
+          "name": "Fellow spy",
+          "meaning": "Marks another spy in the list a spy sees on their role card."
+        },
+        "leader": "The leader of the current round picks the mission team. The lead passes to the next player after every team vote.",
+        "approve": "Vote card: you accept the proposed team. Everyone votes at once and openly.",
+        "reject": "Vote card: you refuse the proposed team. A tie rejects it; 5 rejected teams in a row win the game for the Spies.",
+        "success": "Mission card: the mission goes well. The only card a Resistance member may play.",
+        "fail": "Mission card: sabotage. Only a spy may play it; one Fail is enough to fail the mission (two in mission 4 with 7 or more players)."
+      },
+      "plot": {
+        "note": "Add-on: the host enables it before the game is opened. The effects below are the ones shown on the cards."
+      },
+      "inquisitor": {
+        "token": "The token passes from player to player. After missions 2, 3 and 4 its holder privately sees whether a player who never held it is a Spy or Resistance, and the token moves to that player."
+      },
+      "reverser": {
+        "character": "Your secret character card: you are a Reverser and may play a Reverse card on a mission. A spy Reverser never plays Fail.",
+        "card": "Mission card: an odd number of Reverse cards turns the result of the mission around, two cancel out. Only a Reverser can play it, but everyone on the team holds one."
+      },
+      "defector": {
+        "character": "Your secret character card: you are a Defector. Your side can change when a switch card is flipped at the start of mission 3, 4 or 5, so look at your role card again after every flip.",
+        "change": {
+          "name": "Switch card: Change Allegiance",
+          "meaning": "Flipped at the start of a mission for everyone to see: both Defectors change sides. Nobody is told who they are."
+        },
+        "noChange": {
+          "name": "Switch card: No Change",
+          "meaning": "Flipped at the start of a mission for everyone to see: nothing happens, nobody changes sides."
+        }
+      },
+      "assassin": {
+        "commander": "Your secret character card: you are the Commander of the Resistance and you know who the spies are. If the Resistance wins three missions, the Assassin tries to name you.",
+        "assassin": "Your secret character card: you are the Assassin, a spy. If the Resistance wins three missions, you name the player you take for the Commander; if you are right, the Spies win.",
+        "bodyGuard": "Your secret character card: you are the Body Guard of the Resistance. The Commander is one of two players you see, because the False Commander, if played, looks like the Commander to you.",
+        "deepCover": "Your secret character card: you are Deep Cover, a spy the Commander does not see.",
+        "blindSpy": "Your secret character card: you are the Blind Spy. You know no other spy and they do not know you, but the Commander sees you.",
+        "falseCommander": "Your secret character card: you are the False Commander, a spy the Body Guard takes for the Commander."
+      }
+    },
+    "assassin": {
+      "title": "Assassin",
+      "effect": "The Resistance won three missions. Talk it over with the other spies, then name the player you take for the Commander. If you are right, the Spies win.",
+      "target": "Player to name",
+      "pick": "Pick a player",
+      "confirm": "Name the Commander"
     }
   }
 }

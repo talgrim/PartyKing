@@ -35,8 +35,9 @@ public sealed record ResistanceTeamRejected(Guid SessionId, int MissionNumber, i
 /// <summary>A team member played a mission card; which one stays secret.</summary>
 public sealed record ResistanceMissionCardPlayed(Guid SessionId, Guid PlayerId) : IDomainEvent;
 
-/// <summary>The last mission card was played and the mission was resolved.</summary>
-public sealed record ResistanceMissionCompleted(Guid SessionId, int MissionNumber, bool Succeeded, int FailCount) : IDomainEvent;
+/// <summary>The last mission card was played and the mission was resolved; the numbers of Fail and Reverse cards are public.</summary>
+public sealed record ResistanceMissionCompleted(
+    Guid SessionId, int MissionNumber, bool Succeeded, int FailCount, int ReverseCount) : IDomainEvent;
 
 /// <summary>The lead passed to another player.</summary>
 public sealed record ResistanceLeaderChanged(Guid SessionId, Guid? LeaderPlayerId) : IDomainEvent;

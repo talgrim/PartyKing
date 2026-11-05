@@ -11,6 +11,17 @@ const rules: ResistanceRulesDto = {
   plotCardsEnabled: false,
   plotCardsPerRound: 1,
   inquisitorEnabled: false,
+  blindSpiesEnabled: false,
+  reverserEnabled: false,
+  reverserSides: 'Both',
+  reverserSpyKnowsSpies: true,
+  defectorEnabled: false,
+  defectorsKnowEachOther: false,
+  assassinEnabled: false,
+  bodyGuardEnabled: false,
+  deepCoverEnabled: false,
+  blindSpyEnabled: false,
+  falseCommanderEnabled: false,
 };
 
 describe('missionBoardFor', () => {

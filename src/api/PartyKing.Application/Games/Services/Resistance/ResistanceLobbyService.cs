@@ -56,6 +56,48 @@ public interface IResistanceLobbyService
     Task<ErrorOr<ResistanceGameDto>> SetInquisitorAsync(
         Guid sessionId, bool enabled, GameCaller caller, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Host or admin: switches the Blind Spies variant on or off. NotFound without a game, Conflict once the game has
+    /// started.
+    /// </summary>
+    Task<ErrorOr<ResistanceGameDto>> SetBlindSpiesAsync(
+        Guid sessionId, bool enabled, GameCaller caller, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Host or admin: switches the Reverser module on or off and, when <paramref name="sides"/> is given, chooses
+    /// which sides get a Reverser and <paramref name="spyKnowsSpies"/> whether a spy Reverser and the other spies know
+    /// each other. NotFound without a game, Conflict once the game has started.
+    /// </summary>
+    Task<ErrorOr<ResistanceGameDto>> SetReverserAsync(
+        Guid sessionId,
+        bool enabled,
+        ResistanceReverserSidesDto? sides,
+        bool? spyKnowsSpies,
+        GameCaller caller,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Host or admin: switches the Defector module on or off and, when <paramref name="knowEachOther"/> is given,
+    /// whether the two Defectors know each other. NotFound without a game, Conflict once the game has started.
+    /// </summary>
+    Task<ErrorOr<ResistanceGameDto>> SetDefectorAsync(
+        Guid sessionId, bool enabled, bool? knowEachOther, GameCaller caller, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Host or admin: switches the Assassin module on or off and, while it is on, its optional characters (an omitted
+    /// one keeps its choice). NotFound without a game, Conflict once the game has started or when the Defector, the
+    /// Reverser or Blind Spies are on.
+    /// </summary>
+    Task<ErrorOr<ResistanceGameDto>> SetAssassinAsync(
+        Guid sessionId,
+        bool enabled,
+        bool? bodyGuard,
+        bool? deepCover,
+        bool? blindSpy,
+        bool? falseCommander,
+        GameCaller caller,
+        CancellationToken cancellationToken);
+
     /// <summary>Host or admin: removes a player. NotFound for an unknown game or player.</summary>
     Task<ErrorOr<ResistanceGameDto>> KickAsync(
         Guid sessionId, Guid playerId, GameCaller caller, CancellationToken cancellationToken);
@@ -186,6 +228,78 @@ internal class ResistanceLobbyService : IResistanceLobbyService
                 nameof(SetInquisitorAsync),
                 ResistanceOutcome.NoGame,
                 game => game.SetInquisitor(enabled),
+                cancellationToken),
+            cancellationToken);
+    }
+
+    public Task<ErrorOr<ResistanceGameDto>> SetBlindSpiesAsync(
+        Guid sessionId, bool enabled, GameCaller caller, CancellationToken cancellationToken)
+    {
+        return _gate.RunAsManagerAsync(
+            sessionId,
+            caller,
+            () => _games.UpdateAsync(
+                sessionId,
+                nameof(SetBlindSpiesAsync),
+                ResistanceOutcome.NoGame,
+                game => game.SetBlindSpies(enabled),
+                cancellationToken),
+            cancellationToken);
+    }
+
+    public Task<ErrorOr<ResistanceGameDto>> SetReverserAsync(
+        Guid sessionId,
+        bool enabled,
+        ResistanceReverserSidesDto? sides,
+        bool? spyKnowsSpies,
+        GameCaller caller,
+        CancellationToken cancellationToken)
+    {
+        return _gate.RunAsManagerAsync(
+            sessionId,
+            caller,
+            () => _games.UpdateAsync(
+                sessionId,
+                nameof(SetReverserAsync),
+                ResistanceOutcome.NoGame,
+                game => game.SetReverser(enabled, sides?.ToDomain(), spyKnowsSpies),
+                cancellationToken),
+            cancellationToken);
+    }
+
+    public Task<ErrorOr<ResistanceGameDto>> SetDefectorAsync(
+        Guid sessionId, bool enabled, bool? knowEachOther, GameCaller caller, CancellationToken cancellationToken)
+    {
+        return _gate.RunAsManagerAsync(
+            sessionId,
+            caller,
+            () => _games.UpdateAsync(
+                sessionId,
+                nameof(SetDefectorAsync),
+                ResistanceOutcome.NoGame,
+                game => game.SetDefector(enabled, knowEachOther),
+                cancellationToken),
+            cancellationToken);
+    }
+
+    public Task<ErrorOr<ResistanceGameDto>> SetAssassinAsync(
+        Guid sessionId,
+        bool enabled,
+        bool? bodyGuard,
+        bool? deepCover,
+        bool? blindSpy,
+        bool? falseCommander,
+        GameCaller caller,
+        CancellationToken cancellationToken)
+    {
+        return _gate.RunAsManagerAsync(
+            sessionId,
+            caller,
+            () => _games.UpdateAsync(
+                sessionId,
+                nameof(SetAssassinAsync),
+                ResistanceOutcome.NoGame,
+                game => game.SetAssassin(enabled, bodyGuard, deepCover, blindSpy, falseCommander),
                 cancellationToken),
             cancellationToken);
     }

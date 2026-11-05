@@ -26,7 +26,7 @@ internal sealed class ResistanceGameViewBuilder
         _game = game;
         _you = you;
         _players = game.Players.OrderBy(x => x.Order).ToList();
-        _yourRole = game.IsStarted ? you?.Role : null;
+        _yourRole = game.IsStarted && you is not null ? ResistanceKnowledge.Loyalty(you) : null;
         _votesRevealed = ResistanceRoles.VotesRevealed(game);
         _opinionMakers = ResistanceRoles.OpinionMakerIds(game);
         _openMissionPlayerId = ResistanceRoles.OpenMissionPlayerId(game);
@@ -77,6 +77,12 @@ internal sealed class ResistanceGameViewBuilder
     {
         _view.YourRole = _yourRole?.ToDto();
         _view.FellowSpies = BuildFellowSpies();
+        _view.YourCharacter = _game.IsStarted && _game.Rules is { ReverserEnabled: true } or { DefectorEnabled: true } or { AssassinEnabled: true }
+            ? _you?.Character.ToDto()
+            : null;
+        _view.YourCommanderCandidates = BuildCommanderCandidates();
+        _view.FellowDefectorId = BuildFellowDefector();
+        _view.DefectorFlips = _game.Rules.DefectorEnabled ? _game.DefectorFlips : [];
         _view.RevealedRoles = BuildRevealedRoles();
 
         return this;
@@ -92,6 +98,7 @@ internal sealed class ResistanceGameViewBuilder
         _view.Phase = _game.IsStarted ? _game.Phase.ToDto() : null;
         _view.RejectedTeams = _game.RejectedTeams;
         _view.Winner = _game.Winner?.ToDto();
+        _view.AssassinationTargetPlayerId = _game.AssassinationTargetPlayerId;
 
         return this;
     }
@@ -112,10 +119,10 @@ internal sealed class ResistanceGameViewBuilder
     {
         _view.RequiredFails = _game.IsStarted ? _game.Rules.RequiredFails(_game.Players.Count, _game.MissionNumber) : null;
         _view.PlayedMissionPlayerIds = PlayerIds(x => x.MissionCard is not null);
-        _view.YourMissionCard = _you?.MissionCard;
+        _view.YourMissionCard = _you?.MissionCard?.ToDto();
         _view.MissionResults = BuildMissionResults();
         _view.OpenMissionPlayerId = _openMissionPlayerId;
-        _view.OpenMissionCard = _players.FirstOrDefault(x => x.PlayerId == _openMissionPlayerId)?.MissionCard;
+        _view.OpenMissionCard = _players.FirstOrDefault(x => x.PlayerId == _openMissionPlayerId)?.MissionCard?.ToDto();
         _view.YourPeeks = BuildYourPeeks();
 
         return this;
@@ -162,15 +169,41 @@ internal sealed class ResistanceGameViewBuilder
             .ToList();
     }
 
-    /// <summary>Only a spy sees the other spies.</summary>
+    /// <summary>
+    /// Only a spy and the Commander get the list, and what is in it is up to <see cref="ResistanceKnowledge"/>: with
+    /// the Blind Spies variant a spy gets an empty list.
+    /// </summary>
     private List<Guid>? BuildFellowSpies()
     {
-        if (_you is not { } you || _yourRole != ResistanceRole.Spy)
+        if (!_game.IsStarted || _you is not { } you
+            || (_yourRole != ResistanceRole.Spy && you.Character != ResistanceCharacter.Commander))
         {
             return null;
         }
 
-        return PlayerIds(x => x.Role == ResistanceRole.Spy && x.PlayerId != you.PlayerId);
+        return PlayerIds(x => ResistanceKnowledge.KnowsSpy(_game, you, x));
+    }
+
+    /// <summary>The players the Body Guard takes for the Commander: the Commander and the False Commander, in seat order.</summary>
+    private List<Guid>? BuildCommanderCandidates()
+    {
+        if (!_game.IsStarted || !_game.Rules.AssassinEnabled || _you is not { } you || you.Character != ResistanceCharacter.BodyGuard)
+        {
+            return null;
+        }
+
+        return PlayerIds(x => ResistanceKnowledge.KnowsCommander(_game, you, x));
+    }
+
+    /// <summary>The other Defector, for a Defector of a game where the Defectors know each other.</summary>
+    private Guid? BuildFellowDefector()
+    {
+        if (!_game.IsStarted || _you is not { } you)
+        {
+            return null;
+        }
+
+        return _players.FirstOrDefault(x => ResistanceKnowledge.KnowsDefector(_game, you, x))?.PlayerId;
     }
 
     /// <summary>Every role, but only once the game is over.</summary>
@@ -181,7 +214,7 @@ internal sealed class ResistanceGameViewBuilder
             return null;
         }
 
-        return _players.Select(x => new ResistanceRevealedRoleDto(x.PlayerId, x.Role!.Value.ToDto())).ToList();
+        return _players.Select(x => new ResistanceRevealedRoleDto(x.PlayerId, ResistanceKnowledge.Loyalty(x)!.Value.ToDto(), x.Character.ToDto())).ToList();
     }
 
     private static ResistanceRulesDto BuildRules(ResistanceGame game)
@@ -193,14 +226,18 @@ internal sealed class ResistanceGameViewBuilder
 
         return new ResistanceRulesDto(
             playerCounts, game.Rules.PlotCardsEnabled, game.Rules.PlotCardsPerRound(game.Players.Count),
-            game.Rules.InquisitorEnabled);
+            game.Rules.InquisitorEnabled, game.Rules.BlindSpiesEnabled,
+            game.Rules.ReverserEnabled, game.Rules.ReverserSides.ToDto(), game.Rules.ReverserSpyKnowsSpies,
+            game.Rules.DefectorEnabled, game.Rules.DefectorsKnowEachOther, game.Rules.AssassinEnabled,
+            game.Rules.BodyGuardEnabled, game.Rules.DeepCoverEnabled, game.Rules.BlindSpyEnabled, game.Rules.FalseCommanderEnabled);
     }
 
     private List<ResistanceMissionResultDto> BuildMissionResults()
     {
         return _game.MissionResults
             .OrderBy(x => x.MissionNumber)
-            .Select(x => new ResistanceMissionResultDto(x.MissionNumber, x.Succeeded, x.FailCount, x.TeamPlayerIds))
+            .Select(x => new ResistanceMissionResultDto(
+                x.MissionNumber, x.Succeeded, x.FailCount, x.ReverseCount, x.TeamPlayerIds))
             .ToList();
     }
 
@@ -213,7 +250,7 @@ internal sealed class ResistanceGameViewBuilder
         }
 
         return ResistanceRoles.PeekedCards(_game, you.PlayerId)
-            .Select(x => new ResistanceMissionPeekDto(x.PlayerId, x.Success))
+            .Select(x => new ResistanceMissionPeekDto(x.PlayerId, x.Card.ToDto()))
             .ToList();
     }
 
@@ -289,7 +326,7 @@ internal sealed class ResistanceGameViewBuilder
         foreach (var card in ResistanceRoles.UnconfirmedCards(_game).Where(x => ResistanceRoles.Viewer(x) == you.PlayerId))
         {
             var revealedId = ResistanceRoles.Revealed(card)!.Value;
-            var role = _players.First(x => x.PlayerId == revealedId).Role!.Value;
+            var role = ResistanceKnowledge.Loyalty(_players.First(x => x.PlayerId == revealedId))!.Value;
             reveals.Add(new ResistanceCardRevealDto(card.CardId, revealedId, role.ToDto()));
         }
 
@@ -310,7 +347,8 @@ internal sealed class ResistanceGameViewBuilder
             return null;
         }
 
-        return new ResistanceInquisitionDto(examinedId, _players.First(x => x.PlayerId == examinedId).Role!.Value.ToDto());
+        return new ResistanceInquisitionDto(
+            examinedId, ResistanceKnowledge.Loyalty(_players.First(x => x.PlayerId == examinedId))!.Value.ToDto());
     }
 
     /// <summary>Who confirmed in a window, never who holds a card.</summary>

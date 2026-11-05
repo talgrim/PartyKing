@@ -94,6 +94,51 @@ public class ResistanceController : ResistanceControllerBase
         return result.Match(Ok, Problem);
     }
 
+    /// <summary>Host or admin: switches the Blind Spies variant on or off. 409 once the game has started.</summary>
+    [HttpPut("rules/blind-spies")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> SetBlindSpies(
+        Guid sessionId, [FromBody] ResistanceBlindSpiesRequestDto request, CancellationToken cancellationToken)
+    {
+        var result = await Lobby.SetBlindSpiesAsync(
+            sessionId, request.Enabled, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>
+    /// Host or admin: switches the Reverser module on or off and optionally chooses which sides get a Reverser (Both,
+    /// Resistance or Spy) and whether a spy Reverser and the other spies know each other (omitted keeps the choices). 409 once the game has started.
+    /// </summary>
+    [HttpPut("rules/reverser")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> SetReverser(
+        Guid sessionId, [FromBody] ResistanceReverserRequestDto request, CancellationToken cancellationToken)
+    {
+        var result = await Lobby.SetReverserAsync(
+            sessionId, request.Enabled, request.Sides, request.SpyKnowsSpies, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>
+    /// Host or admin: switches the Defector module on or off and optionally whether the two Defectors know each other
+    /// (omitted keeps the choice). 409 once the game has started.
+    /// </summary>
+    [HttpPut("rules/defector")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> SetDefector(
+        Guid sessionId, [FromBody] ResistanceDefectorRequestDto request, CancellationToken cancellationToken)
+    {
+        var result = await Lobby.SetDefectorAsync(
+            sessionId, request.Enabled, request.KnowEachOther, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
     /// <summary>Admin only: opens the Resistance game to guests (idempotent), 403 for the host.</summary>
     [HttpPost("open")]
     [RequireSessionAccess]

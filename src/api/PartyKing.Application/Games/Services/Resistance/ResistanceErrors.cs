@@ -115,6 +115,31 @@ internal static class ResistanceErrors
             "Resistance.AlreadyExamined", "You already picked the player to examine."),
         ResistanceFailure.NotExamined => Error.Conflict(
             "Resistance.NotExamined", "Pick the player to examine first."),
+        ResistanceFailure.BlindSpiesLocked => Error.Conflict(
+            "Resistance.RulesLocked", "Blind Spies can only be switched before the game starts."),
+        ResistanceFailure.ReverserLocked => Error.Conflict(
+            "Resistance.RulesLocked", "The Reverser can only be switched before the game starts."),
+        ResistanceFailure.NotReverser => Error.Forbidden(
+            "Resistance.NotReverser", "Only a Reverser plays a Reverse card."),
+        ResistanceFailure.ReverserCannotFail => Error.Forbidden(
+            "Resistance.ReverserCannotFail", "A Reverser plays Success or Reverse, never Fail."),
+        ResistanceFailure.DefectorLocked => Error.Conflict(
+            "Resistance.RulesLocked", "The Defectors can only be switched before the game starts."),
+        ResistanceFailure.AssassinLocked => Error.Conflict(
+            "Resistance.RulesLocked", "The Assassin can only be switched before the game starts."),
+        ResistanceFailure.AssassinConflict => Error.Conflict(
+            "Resistance.AssassinConflict", "The Assassin does not combine with the Defectors, the Reverser or Blind Spies."),
+        ResistanceFailure.NotAssassination => Error.Conflict(
+            "Resistance.NotAssassination", "The Assassin is not choosing now."),
+        ResistanceFailure.NotAssassin => Error.Forbidden(
+            "Resistance.NotAssassin", "Only the Assassin names the Commander."),
+        ResistanceFailure.InvalidAssassinationTarget => Error.Validation(
+            "Resistance.InvalidTarget", "That player can't be named."),
+        ResistanceFailure.TooManySpyCharacters => Error.Conflict(
+            "Resistance.TooManySpyCharacters",
+            "There are too few spies for these characters: the Assassin takes one spy seat, and Deep Cover, the Blind Spy and the False Commander one each."),
+        ResistanceFailure.BodyGuardNeedsCover => Error.Conflict(
+            "Resistance.BodyGuardNeedsCover", "With 5 players the Body Guard needs Deep Cover or the False Commander."),
         _ => throw new ArgumentOutOfRangeException(nameof(failure), failure, "No error is defined for this failure."),
     };
 }

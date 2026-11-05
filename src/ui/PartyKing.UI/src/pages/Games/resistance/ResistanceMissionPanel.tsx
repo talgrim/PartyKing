@@ -1,11 +1,12 @@
 import { ReactNode, useState } from 'react';
-import { ResistanceGameDto } from '@/service/endpoints/games/types';
-import { MissionFailCardIcon, MissionSuccessCardIcon } from './ResistanceIcons';
+import { ResistanceGameDto, ResistanceMissionCardKind } from '@/service/endpoints/games/types';
+import { MissionFailCardIcon, MissionReverseCardIcon, MissionSuccessCardIcon } from './ResistanceIcons';
+import { MISSION_CARD_KEYS } from './missionCardKeys';
 import { useTranslation } from 'react-i18next';
 
 type Props = {
   game: ResistanceGameDto;
-  onPlay: (success: boolean) => Promise<void>;
+  onPlay: (card: ResistanceMissionCardKind) => Promise<void>;
 };
 
 const card = (disabled: boolean) =>
@@ -15,18 +16,20 @@ const card = (disabled: boolean) =>
 
 /**
  * A member of the approved team plays one secret mission card. A card can't be taken back, and a member of the
- * Resistance can only play Success, so the Fail card is disabled for them.
+ * Resistance can only play Success, so the Fail card is disabled for them. With the Reverser module everyone on the team
+ * sees a Reverse card (so having one tells nothing) but only a Reverser can play it; a spy Reverser can't play Fail.
  */
 export const ResistanceMissionPanel = ({ game, onPlay }: Props): ReactNode => {
   const { t } = useTranslation();
   const [sending, setSending] = useState(false);
   const played = game.yourMissionCard != null;
-  const mayFail = game.yourRole === 'Spy';
+  const reverser = game.yourCharacter === 'Reverser';
+  const mayFail = game.yourRole === 'Spy' && !reverser;
 
-  const play = async (success: boolean) => {
+  const play = async (card: ResistanceMissionCardKind) => {
     setSending(true);
     try {
-      await onPlay(success);
+      await onPlay(card);
     } finally {
       setSending(false);
     }
@@ -42,7 +45,7 @@ export const ResistanceMissionPanel = ({ game, onPlay }: Props): ReactNode => {
       </div>
       {played ? (
         <p className="text-sm text-slate-300">
-          {t('resistance.missionPanel.played', { card: game.yourMissionCard ? t('resistance.missionCard.success') : t('resistance.missionCard.fail') })}
+          {t('resistance.missionPanel.played', { card: t(MISSION_CARD_KEYS[game.yourMissionCard!]) })}
         </p>
       ) : (
         <>
@@ -51,17 +54,25 @@ export const ResistanceMissionPanel = ({ game, onPlay }: Props): ReactNode => {
               title={t('resistance.missionCard.success')}
               className={card(sending)}
               disabled={sending}
-              onClick={() => void play(true)}
+              onClick={() => void play('Success')}
             />
             <MissionFailCardIcon
               title={t('resistance.missionCard.fail')}
               className={card(sending || !mayFail)}
               disabled={sending || !mayFail}
-              onClick={() => void play(false)}
+              onClick={() => void play('Fail')}
             />
+            {game.rules.reverserEnabled && (
+              <MissionReverseCardIcon
+                title={t('resistance.missionCard.reverse')}
+                className={card(sending || !reverser)}
+                disabled={sending || !reverser}
+                onClick={() => void play('Reverse')}
+              />
+            )}
           </div>
           <p className="text-sm text-slate-400">
-            {t('resistance.missionPanel.hint')}
+            {t(game.rules.reverserEnabled ? 'resistance.missionPanel.hintReverser' : 'resistance.missionPanel.hint')}
           </p>
         </>
       )}
