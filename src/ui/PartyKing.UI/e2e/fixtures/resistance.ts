@@ -40,13 +40,15 @@ type StartOptions = {
   reverser?: boolean;
   /** Turns the Defector module on before the start. */
   defector?: boolean;
+  /** Turns the Assassin module on before the start. */
+  assassin?: boolean;
 };
 
 /** The admin creates and opens a Resistance game, the guests join it and the admin starts it. */
 export async function startResistanceGame(
   session: CreatedSession,
   { openAdmin, openGuest }: Openers,
-  { players = 5, plotCards = false, inquisitor = false, blindSpies = false, reverser = false, defector = false }: StartOptions = {},
+  { players = 5, plotCards = false, inquisitor = false, blindSpies = false, reverser = false, defector = false, assassin = false }: StartOptions = {},
 ): Promise<ResistanceGameSetup> {
   const admin = await openAdmin(session);
   await admin.goto(`/s/${session.id}/games`);
@@ -82,6 +84,9 @@ export async function startResistanceGame(
   if (defector) {
     await enableModule(admin, 'Defectors');
   }
+  if (assassin) {
+    await enableModule(admin, 'Assassin');
+  }
   await admin.getByRole('button', { name: 'Start game' }).click();
   for (const guest of guests.values()) {
     await expect(guest.getByRole('button', { name: 'Show your role' })).toBeVisible();
@@ -90,7 +95,7 @@ export async function startResistanceGame(
 }
 
 /** Turns an add-on on in the "Game settings" dialog. It has to happen before the game starts. */
-export async function enableModule(admin: Page, module: 'Plot cards' | 'Inquisitor' | 'Blind Spies' | 'Reverser' | 'Defectors'): Promise<void> {
+export async function enableModule(admin: Page, module: 'Plot cards' | 'Inquisitor' | 'Blind Spies' | 'Reverser' | 'Defectors' | 'Assassin'): Promise<void> {
   await admin.getByRole('button', { name: 'Game settings' }).click();
   const dialog = admin.getByRole('dialog', { name: 'Game settings' });
   const checkbox = dialog.getByRole('checkbox', { name: `Enable ${module}` });
@@ -122,7 +127,8 @@ type Phase =
   | 'LeaderWindow'
   | 'ConfidenceWindow'
   | 'PeekWindow'
-  | 'Inquisition';
+  | 'Inquisition'
+  | 'Assassination';
 
 type Role = 'Resistance' | 'Spy';
 
@@ -158,8 +164,8 @@ export type ResistanceView = {
   yourPlayerId: string | null;
   leaderPlayerId: string | null;
   yourRole: Role | null;
-  /** Reverser and Defector modules: this player's own character; null when both are off. */
-  yourCharacter: 'Standard' | 'Reverser' | 'Defector' | null;
+  /** Reverser, Defector and Assassin modules: this player's own character; null when all are off. */
+  yourCharacter: 'Standard' | 'Reverser' | 'Defector' | 'Commander' | 'Assassin' | null;
   /** Defector module: the switch cards flipped so far (public), true for Change Allegiance. */
   defectorFlips: boolean[];
   fellowSpies: string[] | null;
@@ -172,7 +178,7 @@ export type ResistanceView = {
   votedPlayerIds: string[];
   yourVote: boolean | null;
   votes: { playerId: string; approve: boolean }[] | null;
-  revealedRoles: { playerId: string; role: Role; character: 'Standard' | 'Reverser' | 'Defector' }[] | null;
+  revealedRoles: { playerId: string; role: Role; character: 'Standard' | 'Reverser' | 'Defector' | 'Commander' | 'Assassin' }[] | null;
   missionResults: { missionNumber: number; succeeded: boolean; failCount: number; reverseCount: number }[];
   /** The cards this player holds (the leader's `toDeal` ones are drawn and still have to be dealt). */
   yourPlotCards: { id: number; type: PlotCardType; toDeal: boolean; inPlay: boolean }[];
@@ -187,6 +193,8 @@ export type ResistanceView = {
   inquisitionExaminedPlayerId: string | null;
   /** The loyalty the examiner saw, private to them until they confirm. */
   yourInquisition: { playerId: string; role: Role } | null;
+  /** Assassin module: the player the Assassin named, public once the game is over. */
+  assassinationTargetPlayerId: string | null;
 };
 
 /** The game as this player's page sees it. */
@@ -315,7 +323,7 @@ export async function playMission(
   await voteAll(setup, 'Approve');
   await playMissionCards(setup, team, failers);
 
-  await expect.poll(async () => (await viewOf(leader, setup.session)).phase).toMatch(/MissionResult|GameOver/);
+  await expect.poll(async () => (await viewOf(leader, setup.session)).phase).toMatch(/MissionResult|GameOver|Assassination/);
   const resolved = await viewOf(leader, setup.session);
   if (resolved.phase === 'MissionResult') {
     await continueMission(leader);

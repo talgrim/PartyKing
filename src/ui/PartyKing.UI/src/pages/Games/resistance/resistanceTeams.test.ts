@@ -17,6 +17,7 @@ const rules: ResistanceRulesDto = {
   reverserSpyKnowsSpies: true,
   defectorEnabled: false,
   defectorsKnowEachOther: false,
+  assassinEnabled: false,
 };
 
 describe('missionBoardFor', () => {
