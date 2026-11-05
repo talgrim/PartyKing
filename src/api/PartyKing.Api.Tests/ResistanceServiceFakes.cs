@@ -63,6 +63,7 @@ internal sealed class FakeResistanceLobbyService : IResistanceLobbyService
         Guid sessionId,
         bool enabled,
         ResistanceReverserSidesDto? sides,
+        bool? spyKnowsSpies,
         GameCaller caller,
         CancellationToken cancellationToken) =>
         throw new NotSupportedException();
@@ -222,7 +223,7 @@ internal sealed class FakeResistanceSeatService : IResistanceSeatService
     {
         LastRelease = (playerId, released, caller);
 
-        return Task.FromResult(ErrorOrFactory.From(new ResistanceGameDto { Rules = new ResistanceRulesDto([], false, 1, false, false, false, ResistanceReverserSidesDto.Both) }));
+        return Task.FromResult(ErrorOrFactory.From(new ResistanceGameDto { Rules = new ResistanceRulesDto([], false, 1, false, false, false, ResistanceReverserSidesDto.Both, true) }));
     }
 
     public Task<ErrorOr<GameSeat>> ClaimAsync(Guid sessionId, Guid playerId, CancellationToken cancellationToken)

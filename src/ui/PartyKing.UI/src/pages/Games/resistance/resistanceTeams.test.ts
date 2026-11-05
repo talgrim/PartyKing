@@ -14,6 +14,7 @@ const rules: ResistanceRulesDto = {
   blindSpiesEnabled: false,
   reverserEnabled: false,
   reverserSides: 'Both',
+  reverserSpyKnowsSpies: true,
 };
 
 describe('missionBoardFor', () => {

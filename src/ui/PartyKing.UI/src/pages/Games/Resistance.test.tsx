@@ -116,6 +116,7 @@ const lobby = (names: string[], isOpen = false) => ({
     blindSpiesEnabled: false,
     reverserEnabled: false,
     reverserSides: 'Both',
+    reverserSpyKnowsSpies: true,
   },
 });
 
@@ -330,7 +331,22 @@ describe('Resistance', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Game settings' });
     await userEvent.selectOptions(within(dialog).getByRole('combobox', { name: 'Who gets a Reverser' }), 'Spy');
 
-    expect(mocks.setResistanceReverser).toHaveBeenCalledWith('session-1', true, 'Spy');
+    expect(mocks.setResistanceReverser).toHaveBeenCalledWith('session-1', true, { sides: 'Spy' });
+  });
+
+  it('chooses whether a spy Reverser knows the other spies, once the module is on', async () => {
+    const game = lobby([]);
+    mocks.getResistance.mockResolvedValue({ ...game, rules: { ...game.rules, reverserEnabled: true } });
+    mocks.setResistanceReverser.mockResolvedValue(lobby([]));
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Game settings' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Game settings' });
+    const knows = within(dialog).getByRole('checkbox', { name: 'Spy Reverser knows the other spies' });
+    expect(knows).toBeChecked();
+    await userEvent.click(knows);
+
+    expect(mocks.setResistanceReverser).toHaveBeenCalledWith('session-1', true, { spyKnowsSpies: false });
   });
 
   it('keeps the sides of the Reverser disabled while the module is off', async () => {
@@ -340,6 +356,7 @@ describe('Resistance', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Game settings' });
 
     expect(within(dialog).getByRole('combobox', { name: 'Who gets a Reverser' })).toBeDisabled();
+    expect(within(dialog).getByRole('checkbox', { name: 'Spy Reverser knows the other spies' })).toBeDisabled();
   });
 
   it('keeps the game settings usable in the open lobby and disables them after the start', async () => {
@@ -537,6 +554,33 @@ describe('Resistance', () => {
       expect(await screen.findByRole('img', { name: 'Spy' })).toBeInTheDocument();
       expect(screen.getByText('Blind Spies: you do not know who the other spies are.')).toBeInTheDocument();
       expect(screen.queryByRole('list', { name: 'Fellow spies' })).not.toBeInTheDocument();
+    });
+
+    it('tells a spy Reverser who keeps their eyes closed that they know no one, instead of listing spies', async () => {
+      mocks.role = { isHost: false, isAdmin: false };
+      const game = started(five, { yourPlayerId: 'p0', yourRole: 'Spy', yourCharacter: 'Reverser', fellowSpies: [] });
+      mocks.getResistance.mockResolvedValue({
+        ...game,
+        rules: { ...game.rules, reverserEnabled: true, reverserSpyKnowsSpies: false },
+      });
+      renderPage();
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Show your role' }));
+
+      expect(await screen.findByText(/you keep your eyes closed in the reveal/)).toBeInTheDocument();
+      expect(screen.queryByRole('list', { name: 'Fellow spies' })).not.toBeInTheDocument();
+    });
+
+    it('lists the spies for a spy Reverser who takes part in the reveal', async () => {
+      mocks.role = { isHost: false, isAdmin: false };
+      const game = started(five, { yourPlayerId: 'p0', yourRole: 'Spy', yourCharacter: 'Reverser', fellowSpies: ['p3'] });
+      mocks.getResistance.mockResolvedValue({ ...game, rules: { ...game.rules, reverserEnabled: true } });
+      renderPage();
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Show your role' }));
+
+      expect(await screen.findByRole('list', { name: 'Fellow spies' })).toBeInTheDocument();
+      expect(screen.queryByText(/you keep your eyes closed/)).not.toBeInTheDocument();
     });
 
     it('marks which seat is yours, and shows no stray "0" for the Resistance role', async () => {

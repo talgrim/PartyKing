@@ -26,7 +26,7 @@ internal sealed class ResistanceGameViewBuilder
         _game = game;
         _you = you;
         _players = game.Players.OrderBy(x => x.Order).ToList();
-        _yourRole = game.IsStarted ? you?.Role : null;
+        _yourRole = game.IsStarted && you is not null ? ResistanceKnowledge.Loyalty(you) : null;
         _votesRevealed = ResistanceRoles.VotesRevealed(game);
         _opinionMakers = ResistanceRoles.OpinionMakerIds(game);
         _openMissionPlayerId = ResistanceRoles.OpenMissionPlayerId(game);
@@ -185,7 +185,7 @@ internal sealed class ResistanceGameViewBuilder
             return null;
         }
 
-        return _players.Select(x => new ResistanceRevealedRoleDto(x.PlayerId, x.Role!.Value.ToDto(), x.Character.ToDto())).ToList();
+        return _players.Select(x => new ResistanceRevealedRoleDto(x.PlayerId, ResistanceKnowledge.Loyalty(x)!.Value.ToDto(), x.Character.ToDto())).ToList();
     }
 
     private static ResistanceRulesDto BuildRules(ResistanceGame game)
@@ -198,7 +198,7 @@ internal sealed class ResistanceGameViewBuilder
         return new ResistanceRulesDto(
             playerCounts, game.Rules.PlotCardsEnabled, game.Rules.PlotCardsPerRound(game.Players.Count),
             game.Rules.InquisitorEnabled, game.Rules.BlindSpiesEnabled,
-            game.Rules.ReverserEnabled, game.Rules.ReverserSides.ToDto());
+            game.Rules.ReverserEnabled, game.Rules.ReverserSides.ToDto(), game.Rules.ReverserSpyKnowsSpies);
     }
 
     private List<ResistanceMissionResultDto> BuildMissionResults()
@@ -295,7 +295,7 @@ internal sealed class ResistanceGameViewBuilder
         foreach (var card in ResistanceRoles.UnconfirmedCards(_game).Where(x => ResistanceRoles.Viewer(x) == you.PlayerId))
         {
             var revealedId = ResistanceRoles.Revealed(card)!.Value;
-            var role = _players.First(x => x.PlayerId == revealedId).Role!.Value;
+            var role = ResistanceKnowledge.Loyalty(_players.First(x => x.PlayerId == revealedId))!.Value;
             reveals.Add(new ResistanceCardRevealDto(card.CardId, revealedId, role.ToDto()));
         }
 
@@ -316,7 +316,8 @@ internal sealed class ResistanceGameViewBuilder
             return null;
         }
 
-        return new ResistanceInquisitionDto(examinedId, _players.First(x => x.PlayerId == examinedId).Role!.Value.ToDto());
+        return new ResistanceInquisitionDto(
+            examinedId, ResistanceKnowledge.Loyalty(_players.First(x => x.PlayerId == examinedId))!.Value.ToDto());
     }
 
     /// <summary>Who confirmed in a window, never who holds a card.</summary>

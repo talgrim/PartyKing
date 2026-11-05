@@ -212,6 +212,8 @@ export type ResistanceRulesDto = {
   reverserEnabled: boolean;
   /** Which sides get a Reverser while the module is played. */
   reverserSides: ResistanceReverserSides;
+  /** Whether a spy Reverser and the other spies know each other; when false the Reverser spy keeps their eyes closed in the reveal. */
+  reverserSpyKnowsSpies: boolean;
 };
 
 // Mirrors PartyKing.Contract.V1.Games.ResistanceCountRulesDto
@@ -231,6 +233,9 @@ export type ResistanceMissionCardKind = 'Success' | 'Fail' | 'Reverse';
 
 /** Reverser module: which sides are dealt a Reverser. */
 export type ResistanceReverserSides = 'Both' | 'Resistance' | 'Spy';
+
+/** Reverser module: the choices that can be changed together with the switch; an omitted one stays as it is. */
+export type ResistanceReverserOptions = { sides?: ResistanceReverserSides; spyKnowsSpies?: boolean };
 
 /** Reverser module: the special character of a player, apart from the side. */
 export type ResistanceCharacter = 'Standard' | 'Reverser';

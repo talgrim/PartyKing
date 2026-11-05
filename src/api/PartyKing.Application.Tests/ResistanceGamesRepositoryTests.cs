@@ -534,6 +534,25 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         Assert.Equal(ResistanceRole.Spy, Assert.Single(reversers).Role);
     }
 
+    [Fact]
+    public async Task TheReverserSpyKnowsSpiesSetting_SurvivesReloads()
+    {
+        await CreateLobbyAsync(5, isOpen: true);
+        Assert.True((await ReloadAsync()).Rules.ReverserSpyKnowsSpies);
+
+        var switched = await _repository.UpdateAsync(
+            _sessionId,
+            "SetReverserAsync",
+            ResistanceOutcome.NoGame,
+            game => game.SetReverser(true, spyKnowsSpies: false),
+            CancellationToken.None);
+
+        Assert.Null(switched.Failure);
+        Assert.False((await ReloadAsync()).Rules.ReverserSpyKnowsSpies);
+        Assert.Null((await StartAsync()).Failure);
+        Assert.False((await ReloadAsync()).Rules.ReverserSpyKnowsSpies);
+    }
+
     private Task<ResistanceOutcome> PlayCardAsync(Guid player, ResistanceMissionCardKind card)
     {
         return _repository.UpdateAsync(
