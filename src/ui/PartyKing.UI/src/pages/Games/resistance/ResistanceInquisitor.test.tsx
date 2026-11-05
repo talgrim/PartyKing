@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { ResistanceGameDto } from '@/service/endpoints/games/types';
 import { ResistanceInquisitor } from './ResistanceInquisitor';
 import { ResistancePlayerMarks } from './ResistancePlayerMarks';
+import { ResistanceTvBoard } from './ResistanceTvBoard';
+import { missionBoardFor } from './resistanceTeams';
 import { resistancePhaseDescription } from './resistancePhase';
 
 const players = ['Ala', 'Bartek', 'Celina', 'Darek', 'Ewa'].map((name, i) => ({ id: `p${i}`, name, isSeatReleased: false, isManagerSeat: false }));
@@ -116,5 +118,45 @@ describe('the token badge', () => {
 
     rerender(<ResistancePlayerMarks game={game({ opinionMakerPlayerIds: [], plotCardCounts: [], opinionMakerVotes: [], votedPlayerIds: [], playedMissionPlayerIds: [] })} playerId="p4" />);
     expect(screen.queryByText('Inquisitor')).not.toBeInTheDocument();
+  });
+});
+
+describe('the token card on the TV board', () => {
+  const tvGame = (overrides: Partial<ResistanceGameDto> = {}) =>
+    game({
+      phase: 'SelectingTeam',
+      missionNumber: 3,
+      opinionMakerPlayerIds: [],
+      opinionMakerVotes: [],
+      votedPlayerIds: [],
+      playedMissionPlayerIds: [],
+      plotCardCounts: [],
+      ...overrides,
+    });
+
+  it('shows the Inquisitor card beside the holder only', () => {
+    render(<ResistanceTvBoard game={tvGame({ inquisitorPlayerId: 'p2' })} board={missionBoardFor(5, undefined)} banner={null} yourPlayerId={null} />);
+
+    const card = screen.getByRole('img', { name: 'Inquisitor' });
+    expect(screen.getByText('Celina').closest('li')).toContainElement(card);
+    expect(screen.getAllByRole('img', { name: 'Inquisitor' })).toHaveLength(1);
+  });
+
+  it('shows no card without a holder, and both cards for an Opinion Maker who holds the token', () => {
+    const none = render(<ResistanceTvBoard game={tvGame({ inquisitorPlayerId: null })} board={missionBoardFor(5, undefined)} banner={null} yourPlayerId={null} />);
+    expect(screen.queryByRole('img', { name: 'Inquisitor' })).not.toBeInTheDocument();
+    none.unmount();
+
+    render(
+      <ResistanceTvBoard
+        game={tvGame({ inquisitorPlayerId: 'p1', opinionMakerPlayerIds: ['p1'] })}
+        board={missionBoardFor(5, undefined)}
+        banner={null}
+        yourPlayerId={null}
+      />,
+    );
+    const seat = screen.getByText('Bartek').closest('li');
+    expect(seat).toContainElement(screen.getByRole('img', { name: 'Inquisitor' }));
+    expect(seat).toContainElement(screen.getByRole('img', { name: 'Opinion Maker' }));
   });
 });

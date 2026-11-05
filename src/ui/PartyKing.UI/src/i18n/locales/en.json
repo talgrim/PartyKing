@@ -546,7 +546,8 @@
       "rules": "Rules",
       "rulesTitle": "Resistance rules",
       "endTitle": "End the game?",
-      "endBody": "The players are sent away and the game can't be resumed. A new one can be created afterwards."
+      "endBody": "The players are sent away and the game can't be resumed. A new one can be created afterwards.",
+      "iconGuide": "Icon guide"
     },
     "errors": {
       "open": "Could not open the game.",
@@ -755,7 +756,10 @@
       "opinionMaker2": "MAKER",
       "openUp1": "OPEN UP",
       "takeResponsibility1": "TAKE",
-      "takeResponsibility2": "RESPONSIBILITY"
+      "takeResponsibility2": "RESPONSIBILITY",
+      "inquisitor": "INQUISITOR",
+      "reverser": "REVERSER",
+      "defector": "DEFECTOR"
     },
     "rules": {
       "goal": {
@@ -900,6 +904,51 @@
       "result": "{{name}} is",
       "private": "Only you can see this. You may tell the others anything; nobody can check it.",
       "seen": "I've seen it"
+    },
+    "iconGuide": {
+      "title": "Icon guide",
+      "back": "Back to the game",
+      "intro": "Every icon and card the Resistance game shows, grouped by the base game and the modules the host can switch on.",
+      "moduleNote": "Module: appears only when the host has enabled it.",
+      "base": {
+        "title": "Base game",
+        "cardBack": {
+          "name": "Card back",
+          "meaning": "Your role card, face down. Tap it to see your role; tap again to hide it."
+        },
+        "spy": "Your role card: you are a Spy. You know the other spies (unless the Blind Spies variant is on), and you may play Success or Fail on a mission.",
+        "resistance": "Your role card: you are in the Resistance. You do not know who the spies are and you may only play Success.",
+        "spyMarker": {
+          "name": "Fellow spy",
+          "meaning": "Marks another spy in the list a spy sees on their role card."
+        },
+        "leader": "The leader of the current round picks the mission team. The lead passes to the next player after every team vote.",
+        "approve": "Vote card: you accept the proposed team. Everyone votes at once and openly.",
+        "reject": "Vote card: you refuse the proposed team. A tie rejects it; 5 rejected teams in a row win the game for the Spies.",
+        "success": "Mission card: the mission goes well. The only card a Resistance member may play.",
+        "fail": "Mission card: sabotage. Only a spy may play it; one Fail is enough to fail the mission (two in mission 4 with 7 or more players)."
+      },
+      "plot": {
+        "note": "Add-on: the host enables it before the game is opened. The effects below are the ones shown on the cards."
+      },
+      "inquisitor": {
+        "token": "The token passes from player to player. After missions 2, 3 and 4 its holder privately sees whether a player who never held it is a Spy or Resistance, and the token moves to that player."
+      },
+      "reverser": {
+        "character": "Your secret character card: you are a Reverser and may play a Reverse card on a mission. A spy Reverser never plays Fail.",
+        "card": "Mission card: an odd number of Reverse cards turns the result of the mission around, two cancel out. Only a Reverser can play it, but everyone on the team holds one."
+      },
+      "defector": {
+        "character": "Your secret character card: you are a Defector. Your side can change when a switch card is flipped at the start of mission 3, 4 or 5, so look at your role card again after every flip.",
+        "change": {
+          "name": "Switch card: Change Allegiance",
+          "meaning": "Flipped at the start of a mission for everyone to see: both Defectors change sides. Nobody is told who they are."
+        },
+        "noChange": {
+          "name": "Switch card: No Change",
+          "meaning": "Flipped at the start of a mission for everyone to see: nothing happens, nobody changes sides."
+        }
+      }
     }
   }
 }

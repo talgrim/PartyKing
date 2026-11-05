@@ -7,6 +7,7 @@ export const ROUTE_PATHS = {
   SESSION_GAMES: '/s/:sessionId/games',
   SESSION_GAMES_RESISTANCE: '/s/:sessionId/games/resistance',
   SESSION_GAMES_RESISTANCE_JOIN: '/s/:sessionId/games/resistance/join',
+  SESSION_GAMES_RESISTANCE_ICONS: '/s/:sessionId/games/resistance/icons',
   SESSION_GAMES_RINGO: '/s/:sessionId/games/ringo',
   SESSION_GAMES_RINGO_JOIN: '/s/:sessionId/games/ringo/join',
   DEV_SESSION_RESISTANCE_PANELS: '/dev/s/:sessionId/resistance',
@@ -32,6 +33,9 @@ export const sessionResistancePath = (sessionId: string) => `/s/${sessionId}/gam
 
 /** Where a guest enters a name to join the open Resistance game, and then sees the board. */
 export const sessionResistanceJoinPath = (sessionId: string) => `/s/${sessionId}/games/resistance/join`;
+
+/** What every icon of the Resistance game means, grouped by module; opened from the rules dialog. */
+export const sessionResistanceIconsPath = (sessionId: string) => `/s/${sessionId}/games/resistance/icons`;
 
 /** Development only: every player of the Resistance game side by side in one tab, see `ResistanceDevPanels`. */
 export const devSessionResistancePanelsPath = (sessionId: string) => `/dev/s/${sessionId}/resistance`;

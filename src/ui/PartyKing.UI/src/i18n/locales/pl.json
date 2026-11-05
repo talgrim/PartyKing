@@ -554,7 +554,8 @@
       "rules": "Zasady",
       "rulesTitle": "Zasady gry Resistance",
       "endTitle": "Zakończyć grę?",
-      "endBody": "Gracze zostaną odesłani, a gry nie będzie można wznowić. Potem można utworzyć nową."
+      "endBody": "Gracze zostaną odesłani, a gry nie będzie można wznowić. Potem można utworzyć nową.",
+      "iconGuide": "Przewodnik po ikonach"
     },
     "errors": {
       "open": "Nie udało się otworzyć gry.",
@@ -763,7 +764,10 @@
       "opinionMaker2": "OPINII",
       "openUp1": "OTWÓRZ SIĘ",
       "takeResponsibility1": "PRZEJMUJESZ",
-      "takeResponsibility2": "ODPOWIEDZIALNOŚĆ"
+      "takeResponsibility2": "ODPOWIEDZIALNOŚĆ",
+      "inquisitor": "INKWIZYTOR",
+      "reverser": "REVERSER",
+      "defector": "DEZERTER"
     },
     "rules": {
       "goal": {
@@ -912,6 +916,51 @@
       "result": "{{name}} to",
       "private": "Widzisz to tylko ty. Możesz powiedzieć pozostałym cokolwiek; nikt tego nie sprawdzi.",
       "seen": "Widziałem/am"
+    },
+    "iconGuide": {
+      "title": "Przewodnik po ikonach",
+      "back": "Wróć do gry",
+      "intro": "Wszystkie ikony i karty, które pokazuje gra Resistance, pogrupowane na grę podstawową i moduły, które może włączyć gospodarz.",
+      "moduleNote": "Moduł: pojawia się tylko wtedy, gdy gospodarz go włączył.",
+      "base": {
+        "title": "Gra podstawowa",
+        "cardBack": {
+          "name": "Rewers karty",
+          "meaning": "Twoja karta roli, zakryta. Stuknij, aby zobaczyć swoją rolę; stuknij ponownie, aby ją ukryć."
+        },
+        "spy": "Twoja karta roli: jesteś Szpiegiem. Znasz pozostałych szpiegów (chyba że włączono wariant Ślepi Szpiedzy) i w misji możesz zagrać Sukces albo Porażkę.",
+        "resistance": "Twoja karta roli: jesteś w Ruchu Oporu. Nie wiesz, kto jest szpiegiem, i w misji możesz zagrać tylko Sukces.",
+        "spyMarker": {
+          "name": "Współszpieg",
+          "meaning": "Oznacza innego szpiega na liście, którą szpieg widzi na swojej karcie roli."
+        },
+        "leader": "Lider bieżącej rundy wybiera drużynę na misję. Po każdym głosowaniu nad drużyną przywództwo przechodzi na następnego gracza.",
+        "approve": "Karta głosowania: akceptujesz zaproponowaną drużynę. Wszyscy głosują jednocześnie i jawnie.",
+        "reject": "Karta głosowania: odrzucasz zaproponowaną drużynę. Remis ją odrzuca; 5 odrzuconych drużyn z rzędu daje wygraną Szpiegom.",
+        "success": "Karta misji: misja przebiega dobrze. Jedyna karta, jaką może zagrać członek Ruchu Oporu.",
+        "fail": "Karta misji: sabotaż. Może ją zagrać tylko szpieg; jedna Porażka wystarczy, by misja się nie udała (dwie w misji 4 przy 7 lub więcej graczach)."
+      },
+      "plot": {
+        "note": "Dodatek: gospodarz włącza go przed otwarciem gry. Poniżej efekty podane na kartach."
+      },
+      "inquisitor": {
+        "token": "Żeton wędruje od gracza do gracza. Po misjach 2, 3 i 4 jego posiadacz prywatnie sprawdza, czy gracz, który nigdy go nie miał, jest Szpiegiem czy z Ruchu Oporu, a żeton przechodzi na tego gracza."
+      },
+      "reverser": {
+        "character": "Twoja tajna karta postaci: jesteś Reverserem i możesz zagrać w misji kartę Odwrócenie. Reverser-szpieg nigdy nie gra Porażki.",
+        "card": "Karta misji: nieparzysta liczba kart Odwrócenie odwraca wynik misji, dwie się znoszą. Zagrać ją może tylko Reverser, ale każdy członek drużyny ją ma."
+      },
+      "defector": {
+        "character": "Twoja tajna karta postaci: jesteś Dezerterem. Twoja strona może się zmienić, gdy na początku misji 3, 4 lub 5 zostanie odkryta karta zmiany, więc po każdym odkryciu sprawdź swoją kartę roli jeszcze raz.",
+        "change": {
+          "name": "Karta zmiany: Zmiana przynależności",
+          "meaning": "Odkrywana na początku misji dla wszystkich: obaj Dezerterzy zmieniają strony. Nikt nie dowiaduje się, kim są."
+        },
+        "noChange": {
+          "name": "Karta zmiany: Bez zmian",
+          "meaning": "Odkrywana na początku misji dla wszystkich: nic się nie dzieje, nikt nie zmienia strony."
+        }
+      }
     }
   }
 }

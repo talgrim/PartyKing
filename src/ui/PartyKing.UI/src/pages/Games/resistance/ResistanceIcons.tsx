@@ -485,6 +485,53 @@ const DefectorFlipMark = ({ cx, missionNumber, change }: { cx: number; missionNu
   );
 };
 
+const INQUISITOR_VIOLET = '#6d28d9';
+
+/** Inquisitor module: the token card of the player who holds it right now (a magnifying glass over a person). */
+export const InquisitorCardIcon = ({ className, title }: IconProps): ReactNode => (
+  <Svg viewBox="0 0 100 140" className={className} title={title}>
+    <CardFrame fill="#2e1065" stroke={INQUISITOR_VIOLET} />
+    <circle cx="50" cy="56" r="34" fill={INQUISITOR_VIOLET} fillOpacity="0.3" />
+    <Person x={46} y={52} scale={1.1} fill={COLORS.paper} />
+    <circle cx="58" cy="62" r="19" fill={COLORS.ink} fillOpacity="0.45" stroke={COLORS.gold} strokeWidth="4" />
+    <path d="M71 76 L86 92" stroke={COLORS.gold} strokeWidth="7" strokeLinecap="round" />
+    <text x="50" y="124" textAnchor="middle" fontSize="9.5" fontWeight="700" fill={COLORS.gold} fontFamily="sans-serif">
+      <T k="resistance.icons.inquisitor" />
+    </text>
+  </Svg>
+);
+
+/** Reverser module: the character card of a Reverser (a person with the turn-around arrows). */
+export const ReverserCardIcon = ({ className, title }: IconProps): ReactNode => (
+  <Svg viewBox="0 0 100 140" className={className} title={title}>
+    <CardFrame fill={COLORS.ink} stroke={COLORS.gold} />
+    <circle cx="50" cy="56" r="34" fill={COLORS.gold} fillOpacity="0.12" />
+    <Person x={50} y={50} scale={1.1} fill={COLORS.paper} />
+    <path d="M26 84 L64 84 M64 84 L55 75 M64 84 L55 93" fill="none" stroke={COLORS.gold} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M74 98 L36 98 M36 98 L45 89 M36 98 L45 107" fill="none" stroke={COLORS.paper} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+    <text x="50" y="126" textAnchor="middle" fontSize="9.5" fontWeight="700" fill={COLORS.gold} fontFamily="sans-serif">
+      <T k="resistance.icons.reverser" />
+    </text>
+  </Svg>
+);
+
+/** Defector module: the character card of a Defector (a figure split into the Resistance and the spy side, with a swap arrow). */
+export const DefectorCardIcon = ({ className, title }: IconProps): ReactNode => (
+  <Svg viewBox="0 0 100 140" className={className} title={title}>
+    <CardFrame fill={COLORS.ink} stroke={COLORS.gold} />
+    <circle cx="50" cy="56" r="34" fill={COLORS.gold} fillOpacity="0.12" />
+    <g transform="translate(50 52) scale(1.4)">
+      <path d="M0 -24 A10 10 0 0 0 0 -4 Z M-22 22 C-22 2 -12 -3 0 -3 L0 22 Z" fill={COLORS.resistance} />
+      <path d="M0 -24 A10 10 0 0 1 0 -4 Z M22 22 C22 2 12 -3 0 -3 L0 22 Z" fill={COLORS.spy} />
+    </g>
+    <path d="M50 20 L50 84" stroke={COLORS.gold} strokeWidth="2" strokeDasharray="4 3" />
+    <path d="M28 96 L72 96 M72 96 L63 87 M72 96 L63 105" fill="none" stroke={COLORS.gold} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+    <text x="50" y="126" textAnchor="middle" fontSize="9.5" fontWeight="700" fill={COLORS.gold} fontFamily="sans-serif">
+      <T k="resistance.icons.defector" />
+    </text>
+  </Svg>
+);
+
 export type MissionResult = 'success' | 'fail' | null;
 
 type MissionBoardProps = {

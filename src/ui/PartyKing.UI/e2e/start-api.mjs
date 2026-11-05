@@ -18,7 +18,9 @@ const apiProject = resolve(here, '../../../api/PartyKing.API');
 const workDir = join(here, '.work');
 rmSync(workDir, { recursive: true, force: true });
 mkdirSync(join(workDir, 'wwwroot'), { recursive: true });
-for (const file of ['appsettings.json', 'appsettings.Development.json']) {
+// The API runs in the e2e environment: the same development helpers as Development (CORS, dev personas, no rate
+// limits, the seeded random source), but with its own appsettings.e2e.json (it quiets the log, which CI prints in full).
+for (const file of ['appsettings.json', 'appsettings.e2e.json']) {
   copyFileSync(join(apiProject, file), join(workDir, file));
 }
 
@@ -27,7 +29,7 @@ const child = spawn('dotnet', ['run', '--project', apiProject, '--no-launch-prof
   stdio: 'inherit',
   env: {
     ...process.env,
-    ASPNETCORE_ENVIRONMENT: 'Development',
+    ASPNETCORE_ENVIRONMENT: 'e2e',
     // `dotnet run` would make the project folder the content root, and its appsettings.Local.json the winner
     ASPNETCORE_CONTENTROOT: workDir,
     ASPNETCORE_URLS: 'http://127.0.0.1:4200',

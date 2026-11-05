@@ -141,6 +141,7 @@ const renderPage = (path = '/s/session-1/games/resistance') =>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route path="/s/:sessionId/games/resistance" element={<Resistance />} />
+          <Route path="/s/:sessionId/games/resistance/icons" element={<p>Icon guide page</p>} />
           <Route path="/s/:sessionId/games" element={<p>Games page</p>} />
           <Route path="/s/:sessionId" element={<p>Session page</p>} />
         </Routes>
@@ -184,6 +185,18 @@ describe('Resistance', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Rules' }));
 
     expect(await screen.findByText('Resistance rules')).toBeInTheDocument();
+  });
+
+  it('opens the icon guide from the rules dialog', async () => {
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Rules' }));
+    const dialog = await screen.findByRole('dialog');
+    const buttons = within(dialog).getAllByRole('button').map((button) => button.textContent);
+    expect(buttons.indexOf('Icon guide')).toBe(buttons.indexOf('Close') - 1);
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Icon guide' }));
+
+    expect(await screen.findByText('Icon guide page')).toBeInTheDocument();
   });
 
   it('seats the players who joined and counts them', async () => {
@@ -584,6 +597,7 @@ describe('Resistance', () => {
       await userEvent.click(await screen.findByRole('button', { name: 'Show your role' }));
 
       expect(await screen.findByText(/You are a Reverser/)).toBeInTheDocument();
+      expect(screen.getByRole('img', { name: 'Reverser' })).toBeInTheDocument();
     });
 
     it('tells a Defector so on the role card, with the other Defector only when the variant gives them', async () => {
@@ -596,6 +610,7 @@ describe('Resistance', () => {
       await userEvent.click(await screen.findByRole('button', { name: 'Show your role' }));
 
       expect(await screen.findByText(/You are a Defector/)).toBeInTheDocument();
+      expect(screen.getByRole('img', { name: 'Defector' })).toBeInTheDocument();
       expect(screen.queryByText(/The other Defector is/)).not.toBeInTheDocument();
     });
 

@@ -13,7 +13,7 @@ type Props = {
   onlinePlayerIds?: string[];
   /** Extra badges after a player's name (votes, roles). */
   marks?: (playerId: string) => ReactNode;
-  /** A card shown by a player's tag (face-up plot cards): above it along the bottom, below it along the side margins, so it stays out of the board. */
+  /** A card shown by a player's tag (face-up plot cards): above it along the bottom, below it along the side margins, so it stays out of the board. The caller sizes the cards; the box fits them. */
   beside?: (playerId: string) => ReactNode;
 };
 
@@ -64,7 +64,7 @@ export const ResistancePlayers = ({ players, yourPlayerId, leaderId = null, onli
               </span>
             )}
             {marks?.(player.id)}
-            {card && <span className={`absolute ${side} w-[5vw] min-w-12`}>{card}</span>}
+            {card && <span className={`absolute ${side} w-max`}>{card}</span>}
           </li>
         );
       })}
