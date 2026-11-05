@@ -120,7 +120,20 @@ export type ResistanceGameDto = {
   leaderWindowPassedPlayerIds: string[];
   /** The mission cards you looked at with Keeping a Close Eye this mission (true = Success); private. */
   yourPeeks: ResistanceMissionPeekDto[];
+  /** Inquisitor module: the player holding the token; public, null when the module is off. */
+  inquisitorPlayerId: string | null;
+  /** The players who held the token, so they can't be examined any more; public. */
+  pastInquisitorPlayerIds: string[];
+  /** While the Inquisition waits for the examiner's confirmation: who picked a player; public. */
+  inquisitionExaminerPlayerId: string | null;
+  /** While the Inquisition waits for the examiner's confirmation: the player picked (the new holder of the token); public. */
+  inquisitionExaminedPlayerId: string | null;
+  /** The loyalty of the player you examined, until you confirm having seen it; private to the examiner. */
+  yourInquisition: ResistanceInquisitionDto | null;
 };
+
+// Mirrors PartyKing.Contract.V1.Games.ResistanceInquisitionDto
+export type ResistanceInquisitionDto = { playerId: string; role: ResistanceRole };
 
 // Mirrors PartyKing.Contract.V1.Games.ResistanceMissionPeekDto
 export type ResistanceMissionPeekDto = { playerId: string; success: boolean };
@@ -186,6 +199,8 @@ export type ResistanceRulesDto = {
   plotCardsEnabled: boolean;
   /** How many plot cards the leader draws before each mission, at the current player count. */
   plotCardsPerRound: number;
+  /** Whether the Inquisitor module is played in this game. */
+  inquisitorEnabled: boolean;
 };
 
 // Mirrors PartyKing.Contract.V1.Games.ResistanceCountRulesDto
@@ -200,7 +215,7 @@ export type ResistanceCountRulesDto = {
 
 export type ResistanceRole = 'Resistance' | 'Spy';
 
-/** DealingCards: the leader hands out the plot cards just drawn (add-on only); ResolvingCards: the immediate plot cards are played and their receivers confirm; SelectingTeam: the leader picks (the votes that rejected the last team stay public until then); Voting: the team is up for a vote; PlayingMission: the approved team plays cards; LeaderWindow: a Strong Leader is out there, so everyone confirms they play no card or its holder takes the lead; ConfidenceWindow: the team was approved while a playable card is out there, so everyone confirms they play no card, the holder of No Confidence cancels the approval or the holder of In the Spotlight names who plays openly; PeekWindow: the mission is played and its outcome is public, but a playable card is out there, so everyone confirms they play no card or the holder of Keeping a Close Eye looks at a mission card; MissionResult: the outcome waits for "Dalej". */
+/** DealingCards: the leader hands out the plot cards just drawn (add-on only); ResolvingCards: the immediate plot cards are played and their receivers confirm; SelectingTeam: the leader picks (the votes that rejected the last team stay public until then); Voting: the team is up for a vote; PlayingMission: the approved team plays cards; LeaderWindow: a Strong Leader is out there, so everyone confirms they play no card or its holder takes the lead; ConfidenceWindow: the team was approved while a playable card is out there, so everyone confirms they play no card, the holder of No Confidence cancels the approval or the holder of In the Spotlight names who plays openly; PeekWindow: the mission is played and its outcome is public, but a playable card is out there, so everyone confirms they play no card or the holder of Keeping a Close Eye looks at a mission card; Inquisition: the Inquisitor module, after missions 2 to 4 the holder of the token picks a player to examine and confirms having seen the loyalty; MissionResult: the outcome waits for "Dalej". */
 export type ResistancePhase =
   | 'SelectingTeam'
   | 'Voting'
@@ -211,7 +226,8 @@ export type ResistancePhase =
   | 'ResolvingCards'
   | 'LeaderWindow'
   | 'ConfidenceWindow'
-  | 'PeekWindow';
+  | 'PeekWindow'
+  | 'Inquisition';
 
 // Mirrors PartyKing.Contract.V1.Games.ResistanceVoteDto
 export type ResistanceVoteDto = {

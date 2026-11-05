@@ -132,7 +132,7 @@ export const Resistance = (): ReactNode => {
   const showQueue = isPlayer && !tv && !embedded && view === 'queue';
   const showBoard = !embedded && !showQueue && (!showPlayerView || wide);
   // The TV tab shares the player's cookies, so it must not show the role or the "Ty" badge of whoever is logged in
-  const shownGame = game && tv ? { ...game, yourPlayerId: null, yourRole: null, fellowSpies: null, yourVote: null, yourMissionCard: null, yourPlotCards: [], yourReveals: [], yourPeeks: [] } : game;
+  const shownGame = game && tv ? { ...game, yourPlayerId: null, yourRole: null, fellowSpies: null, yourVote: null, yourMissionCard: null, yourPlotCards: [], yourReveals: [], yourPeeks: [], yourInquisition: null } : game;
 
   const players = game?.players ?? [];
   const started = game?.startedAt != null;
@@ -249,6 +249,24 @@ export const Resistance = (): ReactNode => {
       await mutate(gamesApi.confirmResistancePlotCard(sessionId, cardId), { revalidate: false });
     } catch {
       setMessage(t('resistance.errors.confirmCard'));
+    }
+  };
+
+  const examinePlayer = async (targetPlayerId: string) => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.examineResistancePlayer(sessionId, targetPlayerId), { revalidate: false });
+    } catch {
+      setMessage(t('resistance.errors.examine'));
+    }
+  };
+
+  const confirmInquisition = async () => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.confirmResistanceInquisition(sessionId), { revalidate: false });
+    } catch {
+      setMessage(t('resistance.errors.confirmInquisition'));
     }
   };
 
@@ -488,6 +506,8 @@ export const Resistance = (): ReactNode => {
                   onPeekMissionCard={peekMissionCard}
                   onPassLeaderWindow={passLeaderWindow}
                   onConfirmPlotCard={confirmPlotCard}
+                  onExaminePlayer={examinePlayer}
+                  onConfirmInquisition={confirmInquisition}
                   onVote={castVote}
                   onPlayMissionCard={playMissionCard}
                   onContinue={continueGame}

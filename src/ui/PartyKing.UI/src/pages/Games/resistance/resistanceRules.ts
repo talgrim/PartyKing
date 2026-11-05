@@ -26,5 +26,6 @@ export const resistanceRules = (): RuleSection[] => [
     })),
     footer: i18n.t('resistance.rules.plot.footer'),
   },
+  { title: i18n.t('resistance.rules.inquisitor.title'), text: i18n.t('resistance.rules.inquisitor.text') },
   { title: i18n.t('resistance.rules.end.title'), text: i18n.t('resistance.rules.end.text') },
 ];

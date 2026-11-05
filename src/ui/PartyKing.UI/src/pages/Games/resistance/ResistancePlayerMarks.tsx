@@ -25,6 +25,8 @@ export const ResistancePlayerMarks = ({ game, playerId }: Props): ReactNode => {
 
   const cardCount = game.plotCardCounts.find((x) => x.playerId === playerId)?.count ?? 0;
 
+  const inquisitor = game.inquisitorPlayerId === playerId;
+
   const played = game.phase === 'PlayingMission' && game.playedMissionPlayerIds.includes(playerId);
 
   return (
@@ -32,6 +34,11 @@ export const ResistancePlayerMarks = ({ game, playerId }: Props): ReactNode => {
       {maker && (
         <span title={t('resistance.marks.opinionMaker')} className={`${badge} bg-amber-400 text-slate-900`}>
           {t('resistance.marks.opinionMaker')}
+        </span>
+      )}
+      {inquisitor && (
+        <span title={t('resistance.marks.inquisitor')} className={`${badge} bg-violet-500 text-white`}>
+          {t('resistance.marks.inquisitor')}
         </span>
       )}
       {makerVote && (

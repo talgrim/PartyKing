@@ -23,7 +23,9 @@ export const ResistanceCloseEye = ({ game, onPeek }: Props): ReactNode => {
   const nameOf = (id: string) => game.players.find((player) => player.id === id)?.name ?? '?';
 
   const inWindow = game.phase === 'PeekWindow';
-  if (!(inWindow || game.phase === 'MissionResult') || (card == null && peeks.length === 0)) return null;
+  // Resolved and not yet moved on from: whatever steps sit between the result and "Next"
+  const resolved = game.phase !== 'GameOver' && game.missionResults.some((result) => result.missionNumber === game.missionNumber);
+  if (!(inWindow || resolved) || (card == null && peeks.length === 0)) return null;
 
   const looked = game.playedPlotCards
     .filter((x) => x.type === 'KeepingCloseEye' && x.missionNumber === game.missionNumber && x.holderPlayerId === game.yourPlayerId)
