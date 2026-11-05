@@ -26,6 +26,7 @@ import {
   devSessionResistancePanelsPath,
   sessionGamesPath,
   sessionPath,
+  sessionResistanceIconsPath,
   sessionResistanceJoinPath,
   sessionResistancePath,
 } from '@/router/constants';
@@ -612,6 +613,7 @@ export const Resistance = (): ReactNode => {
           ))}
         </DialogContent>
         <DialogActions>
+          <Button onClick={() => navigate(sessionResistanceIconsPath(sessionId))}>{t('resistance.page.iconGuide')}</Button>
           <Button onClick={() => setRulesOpen(false)}>{t('common.close')}</Button>
         </DialogActions>
       </Dialog>
