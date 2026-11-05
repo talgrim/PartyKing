@@ -58,7 +58,7 @@ Roles and the first leader are seeded in e2e but depend on the player count and 
 
 ## CI
 
-The `e2e` job of `ci.yml`: setup-dotnet and setup-node, `npx playwright install --with-deps chromium`, `npm run e2e`. With `CI` set Playwright retries a failure once and writes an HTML report, uploaded with the traces as an artifact on failure. `deploy.yml` reuses `ci.yml`, so a failing e2e job also blocks a deploy.
+The `e2e` job of `ci.yml`: setup-dotnet and setup-node, a cache of `~/.cache/ms-playwright` keyed on the Playwright version, `npx playwright install chromium`, `npm run e2e`. There is no `--with-deps`: the runner has every library Chromium needs, and the flag only added CJK and X11 fonts through apt, which took over 5 minutes; add it back if a runner image ever lacks a library. With `CI` set Playwright retries a failure once and writes an HTML report, uploaded with the traces as an artifact on failure. `deploy.yml` reuses `ci.yml`, so a failing e2e job also blocks a deploy.
 
 ### Plot cards
 
