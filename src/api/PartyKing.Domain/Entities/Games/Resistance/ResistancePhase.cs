@@ -54,4 +54,11 @@ public enum ResistancePhase
     /// playable card so it never tells who holds one.
     /// </summary>
     PeekWindow,
+
+    /// <summary>
+    /// Inquisitor module: after mission 2, 3 or 4 (once the peek window is over) the holder of the token picks a player
+    /// who has not held it, privately learns that player's loyalty and confirms; the token passes to the examined
+    /// player. Moves on to <see cref="MissionResult"/> when the holder confirmed.
+    /// </summary>
+    Inquisition,
 }

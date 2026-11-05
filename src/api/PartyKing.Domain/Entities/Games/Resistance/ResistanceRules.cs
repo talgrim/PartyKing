@@ -13,6 +13,9 @@ public class ResistanceRules
     /// <summary>Whether the plot cards add-on is played. Off by default; only editable before the game is opened.</summary>
     public bool PlotCardsEnabled { get; set; }
 
+    /// <summary>Whether the Inquisitor module (Hostile Intent) is played. Off by default; only editable before the game starts.</summary>
+    public bool InquisitorEnabled { get; set; }
+
     /// <summary>How many copies of each plot card the deck holds (15 cards in all).</summary>
     public Dictionary<ResistancePlotCardType, int> PlotDeck { get; set; } = DefaultPlotDeck();
 
@@ -20,11 +23,12 @@ public class ResistanceRules
     /// A deep copy, so a game never shares dictionaries or arrays with the object it was built from. The result is
     /// always a new instance, which the JSON column needs to detect a change. Every property must be copied here.
     /// </summary>
-    public ResistanceRules Clone(bool? plotCardsEnabled = null) => new()
+    public ResistanceRules Clone(bool? plotCardsEnabled = null, bool? inquisitorEnabled = null) => new()
     {
         PlayerCounts = PlayerCounts.ToDictionary(
             x => x.Key, x => new ResistanceCountRules(x.Value.Spies, [.. x.Value.TeamSizes], [.. x.Value.RequiredFails])),
         PlotCardsEnabled = plotCardsEnabled ?? PlotCardsEnabled,
+        InquisitorEnabled = inquisitorEnabled ?? InquisitorEnabled,
         PlotDeck = new Dictionary<ResistancePlotCardType, int>(PlotDeck),
     };
 
