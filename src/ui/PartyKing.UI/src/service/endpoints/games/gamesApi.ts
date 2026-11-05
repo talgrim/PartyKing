@@ -173,6 +173,12 @@ export const gamesApi = {
       withCredentials: true,
     }) as unknown as Promise<ResistanceGameDto>,
 
+  /** Host or admin: switches the Defector module on or off and optionally whether the two Defectors know each other (omitted keeps the choice); 409 once the game has started. */
+  setResistanceDefector: (sessionId: string, enabled: boolean, knowEachOther?: boolean) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/rules/defector`, { enabled, knowEachOther }, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
   /** The Inquisitor token holder picks a player who never held it; the token passes to them. 403 for anyone else, 409 outside the Inquisition, 400 for a player who can't be examined. */
   examineResistancePlayer: (sessionId: string, targetPlayerId: string) =>
     axios.put(`/sessions/${sessionId}/games/resistance/inquisitor/examine`, { targetPlayerId }, {

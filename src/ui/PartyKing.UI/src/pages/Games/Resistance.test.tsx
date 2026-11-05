@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   setResistanceInquisitor: vi.fn(),
   setResistanceBlindSpies: vi.fn(),
   setResistanceReverser: vi.fn(),
+  setResistanceDefector: vi.fn(),
   examineResistancePlayer: vi.fn(),
   confirmResistanceInquisition: vi.fn(),
   selectResistanceTeam: vi.fn(),
@@ -52,6 +53,7 @@ vi.mock('@/service/endpoints/games/gamesApi', () => ({
     setResistanceInquisitor: mocks.setResistanceInquisitor,
     setResistanceBlindSpies: mocks.setResistanceBlindSpies,
     setResistanceReverser: mocks.setResistanceReverser,
+    setResistanceDefector: mocks.setResistanceDefector,
     examineResistancePlayer: mocks.examineResistancePlayer,
     confirmResistanceInquisition: mocks.confirmResistanceInquisition,
     selectResistanceTeam: mocks.selectResistanceTeam,
@@ -74,6 +76,8 @@ const lobby = (names: string[], isOpen = false) => ({
   leaderPlayerId: null,
   yourRole: null,
   yourCharacter: null,
+  fellowDefectorId: null,
+  defectorFlips: [] as boolean[],
   fellowSpies: null,
   missionNumber: 1,
   requiredTeamSize: null,
@@ -117,6 +121,8 @@ const lobby = (names: string[], isOpen = false) => ({
     reverserEnabled: false,
     reverserSides: 'Both',
     reverserSpyKnowsSpies: true,
+    defectorEnabled: false,
+    defectorsKnowEachOther: false,
   },
 });
 
@@ -349,6 +355,44 @@ describe('Resistance', () => {
     expect(mocks.setResistanceReverser).toHaveBeenCalledWith('session-1', true, { spyKnowsSpies: false });
   });
 
+  it('switches the Defectors on before the game starts, with the variant off until then', async () => {
+    mocks.setResistanceDefector.mockResolvedValue(lobby([]));
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Game settings' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Game settings' });
+    expect(within(dialog).getByRole('region', { name: 'Defector' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('checkbox', { name: 'The Defectors know each other' })).toBeDisabled();
+    await userEvent.click(within(dialog).getByRole('checkbox', { name: 'Enable Defectors' }));
+
+    expect(mocks.setResistanceDefector).toHaveBeenCalledWith('session-1', true, undefined);
+  });
+
+  it('chooses whether the Defectors know each other, once the module is on', async () => {
+    const game = lobby([]);
+    mocks.getResistance.mockResolvedValue({ ...game, rules: { ...game.rules, defectorEnabled: true } });
+    mocks.setResistanceDefector.mockResolvedValue(lobby([]));
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Game settings' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Game settings' });
+    const knows = within(dialog).getByRole('checkbox', { name: 'The Defectors know each other' });
+    expect(knows).not.toBeChecked();
+    await userEvent.click(knows);
+
+    expect(mocks.setResistanceDefector).toHaveBeenCalledWith('session-1', true, true);
+  });
+
+  it('shows a message when the Defectors cannot be switched', async () => {
+    mocks.setResistanceDefector.mockRejectedValue(new Error('boom'));
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Game settings' }));
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Enable Defectors' }));
+
+    expect(await screen.findByText('Could not change the Defector setting.')).toBeInTheDocument();
+  });
+
   it('keeps the sides of the Reverser disabled while the module is off', async () => {
     renderPage();
 
@@ -540,6 +584,76 @@ describe('Resistance', () => {
       await userEvent.click(await screen.findByRole('button', { name: 'Show your role' }));
 
       expect(await screen.findByText(/You are a Reverser/)).toBeInTheDocument();
+    });
+
+    it('tells a Defector so on the role card, with the other Defector only when the variant gives them', async () => {
+      mocks.role = { isHost: false, isAdmin: false };
+      const game = started(five, { yourPlayerId: 'p2', yourRole: 'Resistance', yourCharacter: 'Defector' });
+      mocks.getResistance.mockResolvedValue({ ...game, rules: { ...game.rules, defectorEnabled: true } });
+      renderPage();
+
+      expect(screen.queryByText(/You are a Defector/)).not.toBeInTheDocument();
+      await userEvent.click(await screen.findByRole('button', { name: 'Show your role' }));
+
+      expect(await screen.findByText(/You are a Defector/)).toBeInTheDocument();
+      expect(screen.queryByText(/The other Defector is/)).not.toBeInTheDocument();
+    });
+
+    it('names the other Defector when the Defectors know each other', async () => {
+      mocks.role = { isHost: false, isAdmin: false };
+      const game = started(five, {
+        yourPlayerId: 'p2',
+        yourRole: 'Resistance',
+        yourCharacter: 'Defector',
+        fellowDefectorId: 'p4',
+      });
+      mocks.getResistance.mockResolvedValue({
+        ...game,
+        rules: { ...game.rules, defectorEnabled: true, defectorsKnowEachOther: true },
+      });
+      renderPage();
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Show your role' }));
+
+      expect(await screen.findByText(`The other Defector is ${five[4]}.`)).toBeInTheDocument();
+    });
+
+    it('tells a spy Defector that they know no spy, instead of listing spies', async () => {
+      mocks.role = { isHost: false, isAdmin: false };
+      const game = started(five, { yourPlayerId: 'p0', yourRole: 'Spy', yourCharacter: 'Defector', fellowSpies: [] });
+      mocks.getResistance.mockResolvedValue({ ...game, rules: { ...game.rules, defectorEnabled: true } });
+      renderPage();
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Show your role' }));
+
+      expect(await screen.findByText('As a Defector you do not know who the other spies are.')).toBeInTheDocument();
+      expect(screen.queryByRole('list', { name: 'Fellow spies' })).not.toBeInTheDocument();
+    });
+
+    it('shows the flipped switch cards to everybody', async () => {
+      mocks.role = { isHost: false, isAdmin: false };
+      const game = started(five, {
+        yourPlayerId: 'p2',
+        yourRole: 'Resistance',
+        yourCharacter: 'Defector',
+        fellowDefectorId: 'p4',
+        defectorFlips: [false, true],
+      });
+      mocks.getResistance.mockResolvedValue({
+        ...game,
+        rules: { ...game.rules, defectorEnabled: true, defectorsKnowEachOther: true },
+      });
+      renderPage();
+
+      // The latest card is beside the phase banner, so it is there without opening the board
+      expect(await screen.findByRole('img', { name: 'Latest switch card (mission 4): Change Allegiance' })).toBeInTheDocument();
+      expect(screen.queryByRole('img', { name: 'Mission 4: Change Allegiance' })).not.toBeInTheDocument();
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Board' }));
+
+      expect(await screen.findByRole('img', { name: 'Mission 3: No Change' })).toBeInTheDocument();
+      expect(screen.getByRole('img', { name: 'Mission 4: Change Allegiance' })).toBeInTheDocument();
+      expect(screen.queryByRole('img', { name: /Mission 5: / })).not.toBeInTheDocument();
     });
 
     it('tells a spy of the Blind Spies variant that they know no one, instead of listing spies', async () => {
@@ -922,6 +1036,27 @@ describe('Resistance', () => {
 
         expect(screen.queryByRole('region', { name: 'Plot cards played' })).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Show log' })).toBeInTheDocument();
+      });
+
+      it('shows the switch cards on the TV, but not the Defector character or the other Defector', async () => {
+        mocks.role = { isHost: true, isAdmin: false };
+        const game = started(['A', 'B', 'C', 'D', 'E'], {
+          yourPlayerId: 'p2',
+          yourRole: 'Resistance',
+          yourCharacter: 'Defector',
+          fellowDefectorId: 'p4',
+          defectorFlips: [true],
+        });
+        mocks.getResistance.mockResolvedValue({
+          ...game,
+          rules: { ...game.rules, defectorEnabled: true, defectorsKnowEachOther: true },
+        });
+        renderPage('/s/session-1/games/resistance?tv=1');
+
+        expect(await screen.findByRole('img', { name: 'Mission 3: Change Allegiance' })).toBeInTheDocument();
+        expect(screen.getByRole('img', { name: 'Latest switch card (mission 3): Change Allegiance' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Show your role' })).not.toBeInTheDocument();
+        expect(screen.queryByText(/The other Defector is/)).not.toBeInTheDocument();
       });
 
       it('has no toggle before a card is played', async () => {

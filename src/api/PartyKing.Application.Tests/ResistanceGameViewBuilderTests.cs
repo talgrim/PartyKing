@@ -158,6 +158,130 @@ public class ResistanceGameViewBuilderTests
         Assert.True(View(game, 0).Rules.ReverserEnabled);
     }
 
+    [Fact]
+    public void YourCharacter_WithTheDefectorModule_IsSeenOnlyByItsOwner_AndTheRulesArePublic()
+    {
+        var game = NewGame();
+        game.Rules.DefectorEnabled = true;
+        game.Rules.DefectorsKnowEachOther = true;
+        Seat(game, 1).Character = ResistanceCharacter.Defector;
+        Seat(game, 3).Character = ResistanceCharacter.Defector;
+
+        Assert.Equal(ResistanceCharacterDto.Defector, View(game, 1).YourCharacter);
+        Assert.Equal(ResistanceCharacterDto.Defector, View(game, 3).YourCharacter);
+        Assert.Equal(ResistanceCharacterDto.Standard, View(game, 0).YourCharacter);
+        Assert.Null(View(game, null).YourCharacter);
+        foreach (var seat in new int?[] { 0, 3, null })
+        {
+            Assert.True(View(game, seat).Rules.DefectorEnabled);
+            Assert.True(View(game, seat).Rules.DefectorsKnowEachOther);
+        }
+
+        Assert.False(View(NewGame(), 0).Rules.DefectorEnabled);
+        Assert.False(View(NewGame(), 0).Rules.DefectorsKnowEachOther);
+    }
+
+    [Fact]
+    public void FellowDefector_IsSeenOnlyByADefector_AndOnlyWithTheVariant()
+    {
+        var game = NewGame();
+        game.Rules.DefectorEnabled = true;
+        Seat(game, 1).Character = ResistanceCharacter.Defector;
+        Seat(game, 3).Character = ResistanceCharacter.Defector;
+
+        foreach (var seat in new int?[] { 0, 1, 3, 4, null })
+        {
+            Assert.Null(View(game, seat).FellowDefectorId);
+        }
+
+        game.Rules.DefectorsKnowEachOther = true;
+
+        Assert.Equal(Ids[3], View(game, 1).FellowDefectorId);
+        Assert.Equal(Ids[1], View(game, 3).FellowDefectorId);
+        foreach (var seat in new int?[] { 0, 2, 4, null })
+        {
+            Assert.Null(View(game, seat).FellowDefectorId);
+        }
+
+        Assert.Null(View(NewGame(started: false), 1).FellowDefectorId);
+    }
+
+    [Fact]
+    public void DefectorFlips_ArePublic_AndNeverShowTheCardsStillInTheDeck()
+    {
+        var game = NewGame();
+        game.Rules.DefectorEnabled = true;
+        game.DefectorDeck = "NCNCN";
+
+        foreach (var seat in new int?[] { 0, 3, null })
+        {
+            Assert.Empty(View(game, seat).DefectorFlips);
+        }
+
+        game.MissionNumber = 4;
+
+        foreach (var seat in new int?[] { 0, 3, null })
+        {
+            Assert.Equal([false, true], View(game, seat).DefectorFlips);
+        }
+
+        Assert.DoesNotContain("NCNCN", JsonSerializer.Serialize(View(game, 0)));
+    }
+
+    [Fact]
+    public void DefectorFlips_WithTheModuleOff_AreEmpty()
+    {
+        var game = NewGame();
+        game.DefectorDeck = "NCNCN";
+        game.MissionNumber = 5;
+
+        Assert.Empty(View(game, 0).DefectorFlips);
+    }
+
+    [Fact]
+    public void ASwitchedDefector_ShowsTheirNewSide_ToThemselvesAndInTheEndReveal()
+    {
+        var game = NewGame(ResistancePhase.GameOver);
+        game.Rules.DefectorEnabled = true;
+        Seat(game, 2).Character = ResistanceCharacter.Defector;
+        Seat(game, 3).Character = ResistanceCharacter.Defector;
+        Seat(game, 2).Role = ResistanceRole.Spy;
+        Seat(game, 3).Role = ResistanceRole.Resistance;
+        game.DefectorDeck = "CNNNN";
+        game.MissionNumber = 3;
+
+        Assert.Equal(ResistanceRoleDto.Spy, View(game, 2).YourRole);
+        Assert.Equal(ResistanceRoleDto.Resistance, View(game, 3).YourRole);
+        var revealed = View(game, 0).RevealedRoles!;
+        Assert.Equal(ResistanceRoleDto.Spy, revealed.Single(x => x.PlayerId == Ids[2]).Role);
+        Assert.Equal(ResistanceCharacterDto.Defector, revealed.Single(x => x.PlayerId == Ids[2]).Character);
+        Assert.Equal(ResistanceRoleDto.Resistance, revealed.Single(x => x.PlayerId == Ids[3]).Role);
+    }
+
+    [Fact]
+    public void FellowSpies_WithDefectors_FollowTheReveal_AndTheSwitch()
+    {
+        var game = NewGame();
+        game.Rules.DefectorEnabled = true;
+        Seat(game, 1).Character = ResistanceCharacter.Defector;
+        Seat(game, 4).Character = ResistanceCharacter.Defector;
+        game.DefectorDeck = "CNNNN";
+
+        // Before a switch: the spy Defector (seat 4) is known to the other spy but knows no spy
+        Assert.Equal([Ids[4]], View(game, 3).FellowSpies);
+        Assert.Empty(View(game, 4).FellowSpies!);
+        Assert.Null(View(game, 1).FellowSpies);
+
+        // After it: seat 4 is on the resistance side and seat 1 among the spies, whom nobody knows
+        game.MissionNumber = 3;
+        Seat(game, 4).Role = ResistanceRole.Resistance;
+        Seat(game, 1).Role = ResistanceRole.Spy;
+
+        Assert.Empty(View(game, 3).FellowSpies!);
+        Assert.Empty(View(game, 1).FellowSpies!);
+        Assert.Null(View(game, 4).FellowSpies);
+    }
+
     [Theory]
     [InlineData(ResistanceReverserSides.Both, ResistanceReverserSidesDto.Both)]
     [InlineData(ResistanceReverserSides.Resistance, ResistanceReverserSidesDto.Resistance)]

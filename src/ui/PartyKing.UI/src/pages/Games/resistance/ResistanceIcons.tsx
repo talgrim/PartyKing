@@ -1,5 +1,6 @@
 import { KeyboardEvent, ReactNode } from 'react';
 import { ParseKeys } from 'i18next';
+import Tooltip from '@mui/material/Tooltip';
 import { useTranslation } from 'react-i18next';
 import { ResistanceMissionTeamInfo } from './ResistanceMissionTeamInfo';
 
@@ -412,6 +413,78 @@ export const PlotTakeResponsibilityCardIcon = ({ className, title }: IconProps):
   </PlotCardFace>
 );
 
+/**
+ * The face of a Defector switch card (100x140): a Resistance and a spy figure, with arrows that swap them (Change
+ * Allegiance) or an equals sign (No Change). It has no text, so it reads at the small size it has on the mission board.
+ */
+const DefectorSwitchCardFace = ({ change }: { change: boolean }): ReactNode => (
+  <>
+    <CardFrame fill={COLORS.ink} stroke={change ? COLORS.gold : COLORS.muted} />
+    <circle cx="50" cy="36" r="19" fill={COLORS.resistance} />
+    <Person x={50} y={37} scale={0.55} fill={COLORS.paper} />
+    <circle cx="50" cy="104" r="19" fill={COLORS.spy} />
+    <Person x={50} y={105} scale={0.55} fill={COLORS.paper} />
+    {change ? (
+      <>
+        <path d="M34 58 L34 82 M34 82 L27 74 M34 82 L41 74" fill="none" stroke={COLORS.gold} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M66 82 L66 58 M66 58 L59 66 M66 58 L73 66" fill="none" stroke={COLORS.gold} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+      </>
+    ) : (
+      <path d="M34 65 L66 65 M34 77 L66 77" fill="none" stroke={COLORS.paper} strokeWidth="5" strokeLinecap="round" />
+    )}
+  </>
+);
+
+/** The first mission whose start flips a switch card (Defector module), as an index. */
+export const FIRST_FLIP_MISSION_INDEX = 2;
+
+/** A switch card on its own, e.g. next to the phase banner. */
+export const DefectorSwitchCardIcon = ({ className, title, change }: IconProps & { change: boolean }): ReactNode => (
+  <Svg viewBox="0 0 100 140" className={className} title={title}>
+    <DefectorSwitchCardFace change={change} />
+  </Svg>
+);
+
+/** What a flipped switch card did, for the tooltip on the card (here and next to the phase banner). */
+export const DefectorFlipTooltipContent = ({ missionNumber, change }: { missionNumber: number; change: boolean }): ReactNode => {
+  const { t } = useTranslation();
+
+  return (
+    <div className="px-1 py-0.5">
+      <div className="mb-1 text-sm font-bold">
+        {t(change ? 'resistance.defectorFlips.change' : 'resistance.defectorFlips.noChange', { mission: missionNumber })}
+      </div>
+      <div className="text-sm">{t(change ? 'resistance.defectorFlips.changeInfo' : 'resistance.defectorFlips.noChangeInfo')}</div>
+    </div>
+  );
+};
+
+/** A flipped switch card in the upper left corner of a mission disc (the disc's centre is `cx`); hover or tap says what it did. */
+const DefectorFlipMark = ({ cx, missionNumber, change }: { cx: number; missionNumber: number; change: boolean }): ReactNode => {
+  const { t } = useTranslation();
+  const label = t(change ? 'resistance.defectorFlips.change' : 'resistance.defectorFlips.noChange', { mission: missionNumber });
+
+  return (
+    <Tooltip
+      arrow
+      placement="bottom"
+      enterTouchDelay={0}
+      leaveTouchDelay={4000}
+      title={<DefectorFlipTooltipContent missionNumber={missionNumber} change={change} />}
+    >
+      <g
+        role="img"
+        tabIndex={0}
+        aria-label={label}
+        transform={`translate(${cx - 51} 10) scale(0.34)`}
+        style={{ cursor: 'help', outline: 'none' }}
+      >
+        <DefectorSwitchCardFace change={change} />
+      </g>
+    </Tooltip>
+  );
+};
+
 export type MissionResult = 'success' | 'fail' | null;
 
 type MissionBoardProps = {
@@ -429,12 +502,15 @@ type MissionBoardProps = {
   fourthMissionNeedsTwoFails: boolean;
   /** Draws the team sizes faded: they are only a guess until enough players joined. */
   dimmed?: boolean;
+  /** Defector module: the switch cards flipped so far, true for Change Allegiance; the first one belongs to mission 3. */
+  defectorFlips?: readonly boolean[];
   className?: string;
   title?: string;
 };
 
 const MISSIONS = 5;
 const MAX_REJECTIONS = 5;
+
 
 /** The mission track (five discs with team size and outcome) plus the rejected-teams tracker. */
 export const MissionBoardIcon = ({
@@ -445,6 +521,7 @@ export const MissionBoardIcon = ({
   rejectedTeams,
   fourthMissionNeedsTwoFails,
   dimmed = false,
+  defectorFlips = [],
   className,
   title,
 }: MissionBoardProps): ReactNode => (
@@ -455,6 +532,8 @@ export const MissionBoardIcon = ({
       const result = results[i] ?? null;
       const fill = result === 'success' ? COLORS.success : result === 'fail' ? COLORS.fail : '#1e293b';
       const isCurrent = currentMission === i;
+      // Before mission 3 the index is negative, so there is no card
+      const flip = defectorFlips[i - FIRST_FLIP_MISSION_INDEX];
       return (
         <g key={i}>
           <circle
@@ -489,6 +568,7 @@ export const MissionBoardIcon = ({
               <T k="resistance.icons.twoFails" />
             </text>
           )}
+          {flip !== undefined && <DefectorFlipMark cx={cx} missionNumber={i + 1} change={flip} />}
           {result !== null && (teams[i]?.length ?? 0) > 0 && (
             <ResistanceMissionTeamInfo cx={cx + 34} cy={34} missionNumber={i + 1} succeeded={result === 'success'} names={teams[i] ?? []} />
           )}

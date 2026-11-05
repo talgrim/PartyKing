@@ -2,8 +2,8 @@ namespace PartyKing.Domain.Entities.Games.Resistance;
 
 /// <summary>
 /// What a player is allowed to know about another player's secret. Every view that shows a player something about
-/// somebody else asks here, so a module that changes who knows whom (Blind Spies today; the Commander, the Defector
-/// and the Chiefs later) changes one place, and a leak is one test table away.
+/// somebody else asks here, so a module that changes who knows whom (Blind Spies, Reverser and Defector today; the
+/// Commander and the Chiefs later) changes one place, and a leak is one test table away.
 /// </summary>
 public static class ResistanceKnowledge
 {
@@ -34,7 +34,36 @@ public static class ResistanceKnowledge
             return false;
         }
 
+        if (viewer.Character == ResistanceCharacter.Defector || IsUnknownDefector(game, target))
+        {
+            return false;
+        }
+
         return Loyalty(viewer) == ResistanceRole.Spy && Loyalty(target) == ResistanceRole.Spy;
+    }
+
+    /// <summary>
+    /// Whether the viewer knows the target to be the other Defector: only with the variant on
+    /// (<see cref="ResistanceRules.DefectorsKnowEachOther"/>), and then whatever side each is on at the moment.
+    /// </summary>
+    public static bool KnowsDefector(ResistanceGame game, ResistancePlayer viewer, ResistancePlayer target)
+    {
+        return game.Rules is { DefectorEnabled: true, DefectorsKnowEachOther: true }
+               && viewer.PlayerId != target.PlayerId
+               && viewer.Character == ResistanceCharacter.Defector
+               && target.Character == ResistanceCharacter.Defector;
+    }
+
+    /// <summary>
+    /// Whether the player is the Defector who started on the resistance side. At the table the spies' reveal never
+    /// includes them, so the spies do not know them even while a switch card has put them among the spies. The Defector
+    /// who started as a spy shows a thumb in the reveal: the spies know them while they are spies, but they keep their
+    /// eyes closed and know no spy (see <see cref="KnowsSpy"/>).
+    /// </summary>
+    public static bool IsUnknownDefector(ResistanceGame game, ResistancePlayer player)
+    {
+        return player.Character == ResistanceCharacter.Defector
+               && (Loyalty(player) == ResistanceRole.Spy) == game.DefectorsSwitched;
     }
 
     /// <summary>

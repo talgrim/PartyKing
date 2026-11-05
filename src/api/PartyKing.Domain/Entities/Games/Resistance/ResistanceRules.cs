@@ -38,6 +38,18 @@ public class ResistanceRules
     /// </summary>
     public bool ReverserSpyKnowsSpies { get; set; } = true;
 
+    /// <summary>
+    /// Whether the Defector module (Hidden Agenda) is played: a Defector on each side, whose allegiance may switch at
+    /// the start of the missions 3 to 5. Off by default; only editable before the game starts.
+    /// </summary>
+    public bool DefectorEnabled { get; set; }
+
+    /// <summary>
+    /// Whether the two Defectors know each other while <see cref="DefectorEnabled"/> (the variant for large groups).
+    /// Off by default; only editable before the game starts.
+    /// </summary>
+    public bool DefectorsKnowEachOther { get; set; }
+
     /// <summary>How many copies of each plot card the deck holds (15 cards in all).</summary>
     public Dictionary<ResistancePlotCardType, int> PlotDeck { get; set; } = DefaultPlotDeck();
 
@@ -51,7 +63,9 @@ public class ResistanceRules
         bool? blindSpiesEnabled = null,
         bool? reverserEnabled = null,
         ResistanceReverserSides? reverserSides = null,
-        bool? reverserSpyKnowsSpies = null) => new()
+        bool? reverserSpyKnowsSpies = null,
+        bool? defectorEnabled = null,
+        bool? defectorsKnowEachOther = null) => new()
     {
         PlayerCounts = PlayerCounts.ToDictionary(
             x => x.Key, x => new ResistanceCountRules(x.Value.Spies, [.. x.Value.TeamSizes], [.. x.Value.RequiredFails])),
@@ -61,6 +75,8 @@ public class ResistanceRules
         ReverserEnabled = reverserEnabled ?? ReverserEnabled,
         ReverserSides = reverserSides ?? ReverserSides,
         ReverserSpyKnowsSpies = reverserSpyKnowsSpies ?? ReverserSpyKnowsSpies,
+        DefectorEnabled = defectorEnabled ?? DefectorEnabled,
+        DefectorsKnowEachOther = defectorsKnowEachOther ?? DefectorsKnowEachOther,
         PlotDeck = new Dictionary<ResistancePlotCardType, int>(PlotDeck),
     };
 

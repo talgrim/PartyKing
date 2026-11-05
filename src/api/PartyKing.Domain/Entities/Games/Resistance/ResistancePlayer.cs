@@ -24,6 +24,20 @@ public class ResistancePlayer : LobbyPlayer, ILobbyPlayerFactory<ResistancePlaye
     /// </summary>
     public ResistanceRole? Role { get; internal set; }
 
+    /// <summary>
+    /// Puts the player on the other side (a spy becomes Resistance and the other way round). The character stays. Does
+    /// nothing before the game is started, while <see cref="Role"/> is null.
+    /// </summary>
+    internal void SwitchAllegiance()
+    {
+        Role = Role switch
+        {
+            ResistanceRole.Spy => ResistanceRole.Resistance,
+            ResistanceRole.Resistance => ResistanceRole.Spy,
+            _ => Role,
+        };
+    }
+
     /// <summary>Whether the leader put the player on the team of the current mission.</summary>
     public bool IsOnTeam { get; internal set; }
 

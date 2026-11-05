@@ -23,6 +23,7 @@ export const ResistanceCompactBoard = ({ game, board }: Props): ReactNode => {
       rejectedTeams={game?.rejectedTeams}
       missionResults={game?.missionResults}
       players={game?.players}
+      defectorFlips={game?.defectorFlips}
     />
 
     {game && game.players.length > 0 && (

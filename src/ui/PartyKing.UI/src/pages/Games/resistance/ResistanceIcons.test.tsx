@@ -93,4 +93,55 @@ describe('ResistanceIcons', () => {
     expect(await screen.findByText('Bob')).toBeInTheDocument();
     expect(screen.getByText('succeeded')).toBeInTheDocument();
   });
+
+  it('draws a flipped switch card on the disc of the mission it was flipped for, and none before mission 3', () => {
+    render(
+      <MissionBoardIcon
+        title="plansza"
+        teamSizes={[2, 3, 3, 4, 4]}
+        results={['success', 'success', null, null, null]}
+        currentMission={2}
+        rejectedTeams={0}
+        fourthMissionNeedsTwoFails={false}
+        defectorFlips={[true, false]}
+      />,
+    );
+
+    expect(screen.getByRole('img', { name: 'Mission 3: Change Allegiance' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Mission 4: No Change' })).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /Mission [125]: / })).not.toBeInTheDocument();
+  });
+
+  it('explains a switch card in a tooltip on hover', async () => {
+    render(
+      <MissionBoardIcon
+        title="plansza"
+        teamSizes={[2, 3, 3, 4, 4]}
+        results={['success', 'success', null, null, null]}
+        currentMission={2}
+        rejectedTeams={0}
+        fourthMissionNeedsTwoFails={false}
+        defectorFlips={[true]}
+      />,
+    );
+
+    await userEvent.hover(screen.getByRole('img', { name: 'Mission 3: Change Allegiance' }));
+
+    expect(await screen.findByText('Switch card: both Defectors changed sides. Nobody is told who they are.')).toBeInTheDocument();
+  });
+
+  it('draws no switch card without flips', () => {
+    render(
+      <MissionBoardIcon
+        title="plansza"
+        teamSizes={[2, 3, 3, 4, 4]}
+        results={[null, null, null, null, null]}
+        currentMission={0}
+        rejectedTeams={0}
+        fourthMissionNeedsTwoFails={false}
+      />,
+    );
+
+    expect(screen.queryByRole('img', { name: /No Change|Change Allegiance/ })).not.toBeInTheDocument();
+  });
 });

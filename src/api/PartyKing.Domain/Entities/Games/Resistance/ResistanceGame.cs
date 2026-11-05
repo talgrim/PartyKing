@@ -118,7 +118,9 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
             Rules.BlindSpiesEnabled,
             Rules.ReverserEnabled,
             Rules.ReverserSides,
-            Rules.ReverserSpyKnowsSpies);
+            Rules.ReverserSpyKnowsSpies,
+            Rules.DefectorEnabled,
+            Rules.DefectorsKnowEachOther);
 
         return Succeeded();
     }

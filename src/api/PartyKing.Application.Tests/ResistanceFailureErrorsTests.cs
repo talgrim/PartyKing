@@ -96,6 +96,10 @@ public class ResistanceFailureErrorsTests
             ErrorType.Forbidden, "Resistance.NotReverser", "Only a Reverser plays a Reverse card."),
         [ResistanceFailure.ReverserCannotFail] = new(
             ErrorType.Forbidden, "Resistance.ReverserCannotFail", "A Reverser plays Success or Reverse, never Fail."),
+        [ResistanceFailure.DefectorLocked] = new(
+            ErrorType.Conflict,
+            "Resistance.RulesLocked",
+            "The Defectors can only be switched before the game starts."),
         [ResistanceFailure.GameOver] = new(ErrorType.Conflict, "Resistance.GameOver", "The game is over."),
         [ResistanceFailure.NoGame] = new(ErrorType.NotFound, "Resistance.NotFound", "The session has no Resistance game."),
         [ResistanceFailure.NotLeaderToDeal] = new(

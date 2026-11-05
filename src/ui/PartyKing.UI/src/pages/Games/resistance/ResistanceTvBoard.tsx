@@ -54,6 +54,7 @@ export const ResistanceTvBoard = ({ game, board, banner, yourPlayerId, onlinePla
             rejectedTeams={game?.rejectedTeams}
             missionResults={game?.missionResults}
             players={game?.players}
+            defectorFlips={game?.defectorFlips}
           />
         </div>
         {(team.length > 0 || votes || showCards) && (

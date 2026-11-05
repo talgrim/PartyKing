@@ -70,6 +70,17 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
     }
   };
 
+  const defectorChoiceDisabled = game === undefined || started || !game.rules.defectorEnabled;
+
+  const setDefector = async (enabled: boolean, knowEachOther?: boolean) => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.setResistanceDefector(sessionId, enabled, knowEachOther), { revalidate: false });
+    } catch {
+      setMessage(t('resistance.settings.defectorFailed'));
+    }
+  };
+
   const setReverser = async (enabled: boolean, options?: ResistanceReverserOptions) => {
     setMessage(undefined);
     try {
@@ -86,8 +97,9 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
       aria-labelledby="resistance-settings-title"
       fullWidth
       maxWidth="sm"
-      // MUI's emotion styles are unlayered and beat Tailwind's layered utilities, hence the important modifier
-      slotProps={{ paper: { className: 'bg-slate-800! text-slate-200! rounded-xl!' } }}
+      // MUI's emotion styles are unlayered and beat Tailwind's layered utilities, hence the important modifier; from
+      // 1024 px wide the dialog grows from MUI's "sm" (600 px) to 56rem
+      slotProps={{ paper: { className: 'bg-slate-800! text-slate-200! rounded-xl! lg:max-w-4xl!' } }}
     >
       <DialogTitle id="resistance-settings-title" className="flex! items-center justify-between text-xl! font-semibold!">
         {t('resistance.settings.title')}
@@ -179,6 +191,29 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
               onChange={(event) => void setReverser(true, { spyKnowsSpies: event.target.checked })}
             />
             {t('resistance.settings.reverser.spyKnowsSpies')}
+          </label>
+        </SettingsSection>
+        <SettingsSection
+          title={t('resistance.settings.defector.title')}
+          description={t('resistance.settings.defector.description')}
+        >
+          <label className="flex items-center gap-2 text-slate-200">
+            <input
+              type="checkbox"
+              checked={game?.rules.defectorEnabled ?? false}
+              disabled={game === undefined || started}
+              onChange={(event) => void setDefector(event.target.checked)}
+            />
+            {t('resistance.settings.defector.toggle')}
+          </label>
+          <label className={`flex items-center gap-2 text-sm ${defectorChoiceDisabled ? 'text-slate-500' : 'text-slate-200'}`}>
+            <input
+              type="checkbox"
+              checked={game?.rules.defectorsKnowEachOther ?? false}
+              disabled={defectorChoiceDisabled}
+              onChange={(event) => void setDefector(true, event.target.checked)}
+            />
+            {t('resistance.settings.defector.knowEachOther')}
           </label>
         </SettingsSection>
         {message && <p className="text-amber-500">{message}</p>}

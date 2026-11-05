@@ -68,8 +68,12 @@ export type ResistanceGameDto = {
   yourRole: ResistanceRole | null;
   /** The other spies' player ids; only a spy gets them, otherwise null. */
   fellowSpies: string[] | null;
-  /** The caller's own character (Reverser module); null when the module is off or the caller does not play. */
+  /** The caller's own character (Reverser and Defector modules); null when neither is played or the caller does not play. */
   yourCharacter: ResistanceCharacter | null;
+  /** The other Defector's player id; only a Defector gets it, and only when the Defectors know each other. */
+  fellowDefectorId: string | null;
+  /** The switch cards flipped so far, true for Change Allegiance (Defector module). Public. */
+  defectorFlips: boolean[];
   /** The mission being played, from 1. */
   missionNumber: number;
   /** How many players the leader sends on the mission; null before the start. */
@@ -214,6 +218,10 @@ export type ResistanceRulesDto = {
   reverserSides: ResistanceReverserSides;
   /** Whether a spy Reverser and the other spies know each other; when false the Reverser spy keeps their eyes closed in the reveal. */
   reverserSpyKnowsSpies: boolean;
+  /** Whether the Defector module is played in this game: a Defector on each side whose allegiance may switch from the third mission on. */
+  defectorEnabled: boolean;
+  /** Whether the two Defectors know each other while the module is played. */
+  defectorsKnowEachOther: boolean;
 };
 
 // Mirrors PartyKing.Contract.V1.Games.ResistanceCountRulesDto
@@ -237,8 +245,8 @@ export type ResistanceReverserSides = 'Both' | 'Resistance' | 'Spy';
 /** Reverser module: the choices that can be changed together with the switch; an omitted one stays as it is. */
 export type ResistanceReverserOptions = { sides?: ResistanceReverserSides; spyKnowsSpies?: boolean };
 
-/** Reverser module: the special character of a player, apart from the side. */
-export type ResistanceCharacter = 'Standard' | 'Reverser';
+/** The special character of a player, apart from the side (Reverser and Defector modules). */
+export type ResistanceCharacter = 'Standard' | 'Reverser' | 'Defector';
 
 /** DealingCards: the leader hands out the plot cards just drawn (add-on only); ResolvingCards: the immediate plot cards are played and their receivers confirm; SelectingTeam: the leader picks (the votes that rejected the last team stay public until then); Voting: the team is up for a vote; PlayingMission: the approved team plays cards; LeaderWindow: a Strong Leader is out there, so everyone confirms they play no card or its holder takes the lead; ConfidenceWindow: the team was approved while a playable card is out there, so everyone confirms they play no card, the holder of No Confidence cancels the approval or the holder of In the Spotlight names who plays openly; PeekWindow: the mission is played and its outcome is public, but a playable card is out there, so everyone confirms they play no card or the holder of Keeping a Close Eye looks at a mission card; Inquisition: the Inquisitor module, after missions 2 to 4 the holder of the token picks a player to examine and confirms having seen the loyalty; MissionResult: the outcome waits for "Dalej". */
 export type ResistancePhase =

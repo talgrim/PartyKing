@@ -70,6 +70,7 @@ export const ResistancePlayerView = ({ game, onSubmitTeam, onDealPlotCards, onPl
             game.rules.reverserEnabled && !game.rules.reverserSpyKnowsSpies && game.yourCharacter === 'Reverser'
           }
           character={game.yourCharacter}
+          fellowDefectorName={game.players.find((player) => player.id === game.fellowDefectorId)?.name ?? null}
         />
       )}
       {deals && (

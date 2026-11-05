@@ -123,6 +123,22 @@ public class ResistanceController : ResistanceControllerBase
         return result.Match(Ok, Problem);
     }
 
+    /// <summary>
+    /// Host or admin: switches the Defector module on or off and optionally whether the two Defectors know each other
+    /// (omitted keeps the choice). 409 once the game has started.
+    /// </summary>
+    [HttpPut("rules/defector")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> SetDefector(
+        Guid sessionId, [FromBody] ResistanceDefectorRequestDto request, CancellationToken cancellationToken)
+    {
+        var result = await Lobby.SetDefectorAsync(
+            sessionId, request.Enabled, request.KnowEachOther, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
     /// <summary>Admin only: opens the Resistance game to guests (idempotent), 403 for the host.</summary>
     [HttpPost("open")]
     [RequireSessionAccess]

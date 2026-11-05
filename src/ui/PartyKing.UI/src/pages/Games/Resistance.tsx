@@ -133,7 +133,7 @@ export const Resistance = (): ReactNode => {
   const showQueue = isPlayer && !tv && !embedded && view === 'queue';
   const showBoard = !embedded && !showQueue && (!showPlayerView || wide);
   // The TV tab shares the player's cookies, so it must not show the role or the "Ty" badge of whoever is logged in
-  const shownGame = game && tv ? { ...game, yourPlayerId: null, yourRole: null, yourCharacter: null, fellowSpies: null, yourVote: null, yourMissionCard: null, yourPlotCards: [], yourReveals: [], yourPeeks: [], yourInquisition: null } : game;
+  const shownGame = game && tv ? { ...game, yourPlayerId: null, yourRole: null, yourCharacter: null, fellowDefectorId: null, fellowSpies: null, yourVote: null, yourMissionCard: null, yourPlotCards: [], yourReveals: [], yourPeeks: [], yourInquisition: null } : game;
 
   const players = game?.players ?? [];
   const started = game?.startedAt != null;
@@ -321,7 +321,10 @@ export const Resistance = (): ReactNode => {
 
   const banner = shownGame && (
     <>
-      <ResistancePhaseBanner text={resistancePhaseDescription(shownGame, { canManage, isAdmin }, board.teamSizes[0])} />
+      <ResistancePhaseBanner
+        text={resistancePhaseDescription(shownGame, { canManage, isAdmin }, board.teamSizes[0])}
+        defectorFlips={shownGame.defectorFlips}
+      />
       {!logHidden && <ResistancePlotLog cards={shownGame.playedPlotCards} players={shownGame.players} />}
     </>
   );

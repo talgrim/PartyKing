@@ -123,6 +123,8 @@ internal static class ResistanceErrors
             "Resistance.NotReverser", "Only a Reverser plays a Reverse card."),
         ResistanceFailure.ReverserCannotFail => Error.Forbidden(
             "Resistance.ReverserCannotFail", "A Reverser plays Success or Reverse, never Fail."),
+        ResistanceFailure.DefectorLocked => Error.Conflict(
+            "Resistance.RulesLocked", "The Defectors can only be switched before the game starts."),
         _ => throw new ArgumentOutOfRangeException(nameof(failure), failure, "No error is defined for this failure."),
     };
 }

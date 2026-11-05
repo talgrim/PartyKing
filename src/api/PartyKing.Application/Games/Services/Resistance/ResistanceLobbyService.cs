@@ -76,6 +76,13 @@ public interface IResistanceLobbyService
         GameCaller caller,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Host or admin: switches the Defector module on or off and, when <paramref name="knowEachOther"/> is given,
+    /// whether the two Defectors know each other. NotFound without a game, Conflict once the game has started.
+    /// </summary>
+    Task<ErrorOr<ResistanceGameDto>> SetDefectorAsync(
+        Guid sessionId, bool enabled, bool? knowEachOther, GameCaller caller, CancellationToken cancellationToken);
+
     /// <summary>Host or admin: removes a player. NotFound for an unknown game or player.</summary>
     Task<ErrorOr<ResistanceGameDto>> KickAsync(
         Guid sessionId, Guid playerId, GameCaller caller, CancellationToken cancellationToken);
@@ -241,6 +248,21 @@ internal class ResistanceLobbyService : IResistanceLobbyService
                 nameof(SetReverserAsync),
                 ResistanceOutcome.NoGame,
                 game => game.SetReverser(enabled, sides?.ToDomain(), spyKnowsSpies),
+                cancellationToken),
+            cancellationToken);
+    }
+
+    public Task<ErrorOr<ResistanceGameDto>> SetDefectorAsync(
+        Guid sessionId, bool enabled, bool? knowEachOther, GameCaller caller, CancellationToken cancellationToken)
+    {
+        return _gate.RunAsManagerAsync(
+            sessionId,
+            caller,
+            () => _games.UpdateAsync(
+                sessionId,
+                nameof(SetDefectorAsync),
+                ResistanceOutcome.NoGame,
+                game => game.SetDefector(enabled, knowEachOther),
                 cancellationToken),
             cancellationToken);
     }

@@ -33,8 +33,23 @@ public class ResistanceGameDto
     /// <summary>The other spies' player ids. Set only for a spy; everybody else gets null.</summary>
     public IReadOnlyList<Guid>? FellowSpies { get; set; }
 
-    /// <summary>The caller's own character (Reverser module); null when the module is off or the caller does not play.</summary>
+    /// <summary>
+    /// The caller's own character (Reverser and Defector modules); null when neither is played or the caller does not
+    /// play.
+    /// </summary>
     public ResistanceCharacterDto? YourCharacter { get; set; }
+
+    /// <summary>
+    /// The other Defector's player id. Set only for a Defector in a game where the Defectors know each other; everybody
+    /// else gets null.
+    /// </summary>
+    public Guid? FellowDefectorId { get; set; }
+
+    /// <summary>
+    /// The switch cards flipped so far, in order, true for Change Allegiance (Defector module). Public: the cards are
+    /// flipped openly at the start of the missions 3 to 5. Empty until the first flip, and when the module is off.
+    /// </summary>
+    public IReadOnlyList<bool> DefectorFlips { get; set; } = [];
 
     /// <summary>The number of the mission being played.</summary>
     public int MissionNumber { get; set; }
