@@ -13,7 +13,7 @@ describe('ResistanceMissionCards', () => {
   });
 
   it('puts the openly played card first, signed with the player, and counts it out of the hidden ones', () => {
-    render(<ResistanceMissionCards cardCount={3} failCount={1} open={{ name: 'Ala', success: false }} />);
+    render(<ResistanceMissionCards cardCount={3} failCount={1} open={{ name: 'Ala', card: 'Fail' }} />);
 
     const items = screen.getAllByRole('listitem');
     expect(items).toHaveLength(3);
@@ -23,8 +23,23 @@ describe('ResistanceMissionCards', () => {
     expect(items.slice(1).map((item) => cardOf(item))).toEqual(['Success', 'Success']);
   });
 
+  it('keeps every card face down when the number of Fail cards is secret', () => {
+    render(<ResistanceMissionCards cardCount={3} failCount={null} />);
+
+    const items = screen.getAllByRole('listitem');
+    expect(items.map((item) => cardOf(item))).toEqual(['Hidden mission card', 'Hidden mission card', 'Hidden mission card']);
+  });
+
+  it('shows an openly played Reverse card and keeps the others face down', () => {
+    render(<ResistanceMissionCards cardCount={2} failCount={null} open={{ name: 'Ala', card: 'Reverse' }} />);
+
+    const items = screen.getAllByRole('listitem');
+    expect(cardOf(items[0])).toBe('Reverse');
+    expect(cardOf(items[1])).toBe('Hidden mission card');
+  });
+
   it('keeps the hidden Fail cards when the open card is a Success', () => {
-    render(<ResistanceMissionCards cardCount={2} failCount={1} open={{ name: 'Bartek', success: true }} />);
+    render(<ResistanceMissionCards cardCount={2} failCount={1} open={{ name: 'Bartek', card: 'Success' }} />);
 
     const items = screen.getAllByRole('listitem');
     expect(cardOf(items[0])).toBe('Success');

@@ -10,6 +10,7 @@ const game = (count: number, extra: Partial<ResistanceGameDto> = {}): Resistance
   startedAt: null,
   leaderPlayerId: null,
   yourRole: null,
+  yourCharacter: null,
   fellowSpies: null,
   missionNumber: 1,
   requiredTeamSize: null,
@@ -52,6 +53,8 @@ const game = (count: number, extra: Partial<ResistanceGameDto> = {}): Resistance
     plotCardsPerRound: 1,
     inquisitorEnabled: false,
     blindSpiesEnabled: false,
+    reverserEnabled: false,
+    reverserSides: 'Both',
   },
   ...extra,
 });
@@ -166,6 +169,17 @@ describe('resistancePhaseDescription', () => {
 
       expect(text).toContain('Play your mission card');
       expect(text).toContain('The mission fails from 2 Fail cards');
+    });
+
+    it('does not announce the Fail cards with the Reverser module', () => {
+      const text = resistancePhaseDescription(
+        voting({ phase: 'MissionResult', missionResults: [{ missionNumber: 1, succeeded: false, failCount: null, teamPlayerIds: [] }] }),
+        host,
+        2,
+      );
+
+      expect(text).toContain('The mission failed.');
+      expect(text).not.toContain('Fail cards');
     });
 
     it('reports the mission result with the score and who continues', () => {

@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   setResistancePlotCards: vi.fn(),
   setResistanceInquisitor: vi.fn(),
   setResistanceBlindSpies: vi.fn(),
+  setResistanceReverser: vi.fn(),
   examineResistancePlayer: vi.fn(),
   confirmResistanceInquisition: vi.fn(),
   selectResistanceTeam: vi.fn(),
@@ -50,6 +51,7 @@ vi.mock('@/service/endpoints/games/gamesApi', () => ({
     setResistancePlotCards: mocks.setResistancePlotCards,
     setResistanceInquisitor: mocks.setResistanceInquisitor,
     setResistanceBlindSpies: mocks.setResistanceBlindSpies,
+    setResistanceReverser: mocks.setResistanceReverser,
     examineResistancePlayer: mocks.examineResistancePlayer,
     confirmResistanceInquisition: mocks.confirmResistanceInquisition,
     selectResistanceTeam: mocks.selectResistanceTeam,
@@ -71,6 +73,7 @@ const lobby = (names: string[], isOpen = false) => ({
   startedAt: null,
   leaderPlayerId: null,
   yourRole: null,
+  yourCharacter: null,
   fellowSpies: null,
   missionNumber: 1,
   requiredTeamSize: null,
@@ -85,7 +88,7 @@ const lobby = (names: string[], isOpen = false) => ({
   revealedRoles: null as { playerId: string; role: string }[] | null,
   requiredFails: null as number | null,
   playedMissionPlayerIds: [] as string[],
-  yourMissionCard: null as boolean | null,
+  yourMissionCard: null as string | null,
   missionResults: [] as { missionNumber: number; succeeded: boolean; failCount: number; teamPlayerIds: string[] }[],
   yourPlotCards: [] as unknown[],
   plotCardCounts: [] as unknown[],
@@ -111,6 +114,8 @@ const lobby = (names: string[], isOpen = false) => ({
     plotCardsPerRound: 1,
     inquisitorEnabled: false,
     blindSpiesEnabled: false,
+    reverserEnabled: false,
+    reverserSides: 'Both',
   },
 });
 
@@ -151,6 +156,7 @@ describe('Resistance', () => {
     mocks.setResistancePlotCards.mockReset();
     mocks.setResistanceInquisitor.mockReset();
     mocks.setResistanceBlindSpies.mockReset();
+    mocks.setResistanceReverser.mockReset();
     mocks.examineResistancePlayer.mockReset();
     mocks.confirmResistanceInquisition.mockReset();
     mocks.selectResistanceTeam.mockReset();
@@ -290,6 +296,50 @@ describe('Resistance', () => {
     await userEvent.click(await screen.findByRole('checkbox', { name: 'Enable Blind Spies' }));
 
     expect(await screen.findByText('Could not change the Blind Spies setting.')).toBeInTheDocument();
+  });
+
+  it('switches the Reverser on before the game starts', async () => {
+    mocks.setResistanceReverser.mockResolvedValue(lobby([]));
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Game settings' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Game settings' });
+    expect(within(dialog).getByRole('region', { name: 'Reverser' })).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole('checkbox', { name: 'Enable Reverser' }));
+
+    expect(mocks.setResistanceReverser).toHaveBeenCalledWith('session-1', true, undefined);
+  });
+
+  it('shows a message when the Reverser cannot be switched', async () => {
+    mocks.setResistanceReverser.mockRejectedValue(new Error('boom'));
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Game settings' }));
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Enable Reverser' }));
+
+    expect(await screen.findByText('Could not change the Reverser setting.')).toBeInTheDocument();
+  });
+
+  it('chooses which sides get a Reverser, once the module is on', async () => {
+    const game = lobby([]);
+    mocks.getResistance.mockResolvedValue({ ...game, rules: { ...game.rules, reverserEnabled: true } });
+    mocks.setResistanceReverser.mockResolvedValue(lobby([]));
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Game settings' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Game settings' });
+    await userEvent.selectOptions(within(dialog).getByRole('combobox', { name: 'Who gets a Reverser' }), 'Spy');
+
+    expect(mocks.setResistanceReverser).toHaveBeenCalledWith('session-1', true, 'Spy');
+  });
+
+  it('keeps the sides of the Reverser disabled while the module is off', async () => {
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Game settings' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Game settings' });
+
+    expect(within(dialog).getByRole('combobox', { name: 'Who gets a Reverser' })).toBeDisabled();
   });
 
   it('keeps the game settings usable in the open lobby and disables them after the start', async () => {
@@ -461,6 +511,18 @@ describe('Resistance', () => {
 
       expect(await screen.findByRole('img', { name: 'Spy' })).toBeInTheDocument();
       expect(within(screen.getByRole('list', { name: 'Fellow spies' })).getByText('D')).toBeInTheDocument();
+    });
+
+    it('tells a Reverser so on the role card, and nobody else', async () => {
+      mocks.role = { isHost: false, isAdmin: false };
+      const game = started(five, { yourPlayerId: 'p2', yourRole: 'Resistance', yourCharacter: 'Reverser' });
+      mocks.getResistance.mockResolvedValue({ ...game, rules: { ...game.rules, reverserEnabled: true } });
+      renderPage();
+
+      expect(screen.queryByText(/You are a Reverser/)).not.toBeInTheDocument();
+      await userEvent.click(await screen.findByRole('button', { name: 'Show your role' }));
+
+      expect(await screen.findByText(/You are a Reverser/)).toBeInTheDocument();
     });
 
     it('tells a spy of the Blind Spies variant that they know no one, instead of listing spies', async () => {
@@ -1118,13 +1180,51 @@ describe('Resistance', () => {
 
       it('sends the card a spy plays', async () => {
         mocks.getResistance.mockResolvedValue(playing({ yourRole: 'Spy', fellowSpies: [] }));
-        mocks.playResistanceMissionCard.mockResolvedValue(playing({ yourRole: 'Spy', yourMissionCard: false }));
+        mocks.playResistanceMissionCard.mockResolvedValue(playing({ yourRole: 'Spy', yourMissionCard: 'Fail' }));
         renderPage();
 
         await userEvent.click(await screen.findByRole('button', { name: 'Fail' }));
 
-        expect(mocks.playResistanceMissionCard).toHaveBeenCalledWith('session-1', false);
+        expect(mocks.playResistanceMissionCard).toHaveBeenCalledWith('session-1', 'Fail');
         expect(await screen.findByText(/Card played: Fail/)).toBeInTheDocument();
+      });
+
+      const reversers = (extra: object) => {
+        const game = playing(extra);
+
+        return { ...game, rules: { ...game.rules, reverserEnabled: true } };
+      };
+
+      it('gives a Reverser of the Resistance the Reverse card, and still no Fail', async () => {
+        mocks.getResistance.mockResolvedValue(reversers({ yourRole: 'Resistance', yourCharacter: 'Reverser' }));
+        mocks.playResistanceMissionCard.mockResolvedValue(
+          reversers({ yourRole: 'Resistance', yourCharacter: 'Reverser', yourMissionCard: 'Reverse' }),
+        );
+        renderPage();
+
+        expect(await screen.findByRole('button', { name: 'Success' })).toBeEnabled();
+        expect(screen.getByRole('button', { name: 'Fail' })).toHaveAttribute('aria-disabled', 'true');
+        expect(screen.getByText(/so is the number of Fail cards/)).toBeInTheDocument();
+        await userEvent.click(screen.getByRole('button', { name: 'Reverse' }));
+
+        expect(mocks.playResistanceMissionCard).toHaveBeenCalledWith('session-1', 'Reverse');
+        expect(await screen.findByText(/Card played: Reverse/)).toBeInTheDocument();
+      });
+
+      it('takes the Fail card from a spy who is a Reverser', async () => {
+        mocks.getResistance.mockResolvedValue(reversers({ yourRole: 'Spy', yourCharacter: 'Reverser', fellowSpies: [] }));
+        renderPage();
+
+        expect(await screen.findByRole('button', { name: 'Reverse' })).toBeEnabled();
+        expect(screen.getByRole('button', { name: 'Fail' })).toHaveAttribute('aria-disabled', 'true');
+      });
+
+      it('shows no Reverse card to the other players', async () => {
+        mocks.getResistance.mockResolvedValue(reversers({ yourRole: 'Spy', yourCharacter: 'Standard', fellowSpies: [] }));
+        renderPage();
+
+        expect(await screen.findByRole('button', { name: 'Fail' })).toBeEnabled();
+        expect(screen.queryByRole('button', { name: 'Reverse' })).not.toBeInTheDocument();
       });
 
       it('shows no cards to a player outside the team', async () => {

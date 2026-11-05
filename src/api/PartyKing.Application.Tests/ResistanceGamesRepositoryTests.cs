@@ -119,7 +119,8 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
             _sessionId,
             "PlayMissionCardAsync",
             ResistanceOutcome.NoGame,
-            game => game.PlayMissionCard(player, success),
+            game => game.PlayMissionCard(
+                player, success ? ResistanceMissionCardKind.Success : ResistanceMissionCardKind.Fail),
             CancellationToken.None);
     }
 
@@ -444,7 +445,7 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         await VoteAsync(true, true, true, true, true);
         foreach (var member in team)
         {
-            Assert.Null((await PlayMissionCardAsync(member, success: true)).Failure);
+            Assert.Null((await PlayMissionCardAsync(member, true)).Failure);
         }
     }
 
@@ -464,6 +465,81 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
             _sessionId, "SetBlindSpiesAsync", ResistanceOutcome.NoGame, game => game.SetBlindSpies(false), CancellationToken.None);
         Assert.Equal(ResistanceFailure.BlindSpiesLocked, locked.Failure);
         Assert.True((await ReloadAsync()).Rules.BlindSpiesEnabled);
+    }
+
+    [Fact]
+    public async Task Reverser_SurvivesReloadsAndTheStartDealsTheCharacters()
+    {
+        await CreateLobbyAsync(5, isOpen: true);
+        var switched = await _repository.UpdateAsync(
+            _sessionId, "SetReverserAsync", ResistanceOutcome.NoGame, game => game.SetReverser(true), CancellationToken.None);
+        Assert.Null(switched.Failure);
+        Assert.True((await ReloadAsync()).Rules.ReverserEnabled);
+        Assert.Equal(ResistanceReverserSides.Both, (await ReloadAsync()).Rules.ReverserSides);
+
+        Assert.Null((await StartAsync()).Failure);
+        var started = await ReloadAsync();
+        Assert.True(started.Rules.ReverserEnabled);
+        Assert.Single(started.Players, x => x.Character == ResistanceCharacter.Reverser && x.Role == ResistanceRole.Spy);
+        Assert.Single(started.Players, x => x.Character == ResistanceCharacter.Reverser && x.Role == ResistanceRole.Resistance);
+
+        var locked = await _repository.UpdateAsync(
+            _sessionId, "SetReverserAsync", ResistanceOutcome.NoGame, game => game.SetReverser(false), CancellationToken.None);
+        Assert.Equal(ResistanceFailure.ReverserLocked, locked.Failure);
+        Assert.True((await ReloadAsync()).Rules.ReverserEnabled);
+    }
+
+    [Fact]
+    public async Task AReverseCard_IsStoredAsItsOwnKind_AndReversesTheStoredResult()
+    {
+        await CreateLobbyAsync(5, isOpen: true);
+        await _repository.UpdateAsync(
+            _sessionId, "SetReverserAsync", ResistanceOutcome.NoGame, game => game.SetReverser(true), CancellationToken.None);
+        await StartAsync();
+        var current = await ReloadAsync();
+        _players = current.Players.OrderBy(x => x.Order).Select(x => x.PlayerId).ToList();
+        var reverser = current.Players.Single(x => x.Character == ResistanceCharacter.Reverser && x.Role == ResistanceRole.Resistance);
+        var other = current.Players.First(x => x.PlayerId != reverser.PlayerId);
+        Assert.Null((await SelectTeamAsync(current.LeaderPlayerId, [reverser.PlayerId, other.PlayerId])).Failure);
+        await VoteAsync(true, true, true, true, true);
+
+        Assert.Null((await PlayCardAsync(reverser.PlayerId, ResistanceMissionCardKind.Reverse)).Failure);
+        Assert.Null((await PlayCardAsync(other.PlayerId, ResistanceMissionCardKind.Success)).Failure);
+
+        var after = await ReloadAsync();
+        Assert.Equal(ResistanceMissionCardKind.Reverse, after.Players.Single(x => x.PlayerId == reverser.PlayerId).MissionCard);
+        Assert.Equal(ResistanceMissionCardKind.Success, after.Players.Single(x => x.PlayerId == other.PlayerId).MissionCard);
+        Assert.False(Assert.Single(after.MissionResults).Succeeded);
+    }
+
+    [Fact]
+    public async Task TheReverserSides_SurviveReloads_AndDecideWhoGetsTheCharacter()
+    {
+        await CreateLobbyAsync(5, isOpen: true);
+        var switched = await _repository.UpdateAsync(
+            _sessionId,
+            "SetReverserAsync",
+            ResistanceOutcome.NoGame,
+            game => game.SetReverser(true, ResistanceReverserSides.Spy),
+            CancellationToken.None);
+        Assert.Null(switched.Failure);
+        Assert.Equal(ResistanceReverserSides.Spy, (await ReloadAsync()).Rules.ReverserSides);
+
+        Assert.Null((await StartAsync()).Failure);
+        var started = await ReloadAsync();
+        Assert.Equal(ResistanceReverserSides.Spy, started.Rules.ReverserSides);
+        var reversers = started.Players.Where(x => x.Character == ResistanceCharacter.Reverser).ToList();
+        Assert.Equal(ResistanceRole.Spy, Assert.Single(reversers).Role);
+    }
+
+    private Task<ResistanceOutcome> PlayCardAsync(Guid player, ResistanceMissionCardKind card)
+    {
+        return _repository.UpdateAsync(
+            _sessionId,
+            "PlayMissionCardAsync",
+            ResistanceOutcome.NoGame,
+            game => game.PlayMissionCard(player, card),
+            CancellationToken.None);
     }
 
     [Fact]

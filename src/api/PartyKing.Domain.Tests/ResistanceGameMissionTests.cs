@@ -36,11 +36,11 @@ public class ResistanceGameMissionTests
         var game = MissionGame();
         var spy = game.Players[0];
 
-        var outcome = game.PlayMissionCard(spy.PlayerId, success: false);
+        var outcome = game.PlayMissionCard(spy.PlayerId, ResistanceMissionCardKind.Fail);
 
         Assert.Null(outcome.Failure);
         Assert.True(outcome.Changed);
-        Assert.False(spy.MissionCard);
+        Assert.Equal(ResistanceMissionCardKind.Fail, spy.MissionCard);
         Assert.Equal(ResistancePhase.PlayingMission, game.Phase);
         Assert.Empty(game.MissionResults);
     }
@@ -50,8 +50,8 @@ public class ResistanceGameMissionTests
     {
         var game = MissionGame();
 
-        game.PlayMissionCard(game.Players[2].PlayerId, success: true);
-        game.PlayMissionCard(game.Players[0].PlayerId, success: false);
+        game.PlayMissionCard(game.Players[2].PlayerId, ResistanceMissionCardKind.Success);
+        game.PlayMissionCard(game.Players[0].PlayerId, ResistanceMissionCardKind.Fail);
 
         var result = Assert.Single(game.MissionResults);
         Assert.False(result.Succeeded);
@@ -70,15 +70,15 @@ public class ResistanceGameMissionTests
         var offTeam = game.Players[1];
         var resistance = game.Players[2];
 
-        Assert.Equal(ResistanceFailure.NotStarted, notStarted.PlayMissionCard(notStarted.Players[0].PlayerId, true).Failure);
-        Assert.Equal(ResistanceFailure.GameOver, over.PlayMissionCard(over.Players[0].PlayerId, true).Failure);
-        Assert.Equal(ResistanceFailure.NotPlayerToPlay, game.PlayMissionCard(null, true).Failure);
-        Assert.Equal(ResistanceFailure.NotPlayerToPlay, game.PlayMissionCard(Guid.NewGuid(), true).Failure);
-        Assert.Equal(ResistanceFailure.NoApprovedTeam, voting.PlayMissionCard(voting.Players[0].PlayerId, true).Failure);
-        Assert.Equal(ResistanceFailure.NotOnTeam, game.PlayMissionCard(offTeam.PlayerId, true).Failure);
-        Assert.Equal(ResistanceFailure.MustSucceed, game.PlayMissionCard(resistance.PlayerId, false).Failure);
+        Assert.Equal(ResistanceFailure.NotStarted, notStarted.PlayMissionCard(notStarted.Players[0].PlayerId, ResistanceMissionCardKind.Success).Failure);
+        Assert.Equal(ResistanceFailure.GameOver, over.PlayMissionCard(over.Players[0].PlayerId, ResistanceMissionCardKind.Success).Failure);
+        Assert.Equal(ResistanceFailure.NotPlayerToPlay, game.PlayMissionCard(null, ResistanceMissionCardKind.Success).Failure);
+        Assert.Equal(ResistanceFailure.NotPlayerToPlay, game.PlayMissionCard(Guid.NewGuid(), ResistanceMissionCardKind.Success).Failure);
+        Assert.Equal(ResistanceFailure.NoApprovedTeam, voting.PlayMissionCard(voting.Players[0].PlayerId, ResistanceMissionCardKind.Success).Failure);
+        Assert.Equal(ResistanceFailure.NotOnTeam, game.PlayMissionCard(offTeam.PlayerId, ResistanceMissionCardKind.Success).Failure);
+        Assert.Equal(ResistanceFailure.MustSucceed, game.PlayMissionCard(resistance.PlayerId, ResistanceMissionCardKind.Fail).Failure);
         Assert.All(game.Players, x => Assert.Null(x.MissionCard));
-        Assert.False(game.PlayMissionCard(offTeam.PlayerId, true).Changed);
+        Assert.False(game.PlayMissionCard(offTeam.PlayerId, ResistanceMissionCardKind.Success).Changed);
     }
 
     [Fact]
@@ -86,12 +86,12 @@ public class ResistanceGameMissionTests
     {
         var game = MissionGame();
         var spy = game.Players[0];
-        game.PlayMissionCard(spy.PlayerId, success: true);
+        game.PlayMissionCard(spy.PlayerId, ResistanceMissionCardKind.Success);
 
-        var again = game.PlayMissionCard(spy.PlayerId, success: false);
+        var again = game.PlayMissionCard(spy.PlayerId, ResistanceMissionCardKind.Fail);
 
         Assert.Equal(ResistanceFailure.AlreadyPlayed, again.Failure);
-        Assert.True(spy.MissionCard);
+        Assert.Equal(ResistanceMissionCardKind.Success, spy.MissionCard);
     }
 
     [Fact]

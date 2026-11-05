@@ -10,12 +10,12 @@ internal abstract class FakeResistanceCalls
 {
     public ErrorOr<ResistanceGameDto> Result { get; set; }
 
-    public (string Action, Guid SessionId, bool? Approve, Guid? PlayerId)? LastCall { get; private set; }
+    public (string Action, Guid SessionId, object? Argument, Guid? PlayerId)? LastCall { get; private set; }
 
     protected Task<ErrorOr<ResistanceGameDto>> Record(
-        string action, Guid sessionId, bool? approve, GameCaller caller)
+        string action, Guid sessionId, object? argument, GameCaller caller)
     {
-        LastCall = (action, sessionId, approve, caller.PlayerId);
+        LastCall = (action, sessionId, argument, caller.PlayerId);
         return Task.FromResult(Result);
     }
 }
@@ -59,6 +59,14 @@ internal sealed class FakeResistanceLobbyService : IResistanceLobbyService
         Guid sessionId, bool enabled, GameCaller caller, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
 
+    public Task<ErrorOr<ResistanceGameDto>> SetReverserAsync(
+        Guid sessionId,
+        bool enabled,
+        ResistanceReverserSidesDto? sides,
+        GameCaller caller,
+        CancellationToken cancellationToken) =>
+        throw new NotSupportedException();
+
     public Task<ErrorOr<ResistanceGameDto>> KickAsync(
         Guid sessionId, Guid playerId, GameCaller caller, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
@@ -95,9 +103,9 @@ internal sealed class FakeResistanceRoundService : FakeResistanceCalls, IResista
     }
 
     public Task<ErrorOr<ResistanceGameDto>> PlayMissionCardAsync(
-        Guid sessionId, bool success, GameCaller caller, CancellationToken cancellationToken)
+        Guid sessionId, ResistanceMissionCardKindDto card, GameCaller caller, CancellationToken cancellationToken)
     {
-        return Record("mission", sessionId, success, caller);
+        return Record("mission", sessionId, card, caller);
     }
 
     public Task<ErrorOr<ResistanceGameDto>> ContinueAsync(
@@ -214,7 +222,7 @@ internal sealed class FakeResistanceSeatService : IResistanceSeatService
     {
         LastRelease = (playerId, released, caller);
 
-        return Task.FromResult(ErrorOrFactory.From(new ResistanceGameDto { Rules = new ResistanceRulesDto([], false, 1, false, false) }));
+        return Task.FromResult(ErrorOrFactory.From(new ResistanceGameDto { Rules = new ResistanceRulesDto([], false, 1, false, false, false, ResistanceReverserSidesDto.Both) }));
     }
 
     public Task<ErrorOr<GameSeat>> ClaimAsync(Guid sessionId, Guid playerId, CancellationToken cancellationToken)

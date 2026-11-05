@@ -32,7 +32,7 @@ public class ResistanceGameTeamTests
     {
         var game = StartedGame();
         game.Players[3].Vote = true;
-        game.Players[3].MissionCard = true;
+        game.Players[3].MissionCard = ResistanceMissionCardKind.Success;
         var team = Ids(game, 2);
 
         var outcome = game.SelectTeam(game.LeaderPlayerId, team);

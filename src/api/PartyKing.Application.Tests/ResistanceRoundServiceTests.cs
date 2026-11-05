@@ -267,15 +267,15 @@ public class ResistanceRoundServiceTests : ResistanceServiceTestBase
     {
         var ct = CancellationToken.None;
         var (callers, leader) = await StartWithTeamAsync(5);
-        Assert.Equal("Resistance.NotPlayingMission", (await _roundService.PlayMissionCardAsync(_id, true, leader, ct)).FirstError.Code);
+        Assert.Equal("Resistance.NotPlayingMission", (await _roundService.PlayMissionCardAsync(_id, ResistanceMissionCardKindDto.Success, leader, ct)).FirstError.Code);
         await VoteAsync(callers, true, true, true, true, true);
 
         var team = (await _lobbyService.GetAsync(_id, Host, ct)).Value.TeamPlayerIds;
         var outsider = callers.First(x => !team.Contains(x.PlayerId!.Value));
 
-        Assert.Equal("Resistance.NotPlayer", (await _roundService.PlayMissionCardAsync(_id, true, Host, ct)).FirstError.Code);
-        Assert.Equal("Resistance.NotPlayer", (await _roundService.PlayMissionCardAsync(_id, true, Admin, ct)).FirstError.Code);
-        var notOnTeam = await _roundService.PlayMissionCardAsync(_id, true, outsider, ct);
+        Assert.Equal("Resistance.NotPlayer", (await _roundService.PlayMissionCardAsync(_id, ResistanceMissionCardKindDto.Success, Host, ct)).FirstError.Code);
+        Assert.Equal("Resistance.NotPlayer", (await _roundService.PlayMissionCardAsync(_id, ResistanceMissionCardKindDto.Success, Admin, ct)).FirstError.Code);
+        var notOnTeam = await _roundService.PlayMissionCardAsync(_id, ResistanceMissionCardKindDto.Success, outsider, ct);
         Assert.Equal("Resistance.NotOnTeam", notOnTeam.FirstError.Code);
         Assert.Equal(ErrorOr.ErrorType.Forbidden, notOnTeam.FirstError.Type);
     }
@@ -286,14 +286,14 @@ public class ResistanceRoundServiceTests : ResistanceServiceTestBase
         var ct = CancellationToken.None;
         var mission = await StartMissionAsync(5, spiesOnTeam: 1);
 
-        var failed = await _roundService.PlayMissionCardAsync(_id, false, mission.Resistance[0], ct);
+        var failed = await _roundService.PlayMissionCardAsync(_id, ResistanceMissionCardKindDto.Fail, mission.Resistance[0], ct);
         Assert.Equal("Resistance.MustSucceed", failed.FirstError.Code);
         Assert.Equal(ErrorOr.ErrorType.Forbidden, failed.FirstError.Type);
 
-        var played = await _roundService.PlayMissionCardAsync(_id, true, mission.Resistance[0], ct);
+        var played = await _roundService.PlayMissionCardAsync(_id, ResistanceMissionCardKindDto.Success, mission.Resistance[0], ct);
         Assert.False(played.IsError);
-        Assert.Equal("Resistance.AlreadyPlayed", (await _roundService.PlayMissionCardAsync(_id, true, mission.Resistance[0], ct)).FirstError.Code);
-        Assert.False((await _roundService.PlayMissionCardAsync(_id, false, mission.Spies[0], ct)).IsError);
+        Assert.Equal("Resistance.AlreadyPlayed", (await _roundService.PlayMissionCardAsync(_id, ResistanceMissionCardKindDto.Success, mission.Resistance[0], ct)).FirstError.Code);
+        Assert.False((await _roundService.PlayMissionCardAsync(_id, ResistanceMissionCardKindDto.Fail, mission.Spies[0], ct)).IsError);
     }
 
     [Fact]
@@ -303,14 +303,14 @@ public class ResistanceRoundServiceTests : ResistanceServiceTestBase
         var mission = await StartMissionAsync(5, spiesOnTeam: 1);
         var before = _notifier.Changes.Count;
 
-        await _roundService.PlayMissionCardAsync(_id, false, mission.Spies[0], ct);
+        await _roundService.PlayMissionCardAsync(_id, ResistanceMissionCardKindDto.Fail, mission.Spies[0], ct);
 
         Assert.Equal(before + 1, _notifier.Changes.Count);
         var asSpy = (await _lobbyService.GetAsync(_id, mission.Spies[0], ct)).Value;
         var asOther = (await _lobbyService.GetAsync(_id, mission.Resistance[0], ct)).Value;
         var asHost = (await _lobbyService.GetAsync(_id, Host, ct)).Value;
 
-        Assert.False(asSpy.YourMissionCard);
+        Assert.Equal(ResistanceMissionCardKindDto.Fail, asSpy.YourMissionCard);
         Assert.Null(asOther.YourMissionCard);
         Assert.Null(asHost.YourMissionCard);
         foreach (var view in new[] { asSpy, asOther, asHost })
@@ -327,8 +327,8 @@ public class ResistanceRoundServiceTests : ResistanceServiceTestBase
         var ct = CancellationToken.None;
         var mission = await StartMissionAsync(5, spiesOnTeam: 1);
 
-        await _roundService.PlayMissionCardAsync(_id, true, mission.Resistance[0], ct);
-        await _roundService.PlayMissionCardAsync(_id, false, mission.Spies[0], ct);
+        await _roundService.PlayMissionCardAsync(_id, ResistanceMissionCardKindDto.Success, mission.Resistance[0], ct);
+        await _roundService.PlayMissionCardAsync(_id, ResistanceMissionCardKindDto.Fail, mission.Spies[0], ct);
 
         var game = (await _lobbyService.GetAsync(_id, Host, ct)).Value;
         Assert.Equal(ResistancePhaseDto.MissionResult, game.Phase);
@@ -347,7 +347,7 @@ public class ResistanceRoundServiceTests : ResistanceServiceTestBase
 
         foreach (var caller in mission.Team)
         {
-            await _roundService.PlayMissionCardAsync(_id, true, caller, ct);
+            await _roundService.PlayMissionCardAsync(_id, ResistanceMissionCardKindDto.Success, caller, ct);
         }
 
         var game = (await _lobbyService.GetAsync(_id, Host, ct)).Value;
@@ -365,8 +365,8 @@ public class ResistanceRoundServiceTests : ResistanceServiceTestBase
         var mission = await StartMissionAsync(5, spiesOnTeam: 1);
         Assert.Equal(2, (await _lobbyService.GetAsync(_id, Host, ct)).Value.RequiredFails);
 
-        await _roundService.PlayMissionCardAsync(_id, true, mission.Resistance[0], ct);
-        await _roundService.PlayMissionCardAsync(_id, false, mission.Spies[0], ct);
+        await _roundService.PlayMissionCardAsync(_id, ResistanceMissionCardKindDto.Success, mission.Resistance[0], ct);
+        await _roundService.PlayMissionCardAsync(_id, ResistanceMissionCardKindDto.Fail, mission.Spies[0], ct);
 
         var game = (await _lobbyService.GetAsync(_id, Host, ct)).Value;
         var result = Assert.Single(game.MissionResults);
@@ -383,7 +383,7 @@ public class ResistanceRoundServiceTests : ResistanceServiceTestBase
         var leaderId = (await _lobbyService.GetAsync(_id, Host, ct)).Value.LeaderPlayerId;
         foreach (var caller in mission.Team)
         {
-            await _roundService.PlayMissionCardAsync(_id, caller.Equals(mission.Spies[0]) ? false : true, caller, ct);
+            await _roundService.PlayMissionCardAsync(_id, caller.Equals(mission.Spies[0]) ? ResistanceMissionCardKindDto.Fail : ResistanceMissionCardKindDto.Success, caller, ct);
         }
 
         var continued = (await _roundService.ContinueAsync(_id, Host, ct)).Value;
@@ -423,7 +423,7 @@ public class ResistanceRoundServiceTests : ResistanceServiceTestBase
         Assert.Equal(3, game.MissionResults.Count(x => x.Succeeded == resistanceWins));
         Assert.Equal(5, game.RevealedRoles!.Count);
         Assert.Equal("Resistance.GameOver", (await _roundService.ContinueAsync(_id, Host, ct)).FirstError.Code);
-        Assert.Equal("Resistance.GameOver", (await _roundService.PlayMissionCardAsync(_id, true, callers[0], ct)).FirstError.Code);
+        Assert.Equal("Resistance.GameOver", (await _roundService.PlayMissionCardAsync(_id, ResistanceMissionCardKindDto.Success, callers[0], ct)).FirstError.Code);
     }
 
     [Fact]
@@ -505,7 +505,11 @@ public class ResistanceRoundServiceTests : ResistanceServiceTestBase
         var mission = await StartMissionAsync(5, spiesOnTeam: 1);
         foreach (var caller in mission.Team)
         {
-            await _roundService.PlayMissionCardAsync(_id, !mission.Spies.Contains(caller), caller, ct);
+            await _roundService.PlayMissionCardAsync(
+                _id,
+                mission.Spies.Contains(caller) ? ResistanceMissionCardKindDto.Fail : ResistanceMissionCardKindDto.Success,
+                caller,
+                ct);
         }
 
         var game = (await _lobbyService.GetAsync(_id, Host, ct)).Value;
