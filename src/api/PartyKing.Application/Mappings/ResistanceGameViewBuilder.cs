@@ -162,7 +162,10 @@ internal sealed class ResistanceGameViewBuilder
             .ToList();
     }
 
-    /// <summary>Only a spy sees the other spies.</summary>
+    /// <summary>
+    /// Only a spy gets the list, and what is in it is up to <see cref="ResistanceKnowledge"/>: with the Blind Spies
+    /// variant a spy gets an empty list.
+    /// </summary>
     private List<Guid>? BuildFellowSpies()
     {
         if (_you is not { } you || _yourRole != ResistanceRole.Spy)
@@ -170,7 +173,7 @@ internal sealed class ResistanceGameViewBuilder
             return null;
         }
 
-        return PlayerIds(x => x.Role == ResistanceRole.Spy && x.PlayerId != you.PlayerId);
+        return PlayerIds(x => ResistanceKnowledge.KnowsSpy(_game, you, x));
     }
 
     /// <summary>Every role, but only once the game is over.</summary>
@@ -193,7 +196,7 @@ internal sealed class ResistanceGameViewBuilder
 
         return new ResistanceRulesDto(
             playerCounts, game.Rules.PlotCardsEnabled, game.Rules.PlotCardsPerRound(game.Players.Count),
-            game.Rules.InquisitorEnabled);
+            game.Rules.InquisitorEnabled, game.Rules.BlindSpiesEnabled);
     }
 
     private List<ResistanceMissionResultDto> BuildMissionResults()

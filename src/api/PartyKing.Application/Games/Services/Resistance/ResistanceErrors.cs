@@ -115,6 +115,8 @@ internal static class ResistanceErrors
             "Resistance.AlreadyExamined", "You already picked the player to examine."),
         ResistanceFailure.NotExamined => Error.Conflict(
             "Resistance.NotExamined", "Pick the player to examine first."),
+        ResistanceFailure.BlindSpiesLocked => Error.Conflict(
+            "Resistance.RulesLocked", "Blind Spies can only be switched before the game starts."),
         _ => throw new ArgumentOutOfRangeException(nameof(failure), failure, "No error is defined for this failure."),
     };
 }

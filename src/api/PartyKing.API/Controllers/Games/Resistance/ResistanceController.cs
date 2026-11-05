@@ -94,6 +94,19 @@ public class ResistanceController : ResistanceControllerBase
         return result.Match(Ok, Problem);
     }
 
+    /// <summary>Host or admin: switches the Blind Spies variant on or off. 409 once the game has started.</summary>
+    [HttpPut("rules/blind-spies")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> SetBlindSpies(
+        Guid sessionId, [FromBody] ResistanceBlindSpiesRequestDto request, CancellationToken cancellationToken)
+    {
+        var result = await Lobby.SetBlindSpiesAsync(
+            sessionId, request.Enabled, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
     /// <summary>Admin only: opens the Resistance game to guests (idempotent), 403 for the host.</summary>
     [HttpPost("open")]
     [RequireSessionAccess]

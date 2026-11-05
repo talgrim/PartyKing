@@ -422,7 +422,8 @@
       "hide": "Hide your role",
       "show": "Show your role",
       "fellowSpies": "Your fellow spies",
-      "fellowSpiesList": "Fellow spies"
+      "fellowSpiesList": "Fellow spies",
+      "blindSpies": "Blind Spies: you do not know who the other spies are."
     },
     "missionCard": {
       "success": "Success",
@@ -449,6 +450,12 @@
         "title": "Inquisitor",
         "description": "A module in which a public token passes between players. After missions 2, 3 and 4 the token holder picks a player who never held it, privately learns whether they are a Spy or Resistance, and the token passes to that player. The Inquisitor may tell the others anything about it. Works best with 7 or more players.",
         "toggle": "Enable Inquisitor"
+      },
+      "blindSpiesFailed": "Could not change the Blind Spies setting.",
+      "blindSpies": {
+        "title": "Blind Spies",
+        "description": "A variant in which the spies do not get to know each other. Each spy only knows their own role, so a spy has to work out who is on their side. Nothing in the app stops the spies from talking, so agree not to.",
+        "toggle": "Enable Blind Spies"
       }
     },
     "controls": {
@@ -763,6 +770,10 @@
       "end": {
         "title": "End of the game",
         "text": "The Resistance wins after 3 successful missions. The Spies win after 3 failed missions or when 5 teams in a row are rejected in one mission."
+      },
+      "blindSpies": {
+        "title": "Blind Spies (variant)",
+        "text": "When the host enables the variant, the spies are not shown to each other at the start of the game: a spy sees only their own role and has to guess who the other spies are."
       },
       "inquisitor": {
         "title": "Inquisitor (module)",

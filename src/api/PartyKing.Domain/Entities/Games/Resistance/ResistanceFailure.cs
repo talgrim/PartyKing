@@ -145,4 +145,7 @@ public enum ResistanceFailure
 
     /// <summary>The holder has not picked a player to examine yet, so there is nothing to confirm.</summary>
     NotExamined,
+
+    /// <summary>The Blind Spies variant is switched only before the game starts.</summary>
+    BlindSpiesLocked,
 }

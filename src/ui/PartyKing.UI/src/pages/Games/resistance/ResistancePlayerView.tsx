@@ -61,7 +61,12 @@ export const ResistancePlayerView = ({ game, onSubmitTeam, onDealPlotCards, onPl
   return (
     <div className="flex flex-col items-center gap-4 py-2">
       {game.yourRole != null && (
-        <ResistanceRoleCard role={game.yourRole} players={game.players} fellowSpyIds={game.fellowSpies ?? []} />
+        <ResistanceRoleCard
+          role={game.yourRole}
+          players={game.players}
+          fellowSpyIds={game.fellowSpies ?? []}
+          blindSpies={game.rules.blindSpiesEnabled}
+        />
       )}
       {deals && (
         <ResistancePlotDealer

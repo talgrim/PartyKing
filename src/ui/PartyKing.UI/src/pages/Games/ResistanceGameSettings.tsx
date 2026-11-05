@@ -31,7 +31,7 @@ const SettingsSection = ({ title, description, children }: SectionProps): ReactN
 
 /**
  * Host and admins: switches the optional modules of the game on and off, one section per module with a short description.
- * The plot cards add-on and the Inquisitor module exist. The modules can be changed until the game starts.
+ * The plot cards add-on, the Inquisitor module and the Blind Spies variant exist. The modules can be changed until the game starts.
  */
 export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): ReactNode => {
   const { t } = useTranslation();
@@ -55,6 +55,15 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
       await mutate(gamesApi.setResistanceInquisitor(sessionId, enabled), { revalidate: false });
     } catch {
       setMessage(t('resistance.settings.inquisitorFailed'));
+    }
+  };
+
+  const setBlindSpies = async (enabled: boolean) => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.setResistanceBlindSpies(sessionId, enabled), { revalidate: false });
+    } catch {
+      setMessage(t('resistance.settings.blindSpiesFailed'));
     }
   };
 
@@ -108,6 +117,20 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
               onChange={(event) => void setInquisitor(event.target.checked)}
             />
             {t('resistance.settings.inquisitor.toggle')}
+          </label>
+        </SettingsSection>
+        <SettingsSection
+          title={t('resistance.settings.blindSpies.title')}
+          description={t('resistance.settings.blindSpies.description')}
+        >
+          <label className="flex items-center gap-2 text-slate-200">
+            <input
+              type="checkbox"
+              checked={game?.rules.blindSpiesEnabled ?? false}
+              disabled={game === undefined || started}
+              onChange={(event) => void setBlindSpies(event.target.checked)}
+            />
+            {t('resistance.settings.blindSpies.toggle')}
           </label>
         </SettingsSection>
         {message && <p className="text-amber-500">{message}</p>}

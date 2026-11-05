@@ -56,6 +56,13 @@ public interface IResistanceLobbyService
     Task<ErrorOr<ResistanceGameDto>> SetInquisitorAsync(
         Guid sessionId, bool enabled, GameCaller caller, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Host or admin: switches the Blind Spies variant on or off. NotFound without a game, Conflict once the game has
+    /// started.
+    /// </summary>
+    Task<ErrorOr<ResistanceGameDto>> SetBlindSpiesAsync(
+        Guid sessionId, bool enabled, GameCaller caller, CancellationToken cancellationToken);
+
     /// <summary>Host or admin: removes a player. NotFound for an unknown game or player.</summary>
     Task<ErrorOr<ResistanceGameDto>> KickAsync(
         Guid sessionId, Guid playerId, GameCaller caller, CancellationToken cancellationToken);
@@ -186,6 +193,21 @@ internal class ResistanceLobbyService : IResistanceLobbyService
                 nameof(SetInquisitorAsync),
                 ResistanceOutcome.NoGame,
                 game => game.SetInquisitor(enabled),
+                cancellationToken),
+            cancellationToken);
+    }
+
+    public Task<ErrorOr<ResistanceGameDto>> SetBlindSpiesAsync(
+        Guid sessionId, bool enabled, GameCaller caller, CancellationToken cancellationToken)
+    {
+        return _gate.RunAsManagerAsync(
+            sessionId,
+            caller,
+            () => _games.UpdateAsync(
+                sessionId,
+                nameof(SetBlindSpiesAsync),
+                ResistanceOutcome.NoGame,
+                game => game.SetBlindSpies(enabled),
                 cancellationToken),
             cancellationToken);
     }

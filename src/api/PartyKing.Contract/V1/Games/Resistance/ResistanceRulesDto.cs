@@ -6,7 +6,8 @@ namespace PartyKing.Contract.V1.Games.Resistance;
 /// </summary>
 /// <param name="PlotCardsEnabled">Whether the plot cards add-on is played in this game.</param>
 /// <param name="InquisitorEnabled">Whether the Inquisitor module is played in this game.</param>
+/// <param name="BlindSpiesEnabled">Whether the Blind Spies variant is played in this game: the spies do not know each other.</param>
 /// <param name="PlotCardsPerRound">How many plot cards the leader draws before each mission, at the current player count.</param>
 public record ResistanceRulesDto(
     IReadOnlyList<ResistanceCountRulesDto> PlayerCounts, bool PlotCardsEnabled, int PlotCardsPerRound,
-    bool InquisitorEnabled);
+    bool InquisitorEnabled, bool BlindSpiesEnabled);
