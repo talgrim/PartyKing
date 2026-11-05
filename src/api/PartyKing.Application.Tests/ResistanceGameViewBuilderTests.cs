@@ -97,6 +97,20 @@ public class ResistanceGameViewBuilderTests
     }
 
     [Fact]
+    public void FellowSpies_WithBlindSpies_AreAnEmptyListForSpiesAndStillNullForTheRest()
+    {
+        var game = NewGame();
+        game.Rules.BlindSpiesEnabled = true;
+
+        Assert.Empty(View(game, 3).FellowSpies!);
+        Assert.Empty(View(game, 4).FellowSpies!);
+        Assert.Null(View(game, 0).FellowSpies);
+        Assert.Null(View(game, null).FellowSpies);
+        Assert.True(View(game, 3).Rules.BlindSpiesEnabled);
+        Assert.False(View(NewGame(), 3).Rules.BlindSpiesEnabled);
+    }
+
+    [Fact]
     public void RoleAndSpies_AreHiddenBeforeTheStart()
     {
         var game = NewGame(started: false);

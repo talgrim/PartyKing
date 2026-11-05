@@ -201,6 +201,8 @@ export type ResistanceRulesDto = {
   plotCardsPerRound: number;
   /** Whether the Inquisitor module is played in this game. */
   inquisitorEnabled: boolean;
+  /** Whether the Blind Spies variant is played in this game: the spies do not know each other. */
+  blindSpiesEnabled: boolean;
 };
 
 // Mirrors PartyKing.Contract.V1.Games.ResistanceCountRulesDto

@@ -13,13 +13,16 @@ type Props = {
   players: ResistancePlayerDto[];
   /** The other spies; only a spy has them. */
   fellowSpyIds: readonly string[];
+  /** The Blind Spies variant: the spies do not know each other, so a spy is told there is no one to see. */
+  blindSpies?: boolean;
 };
 
 /**
  * The player's secret role: a face-down card that turns over on a tap (and back on another, so a neighbour can't read
- * it). A spy also sees the other spies while the card is face up. The state is local and starts hidden after a reload.
+ * it). A spy also sees the other spies while the card is face up (or is told they don't know each
+ * other, with the Blind Spies variant). The state is local and starts hidden after a reload.
  */
-export const ResistanceRoleCard = ({ role, players, fellowSpyIds }: Props): ReactNode => {
+export const ResistanceRoleCard = ({ role, players, fellowSpyIds, blindSpies = false }: Props): ReactNode => {
   const { t } = useTranslation();
   const [revealed, setRevealed] = useState(false);
   const spies = players.filter((player) => fellowSpyIds.includes(player.id));
@@ -38,7 +41,11 @@ export const ResistanceRoleCard = ({ role, players, fellowSpyIds }: Props): Reac
         {revealed && role === 'Resistance' && <OperativeCardIcon title={t('resistance.roles.resistance')} />}
       </button>
 
-      {revealed && role === 'Spy' && (
+      {revealed && role === 'Spy' && blindSpies && (
+        <p className="max-w-48 text-sm text-slate-200">{t('resistance.roleCard.blindSpies')}</p>
+      )}
+
+      {revealed && role === 'Spy' && !blindSpies && (
         <div>
           <h2 className="text-slate-200">{t('resistance.roleCard.fellowSpies')}</h2>
           <ul aria-label={t('resistance.roleCard.fellowSpiesList')} className="text-sm">

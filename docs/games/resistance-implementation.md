@@ -10,6 +10,7 @@ The game rules (Polish) are in `resistance-rules.md` next to this file; card tex
 - Round flow: start, roles, team, vote, missions, restart
 - Plot cards (add-on): deal, Opinion Maker, immediate cards, windows
 - Inquisitor (module): token, Inquisition phase, private result
+- Blind Spies (variant): the spies do not know each other, `ResistanceKnowledge`
 - Presence (TV view)
 - Seat takeover
 - Views and UI
@@ -18,7 +19,7 @@ The game rules (Polish) are in `resistance-rules.md` next to this file; card tex
 
 - `ResistanceGame` (key `SessionId`; `CreatedAt`, `IsOpen`, `StartedAt`, `LeaderPlayerId`, `Phase`, `MissionNumber`, `RejectedTeams`, `Winner`, `Rules`, and for the Inquisitor `InquisitorPlayerId` / `InquisitionExaminerPlayerId`) owns `ResistancePlayer` rows (`Role`, `IsOnTeam`, `Vote`, `MissionCard`, `PassedLeaderWindow`, `IsReclaimable`, `WasInquisitor`), `ResistanceMissionResults` and `ResistancePlotCard` rows. `MinPlayers` 5, `MaxPlayers` 10 (a full lobby answers 409 `Resistance.Full`).
 - `ResistancePhase`: `SelectingTeam`, `Voting`, `PlayingMission`, `MissionResult`, `GameOver`, the unused `VoteResult` kept for stable numbers (a migration moved games parked in it to `SelectingTeam` with the same leader), and the appended plot-card phases `DealingCards`, `ResolvingCards`, `LeaderWindow`, `ConfidenceWindow`, `PeekWindow`, and the Inquisitor phase `Inquisition`. The lobby is `StartedAt == null`. Phases are stored as ints, so only append.
-- Controllers share the route `games/resistance` behind `ResistanceControllerBase`: `ResistanceController` (lobby and lifecycle; it also calls the round service for start and restart), `ResistanceRoundController` (team, vote, mission, continue, window pass), `ResistancePlotCardsController` (everything under `cards/` plus `rules/plot-cards`), `ResistanceInquisitorController` (`rules/inquisitor`, `inquisitor/examine`, `inquisitor/confirm`) and `ResistanceSeatsController`.
+- Controllers share the route `games/resistance` behind `ResistanceControllerBase`: `ResistanceController` (lobby and lifecycle, plus `rules/blind-spies`; it also calls the round service for start and restart), `ResistanceRoundController` (team, vote, mission, continue, window pass), `ResistancePlotCardsController` (everything under `cards/` plus `rules/plot-cards`), `ResistanceInquisitorController` (`rules/inquisitor`, `inquisitor/examine`, `inquisitor/confirm`) and `ResistanceSeatsController`.
 - Lobby endpoints:
   - `GET` — host, admin and joined players; guests who unlocked the session observe once the game is open (404 before).
   - `GET lobby` → `{createdAt, isOpen, isStarted, joined}`. `IResistanceGamesRepository.GetLobbyAsync(sessionId, playerId, playerStamp)` projects those fields with one `AsNoTracking` query into a `ResistanceLobbyState` (null without a game) and does not use the shared read, because every tab asks for the lobby on its pushes (it shows as `operation="GetLobbyAsync"` in the repository histogram). `joined` follows `GameLobby.IsPlayer`: the host and admins are not players by role.
@@ -29,7 +30,7 @@ The game rules (Polish) are in `resistance-rules.md` next to this file; card tex
 
 `Application/Games/Services/Resistance` has four scoped services that match the controllers:
 
-- `IResistanceLobbyService`: get, lobby, create, open, join, rules, plot-cards and Inquisitor switches, kick, reorder, end.
+- `IResistanceLobbyService`: get, lobby, create, open, join, rules, plot-cards, Inquisitor and Blind Spies switches, kick, reorder, end.
 - `IResistanceRoundService`: start, restart, team, vote, mission card, continue.
 - `IResistancePlotCardService`: deal, play, confirm, take responsibility, take lead, peek, no confidence, pass window.
 - `IResistanceInquisitorService`: examine, confirm.
@@ -51,8 +52,8 @@ The game rules (Polish) are in `resistance-rules.md` next to this file; card tex
 
 ### Roles are secret
 
-- `ResistanceGameViewBuilder.Build(game, caller)` (`Application/Mappings`) gives `yourRole` only to a player of a started game and `fellowSpies` (player ids) only to a spy. Observers, including a host or admin who is not playing, get neither; `leaderPlayerId` is public. Pushes stay payload-free, so each client fetches its own view.
-- UI: `ResistanceRoleCard` shows a face-down `CardBackIcon` that a tap turns into `SpyCardIcon` / `OperativeCardIcon` (local state, hidden again after a reload); a spy sees the other spies (`SpyMarkerIcon`) only while it is face up. `ResistancePlayers` puts `LeaderTokenIcon` next to the leader. Icons live in `resistance/ResistanceIcons.tsx`; without a `className` they size themselves from the viewBox with viewport-based `clamp()` classes (`DEFAULT_SIZE`), and the vote icons accept `onClick` / `pressed` / `disabled`.
+- `ResistanceGameViewBuilder.Build(game, caller)` (`Application/Mappings`) gives `yourRole` only to a player of a started game and `fellowSpies` (player ids) only to a spy, and what is in that list is decided by `ResistanceKnowledge.KnowsSpy` (see Blind Spies). Observers, including a host or admin who is not playing, get neither; `leaderPlayerId` is public. Pushes stay payload-free, so each client fetches its own view.
+- UI: `ResistanceRoleCard` shows a face-down `CardBackIcon` that a tap turns into `SpyCardIcon` / `OperativeCardIcon` (local state, hidden again after a reload); a spy sees the other spies (`SpyMarkerIcon`) only while it is face up (with Blind Spies, a note that they know no one instead). `ResistancePlayers` puts `LeaderTokenIcon` next to the leader. Icons live in `resistance/ResistanceIcons.tsx`; without a `className` they size themselves from the viewBox with viewport-based `clamp()` classes (`DEFAULT_SIZE`), and the vote icons accept `onClick` / `pressed` / `disabled`.
 
 ### Team selection
 
@@ -162,6 +163,16 @@ The Hostile Intent module; rules in `resistance-rules.md`. Off by default.
 - **Views**: public `inquisitorPlayerId`, `pastInquisitorPlayerIds`, `inquisitionExaminerPlayerId`, `inquisitionExaminedPlayerId` and `rules.inquisitorEnabled`; the private `yourInquisition` (`{playerId, role}`) goes only to the examiner while the phase is `Inquisition` and is computed from `Role`, so nothing secret is stored and a seat takeover is safe. The TV tab blanks it. The mission's `yourPeeks` stay visible during `Inquisition`.
 - **Event**: `ResistanceInquisitorTokenPassed(from, to)` carries who, never the loyalty.
 - **UI**: `ResistanceInquisitor` (picker, then the loyalty with a note that nobody can check it, then "I've seen it"; others see nothing), a violet "Inquisitor" badge in `ResistancePlayerMarks`, the `Inquisition` line in `resistancePhase.ts` (names the holder and the examined player, never the loyalty) and an "Inquisitor (module)" section in the rules dialog. `ResistanceTvBoard` keeps the mission cards visible during the phase.
+
+## Blind Spies (variant)
+
+The spies do not get to know each other (the rules' "skip the Spies Reveal step"). Nothing server-side stops them from talking; it is a table agreement.
+
+- `ResistanceRules.BlindSpiesEnabled` is switched by `PUT rules/blind-spies` (host or admin, 409 `RulesLocked` once the game has started, so it can be switched while the game is open; the "Enable Blind Spies" checkbox in "Game settings"). `Clone(.., blindSpiesEnabled)` keeps the flag, `RefreshRules` keeps all three. The rules are an owned JSON column, so a new rules property needs a migration only to move the column default (`AddBlindSpies`); old stored rules read with the flag off.
+- **Who knows whom**: `ResistanceKnowledge.KnowsSpy(game, viewer, target)` is the one place that answers "does the viewer know the target is a spy"; `ResistanceGameViewBuilder.BuildFellowSpies` asks it for every player. Later modules that change who knows whom (Commander, Defector, Chiefs, Deep Agent) extend that function, and `ResistanceGameBlindSpiesTests.KnowsSpy_EveryViewerAndTarget` pins the whole viewer x target table for each setting.
+- **Views**: a spy gets `fellowSpies: []` (not `null`, which stays for everybody who is not a spy) and everybody gets `rules.blindSpiesEnabled`. At `GameOver` `revealedRoles` still shows everyone. The Inquisitor and the plot cards that reveal a loyalty are unaffected.
+- **UI**: `ResistanceRoleCard` takes `blindSpies` and shows "Blind Spies: you do not know who the other spies are." in place of the list; a "Blind Spies (variant)" section in the rules dialog.
+- No new event: the switch raises `ResistanceChanged` only.
 
 ## Presence (TV view)
 

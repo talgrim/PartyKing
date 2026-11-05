@@ -430,7 +430,8 @@
       "hide": "Ukryj swoją rolę",
       "show": "Pokaż swoją rolę",
       "fellowSpies": "Twoi współszpiedzy",
-      "fellowSpiesList": "Współszpiedzy"
+      "fellowSpiesList": "Współszpiedzy",
+      "blindSpies": "Ślepi Szpiedzy: nie wiesz, kim są pozostali szpiedzy."
     },
     "missionCard": {
       "success": "Sukces",
@@ -457,6 +458,12 @@
         "title": "Inkwizytor",
         "description": "Moduł, w którym jawny żeton przechodzi między graczami. Po misjach 2, 3 i 4 posiadacz żetonu wybiera gracza, który nigdy go nie miał, i prywatnie dowiaduje się, czy jest Szpiegiem, czy Ruchem Oporu; żeton przechodzi na badanego. Inkwizytor może powiedzieć pozostałym cokolwiek o wyniku. Najlepiej działa przy 7 lub więcej graczach.",
         "toggle": "Włącz Inkwizytora"
+      },
+      "blindSpiesFailed": "Nie udało się zmienić ustawienia Ślepych Szpiegów.",
+      "blindSpies": {
+        "title": "Ślepi Szpiedzy",
+        "description": "Wariant, w którym szpiedzy nie poznają się nawzajem. Każdy szpieg zna tylko własną rolę, więc musi sam odgadnąć, kto jest po jego stronie. Aplikacja nie powstrzyma szpiegów przed rozmową, więc umówcie się, że jej nie prowadzicie.",
+        "toggle": "Włącz Ślepych Szpiegów"
       }
     },
     "controls": {
@@ -771,6 +778,10 @@
       "end": {
         "title": "Koniec gry",
         "text": "Ruch Oporu wygrywa po 3 udanych misjach. Szpiedzy wygrywają po 3 nieudanych misjach albo gdy 5 drużyn z rzędu zostanie odrzuconych w jednej misji."
+      },
+      "blindSpies": {
+        "title": "Ślepi Szpiedzy (wariant)",
+        "text": "Gdy host włączy wariant, na początku gry szpiedzy nie poznają się nawzajem: szpieg widzi tylko własną rolę i musi odgadnąć, kim są pozostali szpiedzy."
       },
       "inquisitor": {
         "title": "Inkwizytor (moduł)",

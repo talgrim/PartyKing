@@ -161,6 +161,12 @@ export const gamesApi = {
       withCredentials: true,
     }) as unknown as Promise<ResistanceGameDto>,
 
+  /** Host or admin: switches the Blind Spies variant on or off; 409 once the game has started. */
+  setResistanceBlindSpies: (sessionId: string, enabled: boolean) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/rules/blind-spies`, { enabled }, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
   /** The Inquisitor token holder picks a player who never held it; the token passes to them. 403 for anyone else, 409 outside the Inquisition, 400 for a player who can't be examined. */
   examineResistancePlayer: (sessionId: string, targetPlayerId: string) =>
     axios.put(`/sessions/${sessionId}/games/resistance/inquisitor/examine`, { targetPlayerId }, {

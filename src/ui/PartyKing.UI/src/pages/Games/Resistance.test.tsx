@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   refreshResistanceRules: vi.fn(),
   setResistancePlotCards: vi.fn(),
   setResistanceInquisitor: vi.fn(),
+  setResistanceBlindSpies: vi.fn(),
   examineResistancePlayer: vi.fn(),
   confirmResistanceInquisition: vi.fn(),
   selectResistanceTeam: vi.fn(),
@@ -48,6 +49,7 @@ vi.mock('@/service/endpoints/games/gamesApi', () => ({
     refreshResistanceRules: mocks.refreshResistanceRules,
     setResistancePlotCards: mocks.setResistancePlotCards,
     setResistanceInquisitor: mocks.setResistanceInquisitor,
+    setResistanceBlindSpies: mocks.setResistanceBlindSpies,
     examineResistancePlayer: mocks.examineResistancePlayer,
     confirmResistanceInquisition: mocks.confirmResistanceInquisition,
     selectResistanceTeam: mocks.selectResistanceTeam,
@@ -108,6 +110,7 @@ const lobby = (names: string[], isOpen = false) => ({
     plotCardsEnabled: false,
     plotCardsPerRound: 1,
     inquisitorEnabled: false,
+    blindSpiesEnabled: false,
   },
 });
 
@@ -147,6 +150,7 @@ describe('Resistance', () => {
     mocks.refreshResistanceRules.mockReset();
     mocks.setResistancePlotCards.mockReset();
     mocks.setResistanceInquisitor.mockReset();
+    mocks.setResistanceBlindSpies.mockReset();
     mocks.examineResistancePlayer.mockReset();
     mocks.confirmResistanceInquisition.mockReset();
     mocks.selectResistanceTeam.mockReset();
@@ -264,6 +268,28 @@ describe('Resistance', () => {
     await userEvent.click(await screen.findByRole('checkbox', { name: 'Enable Inquisitor' }));
 
     expect(await screen.findByText('Could not change the Inquisitor setting.')).toBeInTheDocument();
+  });
+
+  it('switches Blind Spies on before the game starts', async () => {
+    mocks.setResistanceBlindSpies.mockResolvedValue(lobby([]));
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Game settings' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Game settings' });
+    expect(within(dialog).getByRole('region', { name: 'Blind Spies' })).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole('checkbox', { name: 'Enable Blind Spies' }));
+
+    expect(mocks.setResistanceBlindSpies).toHaveBeenCalledWith('session-1', true);
+  });
+
+  it('shows a message when Blind Spies cannot be switched', async () => {
+    mocks.setResistanceBlindSpies.mockRejectedValue(new Error('boom'));
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Game settings' }));
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Enable Blind Spies' }));
+
+    expect(await screen.findByText('Could not change the Blind Spies setting.')).toBeInTheDocument();
   });
 
   it('keeps the game settings usable in the open lobby and disables them after the start', async () => {
@@ -435,6 +461,20 @@ describe('Resistance', () => {
 
       expect(await screen.findByRole('img', { name: 'Spy' })).toBeInTheDocument();
       expect(within(screen.getByRole('list', { name: 'Fellow spies' })).getByText('D')).toBeInTheDocument();
+    });
+
+    it('tells a spy of the Blind Spies variant that they know no one, instead of listing spies', async () => {
+      mocks.role = { isHost: false, isAdmin: false };
+      const game = started(five, { yourPlayerId: 'p0', yourRole: 'Spy', fellowSpies: [] });
+      mocks.getResistance.mockResolvedValue({ ...game, rules: { ...game.rules, blindSpiesEnabled: true } });
+      renderPage();
+
+      expect(screen.queryByText(/you do not know who the other spies are/)).not.toBeInTheDocument();
+      await userEvent.click(await screen.findByRole('button', { name: 'Show your role' }));
+
+      expect(await screen.findByRole('img', { name: 'Spy' })).toBeInTheDocument();
+      expect(screen.getByText('Blind Spies: you do not know who the other spies are.')).toBeInTheDocument();
+      expect(screen.queryByRole('list', { name: 'Fellow spies' })).not.toBeInTheDocument();
     });
 
     it('marks which seat is yours, and shows no stray "0" for the Resistance role', async () => {
