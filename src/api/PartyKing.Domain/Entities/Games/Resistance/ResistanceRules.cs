@@ -8,6 +8,12 @@ public class ResistanceRules
 {
     public const int Missions = 5;
 
+    /// <summary>Missions one side has to win to win the game.</summary>
+    public const int MissionsToWin = 3;
+
+    /// <summary>Teams rejected in a row in one mission that give the spies the win.</summary>
+    public const int MaxRejectedTeams = 5;
+
     public Dictionary<int, ResistanceCountRules> PlayerCounts { get; set; } = new();
 
     /// <summary>Whether the plot cards add-on is played. Off by default; only editable before the game is opened.</summary>

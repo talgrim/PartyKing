@@ -175,8 +175,7 @@ internal sealed class ResistanceGameViewBuilder
     /// </summary>
     private List<Guid>? BuildFellowSpies()
     {
-        if (!_game.IsStarted || _you is not { } you
-            || (_yourRole != ResistanceRole.Spy && you.Character != ResistanceCharacter.Commander))
+        if (!_game.IsStarted || _you is not { } you || !ResistanceKnowledge.SeesSpies(you))
         {
             return null;
         }
@@ -187,7 +186,7 @@ internal sealed class ResistanceGameViewBuilder
     /// <summary>The players the Body Guard takes for the Commander: the Commander and the False Commander, in seat order.</summary>
     private List<Guid>? BuildCommanderCandidates()
     {
-        if (!_game.IsStarted || !_game.Rules.AssassinEnabled || _you is not { } you || you.Character != ResistanceCharacter.BodyGuard)
+        if (!_game.IsStarted || _you is not { } you || !ResistanceKnowledge.SeesCommanderCandidates(_game, you))
         {
             return null;
         }

@@ -10,9 +10,15 @@ public partial class ResistanceGame
     /// <summary>The cards in the switch deck: three No Change and two Change Allegiance.</summary>
     internal const int DefectorDeckSize = 5;
 
+    /// <summary>A No Change card in <see cref="DefectorDeck"/>.</summary>
+    internal const char DefectorNoChange = 'N';
+
+    /// <summary>A Change Allegiance card in <see cref="DefectorDeck"/>.</summary>
+    internal const char DefectorChangeAllegiance = 'C';
+
     /// <summary>
-    /// The shuffled switch deck as one character per card, top first: <c>N</c> for No Change, <c>C</c> for Change
-    /// Allegiance. Secret until a card is flipped, so only <see cref="DefectorFlips"/> leaves the Domain. Empty unless
+    /// The shuffled switch deck as one character per card, top first: <see cref="DefectorNoChange"/> or
+    /// <see cref="DefectorChangeAllegiance"/>. Secret until a card is flipped, so only <see cref="DefectorFlips"/> leaves the Domain. Empty unless
     /// the Defector module is played in a started game.
     /// </summary>
     public string DefectorDeck { get; internal set; } = string.Empty;
@@ -24,7 +30,7 @@ public partial class ResistanceGame
     /// </summary>
     public IReadOnlyList<bool> DefectorFlips => DefectorDeck
         .Take(Math.Max(0, MissionNumber - DefectorFirstFlipMission + 1))
-        .Select(x => x == 'C')
+        .Select(x => x == DefectorChangeAllegiance)
         .ToList();
 
     /// <summary>Whether the Defectors are on the opposite side to the one they started on.</summary>

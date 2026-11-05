@@ -1,3 +1,4 @@
+using PartyKing.Domain.Entities.Games.Base;
 using PartyKing.Domain.Events.Games.Resistance;
 
 namespace PartyKing.Domain.Entities.Games.Resistance;
@@ -5,16 +6,10 @@ namespace PartyKing.Domain.Entities.Games.Resistance;
 /// <summary>Dealing the roles (and plot cards) of a Resistance game and moving it from one step to the next.</summary>
 public static class ResistanceRoles
 {
-    /// <summary>Missions one side has to win to win the game.</summary>
-    public const int MissionsToWin = 3;
-
     /// <summary>The Inquisitor examines right after these missions (2 to 4), three times in all.</summary>
     public const int FirstInquisitionMission = 2;
 
     public const int LastInquisitionMission = 4;
-
-    /// <summary>Teams rejected in a row in one mission that give the spies the win.</summary>
-    public const int MaxRejectedTeams = 5;
 
     /// <summary>A team is approved by a strict majority of all the players; a tie rejects it.</summary>
     public static bool IsApproved(ResistanceGame game)
@@ -97,7 +92,7 @@ public static class ResistanceRoles
     {
         game.RejectedTeams++;
         game.Publish(new ResistanceTeamRejected(game.SessionId, game.MissionNumber, game.RejectedTeams));
-        if (game.RejectedTeams >= MaxRejectedTeams)
+        if (game.RejectedTeams >= ResistanceRules.MaxRejectedTeams)
         {
             game.Phase = ResistancePhase.GameOver;
             game.Winner = ResistanceRole.Spy;
@@ -220,7 +215,7 @@ public static class ResistanceRoles
     private static void FlipDefectorCard(ResistanceGame game)
     {
         var index = game.MissionNumber - ResistanceGame.DefectorFirstFlipMission;
-        if (index < 0 || index >= game.DefectorDeck.Length || game.DefectorDeck[index] != 'C')
+        if (index < 0 || index >= game.DefectorDeck.Length || game.DefectorDeck[index] != ResistanceGame.DefectorChangeAllegiance)
         {
             return;
         }
@@ -390,7 +385,7 @@ public static class ResistanceRoles
             .OrderBy(x => x.Key)
             .SelectMany(x => Enumerable.Repeat(x.Key, x.Value))
             .ToList();
-        var order = Enumerable.Range(0, types.Count).OrderBy(_ => random.Next()).ToList();
+        var order = Enumerable.Range(0, types.Count).Shuffled(random);
 
         // A restart reuses the rows (same keys), because deleting and re-adding a key in one save conflicts
         game.PlotCards.RemoveAll(x => x.CardId >= types.Count);
@@ -446,16 +441,16 @@ public static class ResistanceRoles
 
         // Assassin module: the third success is not the end yet, the Assassin still names the Commander. Nothing else
         // happens in between (no peek window, no Inquisition), as after any mission that decides the game.
-        if (game.Rules.AssassinEnabled && game.ResistanceScore >= MissionsToWin)
+        if (game.Rules.AssassinEnabled && game.ResistanceScore >= ResistanceRules.MissionsToWin)
         {
             game.Phase = ResistancePhase.Assassination;
             return;
         }
 
-        if (game.ResistanceScore >= MissionsToWin || game.SpyScore >= MissionsToWin)
+        if (game.ResistanceScore >= ResistanceRules.MissionsToWin || game.SpyScore >= ResistanceRules.MissionsToWin)
         {
             game.Phase = ResistancePhase.GameOver;
-            game.Winner = game.ResistanceScore >= MissionsToWin ? ResistanceRole.Resistance : ResistanceRole.Spy;
+            game.Winner = game.ResistanceScore >= ResistanceRules.MissionsToWin ? ResistanceRole.Resistance : ResistanceRole.Spy;
             game.Publish(new ResistanceGameOver(game.SessionId, game.Winner.Value));
             return;
         }
@@ -552,8 +547,9 @@ public static class ResistanceRoles
                 .Character = ResistanceCharacter.Defector;
         }
 
-        var cards = Enumerable.Repeat('N', ResistanceGame.DefectorDeckSize - 2).Concat(['C', 'C']);
-        game.DefectorDeck = new string(cards.OrderBy(_ => random.Next()).ToArray());
+        var cards = Enumerable.Repeat(ResistanceGame.DefectorNoChange, ResistanceGame.DefectorDeckSize - 2)
+            .Concat([ResistanceGame.DefectorChangeAllegiance, ResistanceGame.DefectorChangeAllegiance]);
+        game.DefectorDeck = new string(cards.Shuffled(random).ToArray());
     }
 
     /// <summary>
@@ -591,7 +587,7 @@ public static class ResistanceRoles
     /// <summary>Gives every player a random role, picks a random first leader and starts the first mission.</summary>
     public static void Deal(ResistanceGame game, Random random)
     {
-        var shuffled = game.Players.OrderBy(_ => random.Next()).ToList();
+        var shuffled = game.Players.Shuffled(random);
         var spies = game.Rules.SpyCount(shuffled.Count);
 
         for (var i = 0; i < shuffled.Count; i++)
