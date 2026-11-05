@@ -16,6 +16,7 @@ React 19, react-router, MUI + Tailwind v4, axios + SWR. Axios is configured in `
 - `/s/:sessionId` `MusicQueue`, the one page of a session.
 - `/callback` is the Spotify redirect.
 - `/admin` is the admin login and session panel (create, copy link, release host, delete). Rename, password and slideshow settings live on the session page.
+- `/dev/s/:sessionId/resistance` (dev builds only) shows 5 to 10 Resistance players side by side in one tab, see "Dev personas" in `features/sessions-and-auth.md`.
 - `/s/:sessionId/games/...` see `games/`. The old `/s/:sessionId/upload` redirects to the upload dialog.
 
 ## Session page (`MusicQueue`)

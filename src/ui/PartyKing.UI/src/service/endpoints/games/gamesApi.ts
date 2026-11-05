@@ -1,6 +1,9 @@
 import { axios } from '@/service/request';
 import { GameDto, GameSuggestionsDto, ResistanceClaimableSeatDto, ResistanceGameDto, ResistanceLobbyDto, ResistancePresenceDto, RingoGameDto, RingoLobbyDto } from './types';
 
+/** Development only (the multi-player Resistance page): acts as another dev persona than this tab's, see `devPersona`. */
+const personaHeaders = (persona?: string) => (persona ? { 'X-Dev-Persona': persona } : undefined);
+
 // The axios response interceptor unwraps `response.data`, so this resolves to the payload itself.
 export const gamesApi = {
   /** Host or admin: the games available in the session; rejects with status 403 for guests. */
@@ -86,9 +89,10 @@ export const gamesApi = {
     }) as unknown as Promise<ResistanceGameDto>,
 
   /** Anyone in the session: whether the Resistance game is open to join and whether the caller did; 404 without a game. */
-  getResistanceLobby: (sessionId: string) =>
+  getResistanceLobby: (sessionId: string, persona?: string) =>
     axios.get(`/sessions/${sessionId}/games/resistance/lobby`, {
       withCredentials: true,
+      headers: personaHeaders(persona),
     }) as unknown as Promise<ResistanceLobbyDto>,
 
   /** Host or admin: the players who have the Resistance page open right now (the TV view's start and refetch). */
@@ -218,9 +222,10 @@ export const gamesApi = {
     }) as unknown as Promise<ResistanceGameDto>,
 
   /** Joins the open game as a player; 409 when the name is taken, the lobby is full or the game started, 400 for a bad name. An admin may omit the name ("admin"). */
-  joinResistance: (sessionId: string, name: string) =>
+  joinResistance: (sessionId: string, name: string, persona?: string) =>
     axios.post(`/sessions/${sessionId}/games/resistance/join`, { name }, {
       withCredentials: true,
+      headers: personaHeaders(persona),
     }) as unknown as Promise<void>,
 
   /** Host or admin: removes a player. */

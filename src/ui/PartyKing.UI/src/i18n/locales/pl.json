@@ -482,6 +482,20 @@
       "releaseLabel": "Zwolnij miejsce: {{name}}",
       "keepLabel": "Cofnij zwolnienie miejsca: {{name}}"
     },
+    "dev": {
+      "open": "Dev: wszyscy gracze",
+      "title": "Resistance: wszyscy gracze w jednej karcie (tylko development)",
+      "playerCount": "Gracze",
+      "show": "Dołącz i pokaż",
+      "start": "Rozpocznij grę",
+      "back": "Wróć do gry",
+      "panel": "Gracz {{number}}",
+      "joinedCount": "Dołączyło graczy: {{count}}",
+      "failedUnlock": "Sesja jest zablokowana w tej przeglądarce: najpierw wpisz jej hasło na stronie sesji, potem spróbuj ponownie.",
+      "failedRateLimit": "Za dużo dołączeń w minutę: poczekaj albo uruchom API z RateLimiting__Disabled=true.",
+      "failedJoin": "Nie udało się dołączyć {{name}}: {{reason}}",
+      "failedStart": "Nie udało się rozpocząć gry: {{reason}}"
+    },
     "page": {
       "backToGames": "Wróć do gier",
       "joinAsPlayer": "Dołącz jako gracz",
