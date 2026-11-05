@@ -14,6 +14,8 @@ type Props = {
   onRefreshRules: () => void;
   onContinue: () => void;
   onRestart: () => void;
+  logHidden: boolean;
+  onToggleLog: () => void;
 };
 
 const buttonClass =
@@ -23,7 +25,7 @@ const buttonClass =
  * What the host and admins do to the game: manage the players, start, open it to guests (admin), free the seat of a
  * player who lost their device once it started, and end it.
  */
-export const ResistanceManagerControls = ({ game, isAdmin, onManagePlayers, onManageSeats, onEnd, onStart, onOpen, onRefreshRules, onContinue, onRestart }: Props): ReactNode => {
+export const ResistanceManagerControls = ({ game, isAdmin, onManagePlayers, onManageSeats, onEnd, onStart, onOpen, onRefreshRules, onContinue, onRestart, logHidden, onToggleLog }: Props): ReactNode => {
   const { t } = useTranslation();
   const started = game.startedAt != null;
   const enough = game.players.length >= MIN_PLAYERS;
@@ -51,6 +53,11 @@ export const ResistanceManagerControls = ({ game, isAdmin, onManagePlayers, onMa
       {started && (
         <button type="button" onClick={onManageSeats} title={t('resistance.controls.seatsHint')} className={buttonClass}>
           {t('resistance.controls.seats')}
+        </button>
+      )}
+      {game.playedPlotCards.length > 0 && (
+        <button type="button" onClick={onToggleLog} aria-pressed={logHidden} className={buttonClass}>
+          {logHidden ? t('resistance.controls.showLog') : t('resistance.controls.hideLog')}
         </button>
       )}
       <button type="button" onClick={onEnd} className={buttonClass}>

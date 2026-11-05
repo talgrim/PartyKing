@@ -457,6 +457,8 @@
       "label": "Sterowanie grą",
       "show": "Sterowanie",
       "openTv": "Otwórz widok na telewizor",
+      "showLog": "Pokaż log",
+      "hideLog": "Ukryj log",
       "restart": "Zagraj ponownie",
       "end": "Zakończ grę",
       "start": "Rozpocznij grę",

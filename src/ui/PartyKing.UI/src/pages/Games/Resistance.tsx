@@ -70,6 +70,7 @@ export const Resistance = (): ReactNode => {
   const [searchParams] = useSearchParams();
   const wide = useMediaQuery(WIDE_QUERY);
   const [boardView, setBoardView] = usePersistedFlag('partyking.resistanceBoardView', false);
+  const [logHidden, setLogHidden] = usePersistedFlag('partyking.resistanceLogHidden', false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [managingPlayers, setManagingPlayers] = useState(false);
   const [seatsOpen, setSeatsOpen] = useState(false);
@@ -281,7 +282,7 @@ export const Resistance = (): ReactNode => {
   const banner = shownGame && (
     <>
       <ResistancePhaseBanner text={resistancePhaseDescription(shownGame, { canManage, isAdmin }, board.teamSizes[0])} />
-      <ResistancePlotLog cards={shownGame.playedPlotCards} players={shownGame.players} />
+      {!logHidden && <ResistancePlotLog cards={shownGame.playedPlotCards} players={shownGame.players} />}
     </>
   );
 
@@ -329,6 +330,8 @@ export const Resistance = (): ReactNode => {
       onRefreshRules={() => void refreshRules()}
       onContinue={() => void continueGame()}
       onRestart={() => void restartGame()}
+      logHidden={logHidden}
+      onToggleLog={() => setLogHidden(!logHidden)}
     />
   );
 
