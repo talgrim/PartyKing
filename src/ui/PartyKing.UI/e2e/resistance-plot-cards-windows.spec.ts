@@ -47,6 +47,8 @@ test('Establish Confidence, the Confidence window and a peek at a mission card',
   openAdmin,
   openGuest,
 }) => {
+  // Ten players and two missions take over 30 seconds on a CI runner (the default timeout)
+  test.setTimeout(90_000);
   const session = await createSession();
   const setup = await startResistanceGame(session, { openAdmin, openGuest }, { plotCards: true, players: 10 });
   await playFirstMission(setup);
