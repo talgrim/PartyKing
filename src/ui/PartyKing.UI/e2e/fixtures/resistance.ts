@@ -216,10 +216,14 @@ export async function submitTeam(leader: Page, names: string[]): Promise<void> {
 export const vote = (page: Page, choice: 'Approve' | 'Reject') =>
   page.getByRole('region', { name: 'Voting' }).getByRole('button', { name: choice }).click();
 
-/** Every player casts the same vote. */
+/** Every player casts the same vote. An Opinion Maker has to vote first, so they go before everybody else. */
 export async function voteAll(setup: ResistanceGameSetup, choice: 'Approve' | 'Reject'): Promise<void> {
-  for (const page of setup.guests.values()) {
-    await vote(page, choice);
+  const [, page] = [...setup.guests][0];
+  const view = await viewOf(page, setup.session);
+  const makers = view.opinionMakerPlayerIds.map((id) => nameOf(view, id));
+  const voters = [...setup.guests.keys()].sort((a, b) => Number(makers.includes(b)) - Number(makers.includes(a)));
+  for (const name of voters) {
+    await vote(setup.guests.get(name)!, choice);
   }
 }
 
@@ -241,16 +245,10 @@ export async function playMissionCards(setup: ResistanceGameSetup, team: string[
 }
 
 /**
- * Plays one whole mission: the leader picks a team that gets the outcome (a failed mission needs the required number
- * of spies on it, a successful one has none), everybody approves and the team plays its cards. The leader then
- * continues unless that was the last mission. Returns the view once the mission is resolved. `fails` overrides how
- * many Fail cards a failed mission gets (the number the rules ask for by default).
+ * The team a leader should pick for a mission to end as `outcome`: a failed mission needs the required number of spies
+ * on it (or `fails`), a successful one has none. Also returns the leader's page and the spies who play Fail.
  */
-export async function playMission(
-  setup: ResistanceGameSetup,
-  outcome: 'success' | 'fail',
-  fails?: number,
-): Promise<ResistanceView> {
+export async function pickTeam(setup: ResistanceGameSetup, outcome: 'success' | 'fail', fails?: number) {
   const [, leader] = await waitForLeader(setup);
   const view = await viewOf(leader, setup.session);
   const spies = await spyNames(setup);
@@ -258,6 +256,20 @@ export async function playMission(
 
   const failers = outcome === 'fail' ? spies.slice(0, fails ?? view.requiredFails!) : [];
   const team = [...failers, ...resistance].slice(0, view.requiredTeamSize!);
+  return { leader, team, failers };
+}
+
+/**
+ * Plays one whole mission: the leader picks a team that gets the outcome (see `pickTeam`), everybody approves and the
+ * team plays its cards. The leader then continues unless that was the last mission. Returns the view once the mission
+ * is resolved. It does not know the windows; see `playMissionThroughWindows`.
+ */
+export async function playMission(
+  setup: ResistanceGameSetup,
+  outcome: 'success' | 'fail',
+  fails?: number,
+): Promise<ResistanceView> {
+  const { leader, team, failers } = await pickTeam(setup, outcome, fails);
   await submitTeam(leader, team);
   await voteAll(setup, 'Approve');
   await playMissionCards(setup, team, failers);
@@ -268,6 +280,28 @@ export async function playMission(
     await continueMission(leader);
   }
   return resolved;
+}
+
+/**
+ * Like `playMission` for a mission in which a playable card is in a hand: the Confidence window after the approved
+ * vote and the Peek window after the last mission card are opened, and everybody passes both. The window that opens at
+ * the start of the next mission is the caller's (`passWindow` after `waitForPhase(setup, 'LeaderWindow')`).
+ */
+export async function playMissionThroughWindows(
+  setup: ResistanceGameSetup,
+  outcome: 'success' | 'fail',
+): Promise<void> {
+  const { leader, team, failers } = await pickTeam(setup, outcome);
+  await submitTeam(leader, team);
+  await voteAll(setup, 'Approve');
+  await waitForPhase(setup, 'ConfidenceWindow');
+  await passWindow(setup);
+  await waitForPhase(setup, 'PlayingMission');
+  await playMissionCards(setup, team, failers);
+  await waitForPhase(setup, 'PeekWindow');
+  await passWindow(setup);
+  await waitForPhase(setup, 'MissionResult');
+  await continueMission(leader);
 }
 
 /** Every player but the leader keeps turning teams down until the game is lost. */
@@ -300,12 +334,59 @@ export async function waitForDealing(
   return { name, page, drawn: mine.yourPlotCards.filter((card) => card.toDeal).map((card) => card.type) };
 }
 
-/** The leader gives each drawn card to a player (card type to the name of the receiver) and deals them. */
-export async function dealPlotCards(leader: Page, gifts: Partial<Record<PlotCardType, string>>): Promise<void> {
+/**
+ * The leader gives each drawn card to a player (card type to the name of the receiver) and deals them. A type that was
+ * drawn twice takes one name for each copy.
+ */
+export async function dealPlotCards(
+  leader: Page,
+  gifts: Partial<Record<PlotCardType, string | string[]>>,
+): Promise<void> {
   const dealer = leader.getByRole('region', { name: 'Deal the Plot cards' });
-  for (const [type, receiver] of Object.entries(gifts) as [PlotCardType, string][]) {
-    await dealer.getByLabel(`Who gets the “${PLOT_CARD_NAMES[type]}” card`).selectOption({ label: receiver });
+  for (const [type, receivers] of Object.entries(gifts) as [PlotCardType, string | string[]][]) {
+    const pickers = dealer.getByLabel(`Who gets the “${PLOT_CARD_NAMES[type]}” card`);
+    for (const [index, receiver] of [receivers].flat().entries()) {
+      await pickers.nth(index).selectOption({ label: receiver });
+    }
   }
   await dealer.getByRole('button', { name: 'Deal the cards' }).click();
   await expect(dealer).toBeHidden();
+}
+
+/** The holder of an immediate card (Overheard Conversation, Establish Confidence, Open Up) plays it on `targetName`. */
+export async function playImmediateCard(holder: Page, type: PlotCardType, targetName: string): Promise<void> {
+  const region = holder.getByRole('region', { name: 'Immediate cards' });
+  await region.getByLabel(`Who do you play the “${PLOT_CARD_NAMES[type]}” card on`).selectOption({ label: targetName });
+  await region.getByRole('button', { name: 'Play the card' }).click();
+}
+
+/** The viewer of an identity card reads who it belongs to and which role it shows, then confirms having seen it. */
+export async function confirmIdentityCard(viewer: Page): Promise<{ name: string; role: Role }> {
+  const region = viewer.getByRole('region', { name: 'Immediate cards' });
+  const identity = region.getByText(/Identity card of .+: (Spy|Resistance)\./);
+  await expect(identity).toBeVisible();
+  const [, name, role] = (await identity.innerText()).match(/Identity card of (.+): (Spy|Resistance)\./)!;
+  await region.getByRole('button', { name: "I've seen it" }).click();
+  return { name, role: role as Role };
+}
+
+/** The holder of Take Responsibility takes a card from `targetName`. */
+export async function takeResponsibility(holder: Page, targetName: string): Promise<void> {
+  const section = holder.getByRole('region', { name: 'Take Responsibility', exact: true });
+  await section.getByLabel('Which player do you take a card from').selectOption({ label: targetName });
+  await section.getByRole('button', { name: 'Take the card' }).click();
+  await expect(section).toBeHidden();
+}
+
+/**
+ * Every player confirms in the open Leader, Confidence or Peek window that they play no card. The window closes with the
+ * last confirmation, so the caller waits for the phase that follows.
+ */
+export async function passWindow(setup: ResistanceGameSetup): Promise<void> {
+  for (const page of setup.guests.values()) {
+    await page
+      .getByRole('region', { name: 'Playing cards' })
+      .getByRole('button', { name: "I'm not playing a card" })
+      .click();
+  }
 }

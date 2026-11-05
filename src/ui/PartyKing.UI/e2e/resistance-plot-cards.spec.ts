@@ -1,6 +1,8 @@
 import {
+  confirmIdentityCard,
   dealPlotCards,
   nameOf,
+  playImmediateCard,
   playMission,
   spyNames,
   startResistanceGame,
@@ -232,4 +234,56 @@ test('Take Responsibility moves the visible Opinion Maker to the player who play
     }
   }
   await waitForPhase(setup, 'PlayingMission');
+});
+
+test('Overheard Conversation shows the identity card of a neighbour to its holder only', async ({
+  createSession,
+  openAdmin,
+  openGuest,
+}) => {
+  const session = await createSession();
+  const setup = await startResistanceGame(session, { openAdmin, openGuest }, { plotCards: true, players: 9 });
+
+  // Nine players draw three cards on the first mission, and all of them are played at once or stay face up
+  const { name: leaderName, page: leader, drawn } = await waitForDealing(setup);
+  expect([...drawn].sort()).toEqual(['OpenUp', 'OpinionMaker', 'OverheardConversation']);
+  const [listenerName, makerName, openUpName, openUpTarget, bystanderName] = [...setup.guests.keys()].filter(
+    (name) => name !== leaderName,
+  );
+  await dealPlotCards(leader, {
+    OverheardConversation: listenerName,
+    OpinionMaker: makerName,
+    OpenUp: openUpName,
+  });
+  const dealt = await waitForPhase(setup, 'ResolvingCards');
+
+  // Only the two players next to the holder at the table can be listened in on
+  const seats = dealt.players.map((player) => player.name);
+  const at = seats.indexOf(listenerName);
+  const neighbours = [seats[(at + seats.length - 1) % seats.length], seats[(at + 1) % seats.length]];
+  const listener = setup.guests.get(listenerName)!;
+  const picker = listener
+    .getByRole('region', { name: 'Immediate cards' })
+    .getByLabel(/Who do you play the .Overheard Conversation. card on/);
+  await expect(picker).toBeVisible();
+  expect((await picker.locator('option:not([disabled])').allInnerTexts()).sort()).toEqual([...neighbours].sort());
+
+  await playImmediateCard(listener, 'OverheardConversation', neighbours[0]);
+  await playImmediateCard(setup.guests.get(openUpName)!, 'OpenUp', openUpTarget);
+
+  // The holder reads the neighbour's card and nobody else is shown it; the log says who listened in, not what it saw
+  const heard = await confirmIdentityCard(listener);
+  expect(heard.name).toBe(neighbours[0]);
+  expect((await spyNames(setup)).includes(heard.name)).toBe(heard.role === 'Spy');
+  const bystander = setup.guests.get(bystanderName)!;
+  await expect(bystander.getByText(/Identity card of/)).toBeHidden();
+  await confirmIdentityCard(setup.guests.get(openUpTarget)!);
+
+  await waitForPhase(setup, 'SelectingTeam');
+  await expect(
+    bystander
+      .getByRole('region', { name: 'Plot cards played' })
+      .getByText(`${listenerName} played “Overheard Conversation” and looks at the identity card of ${neighbours[0]}`),
+  ).toBeVisible();
+  await expect(bystander.getByText(/Identity card of/)).toBeHidden();
 });
