@@ -31,7 +31,7 @@ SeededRandomProvider.AddIfConfigured(builder.Services, builder.Environment, buil
 
 // The dev UI (port 2137) calls the API (port 4200) cross-origin; in production both share one origin behind nginx
 const string corsPolicy = "CorsPolicy";
-if (builder.Environment.IsDevelopment())
+if (builder.Environment.IsDevelopmentOrE2e())
 {
     builder.Services.AddCors(options => options.AddPolicy(corsPolicy, policy =>
     {
@@ -108,7 +108,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopmentOrE2e())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
@@ -119,23 +119,23 @@ app.UseForwardedHeaders();
 app.MapDefaultEndpoints();
 
 // TLS is terminated by the proxy in front of the container
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopmentOrE2e())
 {
     app.UseHttpsRedirection();
 }
 
 app.UseRouting();
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopmentOrE2e())
 {
     app.UseCors(corsPolicy);
     app.UseMiddleware<DevPersonaMiddleware>();
 }
 
 // The e2e suite logs in and unlocks sessions from one IP far more often than the limits allow. Without the
-// middleware the [EnableRateLimiting] attributes do nothing. Honoured in Development only, so a stray setting
-// can never lift the limits of a deployed instance.
-if (!(app.Environment.IsDevelopment() && app.Configuration.GetValue<bool>("RateLimiting:Disabled")))
+// middleware the [EnableRateLimiting] attributes do nothing. Honoured in Development and e2e only, so a stray
+// setting can never lift the limits of a deployed instance.
+if (!(app.Environment.IsDevelopmentOrE2e() && app.Configuration.GetValue<bool>("RateLimiting:Disabled")))
 {
     app.UseRateLimiter();
 }
