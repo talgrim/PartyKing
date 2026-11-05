@@ -166,6 +166,71 @@ public class ResistanceGameViewBuilderTests
     }
 
     [Fact]
+    public void FellowSpies_WithDeepCover_TheCommanderDoesNotSeeThemButTheSpiesDo()
+    {
+        var game = AssassinGame();
+        Seat(game, 4).Character = ResistanceCharacter.DeepCover;
+
+        Assert.Equal([Ids[3]], View(game, 2).FellowSpies);
+        Assert.Equal([Ids[4]], View(game, 3).FellowSpies);
+        Assert.Equal([Ids[3]], View(game, 4).FellowSpies);
+    }
+
+    [Fact]
+    public void FellowSpies_WithABlindSpy_NeitherTheySeeNorAreSeenBySpiesButTheCommanderSeesThem()
+    {
+        var game = AssassinGame();
+        Seat(game, 4).Character = ResistanceCharacter.BlindSpy;
+
+        Assert.Empty(View(game, 4).FellowSpies!);
+        Assert.Empty(View(game, 3).FellowSpies!);
+        Assert.Equal([Ids[3], Ids[4]], View(game, 2).FellowSpies);
+        Assert.Null(View(game, 0).FellowSpies);
+    }
+
+    [Fact]
+    public void YourCommanderCandidates_TheBodyGuardSeesTheCommanderAndTheFalseCommanderAlike_NobodyElseSeesAny()
+    {
+        var game = AssassinGame();
+        Seat(game, 1).Character = ResistanceCharacter.BodyGuard;
+        Seat(game, 4).Character = ResistanceCharacter.FalseCommander;
+
+        Assert.Equal([Ids[2], Ids[4]], View(game, 1).YourCommanderCandidates);
+        foreach (var seat in new int?[] { null, 0, 2, 3, 4 })
+        {
+            Assert.Null(View(game, seat).YourCommanderCandidates);
+        }
+    }
+
+    [Fact]
+    public void YourCommanderCandidates_BeforeTheStartOrWithoutTheModule_AreNull()
+    {
+        var game = AssassinGame();
+        Seat(game, 1).Character = ResistanceCharacter.BodyGuard;
+        game.StartedAt = null;
+        Assert.Null(View(game, 1).YourCommanderCandidates);
+
+        game.StartedAt = DateTimeOffset.UnixEpoch;
+        game.Rules.AssassinEnabled = false;
+        Assert.Null(View(game, 1).YourCommanderCandidates);
+    }
+
+    [Fact]
+    public void Rules_TellWhichOptionalCharactersArePlayed()
+    {
+        var game = AssassinGame();
+        game.Rules.BodyGuardEnabled = true;
+        game.Rules.FalseCommanderEnabled = true;
+
+        var rules = View(game, null).Rules;
+
+        Assert.True(rules.BodyGuardEnabled);
+        Assert.True(rules.FalseCommanderEnabled);
+        Assert.False(rules.DeepCoverEnabled);
+        Assert.False(rules.BlindSpyEnabled);
+    }
+
+    [Fact]
     public void FellowSpies_BeforeTheStart_AreNullForTheCommander()
     {
         var game = AssassinGame();

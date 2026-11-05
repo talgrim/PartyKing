@@ -114,6 +114,14 @@ public class ResistanceFailureErrorsTests
             ErrorType.Forbidden, "Resistance.NotAssassin", "Only the Assassin names the Commander."),
         [ResistanceFailure.InvalidAssassinationTarget] = new(
             ErrorType.Validation, "Resistance.InvalidTarget", "That player can't be named."),
+        [ResistanceFailure.TooManySpyCharacters] = new(
+            ErrorType.Conflict,
+            "Resistance.TooManySpyCharacters",
+            "There are too few spies for these characters: the Assassin takes one spy seat, and Deep Cover, the Blind Spy and the False Commander one each."),
+        [ResistanceFailure.BodyGuardNeedsCover] = new(
+            ErrorType.Conflict,
+            "Resistance.BodyGuardNeedsCover",
+            "With 5 players the Body Guard needs Deep Cover or the False Commander."),
         [ResistanceFailure.GameOver] = new(ErrorType.Conflict, "Resistance.GameOver", "The game is over."),
         [ResistanceFailure.NoGame] = new(ErrorType.NotFound, "Resistance.NotFound", "The session has no Resistance game."),
         [ResistanceFailure.NotLeaderToDeal] = new(

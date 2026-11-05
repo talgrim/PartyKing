@@ -291,7 +291,7 @@ public class ResistanceControllerTests
         IsOpen = true,
         MaxPlayers = 10,
         MissionNumber = 1,
-        Rules = new ResistanceRulesDto([], false, 1, false, false, false, ResistanceReverserSidesDto.Both, true, false, false, false)
+        Rules = new ResistanceRulesDto([], false, 1, false, false, false, ResistanceReverserSidesDto.Both, true, false, false, false, false, false, false, false)
     };
 
     /// <summary>Only the player cookie of the Resistance game is read; the rest is not used by the controller.</summary>

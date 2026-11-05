@@ -369,4 +369,324 @@ public class ResistanceGameAssassinTests
             }
         }
     }
+
+    // ---- optional characters ----
+
+    private static ResistanceGame LobbyOf(int players, Action<ResistanceRules> configure)
+    {
+        var rules = AssassinRules();
+        configure(rules);
+        var game = new ResistanceGame { SessionId = Guid.NewGuid(), IsOpen = true, Rules = rules };
+        for (var i = 0; i < players; i++)
+        {
+            game.Players.Add(new ResistancePlayer { PlayerId = Guid.NewGuid(), Order = i });
+        }
+
+        return game;
+    }
+
+    /// <summary>A started game with the given characters in the seats (everyone else standard); the first <paramref name="spies"/> seats are spies.</summary>
+    private static ResistanceGame Table(int spies, params ResistanceCharacter[] characters)
+    {
+        var game = new ResistanceGame { SessionId = Guid.NewGuid(), IsOpen = true, StartedAt = Now, Rules = AssassinRules() };
+        for (var i = 0; i < 7; i++)
+        {
+            game.Players.Add(new ResistancePlayer
+            {
+                PlayerId = Guid.NewGuid(),
+                Order = i,
+                Role = i < spies ? ResistanceRole.Spy : ResistanceRole.Resistance,
+                Character = i < characters.Length ? characters[i] : ResistanceCharacter.Standard,
+            });
+        }
+
+        return game;
+    }
+
+    [Fact]
+    public void SetAssassin_WithOptions_SwitchesThemAndKeepsTheOmittedOnes()
+    {
+        var game = LobbyGame(ResistanceRules.Default());
+
+        game.SetAssassin(true, bodyGuard: true, deepCover: true);
+        game.SetAssassin(true, blindSpy: true);
+
+        Assert.True(game.Rules.AssassinEnabled);
+        Assert.True(game.Rules.BodyGuardEnabled);
+        Assert.True(game.Rules.DeepCoverEnabled);
+        Assert.True(game.Rules.BlindSpyEnabled);
+        Assert.False(game.Rules.FalseCommanderEnabled);
+    }
+
+    [Fact]
+    public void SetAssassin_Off_SwitchesTheOptionsOffToo()
+    {
+        var game = LobbyGame(ResistanceRules.Default());
+        game.SetAssassin(true, bodyGuard: true, deepCover: true, blindSpy: true, falseCommander: true);
+
+        game.SetAssassin(false);
+
+        Assert.False(game.Rules.AssassinEnabled);
+        Assert.False(game.Rules.BodyGuardEnabled);
+        Assert.False(game.Rules.DeepCoverEnabled);
+        Assert.False(game.Rules.BlindSpyEnabled);
+        Assert.False(game.Rules.FalseCommanderEnabled);
+    }
+
+    [Fact]
+    public void RefreshRules_KeepsTheOptionalCharacters()
+    {
+        var game = LobbyGame();
+        game.SetAssassin(true, bodyGuard: true, falseCommander: true);
+        game.IsOpen = false;
+
+        game.RefreshRules(ResistanceRules.Default());
+
+        Assert.True(game.Rules.BodyGuardEnabled);
+        Assert.True(game.Rules.FalseCommanderEnabled);
+    }
+
+    [Theory]
+    [InlineData(5, true, true, false)]
+    [InlineData(6, false, true, true)]
+    [InlineData(7, true, true, true)]
+    [InlineData(9, true, true, true)]
+    public void Start_WithMoreSpyCharactersThanSpySeatsLeftByTheAssassin_IsRefused(int players, bool deepCover, bool blindSpy, bool falseCommander)
+    {
+        var game = LobbyOf(players, rules =>
+        {
+            rules.DeepCoverEnabled = deepCover;
+            rules.BlindSpyEnabled = blindSpy;
+            rules.FalseCommanderEnabled = falseCommander;
+        });
+
+        var outcome = game.Start(Now, new Random(1));
+
+        Assert.Equal(ResistanceFailure.TooManySpyCharacters, outcome.Failure);
+        Assert.False(game.IsStarted);
+        Assert.All(game.Players, x => Assert.Null(x.Role));
+    }
+
+    [Theory]
+    [InlineData(5, false, false)]
+    [InlineData(5, false, true)]
+    [InlineData(7, true, false)]
+    [InlineData(7, false, true)]
+    public void Start_WithSpyCharactersThatFit_Starts(int players, bool deepCover, bool blindSpy)
+    {
+        var game = LobbyOf(players, rules =>
+        {
+            rules.DeepCoverEnabled = deepCover;
+            rules.BlindSpyEnabled = blindSpy;
+            rules.FalseCommanderEnabled = !deepCover && !blindSpy;
+        });
+
+        Assert.Null(game.Start(Now, new Random(2)).Failure);
+    }
+
+    [Fact]
+    public void Start_WithAThirdSpyCharacterAtTenPlayers_Starts()
+    {
+        var game = LobbyOf(10, rules =>
+        {
+            rules.DeepCoverEnabled = true;
+            rules.BlindSpyEnabled = true;
+            rules.FalseCommanderEnabled = true;
+        });
+
+        Assert.Null(game.Start(Now, new Random(3)).Failure);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Start_WithABodyGuardAtFivePlayersAndNoCover_IsRefused(bool withBlindSpy)
+    {
+        var game = LobbyOf(5, rules =>
+        {
+            rules.BodyGuardEnabled = true;
+            rules.BlindSpyEnabled = withBlindSpy;
+        });
+
+        var outcome = game.Start(Now, new Random(1));
+
+        Assert.Equal(ResistanceFailure.BodyGuardNeedsCover, outcome.Failure);
+        Assert.False(game.IsStarted);
+    }
+
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public void Start_WithABodyGuardAtFivePlayersAndDeepCoverOrAFalseCommander_Starts(bool deepCover, bool falseCommander)
+    {
+        var game = LobbyOf(5, rules =>
+        {
+            rules.BodyGuardEnabled = true;
+            rules.DeepCoverEnabled = deepCover;
+            rules.FalseCommanderEnabled = falseCommander;
+        });
+
+        Assert.Null(game.Start(Now, new Random(1)).Failure);
+    }
+
+    [Fact]
+    public void Start_WithABodyGuardAtSixPlayers_NeedsNoCover()
+    {
+        var game = LobbyOf(6, rules => rules.BodyGuardEnabled = true);
+
+        Assert.Null(game.Start(Now, new Random(1)).Failure);
+    }
+
+    [Fact]
+    public void Start_WithTheOptionsButNotTheModule_IgnoresThem()
+    {
+        var game = LobbyOf(5, rules =>
+        {
+            rules.AssassinEnabled = false;
+            rules.DeepCoverEnabled = true;
+            rules.BlindSpyEnabled = true;
+            rules.BodyGuardEnabled = true;
+        });
+
+        Assert.Null(game.Start(Now, new Random(1)).Failure);
+        Assert.All(game.Players, x => Assert.Equal(ResistanceCharacter.Standard, x.Character));
+    }
+
+    [Fact]
+    public void Start_DealsEachEnabledCharacterToTheRightSide()
+    {
+        for (var seed = 0; seed < 20; seed++)
+        {
+            var game = LobbyOf(7, rules =>
+            {
+                rules.BodyGuardEnabled = true;
+                rules.DeepCoverEnabled = true;
+                rules.BlindSpyEnabled = true;
+            });
+
+            game.Start(Now, new Random(seed));
+
+            Assert.Equal(ResistanceRole.Resistance, Assert.Single(game.Players, x => x.Character == ResistanceCharacter.BodyGuard).Role);
+            Assert.Equal(ResistanceRole.Spy, Assert.Single(game.Players, x => x.Character == ResistanceCharacter.DeepCover).Role);
+            Assert.Equal(ResistanceRole.Spy, Assert.Single(game.Players, x => x.Character == ResistanceCharacter.BlindSpy).Role);
+            Assert.Equal(ResistanceRole.Spy, Assert.Single(game.Players, x => x.Character == ResistanceCharacter.Assassin).Role);
+            Assert.Equal(ResistanceRole.Resistance, Assert.Single(game.Players, x => x.Character == ResistanceCharacter.Commander).Role);
+            Assert.DoesNotContain(game.Players, x => x.Character == ResistanceCharacter.FalseCommander);
+            Assert.Equal(3, game.Players.Count(x => x.Role == ResistanceRole.Spy));
+        }
+    }
+
+    [Fact]
+    public void Start_WithTheOptionsOff_DealsTheSameRolesAsWithTheBasicModule()
+    {
+        var basic = LobbyOf(7, _ => { });
+        var withOptions = LobbyOf(7, rules => rules.BodyGuardEnabled = true);
+        for (var i = 0; i < 7; i++)
+        {
+            withOptions.Players[i].PlayerId = basic.Players[i].PlayerId;
+        }
+
+        basic.Start(Now, new Random(5));
+        withOptions.Start(Now, new Random(5));
+
+        Assert.Equal(basic.Players.Select(x => x.Role), withOptions.Players.Select(x => x.Role));
+        Assert.Equal(basic.LeaderPlayerId, withOptions.LeaderPlayerId);
+        Assert.Equal(
+            basic.Players.Select(x => x.Character == ResistanceCharacter.Standard),
+            withOptions.Players.Select(x => x.Character == ResistanceCharacter.Standard || x.Character == ResistanceCharacter.BodyGuard));
+    }
+
+    [Fact]
+    public void KnowsSpy_WithDeepCoverAndABlindSpy_EveryViewerAndTarget()
+    {
+        // Seats 0 Assassin, 1 Deep Cover, 2 Blind Spy (spies); 3 Commander, 4 Body Guard, 5 and 6 standard resistance
+        var game = Table(
+            3,
+            ResistanceCharacter.Assassin,
+            ResistanceCharacter.DeepCover,
+            ResistanceCharacter.BlindSpy,
+            ResistanceCharacter.Commander,
+            ResistanceCharacter.BodyGuard);
+        game.Rules.DeepCoverEnabled = true;
+        game.Rules.BlindSpyEnabled = true;
+        game.Rules.BodyGuardEnabled = true;
+
+        bool[][] expected =
+        [
+            [false, true, false, false, false, false, false],
+            [true, false, false, false, false, false, false],
+            [false, false, false, false, false, false, false],
+            [true, false, true, false, false, false, false],
+            [false, false, false, false, false, false, false],
+            [false, false, false, false, false, false, false],
+            [false, false, false, false, false, false, false],
+        ];
+        for (var viewer = 0; viewer < 7; viewer++)
+        {
+            for (var target = 0; target < 7; target++)
+            {
+                Assert.Equal(
+                    expected[viewer][target],
+                    ResistanceKnowledge.KnowsSpy(game, game.Players[viewer], game.Players[target]));
+            }
+        }
+    }
+
+    [Fact]
+    public void KnowsCommander_EveryViewerAndTarget_TheBodyGuardCannotTellTheFalseCommanderApart()
+    {
+        // Seats 0 Assassin, 1 False Commander, 2 standard spy; 3 Commander, 4 Body Guard, 5 and 6 standard resistance
+        var game = Table(
+            3,
+            ResistanceCharacter.Assassin,
+            ResistanceCharacter.FalseCommander,
+            ResistanceCharacter.Standard,
+            ResistanceCharacter.Commander,
+            ResistanceCharacter.BodyGuard);
+        game.Rules.FalseCommanderEnabled = true;
+        game.Rules.BodyGuardEnabled = true;
+
+        for (var viewer = 0; viewer < 7; viewer++)
+        {
+            for (var target = 0; target < 7; target++)
+            {
+                var expected = viewer == 4 && target is 1 or 3;
+                Assert.Equal(
+                    expected,
+                    ResistanceKnowledge.KnowsCommander(game, game.Players[viewer], game.Players[target]));
+            }
+        }
+    }
+
+    [Fact]
+    public void KnowsSpy_TheFalseCommanderIsAnOrdinarySpyToTheSpiesAndTheCommander()
+    {
+        var game = Table(
+            3,
+            ResistanceCharacter.Assassin,
+            ResistanceCharacter.FalseCommander,
+            ResistanceCharacter.Standard,
+            ResistanceCharacter.Commander);
+
+        Assert.True(ResistanceKnowledge.KnowsSpy(game, game.Players[0], game.Players[1]));
+        Assert.True(ResistanceKnowledge.KnowsSpy(game, game.Players[2], game.Players[1]));
+        Assert.True(ResistanceKnowledge.KnowsSpy(game, game.Players[3], game.Players[1]));
+    }
+
+    [Fact]
+    public void Restart_ClearsTheOptionalCharacters()
+    {
+        var game = LobbyOf(7, rules =>
+        {
+            rules.BodyGuardEnabled = true;
+            rules.DeepCoverEnabled = true;
+        });
+        game.Start(Now, new Random(4));
+        game.Phase = ResistancePhase.Assassination;
+
+        game.Restart();
+
+        Assert.All(game.Players, x => Assert.Equal(ResistanceCharacter.Standard, x.Character));
+        Assert.True(game.Rules.BodyGuardEnabled);
+    }
 }
