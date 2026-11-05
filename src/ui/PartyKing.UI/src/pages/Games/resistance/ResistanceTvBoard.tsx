@@ -57,7 +57,7 @@ export const ResistanceTvBoard = ({ game, board, banner, yourPlayerId, onlinePla
           />
         </div>
         {(team.length > 0 || votes || showCards) && (
-          <div className="flex w-full shrink-0 items-start justify-center gap-[4vw]">
+          <div className="flex w-full shrink-0 flex-wrap items-stretch justify-center gap-3">
             {team.length > 0 && (
               <ResistanceTeamCards members={team} missionNumber={game!.missionNumber} leaderId={game!.leaderPlayerId} />
             )}
