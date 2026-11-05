@@ -111,6 +111,38 @@ public class ResistanceGameViewBuilderTests
     }
 
     [Fact]
+    public void FellowSpies_WithAHiddenReverserSpy_LeaveThemOutOfTheRevealBothWays()
+    {
+        var game = NewGame();
+        game.Rules.ReverserEnabled = true;
+        Seat(game, 3).Character = ResistanceCharacter.Reverser;
+
+        // By default the Reverser takes part in the reveal
+        Assert.Equal([Ids[4]], View(game, 3).FellowSpies);
+        Assert.Equal([Ids[3]], View(game, 4).FellowSpies);
+        Assert.True(View(game, 3).Rules.ReverserSpyKnowsSpies);
+
+        game.Rules.ReverserSpyKnowsSpies = false;
+
+        Assert.Empty(View(game, 3).FellowSpies!);
+        Assert.Empty(View(game, 4).FellowSpies!);
+        Assert.Null(View(game, 0).FellowSpies);
+        Assert.False(View(game, 3).Rules.ReverserSpyKnowsSpies);
+    }
+
+    [Fact]
+    public void FellowSpies_WithTheSwitchOffButNoSpyReverser_AreUnchanged()
+    {
+        var game = NewGame();
+        game.Rules.ReverserEnabled = true;
+        game.Rules.ReverserSpyKnowsSpies = false;
+        Seat(game, 1).Character = ResistanceCharacter.Reverser;
+
+        Assert.Equal([Ids[4]], View(game, 3).FellowSpies);
+        Assert.Equal([Ids[3]], View(game, 4).FellowSpies);
+    }
+
+    [Fact]
     public void YourCharacter_WithTheReverserModule_IsSeenOnlyByItsOwner()
     {
         var game = NewGame();

@@ -332,4 +332,91 @@ public class ResistanceGameReverserTests
         var completed = game.DrainEvents().OfType<ResistanceMissionCompleted>().Single();
         Assert.Equal((1, 0), (completed.FailCount, completed.ReverseCount));
     }
+
+    [Fact]
+    public void ASpyReverser_KnowsTheSpiesByDefault()
+    {
+        var rules = ResistanceRules.Default();
+
+        Assert.True(rules.ReverserSpyKnowsSpies);
+        Assert.True(rules.Clone().ReverserSpyKnowsSpies);
+        Assert.False(rules.Clone(reverserSpyKnowsSpies: false).ReverserSpyKnowsSpies);
+    }
+
+    [Fact]
+    public void SetReverser_ChoosesWhetherTheSpyReverserKnowsTheSpies_AndKeepsItWhenNoneIsGiven()
+    {
+        var game = new ResistanceGame { Rules = ResistanceRules.Default() };
+
+        Assert.Null(game.SetReverser(true, spyKnowsSpies: false).Failure);
+        Assert.False(game.Rules.ReverserSpyKnowsSpies);
+
+        game.SetReverser(false);
+        Assert.False(game.Rules.ReverserSpyKnowsSpies);
+
+        game.SetPlotCards(true);
+        game.RefreshRules(ResistanceRules.Default());
+        Assert.False(game.Rules.ReverserSpyKnowsSpies);
+
+        game.SetReverser(true, spyKnowsSpies: true);
+        Assert.True(game.Rules.ReverserSpyKnowsSpies);
+    }
+
+    [Fact]
+    public void SetReverser_OnceTheGameStarted_CannotChangeWhetherTheSpyReverserKnowsTheSpies()
+    {
+        var game = new ResistanceGame { StartedAt = Now, Rules = ResistanceRules.Default() };
+
+        Assert.Equal(ResistanceFailure.ReverserLocked, game.SetReverser(true, spyKnowsSpies: false).Failure);
+        Assert.True(game.Rules.ReverserSpyKnowsSpies);
+    }
+
+    /// <summary>
+    /// The whole viewer x target table of <see cref="MissionGame"/>: seat 0 a spy, seat 1 a spy Reverser, seat 2 a
+    /// resistance Reverser. The Reverser spy is only left out of the reveal when the rules say so; a resistance Reverser
+    /// is never a spy and the switch changes nothing about them.
+    /// </summary>
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(false, false)]
+    public void KnowsSpy_EveryViewerAndTarget_WithAReverserSpy(bool reverser, bool spyKnowsSpies)
+    {
+        var game = MissionGame();
+        game.Rules = game.Rules.Clone(reverserEnabled: reverser, reverserSpyKnowsSpies: spyKnowsSpies);
+        if (!reverser)
+        {
+            // Without the module nobody holds the character
+            foreach (var player in game.Players)
+            {
+                player.Character = ResistanceCharacter.Standard;
+            }
+        }
+
+        foreach (var viewer in game.Players)
+        {
+            foreach (var target in game.Players)
+            {
+                var hidden = reverser && !spyKnowsSpies && (viewer.Order == 1 || target.Order == 1);
+                var expected = !hidden
+                               && viewer.Role == ResistanceRole.Spy
+                               && target.Role == ResistanceRole.Spy
+                               && viewer.PlayerId != target.PlayerId;
+
+                Assert.Equal(expected, ResistanceKnowledge.KnowsSpy(game, viewer, target));
+            }
+        }
+    }
+
+    [Fact]
+    public void Loyalty_IsTheAllegiance_WhateverTheCharacter()
+    {
+        var game = MissionGame();
+
+        Assert.Equal(ResistanceRole.Spy, ResistanceKnowledge.Loyalty(game.Players[1]));
+        Assert.Equal(ResistanceRole.Resistance, ResistanceKnowledge.Loyalty(game.Players[2]));
+        Assert.Equal(ResistanceRole.Resistance, ResistanceKnowledge.Loyalty(game.Players[3]));
+        Assert.Null(ResistanceKnowledge.Loyalty(new ResistancePlayer()));
+    }
 }

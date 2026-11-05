@@ -55,6 +55,7 @@ const game = (count: number, extra: Partial<ResistanceGameDto> = {}): Resistance
     blindSpiesEnabled: false,
     reverserEnabled: false,
     reverserSides: 'Both',
+    reverserSpyKnowsSpies: true,
   },
   ...extra,
 });
