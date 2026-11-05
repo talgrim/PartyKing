@@ -490,6 +490,33 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Defector_SurvivesReloads_TheStartDealsTheDefectorsAndTheDeck_AndRestartClearsThem()
+    {
+        await CreateLobbyAsync(5, isOpen: true);
+        var switched = await _repository.UpdateAsync(
+            _sessionId,
+            "SetDefectorAsync",
+            ResistanceOutcome.NoGame,
+            game => game.SetDefector(true, defectorsKnowEachOther: true),
+            CancellationToken.None);
+        Assert.Null(switched.Failure);
+        Assert.True((await ReloadAsync()).Rules.DefectorEnabled);
+        Assert.True((await ReloadAsync()).Rules.DefectorsKnowEachOther);
+
+        Assert.Null((await StartAsync()).Failure);
+        var started = await ReloadAsync();
+        Assert.Single(started.Players, x => x.Character == ResistanceCharacter.Defector && x.Role == ResistanceRole.Spy);
+        Assert.Single(started.Players, x => x.Character == ResistanceCharacter.Defector && x.Role == ResistanceRole.Resistance);
+        Assert.Equal(5, started.DefectorDeck.Length);
+        Assert.Equal(2, started.DefectorDeck.Count(x => x == 'C'));
+
+        var locked = await _repository.UpdateAsync(
+            _sessionId, "SetDefectorAsync", ResistanceOutcome.NoGame, game => game.SetDefector(false), CancellationToken.None);
+        Assert.Equal(ResistanceFailure.DefectorLocked, locked.Failure);
+        Assert.True((await ReloadAsync()).Rules.DefectorEnabled);
+    }
+
+    [Fact]
     public async Task AReverseCard_IsStoredAsItsOwnKind_AndReversesTheStoredResult()
     {
         await CreateLobbyAsync(5, isOpen: true);
