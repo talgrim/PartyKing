@@ -26,8 +26,8 @@ public class ResistanceAssassinController : ResistanceControllerBase
     private IResistanceLobbyService Lobby { get; }
 
     /// <summary>
-    /// Host or admin: switches the Assassin module on or off. 409 once the game has started or while the Defector, the
-    /// Reverser or Blind Spies are on.
+    /// Host or admin: switches the Assassin module on or off and, while it is on, its optional characters (omitted
+    /// keeps the choice). 409 once the game has started or while the Defector, the Reverser or Blind Spies are on.
     /// </summary>
     [HttpPut("rules/assassin")]
     [RequireSessionAccess]
@@ -36,7 +36,14 @@ public class ResistanceAssassinController : ResistanceControllerBase
         Guid sessionId, [FromBody] ResistanceAssassinRequestDto request, CancellationToken cancellationToken)
     {
         var result = await Lobby.SetAssassinAsync(
-            sessionId, request.Enabled, await Caller(sessionId), cancellationToken);
+            sessionId,
+            request.Enabled,
+            request.BodyGuard,
+            request.DeepCover,
+            request.BlindSpy,
+            request.FalseCommander,
+            await Caller(sessionId),
+            cancellationToken);
 
         return result.Match(Ok, Problem);
     }

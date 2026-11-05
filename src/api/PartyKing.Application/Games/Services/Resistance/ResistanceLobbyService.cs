@@ -84,11 +84,19 @@ public interface IResistanceLobbyService
         Guid sessionId, bool enabled, bool? knowEachOther, GameCaller caller, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Host or admin: switches the Assassin module on or off. NotFound without a game, Conflict once the game has
-    /// started or when the Defector, the Reverser or Blind Spies are on.
+    /// Host or admin: switches the Assassin module on or off and, while it is on, its optional characters (an omitted
+    /// one keeps its choice). NotFound without a game, Conflict once the game has started or when the Defector, the
+    /// Reverser or Blind Spies are on.
     /// </summary>
     Task<ErrorOr<ResistanceGameDto>> SetAssassinAsync(
-        Guid sessionId, bool enabled, GameCaller caller, CancellationToken cancellationToken);
+        Guid sessionId,
+        bool enabled,
+        bool? bodyGuard,
+        bool? deepCover,
+        bool? blindSpy,
+        bool? falseCommander,
+        GameCaller caller,
+        CancellationToken cancellationToken);
 
     /// <summary>Host or admin: removes a player. NotFound for an unknown game or player.</summary>
     Task<ErrorOr<ResistanceGameDto>> KickAsync(
@@ -275,7 +283,14 @@ internal class ResistanceLobbyService : IResistanceLobbyService
     }
 
     public Task<ErrorOr<ResistanceGameDto>> SetAssassinAsync(
-        Guid sessionId, bool enabled, GameCaller caller, CancellationToken cancellationToken)
+        Guid sessionId,
+        bool enabled,
+        bool? bodyGuard,
+        bool? deepCover,
+        bool? blindSpy,
+        bool? falseCommander,
+        GameCaller caller,
+        CancellationToken cancellationToken)
     {
         return _gate.RunAsManagerAsync(
             sessionId,
@@ -284,7 +299,7 @@ internal class ResistanceLobbyService : IResistanceLobbyService
                 sessionId,
                 nameof(SetAssassinAsync),
                 ResistanceOutcome.NoGame,
-                game => game.SetAssassin(enabled),
+                game => game.SetAssassin(enabled, bodyGuard, deepCover, blindSpy, falseCommander),
                 cancellationToken),
             cancellationToken);
     }

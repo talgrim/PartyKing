@@ -121,7 +121,11 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
             Rules.ReverserSpyKnowsSpies,
             Rules.DefectorEnabled,
             Rules.DefectorsKnowEachOther,
-            Rules.AssassinEnabled);
+            Rules.AssassinEnabled,
+            Rules.BodyGuardEnabled,
+            Rules.DeepCoverEnabled,
+            Rules.BlindSpyEnabled,
+            Rules.FalseCommanderEnabled);
 
         return Succeeded();
     }
@@ -145,6 +149,11 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
         if (Players.Count < MinPlayers)
         {
             return ResistanceOutcome.Failed(ResistanceFailure.NotEnoughPlayers, this);
+        }
+
+        if (AssassinCharactersFailure() is { } invalid)
+        {
+            return ResistanceOutcome.Failed(invalid, this);
         }
 
         ResistanceRoles.Deal(this, random);

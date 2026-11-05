@@ -175,4 +175,10 @@ public enum ResistanceFailure
 
     /// <summary>The player to name is the Assassin themselves or is not a player.</summary>
     InvalidAssassinationTarget,
+
+    /// <summary>The optional spy characters (Deep Cover, Blind Spy, False Commander) do not all fit among the spies, next to the Assassin.</summary>
+    TooManySpyCharacters,
+
+    /// <summary>With 5 players the Body Guard needs Deep Cover or False Commander.</summary>
+    BodyGuardNeedsCover,
 }

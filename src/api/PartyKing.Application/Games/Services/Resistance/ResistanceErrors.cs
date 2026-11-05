@@ -135,6 +135,11 @@ internal static class ResistanceErrors
             "Resistance.NotAssassin", "Only the Assassin names the Commander."),
         ResistanceFailure.InvalidAssassinationTarget => Error.Validation(
             "Resistance.InvalidTarget", "That player can't be named."),
+        ResistanceFailure.TooManySpyCharacters => Error.Conflict(
+            "Resistance.TooManySpyCharacters",
+            "There are too few spies for these characters: the Assassin takes one spy seat, and Deep Cover, the Blind Spy and the False Commander one each."),
+        ResistanceFailure.BodyGuardNeedsCover => Error.Conflict(
+            "Resistance.BodyGuardNeedsCover", "With 5 players the Body Guard needs Deep Cover or the False Commander."),
         _ => throw new ArgumentOutOfRangeException(nameof(failure), failure, "No error is defined for this failure."),
     };
 }

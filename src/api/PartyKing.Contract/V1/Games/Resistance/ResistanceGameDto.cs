@@ -37,6 +37,12 @@ public class ResistanceGameDto
     public IReadOnlyList<Guid>? FellowSpies { get; set; }
 
     /// <summary>
+    /// Assassin module: for the Body Guard, the players one of whom is the Commander (the Commander and the False
+    /// Commander look alike to them); null for everybody else.
+    /// </summary>
+    public IReadOnlyList<Guid>? YourCommanderCandidates { get; set; }
+
+    /// <summary>
     /// The caller's own character (Reverser, Defector and Assassin modules); null when none is played or the caller does not
     /// play.
     /// </summary>

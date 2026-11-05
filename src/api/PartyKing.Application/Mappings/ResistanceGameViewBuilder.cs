@@ -80,6 +80,7 @@ internal sealed class ResistanceGameViewBuilder
         _view.YourCharacter = _game.IsStarted && _game.Rules is { ReverserEnabled: true } or { DefectorEnabled: true } or { AssassinEnabled: true }
             ? _you?.Character.ToDto()
             : null;
+        _view.YourCommanderCandidates = BuildCommanderCandidates();
         _view.FellowDefectorId = BuildFellowDefector();
         _view.DefectorFlips = _game.Rules.DefectorEnabled ? _game.DefectorFlips : [];
         _view.RevealedRoles = BuildRevealedRoles();
@@ -183,6 +184,17 @@ internal sealed class ResistanceGameViewBuilder
         return PlayerIds(x => ResistanceKnowledge.KnowsSpy(_game, you, x));
     }
 
+    /// <summary>The players the Body Guard takes for the Commander: the Commander and the False Commander, in seat order.</summary>
+    private List<Guid>? BuildCommanderCandidates()
+    {
+        if (!_game.IsStarted || !_game.Rules.AssassinEnabled || _you is not { } you || you.Character != ResistanceCharacter.BodyGuard)
+        {
+            return null;
+        }
+
+        return PlayerIds(x => ResistanceKnowledge.KnowsCommander(_game, you, x));
+    }
+
     /// <summary>The other Defector, for a Defector of a game where the Defectors know each other.</summary>
     private Guid? BuildFellowDefector()
     {
@@ -216,7 +228,8 @@ internal sealed class ResistanceGameViewBuilder
             playerCounts, game.Rules.PlotCardsEnabled, game.Rules.PlotCardsPerRound(game.Players.Count),
             game.Rules.InquisitorEnabled, game.Rules.BlindSpiesEnabled,
             game.Rules.ReverserEnabled, game.Rules.ReverserSides.ToDto(), game.Rules.ReverserSpyKnowsSpies,
-            game.Rules.DefectorEnabled, game.Rules.DefectorsKnowEachOther, game.Rules.AssassinEnabled);
+            game.Rules.DefectorEnabled, game.Rules.DefectorsKnowEachOther, game.Rules.AssassinEnabled,
+            game.Rules.BodyGuardEnabled, game.Rules.DeepCoverEnabled, game.Rules.BlindSpyEnabled, game.Rules.FalseCommanderEnabled);
     }
 
     private List<ResistanceMissionResultDto> BuildMissionResults()

@@ -573,6 +573,19 @@ public static class ResistanceRoles
             .Character = ResistanceCharacter.Assassin;
         shuffled.First(x => x.Role == ResistanceRole.Resistance && x.Character == ResistanceCharacter.Standard)
             .Character = ResistanceCharacter.Commander;
+
+        // The optional characters take the next standard players of their side; the start already checked they fit
+        var optional = new (bool Enabled, ResistanceRole Side, ResistanceCharacter Character)[]
+        {
+            (game.Rules.BodyGuardEnabled, ResistanceRole.Resistance, ResistanceCharacter.BodyGuard),
+            (game.Rules.DeepCoverEnabled, ResistanceRole.Spy, ResistanceCharacter.DeepCover),
+            (game.Rules.BlindSpyEnabled, ResistanceRole.Spy, ResistanceCharacter.BlindSpy),
+            (game.Rules.FalseCommanderEnabled, ResistanceRole.Spy, ResistanceCharacter.FalseCommander),
+        };
+        foreach (var (enabled, side, character) in optional.Where(x => x.Enabled))
+        {
+            shuffled.First(x => x.Role == side && x.Character == ResistanceCharacter.Standard).Character = character;
+        }
     }
 
     /// <summary>Gives every player a random role, picks a random first leader and starts the first mission.</summary>

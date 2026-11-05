@@ -13,10 +13,17 @@ public partial class ResistanceGame
     public Guid? AssassinationTargetPlayerId { get; internal set; }
 
     /// <summary>
-    /// Switches the Assassin module on or off in the rules. Allowed until the game starts, open or not. It cannot be
-    /// switched on together with the Defector, the Reverser or Blind Spies.
+    /// Switches the Assassin module on or off in the rules and, while it is on, the optional characters (Body Guard,
+    /// Deep Cover, Blind Spy, False Commander; an omitted one keeps its choice). Switching the module off switches them
+    /// off too. Allowed until the game starts, open or not. It cannot be switched on together with the Defector, the
+    /// Reverser or Blind Spies. Whether the characters fit the number of players is checked at the start.
     /// </summary>
-    public ResistanceOutcome SetAssassin(bool enabled)
+    public ResistanceOutcome SetAssassin(
+        bool enabled,
+        bool? bodyGuard = null,
+        bool? deepCover = null,
+        bool? blindSpy = null,
+        bool? falseCommander = null)
     {
         if (IsStarted)
         {
@@ -29,10 +36,51 @@ public partial class ResistanceGame
         }
 
         // Rules is a JSON column compared by reference, so assign a copy to have the change detected.
-        Rules = Rules.Clone(assassinEnabled: enabled);
+        Rules = enabled
+            ? Rules.Clone(
+                assassinEnabled: true,
+                bodyGuardEnabled: bodyGuard,
+                deepCoverEnabled: deepCover,
+                blindSpyEnabled: blindSpy,
+                falseCommanderEnabled: falseCommander)
+            : Rules.Clone(
+                assassinEnabled: false,
+                bodyGuardEnabled: false,
+                deepCoverEnabled: false,
+                blindSpyEnabled: false,
+                falseCommanderEnabled: false);
 
         return Succeeded();
     }
+
+    /// <summary>
+    /// The failure of the optional characters for the players of this game, or null when they fit: the Assassin takes
+    /// one spy seat, the other spy characters share the rest, and with 5 players a Body Guard needs Deep Cover or False
+    /// Commander (or the Commander, the Body Guard and the spies' side would give the game away).
+    /// </summary>
+    private ResistanceFailure? AssassinCharactersFailure()
+    {
+        if (!Rules.AssassinEnabled)
+        {
+            return null;
+        }
+
+        if (Rules.OptionalSpyCharacters > Rules.SpyCount(Players.Count) - 1)
+        {
+            return ResistanceFailure.TooManySpyCharacters;
+        }
+
+        if (Rules.BodyGuardEnabled && Players.Count == BodyGuardCoverPlayerCount
+                                   && !Rules.DeepCoverEnabled && !Rules.FalseCommanderEnabled)
+        {
+            return ResistanceFailure.BodyGuardNeedsCover;
+        }
+
+        return null;
+    }
+
+    /// <summary>The player count at which a Body Guard needs Deep Cover or False Commander next to them.</summary>
+    internal const int BodyGuardCoverPlayerCount = 5;
 
     /// <summary>
     /// The Assassin names the player they take for the Commander. The spies win when it is the Commander, the

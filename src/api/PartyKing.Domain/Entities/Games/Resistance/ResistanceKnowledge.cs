@@ -29,10 +29,16 @@ public static class ResistanceKnowledge
             return false;
         }
 
-        // The Commander is on the resistance side but knows every spy. (Deep Cover, who hides from them, comes later.)
+        // The Commander is on the resistance side but knows every spy, except Deep Cover, who hides from them
         if (viewer.Character == ResistanceCharacter.Commander)
         {
-            return Loyalty(target) == ResistanceRole.Spy;
+            return Loyalty(target) == ResistanceRole.Spy && target.Character != ResistanceCharacter.DeepCover;
+        }
+
+        // The Blind Spy keeps their eyes closed in the reveal: they know no spy and no spy knows them
+        if (viewer.Character == ResistanceCharacter.BlindSpy || target.Character == ResistanceCharacter.BlindSpy)
+        {
+            return false;
         }
 
         if (IsHiddenReverserSpy(game, viewer) || IsHiddenReverserSpy(game, target))
@@ -46,6 +52,17 @@ public static class ResistanceKnowledge
         }
 
         return Loyalty(viewer) == ResistanceRole.Spy && Loyalty(target) == ResistanceRole.Spy;
+    }
+
+    /// <summary>
+    /// Whether the Body Guard (the viewer) takes the target for the Commander: the Commander and the False Commander look
+    /// alike to them, so the Body Guard only learns that the Commander is one of the players this returns true for.
+    /// </summary>
+    public static bool KnowsCommander(ResistanceGame game, ResistancePlayer viewer, ResistancePlayer target)
+    {
+        return game.Rules.AssassinEnabled
+               && viewer.Character == ResistanceCharacter.BodyGuard
+               && target.Character is ResistanceCharacter.Commander or ResistanceCharacter.FalseCommander;
     }
 
     /// <summary>
