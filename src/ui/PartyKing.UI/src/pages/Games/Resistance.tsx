@@ -272,6 +272,15 @@ export const Resistance = (): ReactNode => {
     }
   };
 
+  const assassinate = async (targetPlayerId: string) => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.assassinateResistancePlayer(sessionId, targetPlayerId), { revalidate: false });
+    } catch {
+      setMessage(t('resistance.errors.assassinate'));
+    }
+  };
+
   const castVote = async (approve: boolean) => {
     setMessage(undefined);
     try {
@@ -513,6 +522,7 @@ export const Resistance = (): ReactNode => {
                   onConfirmPlotCard={confirmPlotCard}
                   onExaminePlayer={examinePlayer}
                   onConfirmInquisition={confirmInquisition}
+                  onAssassinate={assassinate}
                   onVote={castVote}
                   onPlayMissionCard={playMissionCard}
                   onContinue={continueGame}

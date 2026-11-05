@@ -5,6 +5,8 @@ import { PageNavigation } from '@/components/common/PageNavigation';
 import { sessionResistancePath } from '@/router/constants';
 import {
   CardBackIcon,
+  AssassinCardIcon,
+  CommanderCardIcon,
   DefectorCardIcon,
   DefectorSwitchCardIcon,
   InquisitorCardIcon,
@@ -109,6 +111,15 @@ export const ResistanceIconGuide = (): ReactNode => {
           name: t('resistance.iconGuide.defector.noChange.name'),
           meaning: t('resistance.iconGuide.defector.noChange.meaning'),
         },
+      ],
+    },
+    {
+      id: 'assassin',
+      title: t('resistance.rules.assassin.title'),
+      note: t('resistance.iconGuide.moduleNote'),
+      entries: [
+        { icon: card(CommanderCardIcon), name: t('resistance.characters.commander'), meaning: t('resistance.iconGuide.assassin.commander') },
+        { icon: card(AssassinCardIcon), name: t('resistance.characters.assassin'), meaning: t('resistance.iconGuide.assassin.assassin') },
       ],
     },
   ];

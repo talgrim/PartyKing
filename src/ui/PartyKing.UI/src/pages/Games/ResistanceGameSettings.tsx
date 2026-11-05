@@ -70,6 +70,19 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
     }
   };
 
+  const setAssassin = async (enabled: boolean) => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.setResistanceAssassin(sessionId, enabled), { revalidate: false });
+    } catch {
+      setMessage(t('resistance.settings.assassinFailed'));
+    }
+  };
+
+  // The Assassin does not combine with Blind Spies, the Reverser or the Defectors: each is greyed out while the other is on
+  const assassinOn = game?.rules.assassinEnabled ?? false;
+  const assassinBlocked = game?.rules.blindSpiesEnabled || game?.rules.reverserEnabled || game?.rules.defectorEnabled;
+
   const defectorChoiceDisabled = game === undefined || started || !game.rules.defectorEnabled;
 
   const setDefector = async (enabled: boolean, knowEachOther?: boolean) => {
@@ -151,7 +164,7 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
             <input
               type="checkbox"
               checked={game?.rules.blindSpiesEnabled ?? false}
-              disabled={game === undefined || started}
+              disabled={game === undefined || started || assassinOn}
               onChange={(event) => void setBlindSpies(event.target.checked)}
             />
             {t('resistance.settings.blindSpies.toggle')}
@@ -165,7 +178,7 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
             <input
               type="checkbox"
               checked={game?.rules.reverserEnabled ?? false}
-              disabled={game === undefined || started}
+              disabled={game === undefined || started || assassinOn}
               onChange={(event) => void setReverser(event.target.checked)}
             />
             {t('resistance.settings.reverser.toggle')}
@@ -201,7 +214,7 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
             <input
               type="checkbox"
               checked={game?.rules.defectorEnabled ?? false}
-              disabled={game === undefined || started}
+              disabled={game === undefined || started || assassinOn}
               onChange={(event) => void setDefector(event.target.checked)}
             />
             {t('resistance.settings.defector.toggle')}
@@ -214,6 +227,20 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
               onChange={(event) => void setDefector(true, event.target.checked)}
             />
             {t('resistance.settings.defector.knowEachOther')}
+          </label>
+        </SettingsSection>
+        <SettingsSection
+          title={t('resistance.settings.assassin.title')}
+          description={t('resistance.settings.assassin.description')}
+        >
+          <label className="flex items-center gap-2 text-slate-200">
+            <input
+              type="checkbox"
+              checked={assassinOn}
+              disabled={game === undefined || started || (!assassinOn && !!assassinBlocked)}
+              onChange={(event) => void setAssassin(event.target.checked)}
+            />
+            {t('resistance.settings.assassin.toggle')}
           </label>
         </SettingsSection>
         {message && <p className="text-amber-500">{message}</p>}

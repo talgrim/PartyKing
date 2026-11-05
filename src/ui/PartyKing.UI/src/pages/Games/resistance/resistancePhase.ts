@@ -62,8 +62,11 @@ export const resistancePhaseDescription = (
     const passed = game.leaderWindowPassedPlayerIds.length;
 
     if (game.phase === 'GameOver') {
+      const named = game.players.find((player) => player.id === game.assassinationTargetPlayerId)?.name;
       const why =
-        game.winner === 'Spy'
+        named != null
+          ? t(game.winner === 'Spy' ? 'resistance.phase.whyAssassinHit' : 'resistance.phase.whyAssassinMissed', { name: named })
+          : game.winner === 'Spy'
           ? game.rejectedTeams >= MAX_REJECTED_TEAMS
             ? t('resistance.phase.whyRejected', { max: MAX_REJECTED_TEAMS })
             : t('resistance.phase.whyFailed')
@@ -71,6 +74,10 @@ export const resistancePhaseDescription = (
       const winner = t(game.winner === 'Spy' ? 'resistance.phase.spiesWon' : 'resistance.phase.resistanceWon');
 
       return t('resistance.phase.gameOver', { winner, why, score });
+    }
+
+    if (game.phase === 'Assassination') {
+      return t('resistance.phase.assassination', { score });
     }
 
     if (game.phase === 'DealingCards') {

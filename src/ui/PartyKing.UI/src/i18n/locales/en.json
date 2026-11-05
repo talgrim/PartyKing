@@ -428,7 +428,10 @@
       "hiddenReverserSpy": "Reverser spy: you keep your eyes closed in the reveal, so you do not know the other spies and they do not know you.",
       "defector": "You are a Defector: your side can change when a switch card is flipped at the start of mission 3, 4 or 5. Look at your card again after every flip.",
       "defectorSpy": "As a Defector you do not know who the other spies are.",
-      "fellowDefector": "The other Defector is {{name}}."
+      "fellowDefector": "The other Defector is {{name}}.",
+      "commander": "You are the Commander: you know who the spies are. If the Resistance wins three missions, the Assassin will try to name you, so do not give yourself away.",
+      "commanderSpiesList": "Spies you know",
+      "assassin": "You are the Assassin: if the Resistance wins three missions, you get one last chance. Talk it over with the other spies, then name the player you take for the Commander."
     },
     "missionCard": {
       "success": "Success",
@@ -445,7 +448,9 @@
     },
     "characters": {
       "reverser": "Reverser",
-      "defector": "Defector"
+      "defector": "Defector",
+      "commander": "Commander",
+      "assassin": "Assassin"
     },
     "vote": {
       "approve": "Approve",
@@ -492,6 +497,12 @@
         "description": "A module in which two secret Defectors are dealt, one on the Resistance side and one among the Spies. At the start of missions 3, 4 and 5 a switch card is flipped for everyone to see: on Change Allegiance both Defectors change sides (they have to play by the rules of their new side and the win conditions follow), on No Change nothing happens. Nobody is told who the Defectors are, only that a switch happened. The Defector spy does not know the other spies, but they know him as long as he is among them.",
         "toggle": "Enable Defectors",
         "knowEachOther": "The Defectors know each other"
+      },
+      "assassinFailed": "Could not change the Assassin setting.",
+      "assassin": {
+        "title": "Assassin",
+        "description": "A module in which a secret Commander (Resistance) and a secret Assassin (spy) are dealt. The Commander knows who the spies are. After the Resistance wins three missions the Spies get one last chance: the Assassin, after talking it over with the other spies outside the app, names the player they take for the Commander. If right, the Spies win; if wrong, the Resistance wins. Three failed missions still win the game for the Spies. Does not combine with Blind Spies, the Reverser or the Defectors.",
+        "toggle": "Enable Assassin"
       }
     },
     "controls": {
@@ -567,7 +578,8 @@
       "restart": "Could not restart the game.",
       "end": "Could not end the game.",
       "examine": "Could not examine the player.",
-      "confirmInquisition": "Could not confirm."
+      "confirmInquisition": "Could not confirm.",
+      "assassinate": "Could not name the player."
     },
     "viewSwitch": {
       "label": "View",
@@ -759,7 +771,9 @@
       "takeResponsibility2": "RESPONSIBILITY",
       "inquisitor": "INQUISITOR",
       "reverser": "REVERSER",
-      "defector": "DEFECTOR"
+      "defector": "DEFECTOR",
+      "commander": "COMMANDER",
+      "assassin": "ASSASSIN"
     },
     "rules": {
       "goal": {
@@ -828,6 +842,10 @@
       "inquisitor": {
         "title": "Inquisitor (module)",
         "text": "When the host enables the module, a public Inquisitor token starts with the player to the right of the first leader. After missions 2, 3 and 4 the holder picks a player who never held the token and privately sees whether that player is a Spy or Resistance; the token passes to the examined player. The Inquisitor may say anything about the result, and nobody can check it. The module is skipped when the game ends after mission 3 or 4."
+      },
+      "assassin": {
+        "title": "Assassin (module)",
+        "text": "When the host enables the module, a secret Commander is dealt among the Resistance and a secret Assassin among the Spies. The Commander knows who the spies are. If the Spies fail three missions they win as usual. If the Resistance wins three missions, the game is not over yet: the Spies talk it over outside the app and the Assassin names the player they take for the Commander. If they are right, the Spies win; otherwise the Resistance wins. The module does not combine with Blind Spies, the Reverser or the Defectors."
       }
     },
     "phase": {
@@ -893,7 +911,10 @@
       "inquisitionPickYou": "You hold the Inquisitor token: pick a player who never held it to examine.",
       "inquisitionPick": "{{name}} holds the Inquisitor token and picks a player to examine.",
       "inquisitionSeenYou": "You examined {{target}}, who now holds the token. Look at the result and confirm.",
-      "inquisitionSeen": "{{name}} examined {{target}}, who now holds the Inquisitor token, and is looking at the result."
+      "inquisitionSeen": "{{name}} examined {{target}}, who now holds the Inquisitor token, and is looking at the result.",
+      "assassination": "The Resistance won three missions ({{score}}), but the Spies have one last chance: the Assassin is choosing the player they take for the Commander.",
+      "whyAssassinHit": "the Assassin named {{name}}, who is the Commander",
+      "whyAssassinMissed": "the Assassin named {{name}}, who is not the Commander"
     },
     "inquisitor": {
       "title": "Inquisitor",
@@ -948,7 +969,18 @@
           "name": "Switch card: No Change",
           "meaning": "Flipped at the start of a mission for everyone to see: nothing happens, nobody changes sides."
         }
+      },
+      "assassin": {
+        "commander": "Your secret character card: you are the Commander of the Resistance and you know who the spies are. If the Resistance wins three missions, the Assassin tries to name you.",
+        "assassin": "Your secret character card: you are the Assassin, a spy. If the Resistance wins three missions, you name the player you take for the Commander; if you are right, the Spies win."
       }
+    },
+    "assassin": {
+      "title": "Assassin",
+      "effect": "The Resistance won three missions. Talk it over with the other spies, then name the player you take for the Commander. If you are right, the Spies win.",
+      "target": "Player to name",
+      "pick": "Pick a player",
+      "confirm": "Name the Commander"
     }
   }
 }

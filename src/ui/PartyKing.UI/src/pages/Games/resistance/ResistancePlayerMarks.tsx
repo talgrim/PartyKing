@@ -76,6 +76,12 @@ export const ResistancePlayerMarks = ({ game, playerId }: Props): ReactNode => {
       {revealed?.character === 'Defector' && (
         <span className={`${badge} bg-slate-600 text-white`}>{t('resistance.characters.defector')}</span>
       )}
+      {revealed?.character === 'Commander' && (
+        <span className={`${badge} bg-slate-600 text-white`}>{t('resistance.characters.commander')}</span>
+      )}
+      {revealed?.character === 'Assassin' && (
+        <span className={`${badge} bg-slate-600 text-white`}>{t('resistance.characters.assassin')}</span>
+      )}
       {role && (
         <span className={`${badge} ${role === 'Spy' ? 'bg-rose-700 text-white' : 'bg-sky-700 text-white'}`}>
           {role === 'Spy' ? t('resistance.roles.spy') : t('resistance.roles.resistance')}

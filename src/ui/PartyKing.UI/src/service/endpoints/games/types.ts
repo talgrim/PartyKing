@@ -66,9 +66,9 @@ export type ResistanceGameDto = {
   leaderPlayerId: string | null;
   /** The caller's own secret role; null for observers and before the start. */
   yourRole: ResistanceRole | null;
-  /** The other spies' player ids; only a spy gets them, otherwise null. */
+  /** The spies you know: the other spies for a spy, every spy for the Commander (Assassin module); otherwise null. */
   fellowSpies: string[] | null;
-  /** The caller's own character (Reverser and Defector modules); null when neither is played or the caller does not play. */
+  /** The caller's own character (Reverser, Defector and Assassin modules); null when none is played or the caller does not play. */
   yourCharacter: ResistanceCharacter | null;
   /** The other Defector's player id; only a Defector gets it, and only when the Defectors know each other. */
   fellowDefectorId: string | null;
@@ -136,6 +136,8 @@ export type ResistanceGameDto = {
   inquisitionExaminedPlayerId: string | null;
   /** The loyalty of the player you examined, until you confirm having seen it; private to the examiner. */
   yourInquisition: ResistanceInquisitionDto | null;
+  /** Assassin module: the player the Assassin named as the Commander; public once they did (the game is then over). */
+  assassinationTargetPlayerId: string | null;
 };
 
 // Mirrors PartyKing.Contract.V1.Games.ResistanceInquisitionDto
@@ -222,6 +224,8 @@ export type ResistanceRulesDto = {
   defectorEnabled: boolean;
   /** Whether the two Defectors know each other while the module is played. */
   defectorsKnowEachOther: boolean;
+  /** Whether the Assassin module is played in this game: a Commander and an Assassin, who names the Commander after the third successful mission. */
+  assassinEnabled: boolean;
 };
 
 // Mirrors PartyKing.Contract.V1.Games.ResistanceCountRulesDto
@@ -245,10 +249,10 @@ export type ResistanceReverserSides = 'Both' | 'Resistance' | 'Spy';
 /** Reverser module: the choices that can be changed together with the switch; an omitted one stays as it is. */
 export type ResistanceReverserOptions = { sides?: ResistanceReverserSides; spyKnowsSpies?: boolean };
 
-/** The special character of a player, apart from the side (Reverser and Defector modules). */
-export type ResistanceCharacter = 'Standard' | 'Reverser' | 'Defector';
+/** The special character of a player, apart from the side (Reverser, Defector and Assassin modules). */
+export type ResistanceCharacter = 'Standard' | 'Reverser' | 'Defector' | 'Commander' | 'Assassin';
 
-/** DealingCards: the leader hands out the plot cards just drawn (add-on only); ResolvingCards: the immediate plot cards are played and their receivers confirm; SelectingTeam: the leader picks (the votes that rejected the last team stay public until then); Voting: the team is up for a vote; PlayingMission: the approved team plays cards; LeaderWindow: a Strong Leader is out there, so everyone confirms they play no card or its holder takes the lead; ConfidenceWindow: the team was approved while a playable card is out there, so everyone confirms they play no card, the holder of No Confidence cancels the approval or the holder of In the Spotlight names who plays openly; PeekWindow: the mission is played and its outcome is public, but a playable card is out there, so everyone confirms they play no card or the holder of Keeping a Close Eye looks at a mission card; Inquisition: the Inquisitor module, after missions 2 to 4 the holder of the token picks a player to examine and confirms having seen the loyalty; MissionResult: the outcome waits for "Dalej". */
+/** DealingCards: the leader hands out the plot cards just drawn (add-on only); ResolvingCards: the immediate plot cards are played and their receivers confirm; SelectingTeam: the leader picks (the votes that rejected the last team stay public until then); Voting: the team is up for a vote; PlayingMission: the approved team plays cards; LeaderWindow: a Strong Leader is out there, so everyone confirms they play no card or its holder takes the lead; ConfidenceWindow: the team was approved while a playable card is out there, so everyone confirms they play no card, the holder of No Confidence cancels the approval or the holder of In the Spotlight names who plays openly; PeekWindow: the mission is played and its outcome is public, but a playable card is out there, so everyone confirms they play no card or the holder of Keeping a Close Eye looks at a mission card; Inquisition: the Inquisitor module, after missions 2 to 4 the holder of the token picks a player to examine and confirms having seen the loyalty; Assassination: the Assassin module, the Resistance won three missions and the Assassin names the player they take for the Commander (no winner yet); MissionResult: the outcome waits for "Dalej". */
 export type ResistancePhase =
   | 'SelectingTeam'
   | 'Voting'
@@ -260,7 +264,8 @@ export type ResistancePhase =
   | 'LeaderWindow'
   | 'ConfidenceWindow'
   | 'PeekWindow'
-  | 'Inquisition';
+  | 'Inquisition'
+  | 'Assassination';
 
 // Mirrors PartyKing.Contract.V1.Games.ResistanceVoteDto
 export type ResistanceVoteDto = {
