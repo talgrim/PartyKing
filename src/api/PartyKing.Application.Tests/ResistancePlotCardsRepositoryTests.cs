@@ -458,7 +458,7 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
     public async Task RestartingAFinishedGame_BuildsAFreshDeck()
     {
         var game = await StartAsync(5, plotCards: true, withoutImmediateCards: true);
-        for (var i = 0; i < ResistanceRoles.MaxRejectedTeams; i++)
+        for (var i = 0; i < ResistanceRules.MaxRejectedTeams; i++)
         {
             if (i == 0)
             {
@@ -1141,7 +1141,7 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
         await using (var dbContext = await _writer.CreateDbContextAsync())
         {
             var row = await dbContext.Set<ResistanceGame>().SingleAsync(x => x.SessionId == _sessionId);
-            row.RejectedTeams = ResistanceRoles.MaxRejectedTeams - 1;
+            row.RejectedTeams = ResistanceRules.MaxRejectedTeams - 1;
             await dbContext.SaveChangesAsync();
         }
 
