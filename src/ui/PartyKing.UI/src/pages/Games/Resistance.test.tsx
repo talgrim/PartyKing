@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { Resistance } from './Resistance';
 import { useSessionMusicHub } from '@/service/realtime/useSessionMusicHub';
 import { resistanceKey } from '@/service/realtime/sessionMusicEvents';
+import { ApiError } from '@/service/ApiError';
 
 const mocks = vi.hoisted(() => ({
   embedded: false,
@@ -19,6 +20,8 @@ const mocks = vi.hoisted(() => ({
   setResistanceBlindSpies: vi.fn(),
   setResistanceReverser: vi.fn(),
   setResistanceDefector: vi.fn(),
+  setResistanceAssassin: vi.fn(),
+  assassinateResistancePlayer: vi.fn(),
   examineResistancePlayer: vi.fn(),
   confirmResistanceInquisition: vi.fn(),
   selectResistanceTeam: vi.fn(),
@@ -54,6 +57,8 @@ vi.mock('@/service/endpoints/games/gamesApi', () => ({
     setResistanceBlindSpies: mocks.setResistanceBlindSpies,
     setResistanceReverser: mocks.setResistanceReverser,
     setResistanceDefector: mocks.setResistanceDefector,
+    setResistanceAssassin: mocks.setResistanceAssassin,
+    assassinateResistancePlayer: mocks.assassinateResistancePlayer,
     examineResistancePlayer: mocks.examineResistancePlayer,
     confirmResistanceInquisition: mocks.confirmResistanceInquisition,
     selectResistanceTeam: mocks.selectResistanceTeam,
@@ -106,6 +111,7 @@ const lobby = (names: string[], isOpen = false) => ({
   inquisitionExaminerPlayerId: null,
   inquisitionExaminedPlayerId: null,
   yourInquisition: null,
+  assassinationTargetPlayerId: null,
   leaderWindowPassedPlayerIds: [] as unknown[],
   rules: {
     playerCounts: [5, 6, 7, 8, 9, 10].map((playerCount) => ({
@@ -123,6 +129,11 @@ const lobby = (names: string[], isOpen = false) => ({
     reverserSpyKnowsSpies: true,
     defectorEnabled: false,
     defectorsKnowEachOther: false,
+    assassinEnabled: false,
+    bodyGuardEnabled: false,
+    deepCoverEnabled: false,
+    blindSpyEnabled: false,
+    falseCommanderEnabled: false,
   },
 });
 
@@ -404,6 +415,120 @@ describe('Resistance', () => {
     await userEvent.click(await screen.findByRole('checkbox', { name: 'Enable Defectors' }));
 
     expect(await screen.findByText('Could not change the Defector setting.')).toBeInTheDocument();
+  });
+
+  it('switches the Assassin on before the game starts', async () => {
+    mocks.setResistanceAssassin.mockResolvedValue(lobby([]));
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Game settings' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Game settings' });
+    expect(within(dialog).getByRole('region', { name: 'Assassin' })).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole('checkbox', { name: 'Enable Assassin' }));
+
+    expect(mocks.setResistanceAssassin).toHaveBeenCalledWith('session-1', true, undefined);
+  });
+
+  it('warns in the settings and does not start when the Body Guard has no cover at five players', async () => {
+    const game = lobby(['A', 'B', 'C', 'D', 'E'], true);
+    mocks.role = { isHost: true, isAdmin: false };
+    mocks.getResistance.mockResolvedValue({ ...game, rules: { ...game.rules, assassinEnabled: true, bodyGuardEnabled: true } });
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Game settings' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Game settings' });
+    expect(await within(dialog).findByText('With 5 players the Body Guard needs Deep Cover or the False Commander.')).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Start game' }));
+
+    expect(mocks.startResistance).not.toHaveBeenCalled();
+    expect(await screen.findByText('With 5 players the Body Guard needs Deep Cover or the False Commander.')).toBeInTheDocument();
+  });
+
+  it('tells the host why the server refused to start, and keeps the plain message for other failures', async () => {
+    mocks.role = { isHost: true, isAdmin: false };
+    mocks.getResistance.mockResolvedValue(lobby(['A', 'B', 'C', 'D', 'E'], true));
+    mocks.startResistance.mockRejectedValueOnce(
+      new ApiError({ message: 'With 5 players the Body Guard needs Deep Cover or the False Commander.', status: 409 }),
+    );
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Start game' }));
+    expect(
+      await screen.findByText('Could not start the game. With 5 players the Body Guard needs Deep Cover or the False Commander.'),
+    ).toBeInTheDocument();
+
+    mocks.startResistance.mockRejectedValueOnce(new Error('boom'));
+    await userEvent.click(screen.getByRole('button', { name: 'Start game' }));
+    expect(await screen.findByText('Could not start the game.')).toBeInTheDocument();
+  });
+
+  it('keeps the optional Assassin characters disabled while the module is off', async () => {
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Game settings' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Game settings' });
+
+    ['Body Guard', 'Deep Cover', 'Blind Spy', 'False Commander'].forEach((name) => {
+      expect(within(dialog).getByRole('checkbox', { name })).toBeDisabled();
+    });
+  });
+
+  it.each([
+    ['Body Guard', { bodyGuard: true }],
+    ['Deep Cover', { deepCover: true }],
+    ['Blind Spy', { blindSpy: true }],
+    ['False Commander', { falseCommander: true }],
+  ])('switches the %s on once the module is on', async (name, options) => {
+    const game = lobby([]);
+    mocks.getResistance.mockResolvedValue({ ...game, rules: { ...game.rules, assassinEnabled: true } });
+    mocks.setResistanceAssassin.mockResolvedValue(lobby([]));
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Game settings' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Game settings' });
+    await userEvent.click(await within(dialog).findByRole('checkbox', { name }));
+
+    expect(mocks.setResistanceAssassin).toHaveBeenCalledWith('session-1', true, options);
+  });
+
+  it.each([
+    ['Blind Spies', 'blindSpiesEnabled', 'Enable Blind Spies'],
+    ['the Reverser', 'reverserEnabled', 'Enable Reverser'],
+    ['the Defectors', 'defectorEnabled', 'Enable Defectors'],
+  ])('greys the Assassin out while %s is on', async (_name, flag) => {
+    const game = lobby([]);
+    mocks.getResistance.mockResolvedValue({ ...game, rules: { ...game.rules, [flag]: true } });
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Game settings' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Game settings' });
+
+    expect(await within(dialog).findByRole('checkbox', { name: 'Enable Assassin' })).toBeDisabled();
+  });
+
+  it('greys Blind Spies, the Reverser and the Defectors out while the Assassin is on', async () => {
+    const game = lobby([]);
+    mocks.getResistance.mockResolvedValue({ ...game, rules: { ...game.rules, assassinEnabled: true } });
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Game settings' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Game settings' });
+
+    expect(await within(dialog).findByRole('checkbox', { name: 'Enable Assassin' })).toBeChecked();
+    ['Enable Blind Spies', 'Enable Reverser', 'Enable Defectors'].forEach((name) => {
+      expect(within(dialog).getByRole('checkbox', { name })).toBeDisabled();
+    });
+  });
+
+  it('shows a message when the Assassin cannot be switched', async () => {
+    mocks.setResistanceAssassin.mockRejectedValue(new Error('boom'));
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Game settings' }));
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Enable Assassin' }));
+
+    expect(await screen.findByText('Could not change the Assassin setting.')).toBeInTheDocument();
   });
 
   it('keeps the sides of the Reverser disabled while the module is off', async () => {
@@ -925,6 +1050,86 @@ describe('Resistance', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Examine' }));
 
       expect(mocks.examineResistancePlayer).toHaveBeenCalledWith('session-1', 'p4');
+    });
+
+    describe('Assassin module', () => {
+      const assassination = (extra: object = {}) => {
+        const game = started(['A', 'B', 'C', 'D', 'E'], {
+          phase: 'Assassination',
+          missionNumber: 3,
+          yourPlayerId: 'p0',
+          yourRole: 'Spy',
+          yourCharacter: 'Assassin',
+          fellowSpies: ['p3'],
+          ...extra,
+        });
+
+        return { ...game, rules: { ...game.rules, assassinEnabled: true } };
+      };
+
+      it('lets the Assassin name a player, and nobody else', async () => {
+        mocks.role = { isHost: false, isAdmin: false };
+        mocks.assassinateResistancePlayer.mockResolvedValue(assassination());
+        mocks.getResistance.mockResolvedValue(assassination());
+        const view = renderPage();
+
+        await userEvent.selectOptions(await screen.findByLabelText('Player to name'), 'p2');
+        await userEvent.click(screen.getByRole('button', { name: 'Name the Commander' }));
+        expect(mocks.assassinateResistancePlayer).toHaveBeenCalledWith('session-1', 'p2');
+        view.unmount();
+
+        mocks.getResistance.mockResolvedValue(assassination({ yourPlayerId: 'p4', yourCharacter: 'Standard' }));
+        renderPage();
+        await screen.findByText(/the Assassin is choosing/);
+        expect(screen.queryByLabelText('Player to name')).not.toBeInTheDocument();
+      });
+
+      it('shows a message when the guess is refused', async () => {
+        mocks.role = { isHost: false, isAdmin: false };
+        mocks.assassinateResistancePlayer.mockRejectedValue(new Error('boom'));
+        mocks.getResistance.mockResolvedValue(assassination());
+        renderPage();
+
+        await userEvent.selectOptions(await screen.findByLabelText('Player to name'), 'p2');
+        await userEvent.click(screen.getByRole('button', { name: 'Name the Commander' }));
+
+        expect(await screen.findByText('Could not name the player.')).toBeInTheDocument();
+      });
+
+      it('gives the TV tab neither the panel nor the Commander\'s spies', async () => {
+        mocks.role = { isHost: true, isAdmin: false };
+        mocks.getResistance.mockResolvedValue(assassination({ yourRole: 'Resistance', yourCharacter: 'Commander', fellowSpies: ['p0', 'p3'] }));
+        renderPage('/s/session-1/games/resistance?tv=1');
+
+        await screen.findByRole('list', { name: 'Players' });
+        expect(screen.queryByLabelText('Player to name')).not.toBeInTheDocument();
+        expect(screen.queryByRole('list', { name: 'Spies you know' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Show your role' })).not.toBeInTheDocument();
+      });
+
+      it('gives the TV tab no Body Guard candidates, but gives the Body Guard theirs', async () => {
+        mocks.role = { isHost: true, isAdmin: false };
+        const body = assassination({
+          phase: 'SelectingTeam',
+          yourPlayerId: 'p1',
+          yourRole: 'Resistance',
+          yourCharacter: 'BodyGuard',
+          fellowSpies: null,
+          yourCommanderCandidates: ['p2', 'p4'],
+        });
+        mocks.getResistance.mockResolvedValue(body);
+        const tv = renderPage('/s/session-1/games/resistance?tv=1');
+
+        await screen.findByRole('list', { name: 'Players' });
+        expect(screen.queryByRole('list', { name: 'Possible Commanders' })).not.toBeInTheDocument();
+        tv.unmount();
+
+        mocks.role = { isHost: false, isAdmin: false };
+        renderPage();
+        await userEvent.click(await screen.findByRole('button', { name: 'Show your role' }));
+        const list = await screen.findByRole('list', { name: 'Possible Commanders' });
+        expect(Array.from(list.querySelectorAll('li')).map((item) => item.textContent)).toEqual(['C', 'E']);
+      });
     });
 
     it('gives the TV tab nothing of what the examiner saw', async () => {
@@ -1509,6 +1714,16 @@ describe('Resistance', () => {
       await waitFor(() => expect(screen.queryByRole('button', { name: 'Restart game' })).not.toBeInTheDocument());
       expect(await screen.findByRole('button', { name: 'Start game' }, { timeout: 5000 })).toBeEnabled();
       expect(await screen.findByRole('button', { name: 'Game settings' }, { timeout: 5000 })).toBeEnabled();
+    });
+
+    it('lets a manager restart a game that waits for the Assassin', async () => {
+      mocks.role = { isHost: true, isAdmin: false };
+      mocks.getResistance.mockResolvedValue(started(five, { yourPlayerId: null, yourRole: null, phase: 'Assassination' }));
+      renderPage('/s/session-1/games/resistance?tv=1');
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Restart game' }));
+
+      expect(mocks.restartResistance).toHaveBeenCalledWith('session-1');
     });
 
     it('offers no restart while the game is on', async () => {

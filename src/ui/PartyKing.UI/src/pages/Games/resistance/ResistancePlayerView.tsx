@@ -8,6 +8,7 @@ import { ResistancePlotDealer } from './ResistancePlotDealer';
 import { ResistancePlotHand } from './ResistancePlotHand';
 import { ResistancePlotPlayer } from './ResistancePlotPlayer';
 import { ResistanceCloseEye } from './ResistanceCloseEye';
+import { ResistanceAssassin } from './ResistanceAssassin';
 import { ResistanceInquisitor } from './ResistanceInquisitor';
 import { ResistanceLeaderWindow } from './ResistanceLeaderWindow';
 import { ResistanceSpotlightPlayer } from './ResistanceSpotlightPlayer';
@@ -40,6 +41,8 @@ type Props = {
   onExaminePlayer: (targetPlayerId: string) => Promise<void>;
   /** The examiner confirms having seen the loyalty (Inquisition). */
   onConfirmInquisition: () => Promise<void>;
+  /** The Assassin names the player they take for the Commander (Assassination). */
+  onAssassinate: (targetPlayerId: string) => Promise<void>;
   /** Plays a mission card (true = Success); only a member of the approved team sees the cards. */
   onPlayMissionCard: (card: ResistanceMissionCardKind) => Promise<void>;
   /** Moves on after a finished mission; the leader sees the button then. */
@@ -47,7 +50,7 @@ type Props = {
 };
 
 /** The view of a player: their secret role and, as the round goes, the team picker, the vote or the continue button. */
-export const ResistancePlayerView = ({ game, onSubmitTeam, onDealPlotCards, onPlayPlotCard, onTakeResponsibility, onTakeLead, onNoConfidence, onPeekMissionCard, onPassLeaderWindow, onConfirmPlotCard, onExaminePlayer, onConfirmInquisition, onVote, onPlayMissionCard, onContinue }: Props): ReactNode => {
+export const ResistancePlayerView = ({ game, onSubmitTeam, onDealPlotCards, onPlayPlotCard, onTakeResponsibility, onTakeLead, onNoConfidence, onPeekMissionCard, onPassLeaderWindow, onConfirmPlotCard, onExaminePlayer, onConfirmInquisition, onAssassinate, onVote, onPlayMissionCard, onContinue }: Props): ReactNode => {
   const { t } = useTranslation();
   const isPlayer = game.yourPlayerId != null;
   const leads = isPlayer && game.yourPlayerId === game.leaderPlayerId;
@@ -70,6 +73,7 @@ export const ResistancePlayerView = ({ game, onSubmitTeam, onDealPlotCards, onPl
             game.rules.reverserEnabled && !game.rules.reverserSpyKnowsSpies && game.yourCharacter === 'Reverser'
           }
           character={game.yourCharacter}
+          commanderCandidateIds={game.yourCommanderCandidates ?? []}
           fellowDefectorName={game.players.find((player) => player.id === game.fellowDefectorId)?.name ?? null}
         />
       )}
@@ -91,6 +95,7 @@ export const ResistancePlayerView = ({ game, onSubmitTeam, onDealPlotCards, onPl
       )}
       {isPlayer && <ResistanceCloseEye game={game} onPeek={onPeekMissionCard} />}
       {isPlayer && <ResistanceInquisitor game={game} onExamine={onExaminePlayer} onConfirm={onConfirmInquisition} />}
+      {isPlayer && <ResistanceAssassin game={game} onAssassinate={onAssassinate} />}
       {isPlayer && <ResistanceTakeResponsibility game={game} onTake={onTakeResponsibility} />}
       <ResistancePlotHand cards={game.yourPlotCards} />
       {picksTeam && (

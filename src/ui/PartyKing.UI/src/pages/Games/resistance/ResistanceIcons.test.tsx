@@ -4,6 +4,12 @@ import { describe, expect, it } from 'vitest';
 import {
   CardBackIcon,
   DefectorCardIcon,
+  CommanderCardIcon,
+  AssassinCardIcon,
+  BodyGuardCardIcon,
+  DeepCoverCardIcon,
+  BlindSpyCardIcon,
+  FalseCommanderCardIcon,
   InquisitorCardIcon,
   LeaderTokenIcon,
   MissionBoardIcon,
@@ -50,6 +56,12 @@ const cards = {
   InquisitorCardIcon,
   ReverserCardIcon,
   DefectorCardIcon,
+  CommanderCardIcon,
+  AssassinCardIcon,
+  BodyGuardCardIcon,
+  DeepCoverCardIcon,
+  BlindSpyCardIcon,
+  FalseCommanderCardIcon,
 };
 
 describe('ResistanceIcons', () => {

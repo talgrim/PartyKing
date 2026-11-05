@@ -13,6 +13,8 @@ import { PageNavigation } from '@/components/common/PageNavigation';
 import { ResistanceManagerControls } from '@/pages/Games/resistance/ResistanceManagerControls';
 import { ResistanceCompactBoard } from '@/pages/Games/resistance/ResistanceCompactBoard';
 import { ResistancePlotLog } from './resistance/ResistancePlotLog';
+import { ApiError } from '@/service/ApiError';
+import { assassinCharactersProblem } from './resistance/assassinCharacters';
 import { ResistancePhaseBanner } from '@/pages/Games/resistance/ResistancePhaseBanner';
 import { ResistancePlayerView } from '@/pages/Games/resistance/ResistancePlayerView';
 import { ResistanceTvBoard } from '@/pages/Games/resistance/ResistanceTvBoard';
@@ -134,7 +136,7 @@ export const Resistance = (): ReactNode => {
   const showQueue = isPlayer && !tv && !embedded && view === 'queue';
   const showBoard = !embedded && !showQueue && (!showPlayerView || wide);
   // The TV tab shares the player's cookies, so it must not show the role or the "Ty" badge of whoever is logged in
-  const shownGame = game && tv ? { ...game, yourPlayerId: null, yourRole: null, yourCharacter: null, fellowDefectorId: null, fellowSpies: null, yourVote: null, yourMissionCard: null, yourPlotCards: [], yourReveals: [], yourPeeks: [], yourInquisition: null } : game;
+  const shownGame = game && tv ? { ...game, yourPlayerId: null, yourRole: null, yourCharacter: null, fellowDefectorId: null, fellowSpies: null, yourCommanderCandidates: null, yourVote: null, yourMissionCard: null, yourPlotCards: [], yourReveals: [], yourPeeks: [], yourInquisition: null } : game;
 
   const players = game?.players ?? [];
   const started = game?.startedAt != null;
@@ -165,11 +167,19 @@ export const Resistance = (): ReactNode => {
 
   const startGame = async () => {
     setMessage(undefined);
+    const problem = game === undefined ? null : assassinCharactersProblem(game);
+    if (problem) {
+      setMessage(t(`resistance.settings.assassin.${problem}`));
+      return;
+    }
+
     try {
       await mutate(gamesApi.startResistance(sessionId), { revalidate: false });
       void mutateGlobal(resistanceLobbyKey(sessionId));
-    } catch {
-      setMessage(t('resistance.errors.start'));
+    } catch (error) {
+      // A refusal (409) says why in the server's own words, e.g. characters that do not fit the players
+      const reason = error instanceof ApiError && error.status === 409 ? error.message : '';
+      setMessage(reason ? `${t('resistance.errors.start')} ${reason}` : t('resistance.errors.start'));
     }
   };
 
@@ -269,6 +279,15 @@ export const Resistance = (): ReactNode => {
       await mutate(gamesApi.confirmResistanceInquisition(sessionId), { revalidate: false });
     } catch {
       setMessage(t('resistance.errors.confirmInquisition'));
+    }
+  };
+
+  const assassinate = async (targetPlayerId: string) => {
+    setMessage(undefined);
+    try {
+      await mutate(gamesApi.assassinateResistancePlayer(sessionId, targetPlayerId), { revalidate: false });
+    } catch {
+      setMessage(t('resistance.errors.assassinate'));
     }
   };
 
@@ -513,6 +532,7 @@ export const Resistance = (): ReactNode => {
                   onConfirmPlotCard={confirmPlotCard}
                   onExaminePlayer={examinePlayer}
                   onConfirmInquisition={confirmInquisition}
+                  onAssassinate={assassinate}
                   onVote={castVote}
                   onPlayMissionCard={playMissionCard}
                   onContinue={continueGame}

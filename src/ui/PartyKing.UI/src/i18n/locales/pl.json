@@ -436,7 +436,15 @@
       "hiddenReverserSpy": "Reverser-szpieg: podczas ujawniania masz zamknięte oczy, więc nie znasz pozostałych szpiegów, a oni nie znają ciebie.",
       "defector": "Jesteś Dezerterem: twoja strona może się zmienić, gdy na początku misji 3, 4 lub 5 zostanie odkryta karta zmiany. Po każdym odkryciu sprawdź swoją kartę jeszcze raz.",
       "defectorSpy": "Jako Dezerter nie wiesz, kim są pozostali szpiedzy.",
-      "fellowDefector": "Drugi Dezerter to {{name}}."
+      "fellowDefector": "Drugi Dezerter to {{name}}.",
+      "commander": "Jesteś Dowódcą: wiesz, kim są szpiedzy. Jeśli Ruch Oporu wygra trzy misje, Zabójca spróbuje wskazać ciebie, więc się nie zdradź.",
+      "commanderSpiesList": "Znani ci szpiedzy",
+      "assassin": "Jesteś Zabójcą: jeśli Ruch Oporu wygra trzy misje, dostajesz ostatnią szansę. Naradź się z pozostałymi szpiegami, a potem wskaż gracza, którego bierzesz za Dowódcę.",
+      "bodyGuard": "Jesteś Ochroniarzem: Dowódca jest jednym z tych graczy, ale nie wiesz którym (szpieg, Fałszywy Dowódca, może wyglądać dla ciebie jak Dowódca).",
+      "commanderCandidatesList": "Możliwi Dowódcy",
+      "deepCover": "Jesteś Głęboką przykrywką, szpiegiem: Dowódca nie widzi cię wśród szpiegów. Pozostali szpiedzy znają cię normalnie.",
+      "blindSpy": "Jesteś Ślepym Szpiegiem: nie wiesz, kim są pozostali szpiedzy, a oni nie znają ciebie. Dowódca cię widzi.",
+      "falseCommander": "Jesteś Fałszywym Dowódcą, szpiegiem: Ochroniarz bierze cię za Dowódcę. Pozostali szpiedzy znają cię normalnie."
     },
     "missionCard": {
       "success": "Sukces",
@@ -453,7 +461,13 @@
     },
     "characters": {
       "reverser": "Reverser",
-      "defector": "Dezerter"
+      "defector": "Dezerter",
+      "commander": "Dowódca",
+      "assassin": "Zabójca",
+      "bodyGuard": "Ochroniarz",
+      "deepCover": "Głęboka przykrywka",
+      "blindSpy": "Ślepy Szpieg",
+      "falseCommander": "Fałszywy Dowódca"
     },
     "vote": {
       "approve": "Zatwierdź",
@@ -500,6 +514,18 @@
         "description": "Moduł, w którym losowani są dwaj tajni Dezerterzy: jeden po stronie Ruchu Oporu i jeden wśród Szpiegów. Na początku misji 3, 4 i 5 odkrywana jest jawnie karta zmiany: przy zmianie przynależności obaj Dezerterzy zmieniają stronę (grają według zasad nowej strony i to ona liczy się do zwycięstwa), przy braku zmiany nic się nie dzieje. Nikt nie wie, kim są Dezerterzy, tylko że doszło do zmiany. Dezerter-szpieg nie zna pozostałych szpiegów, ale oni znają go, dopóki jest wśród nich.",
         "toggle": "Włącz Dezerterów",
         "knowEachOther": "Dezerterzy znają się nawzajem"
+      },
+      "assassinFailed": "Nie udało się zmienić ustawienia Zabójcy.",
+      "assassin": {
+        "title": "Zabójca",
+        "description": "Moduł, w którym rozdawani są tajny Dowódca (Ruch Oporu) i tajny Zabójca (szpieg). Dowódca wie, kim są szpiedzy. Gdy Ruch Oporu wygra trzy misje, Szpiedzy mają ostatnią szansę: Zabójca, po naradzie z pozostałymi szpiegami poza aplikacją, wskazuje gracza, którego bierze za Dowódcę. Jeśli trafi, wygrywają Szpiedzy; jeśli nie, wygrywa Ruch Oporu. Trzy nieudane misje nadal dają Szpiegom wygraną. Nie łączy się ze Ślepymi Szpiegami, Reverserem ani Dezerterami. Postacie opcjonalne (najlepiej po jednej): Ochroniarz zna Dowódcę (przy 5 graczach wymaga Głębokiej przykrywki albo Fałszywego Dowódcy), Głęboka przykrywka to szpieg, którego Dowódca nie widzi, Ślepy Szpieg nie zna szpiegów i nikt go nie zna, Fałszywy Dowódca wygląda dla Ochroniarza jak Dowódca. Zabójca zajmuje jedno miejsce szpiega, pozostałe postacie szpiegów resztę.",
+        "toggle": "Włącz Zabójcę",
+        "bodyGuard": "Ochroniarz",
+        "deepCover": "Głęboka przykrywka",
+        "blindSpy": "Ślepy Szpieg",
+        "falseCommander": "Fałszywy Dowódca",
+        "tooManySpyCharacters": "Za mało szpiegów na te postacie: Zabójca zajmuje jedno miejsce szpiega, a Głęboka przykrywka, Ślepy Szpieg i Fałszywy Dowódca po jednym.",
+        "bodyGuardNeedsCover": "Przy 5 graczach Ochroniarz wymaga Głębokiej przykrywki albo Fałszywego Dowódcy."
       }
     },
     "controls": {
@@ -575,7 +601,8 @@
       "restart": "Nie udało się zagrać ponownie.",
       "end": "Nie udało się zakończyć gry.",
       "examine": "Nie udało się zbadać gracza.",
-      "confirmInquisition": "Nie udało się potwierdzić."
+      "confirmInquisition": "Nie udało się potwierdzić.",
+      "assassinate": "Nie udało się wskazać gracza."
     },
     "viewSwitch": {
       "label": "Widok",
@@ -767,7 +794,13 @@
       "takeResponsibility2": "ODPOWIEDZIALNOŚĆ",
       "inquisitor": "INKWIZYTOR",
       "reverser": "REVERSER",
-      "defector": "DEZERTER"
+      "defector": "DEZERTER",
+      "commander": "DOWÓDCA",
+      "assassin": "ZABÓJCA",
+      "bodyGuard": "OCHRONIARZ",
+      "deepCover": "PRZYKRYWKA",
+      "blindSpy": "ŚLEPY SZPIEG",
+      "falseCommander": "FAŁSZYWY DOWÓDCA"
     },
     "rules": {
       "goal": {
@@ -836,6 +869,10 @@
       "inquisitor": {
         "title": "Inkwizytor (moduł)",
         "text": "Gdy host włączy moduł, jawny żeton Inkwizytora trafia na początku do gracza po prawej od pierwszego Lidera. Po misjach 2, 3 i 4 posiadacz wybiera gracza, który nigdy nie miał żetonu, i prywatnie widzi, czy jest on Szpiegiem, czy Ruchem Oporu; żeton przechodzi na badanego. Inkwizytor może powiedzieć o wyniku cokolwiek, a nikt nie może tego sprawdzić. Moduł pomija się, gdy gra kończy się po misji 3 lub 4."
+      },
+      "assassin": {
+        "title": "Zabójca (moduł)",
+        "text": "Gdy gospodarz włączy moduł, wśród Ruchu Oporu rozdawany jest tajny Dowódca, a wśród Szpiegów tajny Zabójca. Dowódca wie, kim są szpiedzy. Jeśli Szpiedzy zawalą trzy misje, wygrywają jak zwykle. Jeśli Ruch Oporu wygra trzy misje, gra jeszcze się nie kończy: Szpiedzy naradzają się poza aplikacją, a Zabójca wskazuje gracza, którego bierze za Dowódcę. Jeśli trafi, wygrywają Szpiedzy, w przeciwnym razie Ruch Oporu. Moduł nie łączy się ze Ślepymi Szpiegami, Reverserem ani Dezerterami. Postacie opcjonalne: Ochroniarz (Ruch Oporu) zna Dowódcę, a przy 5 graczach wymaga Głębokiej przykrywki albo Fałszywego Dowódcy; Głębokiej przykrywki (szpieg) Dowódca nie widzi; Ślepy Szpieg (szpieg) nie zna innych szpiegów i oni nie znają jego, choć Dowódca go widzi; Fałszywy Dowódca (szpieg) wygląda dla Ochroniarza jak Dowódca. Najlepiej grać z jedną naraz, a Zabójca zajmuje jedno miejsce szpiega, więc przy 5 lub 6 graczach mieści się tylko jedna postać szpiega."
       }
     },
     "phase": {
@@ -905,7 +942,10 @@
       "inquisitionPickYou": "Masz żeton Inkwizytora: wybierz do zbadania gracza, który nigdy go nie miał.",
       "inquisitionPick": "{{name}} ma żeton Inkwizytora i wybiera gracza do zbadania.",
       "inquisitionSeenYou": "Zbadałeś/aś gracza {{target}}, który ma teraz żeton. Zobacz wynik i potwierdź.",
-      "inquisitionSeen": "{{name}} zbadał/a gracza {{target}}, który ma teraz żeton Inkwizytora, i ogląda wynik."
+      "inquisitionSeen": "{{name}} zbadał/a gracza {{target}}, który ma teraz żeton Inkwizytora, i ogląda wynik.",
+      "assassination": "Ruch Oporu wygrał trzy misje ({{score}}), ale Szpiedzy mają ostatnią szansę: Zabójca wybiera gracza, którego bierze za Dowódcę.",
+      "whyAssassinHit": "Zabójca wskazał gracza {{name}}, który jest Dowódcą",
+      "whyAssassinMissed": "Zabójca wskazał gracza {{name}}, który nie jest Dowódcą"
     },
     "inquisitor": {
       "title": "Inkwizytor",
@@ -960,7 +1000,22 @@
           "name": "Karta zmiany: Bez zmian",
           "meaning": "Odkrywana na początku misji dla wszystkich: nic się nie dzieje, nikt nie zmienia strony."
         }
+      },
+      "assassin": {
+        "commander": "Twoja tajna karta postaci: jesteś Dowódcą Ruchu Oporu i wiesz, kim są szpiedzy. Jeśli Ruch Oporu wygra trzy misje, Zabójca spróbuje wskazać ciebie.",
+        "assassin": "Twoja tajna karta postaci: jesteś Zabójcą, szpiegiem. Jeśli Ruch Oporu wygra trzy misje, wskazujesz gracza, którego bierzesz za Dowódcę; jeśli trafisz, wygrywają Szpiedzy.",
+        "bodyGuard": "Twoja tajna karta postaci: jesteś Ochroniarzem Ruchu Oporu. Dowódca jest jednym z dwóch widocznych dla ciebie graczy, bo Fałszywy Dowódca, jeśli gra, wygląda dla ciebie jak Dowódca.",
+        "deepCover": "Twoja tajna karta postaci: jesteś Głęboką przykrywką, szpiegiem, którego Dowódca nie widzi.",
+        "blindSpy": "Twoja tajna karta postaci: jesteś Ślepym Szpiegiem. Nie znasz innych szpiegów, a oni nie znają ciebie, ale Dowódca cię widzi.",
+        "falseCommander": "Twoja tajna karta postaci: jesteś Fałszywym Dowódcą, szpiegiem, którego Ochroniarz bierze za Dowódcę."
       }
+    },
+    "assassin": {
+      "title": "Zabójca",
+      "effect": "Ruch Oporu wygrał trzy misje. Naradź się z pozostałymi szpiegami, a potem wskaż gracza, którego bierzesz za Dowódcę. Jeśli trafisz, wygrywają Szpiedzy.",
+      "target": "Gracz do wskazania",
+      "pick": "Wybierz gracza",
+      "confirm": "Wskaż Dowódcę"
     }
   }
 }

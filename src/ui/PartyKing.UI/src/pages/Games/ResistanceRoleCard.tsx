@@ -1,6 +1,12 @@
 import { ReactNode, useState } from 'react';
 import {
+  AssassinCardIcon,
+  BlindSpyCardIcon,
+  BodyGuardCardIcon,
   CardBackIcon,
+  CommanderCardIcon,
+  DeepCoverCardIcon,
+  FalseCommanderCardIcon,
   DefectorCardIcon,
   OperativeCardIcon,
   ReverserCardIcon,
@@ -13,14 +19,16 @@ import { useTranslation } from 'react-i18next';
 type Props = {
   role: ResistanceRole;
   players: ResistancePlayerDto[];
-  /** The other spies; only a spy has them. */
+  /** The spies the player knows: the other spies for a spy, every spy for the Commander. */
   fellowSpyIds: readonly string[];
   /** The Blind Spies variant: the spies do not know each other, so a spy is told there is no one to see. */
   blindSpies?: boolean;
   /** The spy Reverser keeps their eyes closed in the reveal (the rule is off): they are told they know no one. */
   hiddenReverserSpy?: boolean;
-  /** The player's character (Reverser and Defector modules), told next to the role while the card is face up. */
+  /** The player's character (Reverser, Defector and Assassin modules), told next to the role while the card is face up. */
   character?: ResistanceCharacter | null;
+  /** The Body Guard's candidates for the Commander (the Commander and the False Commander look alike). */
+  commanderCandidateIds?: readonly string[];
   /** The other Defector, when the Defectors know each other: told to a Defector while the card is face up. */
   fellowDefectorName?: string | null;
 };
@@ -30,10 +38,11 @@ type Props = {
  * it). A spy also sees the other spies while the card is face up (or is told they don't know each
  * other, with the Blind Spies variant). The state is local and starts hidden after a reload.
  */
-export const ResistanceRoleCard = ({ role, players, fellowSpyIds, blindSpies = false, hiddenReverserSpy = false, character = null, fellowDefectorName = null }: Props): ReactNode => {
+export const ResistanceRoleCard = ({ role, players, fellowSpyIds, blindSpies = false, hiddenReverserSpy = false, character = null, fellowDefectorName = null, commanderCandidateIds = [] }: Props): ReactNode => {
   const { t } = useTranslation();
   const [revealed, setRevealed] = useState(false);
   const spies = players.filter((player) => fellowSpyIds.includes(player.id));
+  const candidates = players.filter((player) => commanderCandidateIds.includes(player.id));
 
   return (
     <div className="flex items-center gap-4">
@@ -53,6 +62,65 @@ export const ResistanceRoleCard = ({ role, players, fellowSpyIds, blindSpies = f
         <>
           <ReverserCardIcon title={t('resistance.characters.reverser')} />
           <p className="max-w-48 text-sm text-amber-300">{t('resistance.roleCard.reverser')}</p>
+        </>
+      )}
+
+      {revealed && character === 'Assassin' && (
+        <>
+          <AssassinCardIcon title={t('resistance.characters.assassin')} />
+          <p className="max-w-48 text-sm text-amber-300">{t('resistance.roleCard.assassin')}</p>
+        </>
+      )}
+
+      {revealed && character === 'BodyGuard' && (
+        <>
+          <BodyGuardCardIcon title={t('resistance.characters.bodyGuard')} />
+          <div className="max-w-48 text-sm text-amber-300">
+            <p>{t('resistance.roleCard.bodyGuard')}</p>
+            <ul aria-label={t('resistance.roleCard.commanderCandidatesList')} className="text-slate-200">
+              {candidates.map((candidate) => (
+                <li key={candidate.id}>{candidate.name}</li>
+              ))}
+            </ul>
+          </div>
+        </>
+      )}
+
+      {revealed && character === 'DeepCover' && (
+        <>
+          <DeepCoverCardIcon title={t('resistance.characters.deepCover')} />
+          <p className="max-w-48 text-sm text-amber-300">{t('resistance.roleCard.deepCover')}</p>
+        </>
+      )}
+
+      {revealed && character === 'BlindSpy' && (
+        <>
+          <BlindSpyCardIcon title={t('resistance.characters.blindSpy')} />
+          <p className="max-w-48 text-sm text-amber-300">{t('resistance.roleCard.blindSpy')}</p>
+        </>
+      )}
+
+      {revealed && character === 'FalseCommander' && (
+        <>
+          <FalseCommanderCardIcon title={t('resistance.characters.falseCommander')} />
+          <p className="max-w-48 text-sm text-amber-300">{t('resistance.roleCard.falseCommander')}</p>
+        </>
+      )}
+
+      {revealed && character === 'Commander' && (
+        <>
+          <CommanderCardIcon title={t('resistance.characters.commander')} />
+          <div className="max-w-48 text-sm text-amber-300">
+            <p>{t('resistance.roleCard.commander')}</p>
+            <ul aria-label={t('resistance.roleCard.commanderSpiesList')} className="text-slate-200">
+              {spies.map((spy) => (
+                <li key={spy.id} className="flex items-center gap-1">
+                  <SpyMarkerIcon />
+                  {spy.name}
+                </li>
+              ))}
+            </ul>
+          </div>
         </>
       )}
 
@@ -79,7 +147,7 @@ export const ResistanceRoleCard = ({ role, players, fellowSpyIds, blindSpies = f
         <p className="max-w-48 text-sm text-slate-200">{t('resistance.roleCard.defectorSpy')}</p>
       )}
 
-      {revealed && role === 'Spy' && !blindSpies && !hiddenReverserSpy && character !== 'Defector' && (
+      {revealed && role === 'Spy' && !blindSpies && !hiddenReverserSpy && character !== 'Defector' && character !== 'BlindSpy' && (
         <div>
           <h2 className="text-slate-200">{t('resistance.roleCard.fellowSpies')}</h2>
           <ul aria-label={t('resistance.roleCard.fellowSpiesList')} className="text-sm">

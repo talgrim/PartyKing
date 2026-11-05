@@ -50,6 +50,28 @@ public class ResistanceRules
     /// </summary>
     public bool DefectorsKnowEachOther { get; set; }
 
+    /// <summary>
+    /// Whether the Assassin module (Hidden Agenda) is played: a Commander and an Assassin replace one standard player on
+    /// each side, and after the third successful mission the Assassin names the Commander. Off by default; only
+    /// editable before the game starts, and not together with the Defector, the Reverser or Blind Spies.
+    /// </summary>
+    public bool AssassinEnabled { get; set; }
+
+    /// <summary>Assassin module, optional character: a Body Guard among the resistance. Only while <see cref="AssassinEnabled"/>.</summary>
+    public bool BodyGuardEnabled { get; set; }
+
+    /// <summary>Assassin module, optional character: a spy the Commander does not see. Only while <see cref="AssassinEnabled"/>.</summary>
+    public bool DeepCoverEnabled { get; set; }
+
+    /// <summary>Assassin module, optional character: a spy who knows no spy and is known to none. Only while <see cref="AssassinEnabled"/>.</summary>
+    public bool BlindSpyEnabled { get; set; }
+
+    /// <summary>Assassin module, optional character: a spy the Body Guard takes for the Commander. Only while <see cref="AssassinEnabled"/>.</summary>
+    public bool FalseCommanderEnabled { get; set; }
+
+    /// <summary>How many of the optional spy characters (Deep Cover, Blind Spy, False Commander) are switched on.</summary>
+    public int OptionalSpyCharacters => (DeepCoverEnabled ? 1 : 0) + (BlindSpyEnabled ? 1 : 0) + (FalseCommanderEnabled ? 1 : 0);
+
     /// <summary>How many copies of each plot card the deck holds (15 cards in all).</summary>
     public Dictionary<ResistancePlotCardType, int> PlotDeck { get; set; } = DefaultPlotDeck();
 
@@ -65,7 +87,12 @@ public class ResistanceRules
         ResistanceReverserSides? reverserSides = null,
         bool? reverserSpyKnowsSpies = null,
         bool? defectorEnabled = null,
-        bool? defectorsKnowEachOther = null) => new()
+        bool? defectorsKnowEachOther = null,
+        bool? assassinEnabled = null,
+        bool? bodyGuardEnabled = null,
+        bool? deepCoverEnabled = null,
+        bool? blindSpyEnabled = null,
+        bool? falseCommanderEnabled = null) => new()
     {
         PlayerCounts = PlayerCounts.ToDictionary(
             x => x.Key, x => new ResistanceCountRules(x.Value.Spies, [.. x.Value.TeamSizes], [.. x.Value.RequiredFails])),
@@ -77,6 +104,11 @@ public class ResistanceRules
         ReverserSpyKnowsSpies = reverserSpyKnowsSpies ?? ReverserSpyKnowsSpies,
         DefectorEnabled = defectorEnabled ?? DefectorEnabled,
         DefectorsKnowEachOther = defectorsKnowEachOther ?? DefectorsKnowEachOther,
+        AssassinEnabled = assassinEnabled ?? AssassinEnabled,
+        BodyGuardEnabled = bodyGuardEnabled ?? BodyGuardEnabled,
+        DeepCoverEnabled = deepCoverEnabled ?? DeepCoverEnabled,
+        BlindSpyEnabled = blindSpyEnabled ?? BlindSpyEnabled,
+        FalseCommanderEnabled = falseCommanderEnabled ?? FalseCommanderEnabled,
         PlotDeck = new Dictionary<ResistancePlotCardType, int>(PlotDeck),
     };
 

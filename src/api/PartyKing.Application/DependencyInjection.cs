@@ -200,6 +200,7 @@ public static class DependencyInjection
         services.AddScoped<IResistanceRoundService, ResistanceRoundService>();
         services.AddScoped<IResistancePlotCardService, ResistancePlotCardService>();
         services.AddScoped<IResistanceInquisitorService, ResistanceInquisitorService>();
+        services.AddScoped<IResistanceAssassinService, ResistanceAssassinService>();
         services.AddScoped<IResistancePresenceService, ResistancePresenceService>();
         services.AddScoped<IResistanceSeatService, ResistanceSeatService>();
         services.AddSingleton<IResistanceRulesProvider, ResistanceRulesProvider>();

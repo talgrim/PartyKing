@@ -61,4 +61,10 @@ public enum ResistancePhase
     /// player. Moves on to <see cref="MissionResult"/> when the holder confirmed.
     /// </summary>
     Inquisition,
+
+    /// <summary>
+    /// Assassin module: the resistance won three missions, but the Assassin still names the player they take for the
+    /// Commander. <see cref="ResistanceGame.Winner"/> stays null until they do; then the game is over.
+    /// </summary>
+    Assassination,
 }

@@ -30,11 +30,20 @@ public class ResistanceGameDto
     /// <summary>The caller's secret role. Set only for a player of a started game; observers get null.</summary>
     public ResistanceRoleDto? YourRole { get; set; }
 
-    /// <summary>The other spies' player ids. Set only for a spy; everybody else gets null.</summary>
+    /// <summary>
+    /// The spies the caller knows: the other spies' player ids for a spy, every spy's for the Commander (Assassin
+    /// module). Everybody else gets null.
+    /// </summary>
     public IReadOnlyList<Guid>? FellowSpies { get; set; }
 
     /// <summary>
-    /// The caller's own character (Reverser and Defector modules); null when neither is played or the caller does not
+    /// Assassin module: for the Body Guard, the players one of whom is the Commander (the Commander and the False
+    /// Commander look alike to them); null for everybody else.
+    /// </summary>
+    public IReadOnlyList<Guid>? YourCommanderCandidates { get; set; }
+
+    /// <summary>
+    /// The caller's own character (Reverser, Defector and Assassin modules); null when none is played or the caller does not
     /// play.
     /// </summary>
     public ResistanceCharacterDto? YourCharacter { get; set; }
@@ -80,6 +89,12 @@ public class ResistanceGameDto
 
     /// <summary>Whether the team was approved. Appears together with <see cref="Votes"/>.</summary>
     public bool? VoteApproved { get; set; }
+
+    /// <summary>
+    /// Assassin module: the player the Assassin named as the Commander. Public once they did, which is when the game
+    /// ends; null before that and without the module.
+    /// </summary>
+    public Guid? AssassinationTargetPlayerId { get; set; }
 
     /// <summary>Every player's role. Appears only when the game is over.</summary>
     public IReadOnlyList<ResistanceRevealedRoleDto>? RevealedRoles { get; set; }

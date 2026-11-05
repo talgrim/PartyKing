@@ -16,4 +16,25 @@ public enum ResistanceCharacter
     /// stays; <see cref="ResistancePlayer.Role"/> changes.
     /// </summary>
     Defector = 2,
+
+    /// <summary>
+    /// Assassin module: the one resistance member who knows the spies. If the resistance wins three missions, the
+    /// Assassin gets one guess at who they are.
+    /// </summary>
+    Commander = 3,
+
+    /// <summary>Assassin module: the spy who names the Commander after the third successful mission.</summary>
+    Assassin = 4,
+
+    /// <summary>Assassin module, optional: a resistance member who knows the Commander from the start (and the False Commander just as well).</summary>
+    BodyGuard = 5,
+
+    /// <summary>Assassin module, optional: a spy the Commander does not see.</summary>
+    DeepCover = 6,
+
+    /// <summary>Assassin module, optional: a spy who knows no other spy, and whom no other spy knows (the Commander does see them).</summary>
+    BlindSpy = 7,
+
+    /// <summary>Assassin module, optional: a spy who looks like the Commander to the Body Guard.</summary>
+    FalseCommander = 8,
 }

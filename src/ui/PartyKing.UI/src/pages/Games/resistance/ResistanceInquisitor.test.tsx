@@ -31,6 +31,7 @@ const game = (overrides: Partial<ResistanceGameDto> = {}): ResistanceGameDto =>
     inquisitionExaminerPlayerId: null,
     inquisitionExaminedPlayerId: null,
     yourInquisition: null,
+    assassinationTargetPlayerId: null,
     ...overrides,
   }) as unknown as ResistanceGameDto;
 

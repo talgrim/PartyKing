@@ -1,5 +1,5 @@
 import { axios } from '@/service/request';
-import { GameDto, GameSuggestionsDto, ResistanceClaimableSeatDto, ResistanceGameDto, ResistanceLobbyDto, ResistanceMissionCardKind, ResistancePresenceDto, ResistanceReverserOptions, RingoGameDto, RingoLobbyDto } from './types';
+import { GameDto, GameSuggestionsDto, ResistanceAssassinOptions, ResistanceClaimableSeatDto, ResistanceGameDto, ResistanceLobbyDto, ResistanceMissionCardKind, ResistancePresenceDto, ResistanceReverserOptions, RingoGameDto, RingoLobbyDto } from './types';
 
 /** Development only (the multi-player Resistance page): acts as another dev persona than this tab's, see `devPersona`. */
 const personaHeaders = (persona?: string) => (persona ? { 'X-Dev-Persona': persona } : undefined);
@@ -176,6 +176,18 @@ export const gamesApi = {
   /** Host or admin: switches the Defector module on or off and optionally whether the two Defectors know each other (omitted keeps the choice); 409 once the game has started. */
   setResistanceDefector: (sessionId: string, enabled: boolean, knowEachOther?: boolean) =>
     axios.put(`/sessions/${sessionId}/games/resistance/rules/defector`, { enabled, knowEachOther }, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
+  /** Host or admin: switches the Assassin module on or off and, while it is on, its optional characters (omitted keeps the choice); 409 once the game has started or while the Defector, the Reverser or Blind Spies are on. */
+  setResistanceAssassin: (sessionId: string, enabled: boolean, options: ResistanceAssassinOptions = {}) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/rules/assassin`, { enabled, ...options }, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
+
+  /** The Assassin names the player they take for the Commander, which ends the game. 403 for anyone else, 409 outside the Assassination, 400 for a player who can't be named. */
+  assassinateResistancePlayer: (sessionId: string, targetPlayerId: string) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/assassin/target`, { targetPlayerId }, {
       withCredentials: true,
     }) as unknown as Promise<ResistanceGameDto>,
 

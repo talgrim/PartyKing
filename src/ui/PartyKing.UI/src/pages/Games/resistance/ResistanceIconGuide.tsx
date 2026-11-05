@@ -5,6 +5,12 @@ import { PageNavigation } from '@/components/common/PageNavigation';
 import { sessionResistancePath } from '@/router/constants';
 import {
   CardBackIcon,
+  AssassinCardIcon,
+  BlindSpyCardIcon,
+  BodyGuardCardIcon,
+  CommanderCardIcon,
+  DeepCoverCardIcon,
+  FalseCommanderCardIcon,
   DefectorCardIcon,
   DefectorSwitchCardIcon,
   InquisitorCardIcon,
@@ -109,6 +115,19 @@ export const ResistanceIconGuide = (): ReactNode => {
           name: t('resistance.iconGuide.defector.noChange.name'),
           meaning: t('resistance.iconGuide.defector.noChange.meaning'),
         },
+      ],
+    },
+    {
+      id: 'assassin',
+      title: t('resistance.rules.assassin.title'),
+      note: t('resistance.iconGuide.moduleNote'),
+      entries: [
+        { icon: card(CommanderCardIcon), name: t('resistance.characters.commander'), meaning: t('resistance.iconGuide.assassin.commander') },
+        { icon: card(AssassinCardIcon), name: t('resistance.characters.assassin'), meaning: t('resistance.iconGuide.assassin.assassin') },
+        { icon: card(BodyGuardCardIcon), name: t('resistance.characters.bodyGuard'), meaning: t('resistance.iconGuide.assassin.bodyGuard') },
+        { icon: card(DeepCoverCardIcon), name: t('resistance.characters.deepCover'), meaning: t('resistance.iconGuide.assassin.deepCover') },
+        { icon: card(BlindSpyCardIcon), name: t('resistance.characters.blindSpy'), meaning: t('resistance.iconGuide.assassin.blindSpy') },
+        { icon: card(FalseCommanderCardIcon), name: t('resistance.characters.falseCommander'), meaning: t('resistance.iconGuide.assassin.falseCommander') },
       ],
     },
   ];

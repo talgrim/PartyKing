@@ -26,6 +26,7 @@ describe('ResistanceIconGuide', () => {
       'Inquisitor (module)',
       'Reverser (module)',
       'Defectors (module)',
+      'Assassin (module)',
     ]);
   });
 
@@ -49,6 +50,11 @@ describe('ResistanceIconGuide', () => {
     expect(within(group('Defectors (module)')).getByRole('heading', { name: 'Switch card: Change Allegiance' })).toBeInTheDocument();
     expect(within(group('Defectors (module)')).getByRole('heading', { name: 'Switch card: No Change' })).toBeInTheDocument();
     expect(within(group('Inquisitor (module)')).getByRole('heading', { name: 'Inquisitor' })).toBeInTheDocument();
+    expect(within(group('Assassin (module)')).getByRole('heading', { name: 'Commander' })).toBeInTheDocument();
+    expect(within(group('Assassin (module)')).getByRole('heading', { name: 'Assassin' })).toBeInTheDocument();
+    ['Body Guard', 'Deep Cover', 'Blind Spy', 'False Commander'].forEach((name) => {
+      expect(within(group('Assassin (module)')).getByRole('heading', { name })).toBeInTheDocument();
+    });
   });
 
   it('describes the cards of the base game', () => {

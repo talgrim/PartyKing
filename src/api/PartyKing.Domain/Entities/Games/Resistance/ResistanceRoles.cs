@@ -443,6 +443,15 @@ public static class ResistanceRoles
         });
 
         game.Publish(new ResistanceMissionCompleted(game.SessionId, game.MissionNumber, succeeded, fails, reverses));
+
+        // Assassin module: the third success is not the end yet, the Assassin still names the Commander. Nothing else
+        // happens in between (no peek window, no Inquisition), as after any mission that decides the game.
+        if (game.Rules.AssassinEnabled && game.ResistanceScore >= MissionsToWin)
+        {
+            game.Phase = ResistancePhase.Assassination;
+            return;
+        }
+
         if (game.ResistanceScore >= MissionsToWin || game.SpyScore >= MissionsToWin)
         {
             game.Phase = ResistancePhase.GameOver;
@@ -507,6 +516,7 @@ public static class ResistanceRoles
         game.InquisitionExaminerPlayerId = null;
         game.PlotCards.Clear();
         game.DefectorDeck = string.Empty;
+        game.AssassinationTargetPlayerId = null;
     }
 
     /// <summary>The token starts with the player to the right of the first leader: the one before them in seating order.</summary>
@@ -546,6 +556,38 @@ public static class ResistanceRoles
         game.DefectorDeck = new string(cards.OrderBy(_ => random.Next()).ToArray());
     }
 
+    /// <summary>
+    /// Assassin module: the Assassin is the first spy and the Commander the first resistance member of the shuffle
+    /// (no extra draw, so a game without the module deals as before). The module does not combine with the other
+    /// characters, so every player is still a standard one here.
+    /// </summary>
+    private static void DealAssassin(ResistanceGame game, List<ResistancePlayer> shuffled)
+    {
+        game.AssassinationTargetPlayerId = null;
+        if (!game.Rules.AssassinEnabled)
+        {
+            return;
+        }
+
+        shuffled.First(x => x.Role == ResistanceRole.Spy && x.Character == ResistanceCharacter.Standard)
+            .Character = ResistanceCharacter.Assassin;
+        shuffled.First(x => x.Role == ResistanceRole.Resistance && x.Character == ResistanceCharacter.Standard)
+            .Character = ResistanceCharacter.Commander;
+
+        // The optional characters take the next standard players of their side; the start already checked they fit
+        var optional = new (bool Enabled, ResistanceRole Side, ResistanceCharacter Character)[]
+        {
+            (game.Rules.BodyGuardEnabled, ResistanceRole.Resistance, ResistanceCharacter.BodyGuard),
+            (game.Rules.DeepCoverEnabled, ResistanceRole.Spy, ResistanceCharacter.DeepCover),
+            (game.Rules.BlindSpyEnabled, ResistanceRole.Spy, ResistanceCharacter.BlindSpy),
+            (game.Rules.FalseCommanderEnabled, ResistanceRole.Spy, ResistanceCharacter.FalseCommander),
+        };
+        foreach (var (enabled, side, character) in optional.Where(x => x.Enabled))
+        {
+            shuffled.First(x => x.Role == side && x.Character == ResistanceCharacter.Standard).Character = character;
+        }
+    }
+
     /// <summary>Gives every player a random role, picks a random first leader and starts the first mission.</summary>
     public static void Deal(ResistanceGame game, Random random)
     {
@@ -576,6 +618,7 @@ public static class ResistanceRoles
         }
 
         DealDefectors(game, shuffled, random);
+        DealAssassin(game, shuffled);
 
         game.ChangeLeader(game.Players[random.Next(game.Players.Count)].PlayerId);
         GiveInquisitorToken(game);

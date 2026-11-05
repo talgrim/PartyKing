@@ -18,4 +18,5 @@ public enum ResistancePhaseDto
     ConfidenceWindow,
     PeekWindow,
     Inquisition,
+    Assassination,
 }
