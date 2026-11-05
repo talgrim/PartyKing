@@ -41,13 +41,14 @@ describe('Resistance in Polish', () => {
     await setLanguage('pl');
     render(
       <>
-        <ResistanceViewSwitch showBoard={false} onChange={() => undefined} />
+        <ResistanceViewSwitch value="player" onChange={() => undefined} />
         <ResistanceMissionCards cardCount={2} failCount={1} />
       </>,
     );
 
     expect(screen.getByRole('button', { name: 'Gracz' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Plansza' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Kolejka' })).toBeInTheDocument();
     expect(screen.getByText('Karty misji')).toBeInTheDocument();
     expect(screen.getAllByRole('img', { name: 'Porażka' })).toHaveLength(1);
     expect(screen.getAllByRole('img', { name: 'Sukces' })).toHaveLength(1);
