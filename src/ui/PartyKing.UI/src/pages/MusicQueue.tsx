@@ -1,7 +1,7 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import useSWR, { useSWRConfig } from 'swr';
-import { AdminPlayerControls } from '@/components/Music/AdminPlayerControls';
+import { RemotePlayerControls } from '@/components/Music/RemotePlayerControls';
 import { LyricsView } from '@/components/Music/LyricsView';
 import { MaximizedView } from '@/components/Music/MaximizedView';
 import { HostPlayer } from '@/components/Music/HostPlayer';
@@ -216,8 +216,9 @@ export const MusicQueue = (): ReactNode => {
             {/* An admin who is also the host plays the music themselves, so only the host's player is shown. */}
             {isHost && <HostPlayer sessionId={session.id} isAdmin={isAdmin} pushHandlers={hostPlayerPush} />}
             {!isHost && isAdmin && (
-              <AdminPlayerControls
+              <RemotePlayerControls
                 sessionId={session.id}
+                isAdmin
                 nowPlaying={nowPlaying}
                 onChanged={() => void refreshNowPlaying()}
               />

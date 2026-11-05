@@ -15,7 +15,7 @@ import { createPositionTracker } from './playbackPosition';
 import { getPlaybackState } from '@/service/endpoints/spotify/spotifyPlaybackApi';
 import { takeoverPositionMs, useTakeoverAvailable } from './takeover';
 import { describeYoutubeError } from './youtubeErrors';
-import { usePersistedNumber } from '@/utils/usePersistedNumber';
+import { usePlayerVolume } from './playerVolume';
 import { PlayerCommand } from '@/service/endpoints/player/types';
 import { HostPlayerPushHandlers } from '@/service/realtime/sessionMusicEvents';
 import { useTranslation } from 'react-i18next';
@@ -30,9 +30,6 @@ const TOKEN_REFRESH_MS = 30 * 60 * 1000;
 const STATE_REPORT_INTERVAL_MS = 10000;
 // A host login that comes back to this page and is still rejected within this window is a loop.
 const LOGIN_LOOP_WINDOW_MS = 30 * 1000;
-
-const VOLUME_STORAGE_KEY = 'partyking.volume';
-const DEFAULT_VOLUME = 0.5;
 
 const loginAttemptKey = (sessionId: string) => `host-login-attempt:${sessionId}`;
 
@@ -69,7 +66,7 @@ export const HostPlayer = ({ sessionId, isAdmin, pushHandlers }: Props): ReactNo
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [takeover, setTakeover] = useState<{ uri: string; positionMs: number } | null>(null);
   const [errorLog, setErrorLog] = useState<ErrorLogEntry[]>([]);
-  const [volume, setVolume] = usePersistedNumber(VOLUME_STORAGE_KEY, DEFAULT_VOLUME, 0, 1);
+  const [volume, setVolume] = usePlayerVolume();
 
   // Callbacks that fire at arbitrary times (timers, the Spotify SDK) read the latest state through these.
   const songRef = useRef(song);

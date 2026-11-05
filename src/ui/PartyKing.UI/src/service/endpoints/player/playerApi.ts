@@ -1,5 +1,5 @@
 import { axios } from '@/service/request';
-import { NowPlayingDto, PlayerStateRequest, PlayerStateResponse } from './types';
+import { NowPlayingDto, PlayerCommand, PlayerStateRequest, PlayerStateResponse } from './types';
 
 // The axios response interceptor unwraps `response.data`, so these resolve to the payload itself.
 // Reports come every ~10 s (and on every change); one that takes longer is dead (the next one tries again)
@@ -16,4 +16,11 @@ export const playerApi = {
     unwrap<PlayerStateResponse>(
       axios.post(`/sessions/${sessionId}/player/state`, state, { withCredentials: true, timeout: REPORT_TIMEOUT_MS }),
     ),
+
+  /**
+   * Host or admin only. Asks the host's player to pause or resume; rejects with status 403 for anyone else and 409
+   * when no player is connected.
+   */
+  sendCommand: (sessionId: string, command: PlayerCommand) =>
+    unwrap<void>(axios.post(`/sessions/${sessionId}/player/commands`, { command }, { withCredentials: true })),
 };

@@ -53,6 +53,13 @@ export const RESISTANCE_TV_HUB_TOPICS: readonly SessionHubTopic[] = [
   'resistancePresence',
 ];
 
+/**
+ * A Resistance page that offers the music queue (the player's phone, the managers' TV) also hears the music pushes.
+ * Only the queue and the player change the cache, with no fetch per push, so this costs a few messages.
+ */
+export const withMusicTopic = (topics: readonly SessionHubTopic[]): readonly SessionHubTopic[] =>
+  topics.includes('music') ? topics : [...topics, 'music'];
+
 /** The join page shows the lobby only; once the player joined the board opens its own connection. */
 export const RESISTANCE_JOIN_HUB_TOPICS: readonly SessionHubTopic[] = ['resistanceLobby'];
 
