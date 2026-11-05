@@ -56,7 +56,7 @@ public static class ResistanceRoles
 
     /// <summary>
     /// Whether <paramref name="target"/>'s mission card of the finished mission can be peeked at (in the peek window): it was played,
-    /// is not the peeker's own and no Keeping a Close Eye looked at it yet.
+    /// is not the peeker's own and the peeker has not looked at it yet (other players may look at the same card).
     /// </summary>
     public static bool CanPeek(ResistanceGame game, Guid peeker, Guid target)
     {
@@ -66,6 +66,7 @@ public static class ResistanceRoles
                && !game.PlotCards.Any(x => x.Type == ResistancePlotCardType.KeepingCloseEye
                                            && x.Location == ResistancePlotCardLocation.Played
                                            && x.PlayedInMission == game.MissionNumber
+                                           && x.HolderPlayerId == peeker
                                            && x.TargetPlayerId == target);
     }
 

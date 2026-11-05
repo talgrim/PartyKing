@@ -746,7 +746,7 @@
           },
           "closeEye": {
             "name": "Keeping a Close Eye on You",
-            "text": "after the mission (before “Next”) lets you look at another player's mission card; each card can be looked at by one player only."
+            "text": "after the mission (before “Next”) lets you look at another player's mission card."
           }
         },
         "footer": "When anyone holds a card (other than the Opinion Maker), everyone confirms before the team is picked or after it is approved that they are not playing a card, so nobody can tell who holds one."

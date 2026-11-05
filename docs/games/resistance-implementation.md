@@ -145,7 +145,7 @@ Overheard Conversation, Establish Confidence and Open Up (`ResistanceRoles.IsImm
 ### Keeping a Close Eye on You (`PeekWindow`)
 
 - The last mission card resolves the mission (the result is public at once). When any playable card is in a hand the phase is `PeekWindow` instead of `MissionResult` and "Dalej" stays hidden; when everyone confirmed, `AfterWindow` sets `MissionResult`.
-- The mission cards stay in `ResistancePlayer.MissionCard` until "Dalej". `PUT cards/{id}/peek` (`{targetPlayerId}`, holder only) is `ResistanceGame.PeekMissionCard`. Errors: 403 `NotYourCard`, 404 `UnknownCard`, 409 `CardState`, 409 `WrongPhase` / `CardNotPlayableNow` outside `PeekWindow`; 400 `InvalidTarget` for your own card, a player who played no card, or a card another Keeping a Close Eye already looked at.
+- The mission cards stay in `ResistancePlayer.MissionCard` until "Dalej". `PUT cards/{id}/peek` (`{targetPlayerId}`, holder only) is `ResistanceGame.PeekMissionCard`. Errors: 403 `NotYourCard`, 404 `UnknownCard`, 409 `CardState`, 409 `WrongPhase` / `CardNotPlayableNow` outside `PeekWindow`; 400 `InvalidTarget` for your own card, a player who played no card, or a player whose card the caller already looked at (a different holder may look at the same card; `ResistanceRoles.CanPeek`).
 - The play is public (the log names holder and target, `Played`, already confirmed); the card seen is the private `yourPeeks` (`ResistanceRoles.PeekedCards`, only in `MissionResult`, blanked in the TV tab).
 - A mission that ends the game leaves no window to peek (`GameOver`, 409 `GameOver`), and "Dalej" clears the cards, so a peek must happen before it. UI: `ResistanceCloseEye`.
 

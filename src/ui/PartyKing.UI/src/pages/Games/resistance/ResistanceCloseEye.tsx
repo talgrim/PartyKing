@@ -10,7 +10,8 @@ type Props = {
 
 /**
  * Keeping a Close Eye: in the peek window after the mission is played its holder looks at one team member's mission card.
- * Not your own, and a card nobody has looked at yet. The play is public; the card seen stays with the peeker.
+ * Not your own, and not one you already looked at (other players may look at the same card). The play is public; the
+ * card seen stays with the peeker.
  */
 export const ResistanceCloseEye = ({ game, onPeek }: Props): ReactNode => {
   const { t } = useTranslation();
@@ -25,7 +26,7 @@ export const ResistanceCloseEye = ({ game, onPeek }: Props): ReactNode => {
   if (!(inWindow || game.phase === 'MissionResult') || (card == null && peeks.length === 0)) return null;
 
   const looked = game.playedPlotCards
-    .filter((x) => x.type === 'KeepingCloseEye' && x.missionNumber === game.missionNumber)
+    .filter((x) => x.type === 'KeepingCloseEye' && x.missionNumber === game.missionNumber && x.holderPlayerId === game.yourPlayerId)
     .map((x) => x.targetPlayerId);
   const options = game.players.filter(
     (player) => player.id !== game.yourPlayerId && game.teamPlayerIds.includes(player.id) && !looked.includes(player.id),

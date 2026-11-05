@@ -754,7 +754,7 @@
           },
           "closeEye": {
             "name": "Mam cię na oku",
-            "text": "po misji (przed „Dalej”) pozwala podejrzeć kartę Misji innego gracza; każdą kartę może podejrzeć tylko jeden gracz."
+            "text": "po misji (przed „Dalej”) pozwala podejrzeć kartę Misji innego gracza."
           }
         },
         "footer": "Gdy ktoś ma w ręku jakąkolwiek kartę (poza Kreatorem opinii), przed wyborem drużyny albo po zatwierdzeniu wszyscy potwierdzają, że nie zagrywają karty, więc nie widać, kto ją ma."
