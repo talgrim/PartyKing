@@ -1,0 +1,43 @@
+# Frontend (`src/ui/PartyKing.UI/src`)
+
+React 19, react-router, MUI + Tailwind v4, axios + SWR. Axios is configured in `src/service/request.ts`; the `@/` import alias maps to `src/`.
+
+## Contents
+
+- Routes and pages
+- Session page (music, slideshow, settings)
+- API base URL and polling
+- Language (i18n)
+
+## Routes and pages
+
+`router/routes.tsx`:
+- `/` Home lists sessions with a code search (no slideshow links).
+- `/s/:sessionId` `MusicQueue`, the one page of a session.
+- `/callback` is the Spotify redirect.
+- `/admin` is the admin login and session panel (create, copy link, release host, delete). Rename, password and slideshow settings live on the session page.
+- `/s/:sessionId/games/...` see `games/`. The old `/s/:sessionId/upload` redirects to the upload dialog.
+
+## Session page (`MusicQueue`)
+
+- Everyone sees `NowPlayingCard` (art, title, artist, paused badge) and the queue. The viewer's role from `useViewerRole` (`GET /sessions/{id}/me`) adds:
+  - For the host and any admin: a red delete icon on each "Up next" row (`Queue` prop `canRemove`, deletes at once, no confirmation).
+  - For the host: `HostPlayer`, which plays the music, so the host must keep the page open. `VolumeControl` sets the volume, stored in `localStorage` through `usePersistedNumber` (`usePlayerVolume`, `partyking.volume`), which follows the `storage` event, so another tab of the same browser (the Resistance queue panel) changes the volume of the playing tab. A YouTube player error skips to the next song, but only until 2 videos fail in a row; then it stops and shows a message until the host presses "Next song" or a song plays. `ErrorLog` lists errors for the admin only.
+  - For an admin who is not the host: `RemotePlayerControls` (Play/Pause through `POST player/commands`; Next through the admin endpoint for an admin, or the host's own for a host who is not an admin; disabled while no player is connected; optional volume when given one).
+- A host whose login expired uses "I'm the host" in `SessionHeader` to log in again. `SessionHeader` also shows, to the host and admins, a gear (`SessionSettings`, a MUI `Dialog` with `SessionNameForm`, `SessionPasswordChangeForm` and `SlideshowSettingsForm`).
+- **Slideshow**: there is no separate slideshow route. The host and admins get `SlideshowView` in a left drawer that is open by default (closed by default on a touch device, `isMobileDevice`) and hidden with a toggle (persisted in `localStorage` through `usePersistedFlag`). `SlideshowView` fills its parent's box; guests never request the photos from this page.
+- **Maximize**: a button opens `MaximizedView`, a `fixed inset-0` overlay with the slideshow, `NowPlayingOverlay` (title and artist only) and a read-only `QueueList`. The queue sits on the right on a landscape or wide screen (a phone turned sideways included) and below the slideshow on a portrait one; a queue button next to the X hides it (kept in `localStorage` as `partyking.maximizedQueueOpen`). Esc or the X exits. The overlay covers the page without unmounting it, so the host's `HostPlayer` keeps playing.
+
+## API base URL and polling
+
+- The API base URL comes from `src/envVariables.ts`: `VITE_API_URL` if set, else `http://127.0.0.1:4200` in dev (must match the API launch profile) and `/api` in production builds. To test from phones on the LAN, change both `envVariables.ts` (or set `VITE_API_URL`) and `src/api/PartyKing.API/Properties/launchSettings.json` to the machine's LAN IP, but don't commit that change.
+- SWR `refreshInterval`s: slide 60 s with the hub connected and 5 s without (`SlideChanged` is pushed), queue 5 s, now-playing 4 s, session 30 s, session lists 10 s. The host player reports state every 10 s (and on every change) with an 8 s timeout.
+
+## Language (i18n)
+
+- The UI is English or Polish (English by default, no browser detection). The UI sends `Accept-Language: en|pl` on every request (request interceptor in `service/interceptors/request.ts`, read at call time).
+- Server side: `UiLanguageParser` (`PartyKing.Application/Localization`) maps the header to `UiLanguage` (`En` / `Pl`: highest `q`, first on a tie, `pl-PL` counts as `pl`, anything else or no header gives English). `CoreController.GetLanguage()` reads it and controllers pass it to the Application services as a parameter, so Application never sees HTTP.
+- Only the texts the server generates are localized: `GameService` (game names and descriptions; Ringo and Resistance keep their names, Never have I ever is "Nigdy w życiu" in Polish) and the two suggestion services (per-language prompt, avoid-repeats line and built-in fallback list in a private `Texts` record). Error messages (`Error.*` descriptions, ProblemDetails `title`) stay in English. `useGames` puts the language in its SWR key, so a switch refetches the names.
+- UI texts: `i18next` with bundled `en.json` / `pl.json` (`src/i18n`; keys are type-checked against `en.json`; `i18n.test.ts` checks both files have the same keys). **New texts need a key in both files.** The choice lives in `localStorage` as `partyking.language`; the switcher is fixed in the upper-left corner (`LanguageSwitcher`, rendered by `Layout`).
+- Every UI text goes through `t()`. Outside components (`resistancePhase.ts`, `resistanceRules.ts`, `ringoCards.ts`) texts come from `i18n.t` called lazily, `PLOT_CARDS` exposes `name` / `effect` as getters, and a component that only calls such helpers still calls `useTranslation()` so it re-renders on a language switch. The SVG labels in `ResistanceIcons` render through a small `T` component. The English Resistance texts were drafted from the Polish rules in `CLAUDE.local.md`.
+- Tests run in English; a test that needs Polish calls `await setLanguage('pl')` (`testSetup.ts` resets it).
