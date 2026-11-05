@@ -473,7 +473,7 @@
       "reverserFailed": "Nie udało się zmienić ustawienia Reversera.",
       "reverser": {
         "title": "Reverser",
-        "description": "Moduł, w którym losowana jest tajna postać Reversera: domyślnie jeden gracz z Ruchu Oporu i jeden ze Szpiegów (można wybrać tylko jedną stronę). Reverser w drużynie misji ma też kartę Odwrócenie, która odwraca wynik misji: misja, która by się nie udała, udaje się, a udana kończy się porażką. Dwie karty Odwrócenie znoszą się. Reverser-szpieg nigdy nie zagra Porażki. Liczba kart Porażka nie jest już ogłaszana.",
+        "description": "Moduł, w którym losowana jest tajna postać Reversera: domyślnie jeden gracz z Ruchu Oporu i jeden ze Szpiegów (można wybrać tylko jedną stronę). Reverser w drużynie misji ma też kartę Odwrócenie, która odwraca wynik misji: misja, która by się nie udała, udaje się, a udana kończy się porażką. Dwie karty Odwrócenie znoszą się. Reverser-szpieg nigdy nie zagra Porażki. Zagrane karty, także Odwrócenie, są pokazywane bez informacji, kto je zagrał.",
         "toggle": "Włącz Reversera",
         "sides": "Kto dostaje Reversera",
         "sidesBoth": "Obie strony (Ruch Oporu i Szpiedzy)",
@@ -587,8 +587,7 @@
       "inquisitor": "Inkwizytor"
     },
     "missionCards": {
-      "title": "Karty misji",
-      "hidden": "Ukryta karta misji"
+      "title": "Karty misji"
     },
     "teamCards": {
       "label": "Drużyna",
@@ -616,7 +615,7 @@
       "title": "Zagraj kartę misji",
       "played": "Zagrano kartę: {{card}}. Czekamy na pozostałych członków drużyny.",
       "hint": "Karta jest tajna, wszyscy zobaczą tylko liczbę kart Porażka. Zagranej karty nie można zmienić.",
-      "hintReverser": "Karta jest tajna, tak samo jak liczba kart Porażka: wszyscy zobaczą tylko, czy misja się udała. Zagranej karty nie można zmienić."
+      "hintReverser": "Karta jest tajna do końca misji, potem wszystkie zagrane karty są pokazane bez informacji, kto je zagrał. Kartę Odwrócenie może zagrać tylko Reverser. Zagranej karty nie można zmienić."
     },
     "plotWindow": {
       "label": "Zagrywanie kart",
@@ -803,7 +802,7 @@
       },
       "reverser": {
         "title": "Reverser (moduł)",
-        "text": "Gdy host włączy moduł, losowani są tajni Reverserzy: domyślnie jeden z Ruchu Oporu i jeden ze Szpiegów, albo tylko po stronie wybranej przez hosta. Reverser w drużynie misji może zagrać kartę Odwrócenie zamiast Sukcesu. Nieparzysta liczba kart Odwrócenie odwraca wynik misji (nieudana staje się udaną i odwrotnie), dwie się znoszą; w misji wymagającej dwóch Porażek jedna Porażka z jednym Odwróceniem to porażka. Reverser-szpieg zagrywa Sukces albo Odwrócenie, nigdy Porażkę. Ogłaszane jest tylko, czy misja się udała, a nie liczba kart Porażka."
+        "text": "Gdy host włączy moduł, losowani są tajni Reverserzy: domyślnie jeden z Ruchu Oporu i jeden ze Szpiegów, albo tylko po stronie wybranej przez hosta. Reverser w drużynie misji może zagrać kartę Odwrócenie zamiast Sukcesu. Nieparzysta liczba kart Odwrócenie odwraca wynik misji (nieudana staje się udaną i odwrotnie), dwie się znoszą; w misji wymagającej dwóch Porażek jedna Porażka z jednym Odwróceniem to porażka. Reverser-szpieg zagrywa Sukces albo Odwrócenie, nigdy Porażkę. Po zakończeniu misji zagrane karty (także Porażka i Odwrócenie) są pokazywane bez informacji, kto je zagrał."
       },
       "inquisitor": {
         "title": "Inkwizytor (moduł)",
@@ -844,11 +843,11 @@
       "playingMission": "Drużyna ({{names}}) została zatwierdzona ({{tally}}) i wykonuje {{mission}}. {{progress}}{{rule}}{{mine}}{{open}}",
       "missionSucceeded": "Misja zakończyła się sukcesem",
       "missionFailed": "Misja zakończyła się porażką (kart Porażka: {{count}})",
-      "missionFailedHidden": "Misja zakończyła się porażką",
       "peekWindow": "{{outcome}}. Wynik: {{score}}. Zanim lider przejdzie dalej, gracze decydują, czy zagrywają karty Intrygi. Potwierdzili: {{passed}}/{{count}}.{{mine}}",
       "nextClick": "Kliknij „Dalej”",
       "nextWait": "Lider lub host kliknie „Dalej”",
       "failCardsNote": "(kart Porażka: {{count}})",
+      "reverseCardsNote": "(kart Odwrócenie: {{count}})",
       "missionResult": "{{outcome}}{{fails}}. Wynik: {{score}}. {{next}}, żeby zaczęła się kolejna misja.",
       "voted": "Zagłosowało {{voted}}/{{count}}.",
       "voteNow": "Zagłosuj: zatwierdź albo odrzuć drużynę.",

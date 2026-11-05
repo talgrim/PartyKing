@@ -40,6 +40,8 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
   const [message, setMessage] = useState<string>();
 
   const started = game?.startedAt != null;
+  // The sides only matter while the module is on, and like every setting they lock when the game starts
+  const sidesDisabled = game === undefined || started || !game.rules.reverserEnabled;
 
   const setPlotCards = async (enabled: boolean) => {
     setMessage(undefined);
@@ -156,13 +158,13 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
             />
             {t('resistance.settings.reverser.toggle')}
           </label>
-          <label className="flex flex-col gap-1 text-sm text-slate-200">
+          <label className={`flex flex-col gap-1 text-sm ${sidesDisabled ? 'text-slate-500' : 'text-slate-200'}`}>
             {t('resistance.settings.reverser.sides')}
             <select
               value={game?.rules.reverserSides ?? 'Both'}
-              disabled={game === undefined || started || !game.rules.reverserEnabled}
+              disabled={sidesDisabled}
               onChange={(event) => void setReverser(true, event.target.value as ResistanceReverserSides)}
-              className="rounded bg-slate-700 p-1 text-slate-100"
+              className="rounded bg-slate-700 p-1 text-slate-100 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500 disabled:opacity-60"
             >
               <option value="Both">{t('resistance.settings.reverser.sidesBoth')}</option>
               <option value="Resistance">{t('resistance.settings.reverser.sidesResistance')}</option>

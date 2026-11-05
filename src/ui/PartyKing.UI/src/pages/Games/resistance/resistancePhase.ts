@@ -133,11 +133,11 @@ export const resistancePhaseDescription = (
     }
 
     const last = results.find((result) => result.missionNumber === game.missionNumber);
-    const outcome = last?.succeeded
-      ? t('resistance.phase.missionSucceeded')
-      : last?.failCount == null
-        ? t('resistance.phase.missionFailedHidden')
-        : t('resistance.phase.missionFailed', { count: last.failCount });
+    const reversed = last != null && last.reverseCount > 0 ? ` ${t('resistance.phase.reverseCardsNote', { count: last.reverseCount })}` : '';
+    const outcome =
+      (last?.succeeded
+        ? t('resistance.phase.missionSucceeded')
+        : t('resistance.phase.missionFailed', { count: last?.failCount ?? 0 })) + reversed;
 
     if (game.phase === 'PeekWindow') {
       return t('resistance.phase.peekWindow', { outcome, score, passed, count, mine: confirmation(game) });
@@ -165,7 +165,7 @@ export const resistancePhaseDescription = (
     if (game.phase === 'MissionResult') {
       const next = t(youLead || viewer.canManage ? 'resistance.phase.nextClick' : 'resistance.phase.nextWait');
       const fails =
-        last?.succeeded && last.failCount != null && last.failCount > 0 ? ` ${t('resistance.phase.failCardsNote', { count: last.failCount })}` : '';
+        last?.succeeded && last.failCount > 0 ? ` ${t('resistance.phase.failCardsNote', { count: last.failCount })}` : '';
 
       return t('resistance.phase.missionResult', { outcome, fails, score, next });
     }

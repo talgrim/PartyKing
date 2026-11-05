@@ -16,8 +16,8 @@ const card = (disabled: boolean) =>
 
 /**
  * A member of the approved team plays one secret mission card. A card can't be taken back, and a member of the
- * Resistance can only play Success, so the Fail card is disabled for them. With the Reverser module a Reverser also
- * holds a Reverse card; a spy Reverser can't play Fail.
+ * Resistance can only play Success, so the Fail card is disabled for them. With the Reverser module everyone on the team
+ * sees a Reverse card (so having one tells nothing) but only a Reverser can play it; a spy Reverser can't play Fail.
  */
 export const ResistanceMissionPanel = ({ game, onPlay }: Props): ReactNode => {
   const { t } = useTranslation();
@@ -62,11 +62,11 @@ export const ResistanceMissionPanel = ({ game, onPlay }: Props): ReactNode => {
               disabled={sending || !mayFail}
               onClick={() => void play('Fail')}
             />
-            {reverser && (
+            {game.rules.reverserEnabled && (
               <MissionReverseCardIcon
                 title={t('resistance.missionCard.reverse')}
-                className={card(sending)}
-                disabled={sending}
+                className={card(sending || !reverser)}
+                disabled={sending || !reverser}
                 onClick={() => void play('Reverse')}
               />
             )}

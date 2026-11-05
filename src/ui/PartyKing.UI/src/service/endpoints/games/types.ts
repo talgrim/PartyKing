@@ -189,8 +189,10 @@ export type ResistancePlotCardType =
 export type ResistanceMissionResultDto = {
   missionNumber: number;
   succeeded: boolean;
-  /** The Fail cards played; null with the Reverser module, where the number would tell that a Reverser played. */
-  failCount: number | null;
+  /** The Fail cards played; public, not who played them. */
+  failCount: number;
+  /** The Reverse cards played (Reverser module, 0 otherwise); public too. */
+  reverseCount: number;
   /** The players on the mission's team (empty for a mission recorded before teams were kept). */
   teamPlayerIds: string[];
 };

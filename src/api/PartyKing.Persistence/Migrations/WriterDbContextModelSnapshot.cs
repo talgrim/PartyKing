@@ -118,6 +118,9 @@ namespace PartyKing.Persistence.Migrations
                     b.Property<int>("FailCount")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("ReverseCount")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("Succeeded")
                         .HasColumnType("INTEGER");
 

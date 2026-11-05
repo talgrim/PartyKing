@@ -206,7 +206,7 @@ internal sealed class ResistanceGameViewBuilder
         return _game.MissionResults
             .OrderBy(x => x.MissionNumber)
             .Select(x => new ResistanceMissionResultDto(
-                x.MissionNumber, x.Succeeded, _game.Rules.ReverserEnabled ? null : x.FailCount, x.TeamPlayerIds))
+                x.MissionNumber, x.Succeeded, x.FailCount, x.ReverseCount, x.TeamPlayerIds))
             .ToList();
     }
 

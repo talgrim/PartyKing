@@ -402,14 +402,14 @@ public static class ResistanceRoles
 
     /// <summary>
     /// Applies the complete set of cards (see <see cref="ResistanceMissionRules"/>): the outcome and the number of
-    /// Fail cards are recorded, and the third success or failure ends the game. With the Reverser module on, the
-    /// number of Fail cards is not announced (the event carries none), because next to the Reverse cards it would tell
-    /// that a Reverser played.
+    /// Fail and Reverse cards are recorded (the played cards are shown to everybody without who played them, as when
+    /// the cards are revealed shuffled at the table), and the third success or failure ends the game.
     /// </summary>
     public static void ResolveMission(ResistanceGame game)
     {
         var cards = game.Players.Where(x => x.IsOnTeam).Select(x => x.MissionCard!.Value).ToList();
         var fails = cards.Count(x => x == ResistanceMissionCardKind.Fail);
+        var reverses = cards.Count(x => x == ResistanceMissionCardKind.Reverse);
         var succeeded = ResistanceMissionRules.HasSucceeded(cards, game.Rules.RequiredFails(game.Players.Count, game.MissionNumber));
 
         game.MissionResults.Add(new ResistanceMissionResult
@@ -417,12 +417,12 @@ public static class ResistanceRoles
             SessionId = game.SessionId,
             MissionNumber = game.MissionNumber,
             FailCount = fails,
+            ReverseCount = reverses,
             Succeeded = succeeded,
             TeamPlayerIds = game.Players.Where(x => x.IsOnTeam).OrderBy(x => x.Order).Select(x => x.PlayerId).ToList(),
         });
 
-        game.Publish(new ResistanceMissionCompleted(
-            game.SessionId, game.MissionNumber, succeeded, game.Rules.ReverserEnabled ? null : fails));
+        game.Publish(new ResistanceMissionCompleted(game.SessionId, game.MissionNumber, succeeded, fails, reverses));
         if (game.ResistanceScore >= MissionsToWin || game.SpyScore >= MissionsToWin)
         {
             game.Phase = ResistancePhase.GameOver;

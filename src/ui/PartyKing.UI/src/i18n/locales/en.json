@@ -465,7 +465,7 @@
       "reverserFailed": "Could not change the Reverser setting.",
       "reverser": {
         "title": "Reverser",
-        "description": "A module in which a secret Reverser character is dealt, by default to one player among the Resistance and one among the Spies (you can choose just one side). A Reverser on the mission team also holds a Reverse card, which turns the result of the mission around: a mission that would fail succeeds, and one that would succeed fails. Two Reverse cards cancel out. A Reverser who is a spy can never play Fail. The number of Fail cards is no longer announced.",
+        "description": "A module in which a secret Reverser character is dealt, by default to one player among the Resistance and one among the Spies (you can choose just one side). A Reverser on the mission team also holds a Reverse card, which turns the result of the mission around: a mission that would fail succeeds, and one that would succeed fails. Two Reverse cards cancel out. A Reverser who is a spy can never play Fail. The played cards, Reverse included, are shown without saying who played them.",
         "toggle": "Enable Reverser",
         "sides": "Who gets a Reverser",
         "sidesBoth": "Both sides (the Resistance and the Spies)",
@@ -579,8 +579,7 @@
       "inquisitor": "Inquisitor"
     },
     "missionCards": {
-      "title": "Mission cards",
-      "hidden": "Hidden mission card"
+      "title": "Mission cards"
     },
     "teamCards": {
       "label": "Team",
@@ -608,7 +607,7 @@
       "title": "Play a mission card",
       "played": "Card played: {{card}}. Waiting for the other team members.",
       "hint": "The card is secret, everyone only sees the number of Fail cards. A played card can't be changed.",
-      "hintReverser": "The card is secret and so is the number of Fail cards, everyone only sees whether the mission succeeded. A played card can't be changed."
+      "hintReverser": "The card is secret until the mission ends, then all the played cards are shown without saying who played them. Only a Reverser can play the Reverse card. A played card can't be changed."
     },
     "plotWindow": {
       "label": "Playing cards",
@@ -795,7 +794,7 @@
       },
       "reverser": {
         "title": "Reverser (module)",
-        "text": "When the host enables the module, secret Reversers are dealt: by default one among the Resistance and one among the Spies, or only on the side the host chose. A Reverser on a mission team may play a Reverse card instead of Success. An odd number of Reverse cards turns the result of the mission around (it fails if it would have succeeded and the other way round), two cancel out; on the mission that needs two Fails, one Fail with one Reverse is a failure. A spy Reverser plays Success or Reverse, never Fail. Only whether the mission succeeded is announced, not the number of Fail cards."
+        "text": "When the host enables the module, secret Reversers are dealt: by default one among the Resistance and one among the Spies, or only on the side the host chose. A Reverser on a mission team may play a Reverse card instead of Success. An odd number of Reverse cards turns the result of the mission around (it fails if it would have succeeded and the other way round), two cancel out; on the mission that needs two Fails, one Fail with one Reverse is a failure. A spy Reverser plays Success or Reverse, never Fail. Once the mission ends, the played cards (Fail and Reverse ones too) are shown without saying who played them."
       },
       "inquisitor": {
         "title": "Inquisitor (module)",
@@ -836,11 +835,11 @@
       "playingMission": "The team ({{names}}) was approved ({{tally}}) and is on {{mission}}. {{progress}}{{rule}}{{mine}}{{open}}",
       "missionSucceeded": "The mission succeeded",
       "missionFailed": "The mission failed (Fail cards: {{count}})",
-      "missionFailedHidden": "The mission failed",
       "peekWindow": "{{outcome}}. Score: {{score}}. Before the leader moves on, the players decide whether to play Plot cards. Confirmed: {{passed}}/{{count}}.{{mine}}",
       "nextClick": "Click “Next”",
       "nextWait": "The leader or the host will click “Next”",
       "failCardsNote": "(Fail cards: {{count}})",
+      "reverseCardsNote": "(Reverse cards: {{count}})",
       "missionResult": "{{outcome}}{{fails}}. Score: {{score}}. {{next}} to start the next mission.",
       "voted": "Voted: {{voted}}/{{count}}.",
       "voteNow": "Vote: approve or reject the team.",
