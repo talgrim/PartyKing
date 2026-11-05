@@ -29,6 +29,12 @@ public static class ResistanceKnowledge
             return false;
         }
 
+        // The Commander is on the resistance side but knows every spy. (Deep Cover, who hides from them, comes later.)
+        if (viewer.Character == ResistanceCharacter.Commander)
+        {
+            return Loyalty(target) == ResistanceRole.Spy;
+        }
+
         if (IsHiddenReverserSpy(game, viewer) || IsHiddenReverserSpy(game, target))
         {
             return false;

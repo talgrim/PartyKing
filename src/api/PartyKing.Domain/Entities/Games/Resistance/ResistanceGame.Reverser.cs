@@ -16,6 +16,11 @@ public partial class ResistanceGame
             return ResistanceOutcome.Failed(ResistanceFailure.ReverserLocked, this);
         }
 
+        if (enabled && Rules.AssassinEnabled)
+        {
+            return ResistanceOutcome.Failed(ResistanceFailure.AssassinConflict, this);
+        }
+
         // Rules is a JSON column compared by reference, so assign a copy to have the change detected.
         Rules = Rules.Clone(reverserEnabled: enabled, reverserSides: sides, reverserSpyKnowsSpies: spyKnowsSpies);
 

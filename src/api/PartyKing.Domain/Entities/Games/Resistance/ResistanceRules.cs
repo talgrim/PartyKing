@@ -50,6 +50,13 @@ public class ResistanceRules
     /// </summary>
     public bool DefectorsKnowEachOther { get; set; }
 
+    /// <summary>
+    /// Whether the Assassin module (Hidden Agenda) is played: a Commander and an Assassin replace one standard player on
+    /// each side, and after the third successful mission the Assassin names the Commander. Off by default; only
+    /// editable before the game starts, and not together with the Defector, the Reverser or Blind Spies.
+    /// </summary>
+    public bool AssassinEnabled { get; set; }
+
     /// <summary>How many copies of each plot card the deck holds (15 cards in all).</summary>
     public Dictionary<ResistancePlotCardType, int> PlotDeck { get; set; } = DefaultPlotDeck();
 
@@ -65,7 +72,8 @@ public class ResistanceRules
         ResistanceReverserSides? reverserSides = null,
         bool? reverserSpyKnowsSpies = null,
         bool? defectorEnabled = null,
-        bool? defectorsKnowEachOther = null) => new()
+        bool? defectorsKnowEachOther = null,
+        bool? assassinEnabled = null) => new()
     {
         PlayerCounts = PlayerCounts.ToDictionary(
             x => x.Key, x => new ResistanceCountRules(x.Value.Spies, [.. x.Value.TeamSizes], [.. x.Value.RequiredFails])),
@@ -77,6 +85,7 @@ public class ResistanceRules
         ReverserSpyKnowsSpies = reverserSpyKnowsSpies ?? ReverserSpyKnowsSpies,
         DefectorEnabled = defectorEnabled ?? DefectorEnabled,
         DefectorsKnowEachOther = defectorsKnowEachOther ?? DefectorsKnowEachOther,
+        AssassinEnabled = assassinEnabled ?? AssassinEnabled,
         PlotDeck = new Dictionary<ResistancePlotCardType, int>(PlotDeck),
     };
 

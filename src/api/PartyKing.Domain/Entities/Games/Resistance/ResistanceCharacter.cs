@@ -16,4 +16,13 @@ public enum ResistanceCharacter
     /// stays; <see cref="ResistancePlayer.Role"/> changes.
     /// </summary>
     Defector = 2,
+
+    /// <summary>
+    /// Assassin module: the one resistance member who knows the spies. If the resistance wins three missions, the
+    /// Assassin gets one guess at who they are.
+    /// </summary>
+    Commander = 3,
+
+    /// <summary>Assassin module: the spy who names the Commander after the third successful mission.</summary>
+    Assassin = 4,
 }

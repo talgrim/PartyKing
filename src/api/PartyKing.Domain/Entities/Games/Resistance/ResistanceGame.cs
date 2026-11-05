@@ -120,7 +120,8 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
             Rules.ReverserSides,
             Rules.ReverserSpyKnowsSpies,
             Rules.DefectorEnabled,
-            Rules.DefectorsKnowEachOther);
+            Rules.DefectorsKnowEachOther,
+            Rules.AssassinEnabled);
 
         return Succeeded();
     }
@@ -161,7 +162,8 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
             return ResistanceOutcome.Failed(ResistanceFailure.NotStarted, this);
         }
 
-        if (Phase != ResistancePhase.GameOver)
+        // A game waiting for the Assassin can be restarted too, so an absent Assassin never strands it
+        if (Phase is not (ResistancePhase.GameOver or ResistancePhase.Assassination))
         {
             return ResistanceOutcome.Failed(ResistanceFailure.NotOver, this);
         }

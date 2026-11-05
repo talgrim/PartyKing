@@ -77,7 +77,7 @@ internal sealed class ResistanceGameViewBuilder
     {
         _view.YourRole = _yourRole?.ToDto();
         _view.FellowSpies = BuildFellowSpies();
-        _view.YourCharacter = _game.IsStarted && _game.Rules is { ReverserEnabled: true } or { DefectorEnabled: true }
+        _view.YourCharacter = _game.IsStarted && _game.Rules is { ReverserEnabled: true } or { DefectorEnabled: true } or { AssassinEnabled: true }
             ? _you?.Character.ToDto()
             : null;
         _view.FellowDefectorId = BuildFellowDefector();
@@ -97,6 +97,7 @@ internal sealed class ResistanceGameViewBuilder
         _view.Phase = _game.IsStarted ? _game.Phase.ToDto() : null;
         _view.RejectedTeams = _game.RejectedTeams;
         _view.Winner = _game.Winner?.ToDto();
+        _view.AssassinationTargetPlayerId = _game.AssassinationTargetPlayerId;
 
         return this;
     }
@@ -168,12 +169,13 @@ internal sealed class ResistanceGameViewBuilder
     }
 
     /// <summary>
-    /// Only a spy gets the list, and what is in it is up to <see cref="ResistanceKnowledge"/>: with the Blind Spies
-    /// variant a spy gets an empty list.
+    /// Only a spy and the Commander get the list, and what is in it is up to <see cref="ResistanceKnowledge"/>: with
+    /// the Blind Spies variant a spy gets an empty list.
     /// </summary>
     private List<Guid>? BuildFellowSpies()
     {
-        if (_you is not { } you || _yourRole != ResistanceRole.Spy)
+        if (!_game.IsStarted || _you is not { } you
+            || (_yourRole != ResistanceRole.Spy && you.Character != ResistanceCharacter.Commander))
         {
             return null;
         }
@@ -214,7 +216,7 @@ internal sealed class ResistanceGameViewBuilder
             playerCounts, game.Rules.PlotCardsEnabled, game.Rules.PlotCardsPerRound(game.Players.Count),
             game.Rules.InquisitorEnabled, game.Rules.BlindSpiesEnabled,
             game.Rules.ReverserEnabled, game.Rules.ReverserSides.ToDto(), game.Rules.ReverserSpyKnowsSpies,
-            game.Rules.DefectorEnabled, game.Rules.DefectorsKnowEachOther);
+            game.Rules.DefectorEnabled, game.Rules.DefectorsKnowEachOther, game.Rules.AssassinEnabled);
     }
 
     private List<ResistanceMissionResultDto> BuildMissionResults()

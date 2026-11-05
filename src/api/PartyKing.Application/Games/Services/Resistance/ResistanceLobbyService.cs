@@ -83,6 +83,13 @@ public interface IResistanceLobbyService
     Task<ErrorOr<ResistanceGameDto>> SetDefectorAsync(
         Guid sessionId, bool enabled, bool? knowEachOther, GameCaller caller, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Host or admin: switches the Assassin module on or off. NotFound without a game, Conflict once the game has
+    /// started or when the Defector, the Reverser or Blind Spies are on.
+    /// </summary>
+    Task<ErrorOr<ResistanceGameDto>> SetAssassinAsync(
+        Guid sessionId, bool enabled, GameCaller caller, CancellationToken cancellationToken);
+
     /// <summary>Host or admin: removes a player. NotFound for an unknown game or player.</summary>
     Task<ErrorOr<ResistanceGameDto>> KickAsync(
         Guid sessionId, Guid playerId, GameCaller caller, CancellationToken cancellationToken);
@@ -263,6 +270,21 @@ internal class ResistanceLobbyService : IResistanceLobbyService
                 nameof(SetDefectorAsync),
                 ResistanceOutcome.NoGame,
                 game => game.SetDefector(enabled, knowEachOther),
+                cancellationToken),
+            cancellationToken);
+    }
+
+    public Task<ErrorOr<ResistanceGameDto>> SetAssassinAsync(
+        Guid sessionId, bool enabled, GameCaller caller, CancellationToken cancellationToken)
+    {
+        return _gate.RunAsManagerAsync(
+            sessionId,
+            caller,
+            () => _games.UpdateAsync(
+                sessionId,
+                nameof(SetAssassinAsync),
+                ResistanceOutcome.NoGame,
+                game => game.SetAssassin(enabled),
                 cancellationToken),
             cancellationToken);
     }
