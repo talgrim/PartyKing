@@ -34,6 +34,7 @@ import { isDevEmbedded, withDevPersona } from '@/service/devPersona';
 import { gamesApi } from '@/service/endpoints/games/gamesApi';
 import { useResistanceGame } from '@/service/endpoints/games/useResistanceGame';
 import { useResistancePresence } from '@/service/endpoints/games/useResistancePresence';
+import { ResistanceMissionCardKind } from '@/service/endpoints/games/types';
 import { useViewerRole } from '@/service/endpoints/sessions/useViewerRole';
 import {
   RESISTANCE_HUB_TOPICS,
@@ -132,7 +133,7 @@ export const Resistance = (): ReactNode => {
   const showQueue = isPlayer && !tv && !embedded && view === 'queue';
   const showBoard = !embedded && !showQueue && (!showPlayerView || wide);
   // The TV tab shares the player's cookies, so it must not show the role or the "Ty" badge of whoever is logged in
-  const shownGame = game && tv ? { ...game, yourPlayerId: null, yourRole: null, fellowSpies: null, yourVote: null, yourMissionCard: null, yourPlotCards: [], yourReveals: [], yourPeeks: [], yourInquisition: null } : game;
+  const shownGame = game && tv ? { ...game, yourPlayerId: null, yourRole: null, yourCharacter: null, fellowSpies: null, yourVote: null, yourMissionCard: null, yourPlotCards: [], yourReveals: [], yourPeeks: [], yourInquisition: null } : game;
 
   const players = game?.players ?? [];
   const started = game?.startedAt != null;
@@ -279,10 +280,10 @@ export const Resistance = (): ReactNode => {
     }
   };
 
-  const playMissionCard = async (success: boolean) => {
+  const playMissionCard = async (card: ResistanceMissionCardKind) => {
     setMessage(undefined);
     try {
-      await mutate(gamesApi.playResistanceMissionCard(sessionId, success), { revalidate: false });
+      await mutate(gamesApi.playResistanceMissionCard(sessionId, card), { revalidate: false });
     } catch {
       setMessage(t('resistance.errors.missionCard'));
     }

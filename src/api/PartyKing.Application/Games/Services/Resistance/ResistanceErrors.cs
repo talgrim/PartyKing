@@ -117,6 +117,12 @@ internal static class ResistanceErrors
             "Resistance.NotExamined", "Pick the player to examine first."),
         ResistanceFailure.BlindSpiesLocked => Error.Conflict(
             "Resistance.RulesLocked", "Blind Spies can only be switched before the game starts."),
+        ResistanceFailure.ReverserLocked => Error.Conflict(
+            "Resistance.RulesLocked", "The Reverser can only be switched before the game starts."),
+        ResistanceFailure.NotReverser => Error.Forbidden(
+            "Resistance.NotReverser", "Only a Reverser plays a Reverse card."),
+        ResistanceFailure.ReverserCannotFail => Error.Forbidden(
+            "Resistance.ReverserCannotFail", "A Reverser plays Success or Reverse, never Fail."),
         _ => throw new ArgumentOutOfRangeException(nameof(failure), failure, "No error is defined for this failure."),
     };
 }

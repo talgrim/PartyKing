@@ -431,11 +431,16 @@
       "show": "Pokaż swoją rolę",
       "fellowSpies": "Twoi współszpiedzy",
       "fellowSpiesList": "Współszpiedzy",
-      "blindSpies": "Ślepi Szpiedzy: nie wiesz, kim są pozostali szpiedzy."
+      "blindSpies": "Ślepi Szpiedzy: nie wiesz, kim są pozostali szpiedzy.",
+      "reverser": "Jesteś Reverserem: możesz zagrać kartę Odwrócenie, która odwraca wynik misji."
     },
     "missionCard": {
       "success": "Sukces",
-      "fail": "Porażka"
+      "fail": "Porażka",
+      "reverse": "Odwrócenie"
+    },
+    "characters": {
+      "reverser": "Reverser"
     },
     "vote": {
       "approve": "Zatwierdź",
@@ -464,6 +469,16 @@
         "title": "Ślepi Szpiedzy",
         "description": "Wariant, w którym szpiedzy nie poznają się nawzajem. Każdy szpieg zna tylko własną rolę, więc musi sam odgadnąć, kto jest po jego stronie. Aplikacja nie powstrzyma szpiegów przed rozmową, więc umówcie się, że jej nie prowadzicie.",
         "toggle": "Włącz Ślepych Szpiegów"
+      },
+      "reverserFailed": "Nie udało się zmienić ustawienia Reversera.",
+      "reverser": {
+        "title": "Reverser",
+        "description": "Moduł, w którym losowana jest tajna postać Reversera: domyślnie jeden gracz z Ruchu Oporu i jeden ze Szpiegów (można wybrać tylko jedną stronę). Reverser w drużynie misji ma też kartę Odwrócenie, która odwraca wynik misji: misja, która by się nie udała, udaje się, a udana kończy się porażką. Dwie karty Odwrócenie znoszą się. Reverser-szpieg nigdy nie zagra Porażki. Zagrane karty, także Odwrócenie, są pokazywane bez informacji, kto je zagrał.",
+        "toggle": "Włącz Reversera",
+        "sides": "Kto dostaje Reversera",
+        "sidesBoth": "Obie strony (Ruch Oporu i Szpiedzy)",
+        "sidesResistance": "Tylko Ruch Oporu",
+        "sidesSpy": "Tylko Szpiedzy"
       }
     },
     "controls": {
@@ -599,7 +614,8 @@
       "label": "Misja",
       "title": "Zagraj kartę misji",
       "played": "Zagrano kartę: {{card}}. Czekamy na pozostałych członków drużyny.",
-      "hint": "Karta jest tajna, wszyscy zobaczą tylko liczbę kart Porażka. Zagranej karty nie można zmienić."
+      "hint": "Karta jest tajna, wszyscy zobaczą tylko liczbę kart Porażka. Zagranej karty nie można zmienić.",
+      "hintReverser": "Karta jest tajna do końca misji, potem wszystkie zagrane karty są pokazane bez informacji, kto je zagrał. Kartę Odwrócenie może zagrać tylko Reverser. Zagranej karty nie można zmienić."
     },
     "plotWindow": {
       "label": "Zagrywanie kart",
@@ -705,6 +721,7 @@
       "reject": "ODRZUĆ",
       "success": "SUKCES",
       "fail": "PORAŻKA",
+      "reverse": "ODWRÓCENIE",
       "plot": "INTRYGA",
       "mission": "MISJA {{n}}",
       "twoFails": "2 PORAŻKI",
@@ -783,6 +800,10 @@
         "title": "Ślepi Szpiedzy (wariant)",
         "text": "Gdy host włączy wariant, na początku gry szpiedzy nie poznają się nawzajem: szpieg widzi tylko własną rolę i musi odgadnąć, kim są pozostali szpiedzy."
       },
+      "reverser": {
+        "title": "Reverser (moduł)",
+        "text": "Gdy host włączy moduł, losowani są tajni Reverserzy: domyślnie jeden z Ruchu Oporu i jeden ze Szpiegów, albo tylko po stronie wybranej przez hosta. Reverser w drużynie misji może zagrać kartę Odwrócenie zamiast Sukcesu. Nieparzysta liczba kart Odwrócenie odwraca wynik misji (nieudana staje się udaną i odwrotnie), dwie się znoszą; w misji wymagającej dwóch Porażek jedna Porażka z jednym Odwróceniem to porażka. Reverser-szpieg zagrywa Sukces albo Odwrócenie, nigdy Porażkę. Po zakończeniu misji zagrane karty (także Porażka i Odwrócenie) są pokazywane bez informacji, kto je zagrał."
+      },
       "inquisitor": {
         "title": "Inkwizytor (moduł)",
         "text": "Gdy host włączy moduł, jawny żeton Inkwizytora trafia na początku do gracza po prawej od pierwszego Lidera. Po misjach 2, 3 i 4 posiadacz wybiera gracza, który nigdy nie miał żetonu, i prywatnie widzi, czy jest on Szpiegiem, czy Ruchem Oporu; żeton przechodzi na badanego. Inkwizytor może powiedzieć o wyniku cokolwiek, a nikt nie może tego sprawdzić. Moduł pomija się, gdy gra kończy się po misji 3 lub 4."
@@ -826,6 +847,7 @@
       "nextClick": "Kliknij „Dalej”",
       "nextWait": "Lider lub host kliknie „Dalej”",
       "failCardsNote": "(kart Porażka: {{count}})",
+      "reverseCardsNote": "(kart Odwrócenie: {{count}})",
       "missionResult": "{{outcome}}{{fails}}. Wynik: {{score}}. {{next}}, żeby zaczęła się kolejna misja.",
       "voted": "Zagłosowało {{voted}}/{{count}}.",
       "voteNow": "Zagłosuj: zatwierdź albo odrzuć drużynę.",

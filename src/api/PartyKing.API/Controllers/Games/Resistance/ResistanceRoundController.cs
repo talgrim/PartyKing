@@ -58,9 +58,9 @@ public class ResistanceRoundController : ResistanceControllerBase
     }
 
     /// <summary>
-    /// A member of the approved team secretly plays Success or Fail, once. 403 for anyone who did not join, is not on
-    /// the team, or is a member of the resistance playing Fail; 409 when no approved team is playing or the card was
-    /// already played.
+    /// A member of the approved team secretly plays Success, Fail or Reverse, once. 403 for anyone who did not join, is
+    /// not on the team, is a member of the resistance playing Fail, plays Reverse without being a Reverser or is a
+    /// spy Reverser playing Fail; 409 when no approved team is playing or the card was already played.
     /// </summary>
     [HttpPut("mission")]
     [RequireSessionAccess]
@@ -69,7 +69,7 @@ public class ResistanceRoundController : ResistanceControllerBase
         Guid sessionId, [FromBody] ResistanceMissionCardRequestDto request, CancellationToken cancellationToken)
     {
         var result = await Rounds.PlayMissionCardAsync(
-            sessionId, request.Success, await Caller(sessionId), cancellationToken);
+            sessionId, request.Card, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
     }

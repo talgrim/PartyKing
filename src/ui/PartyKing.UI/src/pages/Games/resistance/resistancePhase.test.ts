@@ -10,6 +10,7 @@ const game = (count: number, extra: Partial<ResistanceGameDto> = {}): Resistance
   startedAt: null,
   leaderPlayerId: null,
   yourRole: null,
+  yourCharacter: null,
   fellowSpies: null,
   missionNumber: 1,
   requiredTeamSize: null,
@@ -52,6 +53,8 @@ const game = (count: number, extra: Partial<ResistanceGameDto> = {}): Resistance
     plotCardsPerRound: 1,
     inquisitorEnabled: false,
     blindSpiesEnabled: false,
+    reverserEnabled: false,
+    reverserSides: 'Both',
   },
   ...extra,
 });
@@ -168,9 +171,19 @@ describe('resistancePhaseDescription', () => {
       expect(text).toContain('The mission fails from 2 Fail cards');
     });
 
+    it('names the Reverse cards that were played next to the outcome', () => {
+      const text = resistancePhaseDescription(
+        voting({ phase: 'MissionResult', missionResults: [{ missionNumber: 1, succeeded: false, failCount: 0, reverseCount: 1, teamPlayerIds: [] }] }),
+        host,
+        2,
+      );
+
+      expect(text).toContain('The mission failed (Fail cards: 0) (Reverse cards: 1)');
+    });
+
     it('reports the mission result with the score and who continues', () => {
       const text = resistancePhaseDescription(
-        voting({ phase: 'MissionResult', missionResults: [{ missionNumber: 1, succeeded: false, failCount: 1, teamPlayerIds: [] }] }),
+        voting({ phase: 'MissionResult', missionResults: [{ missionNumber: 1, succeeded: false, failCount: 1, reverseCount: 0, teamPlayerIds: [] }] }),
         host,
         2,
       );
@@ -181,7 +194,7 @@ describe('resistancePhaseDescription', () => {
     });
 
     it('names the reason the game ended', () => {
-      const missions = [1, 2, 3].map((missionNumber) => ({ missionNumber, succeeded: true, failCount: 0, teamPlayerIds: [] }));
+      const missions = [1, 2, 3].map((missionNumber) => ({ missionNumber, succeeded: true, failCount: 0, reverseCount: 0, teamPlayerIds: [] }));
       const text = resistancePhaseDescription(
         voting({ phase: 'GameOver', winner: 'Resistance', missionResults: missions }),
         guest,

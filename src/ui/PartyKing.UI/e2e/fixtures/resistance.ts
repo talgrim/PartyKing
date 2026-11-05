@@ -36,13 +36,15 @@ type StartOptions = {
   inquisitor?: boolean;
   /** Turns the Blind Spies variant on before the start. */
   blindSpies?: boolean;
+  /** Turns the Reverser module on before the start. */
+  reverser?: boolean;
 };
 
 /** The admin creates and opens a Resistance game, the guests join it and the admin starts it. */
 export async function startResistanceGame(
   session: CreatedSession,
   { openAdmin, openGuest }: Openers,
-  { players = 5, plotCards = false, inquisitor = false, blindSpies = false }: StartOptions = {},
+  { players = 5, plotCards = false, inquisitor = false, blindSpies = false, reverser = false }: StartOptions = {},
 ): Promise<ResistanceGameSetup> {
   const admin = await openAdmin(session);
   await admin.goto(`/s/${session.id}/games`);
@@ -72,6 +74,9 @@ export async function startResistanceGame(
   if (blindSpies) {
     await enableModule(admin, 'Blind Spies');
   }
+  if (reverser) {
+    await enableModule(admin, 'Reverser');
+  }
   await admin.getByRole('button', { name: 'Start game' }).click();
   for (const guest of guests.values()) {
     await expect(guest.getByRole('button', { name: 'Show your role' })).toBeVisible();
@@ -80,7 +85,7 @@ export async function startResistanceGame(
 }
 
 /** Turns an add-on on in the "Game settings" dialog. It has to happen before the game starts. */
-export async function enableModule(admin: Page, module: 'Plot cards' | 'Inquisitor' | 'Blind Spies'): Promise<void> {
+export async function enableModule(admin: Page, module: 'Plot cards' | 'Inquisitor' | 'Blind Spies' | 'Reverser'): Promise<void> {
   await admin.getByRole('button', { name: 'Game settings' }).click();
   const dialog = admin.getByRole('dialog', { name: 'Game settings' });
   const checkbox = dialog.getByRole('checkbox', { name: `Enable ${module}` });
@@ -148,6 +153,8 @@ export type ResistanceView = {
   yourPlayerId: string | null;
   leaderPlayerId: string | null;
   yourRole: Role | null;
+  /** Reverser module: this player's own character; null when the module is off. */
+  yourCharacter: 'Standard' | 'Reverser' | null;
   fellowSpies: string[] | null;
   missionNumber: number;
   requiredTeamSize: number | null;
@@ -158,8 +165,8 @@ export type ResistanceView = {
   votedPlayerIds: string[];
   yourVote: boolean | null;
   votes: { playerId: string; approve: boolean }[] | null;
-  revealedRoles: { playerId: string; role: Role }[] | null;
-  missionResults: unknown[];
+  revealedRoles: { playerId: string; role: Role; character: 'Standard' | 'Reverser' }[] | null;
+  missionResults: { missionNumber: number; succeeded: boolean; failCount: number; reverseCount: number }[];
   /** The cards this player holds (the leader's `toDeal` ones are drawn and still have to be dealt). */
   yourPlotCards: { id: number; type: PlotCardType; toDeal: boolean; inPlay: boolean }[];
   /** Public: how many cards each player holds (an Opinion Maker in play is not counted). */

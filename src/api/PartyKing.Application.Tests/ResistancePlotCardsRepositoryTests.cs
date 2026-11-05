@@ -133,7 +133,8 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
             _sessionId,
             "PlayMissionCardAsync",
             ResistanceOutcome.NoGame,
-            game => game.PlayMissionCard(player, success),
+            game => game.PlayMissionCard(
+                player, success ? ResistanceMissionCardKind.Success : ResistanceMissionCardKind.Fail),
             CancellationToken.None);
     }
 
@@ -1190,7 +1191,7 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
 
         Assert.Null(peeked.Failure);
         var after = await ReloadAsync();
-        Assert.Equal([(target, true)], ResistanceRoles.PeekedCards(after, card.HolderPlayerId!.Value));
+        Assert.Equal([(target, ResistanceMissionCardKind.Success)], ResistanceRoles.PeekedCards(after, card.HolderPlayerId!.Value));
         Assert.Empty(ResistanceRoles.PeekedCards(after, target));
         Assert.Equal(ResistancePlotCardLocation.Played, after.PlotCards.Single(x => x.CardId == card.CardId).Location);
     }

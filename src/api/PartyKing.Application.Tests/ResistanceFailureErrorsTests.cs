@@ -88,6 +88,14 @@ public class ResistanceFailureErrorsTests
             ErrorType.Conflict,
             "Resistance.RulesLocked",
             "Blind Spies can only be switched before the game starts."),
+        [ResistanceFailure.ReverserLocked] = new(
+            ErrorType.Conflict,
+            "Resistance.RulesLocked",
+            "The Reverser can only be switched before the game starts."),
+        [ResistanceFailure.NotReverser] = new(
+            ErrorType.Forbidden, "Resistance.NotReverser", "Only a Reverser plays a Reverse card."),
+        [ResistanceFailure.ReverserCannotFail] = new(
+            ErrorType.Forbidden, "Resistance.ReverserCannotFail", "A Reverser plays Success or Reverse, never Fail."),
         [ResistanceFailure.GameOver] = new(ErrorType.Conflict, "Resistance.GameOver", "The game is over."),
         [ResistanceFailure.NoGame] = new(ErrorType.NotFound, "Resistance.NotFound", "The session has no Resistance game."),
         [ResistanceFailure.NotLeaderToDeal] = new(

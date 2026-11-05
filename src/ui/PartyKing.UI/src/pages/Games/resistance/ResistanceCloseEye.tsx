@@ -1,5 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { ResistanceGameDto } from '@/service/endpoints/games/types';
+import { MISSION_CARD_KEYS } from './missionCardKeys';
 import { PLOT_CARDS } from './resistancePlotCards';
 import { useTranslation } from 'react-i18next';
 
@@ -52,7 +53,7 @@ export const ResistanceCloseEye = ({ game, onPeek }: Props): ReactNode => {
         <p className="font-medium text-slate-100">{name}</p>
         {peeks.map((seen) => (
           <p key={seen.playerId} className="text-sm text-slate-100">
-            {t('resistance.closeEye.seen', { name: nameOf(seen.playerId), card: seen.success ? t('resistance.missionCard.success') : t('resistance.missionCard.fail') })}
+            {t('resistance.closeEye.seen', { name: nameOf(seen.playerId), card: t(MISSION_CARD_KEYS[seen.card]) })}
           </p>
         ))}
         {inWindow && card != null && options.length > 0 && (

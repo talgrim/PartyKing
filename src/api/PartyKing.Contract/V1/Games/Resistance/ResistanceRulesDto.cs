@@ -7,7 +7,9 @@ namespace PartyKing.Contract.V1.Games.Resistance;
 /// <param name="PlotCardsEnabled">Whether the plot cards add-on is played in this game.</param>
 /// <param name="InquisitorEnabled">Whether the Inquisitor module is played in this game.</param>
 /// <param name="BlindSpiesEnabled">Whether the Blind Spies variant is played in this game: the spies do not know each other.</param>
+/// <param name="ReverserEnabled">Whether the Reverser module is played in this game: a Reverser on each side may play a Reverse card.</param>
+/// <param name="ReverserSides">Which sides get a Reverser while the module is played.</param>
 /// <param name="PlotCardsPerRound">How many plot cards the leader draws before each mission, at the current player count.</param>
 public record ResistanceRulesDto(
     IReadOnlyList<ResistanceCountRulesDto> PlayerCounts, bool PlotCardsEnabled, int PlotCardsPerRound,
-    bool InquisitorEnabled, bool BlindSpiesEnabled);
+    bool InquisitorEnabled, bool BlindSpiesEnabled, bool ReverserEnabled, ResistanceReverserSidesDto ReverserSides);

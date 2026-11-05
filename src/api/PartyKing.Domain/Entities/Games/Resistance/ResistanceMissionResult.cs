@@ -1,8 +1,8 @@
 namespace PartyKing.Domain.Entities.Games.Resistance;
 
 /// <summary>
-/// The public outcome of one finished mission: the team that went and the number of Fail cards, never who played
-/// them. Keyed by
+/// The public outcome of one finished mission: the team that went and the number of Fail and Reverse cards, never who
+/// played them. Keyed by
 /// <see cref="SessionId"/> and <see cref="MissionNumber"/>.
 /// </summary>
 public class ResistanceMissionResult
@@ -14,6 +14,9 @@ public class ResistanceMissionResult
 
     /// <summary>The Fail cards played; the mission failed when they reached <see cref="ResistanceRules.RequiredFails"/>.</summary>
     public int FailCount { get; internal set; }
+
+    /// <summary>The Reverse cards played (Reverser module; 0 otherwise). Public like <see cref="FailCount"/>.</summary>
+    public int ReverseCount { get; internal set; }
 
     public bool Succeeded { get; internal set; }
 

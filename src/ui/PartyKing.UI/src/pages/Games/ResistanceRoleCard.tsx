@@ -5,7 +5,7 @@ import {
   SpyCardIcon,
   SpyMarkerIcon,
 } from '@/pages/Games/resistance/ResistanceIcons';
-import { ResistancePlayerDto, ResistanceRole } from '@/service/endpoints/games/types';
+import { ResistanceCharacter, ResistancePlayerDto, ResistanceRole } from '@/service/endpoints/games/types';
 import { useTranslation } from 'react-i18next';
 
 type Props = {
@@ -15,6 +15,8 @@ type Props = {
   fellowSpyIds: readonly string[];
   /** The Blind Spies variant: the spies do not know each other, so a spy is told there is no one to see. */
   blindSpies?: boolean;
+  /** The Reverser module: the player's character, told next to the role while the card is face up. */
+  character?: ResistanceCharacter | null;
 };
 
 /**
@@ -22,7 +24,7 @@ type Props = {
  * it). A spy also sees the other spies while the card is face up (or is told they don't know each
  * other, with the Blind Spies variant). The state is local and starts hidden after a reload.
  */
-export const ResistanceRoleCard = ({ role, players, fellowSpyIds, blindSpies = false }: Props): ReactNode => {
+export const ResistanceRoleCard = ({ role, players, fellowSpyIds, blindSpies = false, character = null }: Props): ReactNode => {
   const { t } = useTranslation();
   const [revealed, setRevealed] = useState(false);
   const spies = players.filter((player) => fellowSpyIds.includes(player.id));
@@ -40,6 +42,10 @@ export const ResistanceRoleCard = ({ role, players, fellowSpyIds, blindSpies = f
         {revealed && role === 'Spy' && <SpyCardIcon title={t('resistance.roles.spy')} />}
         {revealed && role === 'Resistance' && <OperativeCardIcon title={t('resistance.roles.resistance')} />}
       </button>
+
+      {revealed && character === 'Reverser' && (
+        <p className="max-w-48 text-sm text-amber-300">{t('resistance.roleCard.reverser')}</p>
+      )}
 
       {revealed && role === 'Spy' && blindSpies && (
         <p className="max-w-48 text-sm text-slate-200">{t('resistance.roleCard.blindSpies')}</p>

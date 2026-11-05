@@ -211,7 +211,7 @@ public class ResistanceGamePlotCardTests
         var thief = _game.Players[1];
         var victim = _game.Players[2];
         var member = _game.Players[3];
-        member.MissionCard = true;
+        member.MissionCard = ResistanceMissionCardKind.Success;
         var steal = AddCard(ResistancePlotCardType.TakeResponsibility, ResistancePlotCardLocation.Hand, thief);
         var own = AddCard(ResistancePlotCardType.KeepingCloseEye, ResistancePlotCardLocation.Hand, thief);
         var stolen = AddCard(ResistancePlotCardType.KeepingCloseEye, ResistancePlotCardLocation.Hand, victim);
@@ -239,7 +239,7 @@ public class ResistanceGamePlotCardTests
         var first = _game.Players[3];
         var second = _game.Players[4];
         var member = _game.Players[1];
-        member.MissionCard = false;
+        member.MissionCard = ResistanceMissionCardKind.Fail;
         var firstCard = AddCard(ResistancePlotCardType.KeepingCloseEye, ResistancePlotCardLocation.Hand, first);
         var firstSpare = AddCard(ResistancePlotCardType.KeepingCloseEye, ResistancePlotCardLocation.Hand, first);
         var secondCard = AddCard(ResistancePlotCardType.KeepingCloseEye, ResistancePlotCardLocation.Hand, second);
@@ -339,8 +339,8 @@ public class ResistanceGamePlotCardTests
         _game.Phase = ResistancePhase.PeekWindow;
         var holder = _game.Players[3];
         var member = _game.Players[1];
-        member.MissionCard = true;
-        holder.MissionCard = false;
+        member.MissionCard = ResistanceMissionCardKind.Success;
+        holder.MissionCard = ResistanceMissionCardKind.Fail;
         var card = AddCard(ResistancePlotCardType.KeepingCloseEye, ResistancePlotCardLocation.Hand, holder);
 
         Assert.Equal(ResistanceFailure.InvalidTarget, _game.PeekMissionCard(holder.PlayerId, card.CardId, holder.PlayerId, Now).Failure);

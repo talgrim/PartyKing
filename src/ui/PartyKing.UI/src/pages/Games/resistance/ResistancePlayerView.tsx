@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { ResistanceGameDto } from '@/service/endpoints/games/types';
+import { ResistanceGameDto, ResistanceMissionCardKind } from '@/service/endpoints/games/types';
 import { ResistanceRoleCard } from '../ResistanceRoleCard';
 import { ResistanceTeamPicker } from './ResistanceTeamPicker';
 import { ResistanceMissionPanel } from './ResistanceMissionPanel';
@@ -41,7 +41,7 @@ type Props = {
   /** The examiner confirms having seen the loyalty (Inquisition). */
   onConfirmInquisition: () => Promise<void>;
   /** Plays a mission card (true = Success); only a member of the approved team sees the cards. */
-  onPlayMissionCard: (success: boolean) => Promise<void>;
+  onPlayMissionCard: (card: ResistanceMissionCardKind) => Promise<void>;
   /** Moves on after a finished mission; the leader sees the button then. */
   onContinue: () => Promise<void>;
 };
@@ -66,6 +66,7 @@ export const ResistancePlayerView = ({ game, onSubmitTeam, onDealPlotCards, onPl
           players={game.players}
           fellowSpyIds={game.fellowSpies ?? []}
           blindSpies={game.rules.blindSpiesEnabled}
+          character={game.yourCharacter}
         />
       )}
       {deals && (

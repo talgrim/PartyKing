@@ -148,4 +148,13 @@ public enum ResistanceFailure
 
     /// <summary>The Blind Spies variant is switched only before the game starts.</summary>
     BlindSpiesLocked,
+
+    /// <summary>The Reverser module is switched only before the game starts.</summary>
+    ReverserLocked,
+
+    /// <summary>Only a Reverser plays a Reverse card.</summary>
+    NotReverser,
+
+    /// <summary>A Reverser among the spies plays Success or Reverse, never Fail.</summary>
+    ReverserCannotFail,
 }

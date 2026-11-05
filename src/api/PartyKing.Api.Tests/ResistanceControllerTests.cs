@@ -94,9 +94,9 @@ public class ResistanceControllerTests
         _roundService.Result = game;
 
         var result = await _round.PlayMissionCard(
-            _sessionId, new ResistanceMissionCardRequestDto(false), CancellationToken.None);
+            _sessionId, new ResistanceMissionCardRequestDto(ResistanceMissionCardKindDto.Fail), CancellationToken.None);
 
-        Assert.Equal(("mission", _sessionId, false, _playerId), _roundService.LastCall);
+        Assert.Equal(("mission", _sessionId, ResistanceMissionCardKindDto.Fail, _playerId), _roundService.LastCall);
         Assert.Same(game, Assert.IsType<OkObjectResult>(result).Value);
     }
 
@@ -107,7 +107,7 @@ public class ResistanceControllerTests
         _roundService.Result = error;
 
         var result = await _round.PlayMissionCard(
-            _sessionId, new ResistanceMissionCardRequestDto(true), CancellationToken.None);
+            _sessionId, new ResistanceMissionCardRequestDto(ResistanceMissionCardKindDto.Success), CancellationToken.None);
 
         Assert.Equal(status, Assert.IsType<ObjectResult>(result).StatusCode);
     }
@@ -264,7 +264,7 @@ public class ResistanceControllerTests
         IsOpen = true,
         MaxPlayers = 10,
         MissionNumber = 1,
-        Rules = new ResistanceRulesDto([], false, 1, false, false)
+        Rules = new ResistanceRulesDto([], false, 1, false, false, false, ResistanceReverserSidesDto.Both)
     };
 
     /// <summary>Only the player cookie of the Resistance game is read; the rest is not used by the controller.</summary>

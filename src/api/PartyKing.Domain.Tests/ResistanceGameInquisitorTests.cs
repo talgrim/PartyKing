@@ -51,8 +51,9 @@ public class ResistanceGameInquisitorTests
 
     private static void CompleteMission(ResistanceGame game, bool success = true)
     {
-        game.PlayMissionCard(game.Players[2].PlayerId, success: true);
-        game.PlayMissionCard(game.Players[0].PlayerId, success);
+        game.PlayMissionCard(game.Players[2].PlayerId, ResistanceMissionCardKind.Success);
+        game.PlayMissionCard(
+            game.Players[0].PlayerId, success ? ResistanceMissionCardKind.Success : ResistanceMissionCardKind.Fail);
     }
 
     private static ResistanceGame InquisitionGame()
@@ -322,7 +323,7 @@ public class ResistanceGameInquisitorTests
 
         var peeks = ResistanceRoles.PeekedCards(game, peeker.PlayerId).ToList();
 
-        Assert.Equal([(game.Players[0].PlayerId, true)], peeks);
+        Assert.Equal([(game.Players[0].PlayerId, ResistanceMissionCardKind.Success)], peeks);
     }
 
     [Theory]
