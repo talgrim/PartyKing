@@ -197,6 +197,7 @@ public static class ResistanceRoles
     public static void BeginMission(ResistanceGame game)
     {
         game.Phase = ResistancePhase.SelectingTeam;
+        FlipDefectorCard(game);
         if (!game.Rules.PlotCardsEnabled)
         {
             return;
@@ -209,6 +210,25 @@ public static class ResistanceRoles
         }
 
         DrawPlotCards(game);
+    }
+
+    /// <summary>
+    /// Defector module: from the third mission on, the card on top of the switch deck is flipped as the mission begins;
+    /// Change Allegiance puts both Defectors on the other side, so the win checks and the mission card rules follow
+    /// from <see cref="ResistancePlayer.Role"/> at once. A rejected team does not begin a mission, so it flips nothing.
+    /// </summary>
+    private static void FlipDefectorCard(ResistanceGame game)
+    {
+        var index = game.MissionNumber - ResistanceGame.DefectorFirstFlipMission;
+        if (index < 0 || index >= game.DefectorDeck.Length || game.DefectorDeck[index] != 'C')
+        {
+            return;
+        }
+
+        foreach (var defector in game.Players.Where(x => x.Character == ResistanceCharacter.Defector))
+        {
+            defector.SwitchAllegiance();
+        }
     }
 
     private static void DrawPlotCards(ResistanceGame game)
@@ -486,6 +506,7 @@ public static class ResistanceRoles
         game.InquisitorPlayerId = null;
         game.InquisitionExaminerPlayerId = null;
         game.PlotCards.Clear();
+        game.DefectorDeck = string.Empty;
     }
 
     /// <summary>The token starts with the player to the right of the first leader: the one before them in seating order.</summary>
@@ -500,6 +521,29 @@ public static class ResistanceRoles
         var holder = seats[(seats.FindIndex(x => x.PlayerId == game.LeaderPlayerId) + seats.Count - 1) % seats.Count];
         holder.WasInquisitor = true;
         game.InquisitorPlayerId = holder.PlayerId;
+    }
+
+    /// <summary>
+    /// Defector module: one Defector on each side, taken from the players still without a character (there are always
+    /// some, as a side has at least two spies and three members of the resistance and takes one Reverser at most), and a
+    /// shuffled switch deck.
+    /// </summary>
+    private static void DealDefectors(ResistanceGame game, List<ResistancePlayer> shuffled, Random random)
+    {
+        game.DefectorDeck = string.Empty;
+        if (!game.Rules.DefectorEnabled)
+        {
+            return;
+        }
+
+        foreach (var side in new[] { ResistanceRole.Spy, ResistanceRole.Resistance })
+        {
+            shuffled.First(x => x.Role == side && x.Character == ResistanceCharacter.Standard)
+                .Character = ResistanceCharacter.Defector;
+        }
+
+        var cards = Enumerable.Repeat('N', ResistanceGame.DefectorDeckSize - 2).Concat(['C', 'C']);
+        game.DefectorDeck = new string(cards.OrderBy(_ => random.Next()).ToArray());
     }
 
     /// <summary>Gives every player a random role, picks a random first leader and starts the first mission.</summary>
@@ -520,14 +564,18 @@ public static class ResistanceRoles
             var sides = game.Rules.ReverserSides;
             if (sides != ResistanceReverserSides.Resistance)
             {
-                shuffled.First(x => x.Role == ResistanceRole.Spy).Character = ResistanceCharacter.Reverser;
+                shuffled.First(x => x.Role == ResistanceRole.Spy && x.Character == ResistanceCharacter.Standard)
+                    .Character = ResistanceCharacter.Reverser;
             }
 
             if (sides != ResistanceReverserSides.Spy)
             {
-                shuffled.First(x => x.Role == ResistanceRole.Resistance).Character = ResistanceCharacter.Reverser;
+                shuffled.First(x => x.Role == ResistanceRole.Resistance && x.Character == ResistanceCharacter.Standard)
+                    .Character = ResistanceCharacter.Reverser;
             }
         }
+
+        DealDefectors(game, shuffled, random);
 
         game.ChangeLeader(game.Players[random.Next(game.Players.Count)].PlayerId);
         GiveInquisitorToken(game);

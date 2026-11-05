@@ -157,4 +157,7 @@ public enum ResistanceFailure
 
     /// <summary>A Reverser among the spies plays Success or Reverse, never Fail.</summary>
     ReverserCannotFail,
+
+    /// <summary>The Defector module is switched only before the game starts.</summary>
+    DefectorLocked,
 }

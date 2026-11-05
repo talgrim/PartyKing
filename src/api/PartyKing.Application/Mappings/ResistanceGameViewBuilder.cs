@@ -77,7 +77,11 @@ internal sealed class ResistanceGameViewBuilder
     {
         _view.YourRole = _yourRole?.ToDto();
         _view.FellowSpies = BuildFellowSpies();
-        _view.YourCharacter = _game is { IsStarted: true, Rules.ReverserEnabled: true } ? _you?.Character.ToDto() : null;
+        _view.YourCharacter = _game.IsStarted && _game.Rules is { ReverserEnabled: true } or { DefectorEnabled: true }
+            ? _you?.Character.ToDto()
+            : null;
+        _view.FellowDefectorId = BuildFellowDefector();
+        _view.DefectorFlips = _game.Rules.DefectorEnabled ? _game.DefectorFlips : [];
         _view.RevealedRoles = BuildRevealedRoles();
 
         return this;
@@ -177,6 +181,17 @@ internal sealed class ResistanceGameViewBuilder
         return PlayerIds(x => ResistanceKnowledge.KnowsSpy(_game, you, x));
     }
 
+    /// <summary>The other Defector, for a Defector of a game where the Defectors know each other.</summary>
+    private Guid? BuildFellowDefector()
+    {
+        if (!_game.IsStarted || _you is not { } you)
+        {
+            return null;
+        }
+
+        return _players.FirstOrDefault(x => ResistanceKnowledge.KnowsDefector(_game, you, x))?.PlayerId;
+    }
+
     /// <summary>Every role, but only once the game is over.</summary>
     private List<ResistanceRevealedRoleDto>? BuildRevealedRoles()
     {
@@ -198,7 +213,8 @@ internal sealed class ResistanceGameViewBuilder
         return new ResistanceRulesDto(
             playerCounts, game.Rules.PlotCardsEnabled, game.Rules.PlotCardsPerRound(game.Players.Count),
             game.Rules.InquisitorEnabled, game.Rules.BlindSpiesEnabled,
-            game.Rules.ReverserEnabled, game.Rules.ReverserSides.ToDto(), game.Rules.ReverserSpyKnowsSpies);
+            game.Rules.ReverserEnabled, game.Rules.ReverserSides.ToDto(), game.Rules.ReverserSpyKnowsSpies,
+            game.Rules.DefectorEnabled, game.Rules.DefectorsKnowEachOther);
     }
 
     private List<ResistanceMissionResultDto> BuildMissionResults()

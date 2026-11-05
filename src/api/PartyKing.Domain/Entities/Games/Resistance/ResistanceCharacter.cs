@@ -10,4 +10,10 @@ public enum ResistanceCharacter
 
     /// <summary>Reverser module: may play a Reverse card. One on the resistance side and one among the spies.</summary>
     Reverser = 1,
+
+    /// <summary>
+    /// Defector module: one on each side, whose allegiance may change at the start of the missions 3 to 5. The character
+    /// stays; <see cref="ResistancePlayer.Role"/> changes.
+    /// </summary>
+    Defector = 2,
 }
