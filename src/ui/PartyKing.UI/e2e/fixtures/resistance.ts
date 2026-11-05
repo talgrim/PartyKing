@@ -34,13 +34,15 @@ type StartOptions = {
   plotCards?: boolean;
   /** Turns the Inquisitor module on before the start. */
   inquisitor?: boolean;
+  /** Turns the Blind Spies variant on before the start. */
+  blindSpies?: boolean;
 };
 
 /** The admin creates and opens a Resistance game, the guests join it and the admin starts it. */
 export async function startResistanceGame(
   session: CreatedSession,
   { openAdmin, openGuest }: Openers,
-  { players = 5, plotCards = false, inquisitor = false }: StartOptions = {},
+  { players = 5, plotCards = false, inquisitor = false, blindSpies = false }: StartOptions = {},
 ): Promise<ResistanceGameSetup> {
   const admin = await openAdmin(session);
   await admin.goto(`/s/${session.id}/games`);
@@ -67,6 +69,9 @@ export async function startResistanceGame(
   if (inquisitor) {
     await enableModule(admin, 'Inquisitor');
   }
+  if (blindSpies) {
+    await enableModule(admin, 'Blind Spies');
+  }
   await admin.getByRole('button', { name: 'Start game' }).click();
   for (const guest of guests.values()) {
     await expect(guest.getByRole('button', { name: 'Show your role' })).toBeVisible();
@@ -75,7 +80,7 @@ export async function startResistanceGame(
 }
 
 /** Turns an add-on on in the "Game settings" dialog. It has to happen before the game starts. */
-export async function enableModule(admin: Page, module: 'Plot cards' | 'Inquisitor'): Promise<void> {
+export async function enableModule(admin: Page, module: 'Plot cards' | 'Inquisitor' | 'Blind Spies'): Promise<void> {
   await admin.getByRole('button', { name: 'Game settings' }).click();
   const dialog = admin.getByRole('dialog', { name: 'Game settings' });
   const checkbox = dialog.getByRole('checkbox', { name: `Enable ${module}` });

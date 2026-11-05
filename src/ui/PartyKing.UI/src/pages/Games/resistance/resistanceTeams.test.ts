@@ -11,6 +11,7 @@ const rules: ResistanceRulesDto = {
   plotCardsEnabled: false,
   plotCardsPerRound: 1,
   inquisitorEnabled: false,
+  blindSpiesEnabled: false,
 };
 
 describe('missionBoardFor', () => {

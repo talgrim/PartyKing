@@ -51,6 +51,7 @@ const game = (count: number, extra: Partial<ResistanceGameDto> = {}): Resistance
     plotCardsEnabled: false,
     plotCardsPerRound: 1,
     inquisitorEnabled: false,
+    blindSpiesEnabled: false,
   },
   ...extra,
 });

@@ -449,6 +449,24 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task BlindSpies_SurvivesReloadsAndTheStartOfTheGame()
+    {
+        await CreateLobbyAsync(5, isOpen: true);
+        var switched = await _repository.UpdateAsync(
+            _sessionId, "SetBlindSpiesAsync", ResistanceOutcome.NoGame, game => game.SetBlindSpies(true), CancellationToken.None);
+        Assert.Null(switched.Failure);
+        Assert.True((await ReloadAsync()).Rules.BlindSpiesEnabled);
+
+        Assert.Null((await StartAsync()).Failure);
+        Assert.True((await ReloadAsync()).Rules.BlindSpiesEnabled);
+
+        var locked = await _repository.UpdateAsync(
+            _sessionId, "SetBlindSpiesAsync", ResistanceOutcome.NoGame, game => game.SetBlindSpies(false), CancellationToken.None);
+        Assert.Equal(ResistanceFailure.BlindSpiesLocked, locked.Failure);
+        Assert.True((await ReloadAsync()).Rules.BlindSpiesEnabled);
+    }
+
+    [Fact]
     public async Task TheFifthRejectedTeamInARow_EndsTheGameWithTheSpiesWinning()
     {
         var ct = CancellationToken.None;
