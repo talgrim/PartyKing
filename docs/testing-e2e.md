@@ -1,6 +1,6 @@
 # E2E tests (Playwright, Chromium)
 
-From `src/ui/PartyKing.UI`: `npm run e2e`, about 4 min, 38 tests. First time only: `npx playwright install chromium`. Typecheck the suite with `npx tsc -p e2e/tsconfig.json`; `vite.config.ts` keeps `e2e` and `playwright.config.*` out of vitest.
+From `src/ui/PartyKing.UI`: `npm run e2e`, about 4 min, 40 tests. First time only: `npx playwright install chromium`. Typecheck the suite with `npx tsc -p e2e/tsconfig.json`; `vite.config.ts` keeps `e2e` and `playwright.config.*` out of vitest.
 
 ## Setup
 
@@ -34,15 +34,16 @@ From `src/ui/PartyKing.UI`: `npm run e2e`, about 4 min, 38 tests. First time onl
 - `resistance-hidden-info.spec.ts`: only spies are told who the spies are (screen and API), the admin and a watching guest get no role, an admin who plays gets none on `?tv=1`, votes stay secret until the last one and can be changed until then.
 - `resistance-lifecycle.spec.ts`: restart a finished game with the same players; "End game" asks first, then sends everybody away.
 - `resistance-plot-cards.spec.ts`: the add-on turned on with `startResistanceGame(..., {plotCards: true})`. Five players: the leader deals the drawn Open Up, its holder plays it, the target confirms the identity card; on the next mission a Strong Leader takes the lead in the Leader window after a rejected team. Seven players: an Opinion Maker votes first and a No Confidence card rejects the approved team in the Confidence window (counts as a rejected team). Ten players: Take Responsibility, played once the Open Up is resolved, takes the visible Opinion Maker from its holder, who then votes first.
+- `resistance-two-fails.spec.ts`: seven players, fourth mission (two Fail cards needed). One Fail card among the four team members does not fail it (the fifth mission, which needs one, then does), two Fail cards do. The outcomes of the first three missions are chosen so that nobody has won by then.
 - `resistance-seat-takeover.spec.ts`: the host releases the seat of a player whose context was closed (needs the presence grace of 10 s, so the test waits up to 30 s for the button to enable); a new context claims it from the "Back in the game" picker; an unreleased seat is not offered.
-- Not covered: anything needing Spotify or YouTube (host login, the player, search), the Plot cards not named above (Overheard Conversation, Establish Confidence, Keeping a Close Eye, In the Spotlight), the two-fails rule of mission 4 (7+ players), reordering the seats, and the Polish texts of a game.
+- Not covered: anything needing Spotify or YouTube (host login, the player, search), the Plot cards not named above (Overheard Conversation, Establish Confidence, Keeping a Close Eye, In the Spotlight), reordering the seats, and the Polish texts of a game.
 
 ## Resistance helpers
 
 Roles and the first leader are seeded in e2e but depend on the player count and the order of joining, so the helpers still find out who is who instead of hard-coding it:
 - `viewOf(page, session)` / `viewOfPlayer(setup, name)` read `GET /sessions/:id/games/resistance` with that player's own cookies (they are shared across ports on 127.0.0.1). It is exactly the player's view of the game, so it also proves what a player must not know (`votes`, `fellowSpies`, `yourRole` of someone else). Use it to find who has to act (`waitForLeader`, `spyNames`, `waitForPhase`); the acting itself goes through the UI.
 - `waitForPhase` polls, because a click returns before the server has answered. Call it (or `waitForLeader`) between steps and not `isVisible()`.
-- `submitTeam`, `vote`, `voteAll`, `continueMission`, `rejectTeams` and `playMission(setup, 'success' | 'fail')` play a round. A failed mission puts as many spies on the team as it needs Fail cards.
+- `submitTeam`, `vote`, `voteAll`, `continueMission`, `rejectTeams`, `playMissionCards(setup, team, failers)` and `playMission(setup, 'success' | 'fail', fails?)` play a round. A failed mission puts as many spies on the team as it needs Fail cards (or `fails`).
 - The team picker's checkbox is covered by a tick, so the tests tap the player's name inside the "Pick the team" group. Once the team is full the other checkboxes are disabled.
 - The Approve/Reject/Success/Fail cards are `role="button"` SVGs inside the "Voting" and "Mission" regions.
 - The mission panel disappears with the last card, so the tests do not wait for "Card played".
