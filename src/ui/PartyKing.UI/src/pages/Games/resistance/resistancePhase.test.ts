@@ -11,6 +11,8 @@ const game = (count: number, extra: Partial<ResistanceGameDto> = {}): Resistance
   leaderPlayerId: null,
   yourRole: null,
   yourCharacter: null,
+  fellowDefectorId: null,
+  defectorFlips: [],
   fellowSpies: null,
   missionNumber: 1,
   requiredTeamSize: null,
@@ -56,6 +58,8 @@ const game = (count: number, extra: Partial<ResistanceGameDto> = {}): Resistance
     reverserEnabled: false,
     reverserSides: 'Both',
     reverserSpyKnowsSpies: true,
+    defectorEnabled: false,
+    defectorsKnowEachOther: false,
   },
   ...extra,
 });
