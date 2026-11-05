@@ -1,4 +1,4 @@
-import { FormEvent, ReactNode, useEffect, useRef, useState } from 'react';
+import { FormEvent, ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 import { secondsToTimeSpan, timeSpanToSeconds } from '@/service/endpoints/sessions/slideTime';
 import { settingsButtonClass, settingsInputClass, settingsMessageClass } from './settingsStyles';
@@ -46,9 +46,11 @@ export const SlideshowSettingsForm = ({ sessionId }: Props): ReactNode => {
   }, [sessionId]);
 
   // The wheel changes the seconds while the pointer is over the field, focused or not. React registers wheel
-  // listeners as passive, so this one is attached by hand to be able to stop the dialog from scrolling.
+  // listeners as passive, so this one is attached by hand to be able to stop the dialog from scrolling. A layout effect
+  // attaches it in the same commit that shows the field; a passive effect runs later, so a wheel (or a test that waits
+  // for the field and wheels at once) in between would be lost.
   const loaded = slideSeconds !== null;
-  useEffect(() => {
+  useLayoutEffect(() => {
     const input = secondsInput.current;
     if (!input) return;
 
