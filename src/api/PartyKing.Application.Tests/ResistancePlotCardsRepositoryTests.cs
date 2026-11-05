@@ -1264,19 +1264,21 @@ public class ResistancePlotCardsRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task KeepingCloseEye_ASecondHolderCannotLookAtTheSameCard()
+    public async Task KeepingCloseEye_ASecondHolderMayLookAtTheSameCard_ButNotTheSameHolderTwice()
     {
-        var ct = CancellationToken.None;
         var (game, card) = await AfterTheMissionWithCloseEyeAsync();
         var holder = card.HolderPlayerId!.Value;
         var target = game.Players.First(x => x.IsOnTeam && x.PlayerId != holder).PlayerId;
         var second = game.Players.First(x => x.PlayerId != holder && x.PlayerId != target).PlayerId;
         await SetCardAsync(SpareCardId(game), second, ResistancePlotCardLocation.Hand, ResistancePlotCardType.KeepingCloseEye);
+        await SetCardAsync(SpareCardId(game, 1), holder, ResistancePlotCardLocation.Hand, ResistancePlotCardType.KeepingCloseEye);
         await PeekMissionCardAsync(holder, card.CardId, target);
 
         var again = await PeekMissionCardAsync(second, SpareCardId(game), target);
+        var sameHolder = await PeekMissionCardAsync(holder, SpareCardId(game, 1), target);
 
-        Assert.Equal(ResistanceFailure.InvalidTarget, again.Failure);
+        Assert.Null(again.Failure);
+        Assert.Equal(ResistanceFailure.InvalidTarget, sameHolder.Failure);
     }
 
     [Theory]

@@ -378,10 +378,10 @@ describe('Keeping a Close Eye', () => {
   const afterMission = (overrides: Partial<ResistanceGameDto> = {}) =>
     game({ phase: 'PeekWindow', missionNumber: 1, teamPlayerIds: ['p0', 'p1', 'p2'], yourPlotCards: [eye], ...overrides });
 
-  it('offers the other team members whose card nobody looked at yet', async () => {
+  it('offers the other team members except the ones you already looked at', async () => {
     const user = userEvent.setup();
     const onPeek = vi.fn().mockResolvedValue(undefined);
-    const looked = { id: 8, type: 'KeepingCloseEye', holderPlayerId: 'p3', targetPlayerId: 'p1', missionNumber: 1, isConfirmed: true } as const;
+    const looked = { id: 8, type: 'KeepingCloseEye', holderPlayerId: 'p0', targetPlayerId: 'p1', missionNumber: 1, isConfirmed: true } as const;
     render(<ResistanceCloseEye game={afterMission({ playedPlotCards: [looked] })} onPeek={onPeek} />);
 
     expect(screen.queryByRole('option', { name: 'Bartek' })).toBeNull();
@@ -389,6 +389,13 @@ describe('Keeping a Close Eye', () => {
     await user.click(screen.getByRole('button', { name: 'Look at the card' }));
 
     expect(onPeek).toHaveBeenCalledWith(4, 'p2');
+  });
+
+  it('still offers a card that another player already looked at', () => {
+    const looked = { id: 8, type: 'KeepingCloseEye', holderPlayerId: 'p3', targetPlayerId: 'p1', missionNumber: 1, isConfirmed: true } as const;
+    render(<ResistanceCloseEye game={afterMission({ playedPlotCards: [looked] })} onPeek={vi.fn()} />);
+
+    expect(screen.getByRole('option', { name: 'Bartek' })).toBeInTheDocument();
   });
 
   it('shows the card that was seen and hides the picker outside the mission result', () => {
