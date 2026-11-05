@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using PartyKing.API.Authentication;
 using PartyKing.API.Authorization;
+using PartyKing.API.Cookies;
 using PartyKing.Application.Player.Services;
 using PartyKing.Contract.V1.Player;
 using PartyKing.Contract.V1.Queue;
@@ -9,11 +11,16 @@ namespace PartyKing.API.Controllers;
 public class PlayerController : CoreController
 {
     private readonly IPlayerService _playerService;
+    private readonly ISignedCookies _cookies;
 
-    public PlayerController(IHttpContextAccessor httpContextAccessor, IPlayerService playerService)
+    public PlayerController(
+        IHttpContextAccessor httpContextAccessor,
+        IPlayerService playerService,
+        ISignedCookies cookies)
         : base(httpContextAccessor)
     {
         _playerService = playerService;
+        _cookies = cookies;
     }
 
     [HttpGet("sessions/{sessionId:guid}/now-playing")]
@@ -44,17 +51,21 @@ public class PlayerController : CoreController
         return result.Match(Ok, Problem);
     }
 
-    /// <summary>Asks the host's player to pause or resume. 409 when no player is connected.</summary>
-    [HttpPost("admin/sessions/{sessionId:guid}/player/commands")]
+    /// <summary>
+    /// Asks the host's player to pause or resume. Host or admin only (403 otherwise); 409 when no player is
+    /// connected.
+    /// </summary>
+    [HttpPost("sessions/{sessionId:guid}/player/commands")]
     [RequireSessionAccess]
-    [AuthorizeAdmin]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> SendCommand(
         Guid sessionId,
         [FromBody] PlayerCommandRequestDto request,
         CancellationToken cancellationToken)
     {
-        var result = await _playerService.SendCommandAsync(sessionId, request.Command, cancellationToken);
+        var caller = await HttpContext.ReadSessionCallerAsync(_cookies);
+
+        var result = await _playerService.SendCommandAsync(sessionId, request.Command, caller, cancellationToken);
 
         return result.Match(_ => NoContent(), Problem);
     }

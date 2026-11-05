@@ -587,10 +587,11 @@ tego utworu) i `playerConnected` (odtwarzacz zgłosił się w ciągu ostatnich 1
 Body `{ "songId": 1, "paused": false }`. Odtwarzacz gospodarza woła to co ok. 3 s; odpowiedź zawiera oczekującą
 komendę admina (`Pause` / `Resume`).
 
-#### `POST /admin/sessions/{sessionId}/player/commands` i `POST /admin/sessions/{sessionId}/songs/next` (admin)
+#### `POST /sessions/{sessionId}/player/commands` (gospodarz lub admin) i `POST /admin/sessions/{sessionId}/songs/next` (admin)
 
-Zdalne sterowanie, gdy admin nie jest gospodarzem (pauza/wznowienie oraz następny utwór). `409`, gdy żaden
-odtwarzacz nie jest połączony. Wymagają też odblokowanej sesji.
+Zdalne sterowanie, gdy gospodarz lub admin jest na innej karcie niż odtwarzacz (pauza/wznowienie oraz następny utwór;
+następny utwór może też wywołać sam gospodarz przez `POST /sessions/{sessionId}/songs/next`). `403` dla kogokolwiek
+innego, `409`, gdy żaden odtwarzacz nie jest połączony. Wymagają też odblokowanej sesji.
 
 #### `GET /sessions/{sessionId}/tracks?query=<tekst>`
 
