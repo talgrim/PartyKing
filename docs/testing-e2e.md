@@ -5,7 +5,7 @@ From `src/ui/PartyKing.UI`: `npm run e2e`, about 3 min, 34 tests. First time onl
 ## Setup
 
 - `playwright.config.ts` starts both servers itself and never reuses running ones, so stop your dev API and Vite first (ports 4200 and 2137).
-- `e2e/start-api.mjs` runs the API in Development on a throw-away database. The web root and the *content root* are in the git-ignored `e2e/.work` (wiped on each start), so your `appsettings.Local.json` (which would override env vars) is not read. Admin: `e2e-admin` / `e2e-admin-password`. `RateLimiting__Disabled=true` — honoured in Development only (`Program.cs` skips `UseRateLimiter`), because the suite logs in and unlocks sessions far more often than the 10/min limits allow. Then `npm start` runs Vite.
+- `e2e/start-api.mjs` runs the API in Development on a throw-away database. The web root and the *content root* are in the git-ignored `e2e/.work` (wiped on each start), so your `appsettings.Local.json` (which would override env vars) is not read. Admin: `e2e-admin` / `e2e-admin-password`. `RateLimiting__Disabled=true` — honoured in Development only (`Program.cs` skips `UseRateLimiter`), because the suite logs in and unlocks sessions far more often than the 10/min limits allow. `Resistance__Seed=1` — also Development only (`SeededRandomProvider`): every Resistance action that needs randomness (the deal of roles and first leader, the plot deck shuffle, the card taken by Take Responsibility) gets a `Random` from this seed, so the same number of players joining in the same order always get the same deal (a different player count deals differently). Then `npm start` runs Vite.
 - The e2e API runs without `LlmSettings:ApiKey` on purpose, so the specs also guard that Ringo works without one.
 - `global-setup.ts` logs the admin in once and saves the cookies to `e2e/.auth` (git-ignored).
 - One worker; tests share one API and database.
@@ -34,11 +34,11 @@ From `src/ui/PartyKing.UI`: `npm run e2e`, about 3 min, 34 tests. First time onl
 - `resistance-hidden-info.spec.ts`: only spies are told who the spies are (screen and API), the admin and a watching guest get no role, an admin who plays gets none on `?tv=1`, votes stay secret until the last one and can be changed until then.
 - `resistance-lifecycle.spec.ts`: restart a finished game with the same players; "End game" asks first, then sends everybody away.
 - `resistance-seat-takeover.spec.ts`: the host releases the seat of a player whose context was closed (needs the presence grace of 10 s, so the test waits up to 30 s for the button to enable); a new context claims it from the "Back in the game" picker; an unreleased seat is not offered.
-- Not covered: anything needing Spotify or YouTube (host login, the player, search), the plot cards add-on (needs a seeded deal or a configurable plot deck), the two-fails rule of mission 4 (7+ players), reordering the seats, and the Polish texts of a game.
+- Not covered: anything needing Spotify or YouTube (host login, the player, search), the plot cards add-on (the deal is seeded now, so the specs can be written), the two-fails rule of mission 4 (7+ players), reordering the seats, and the Polish texts of a game.
 
 ## Resistance helpers
 
-Roles and the first leader are random, so the helpers first find out who is who:
+Roles and the first leader are seeded in e2e but depend on the player count and the order of joining, so the helpers still find out who is who instead of hard-coding it:
 - `viewOf(page, session)` / `viewOfPlayer(setup, name)` read `GET /sessions/:id/games/resistance` with that player's own cookies (they are shared across ports on 127.0.0.1). It is exactly the player's view of the game, so it also proves what a player must not know (`votes`, `fellowSpies`, `yourRole` of someone else). Use it to find who has to act (`waitForLeader`, `spyNames`, `waitForPhase`); the acting itself goes through the UI.
 - `waitForPhase` polls, because a click returns before the server has answered. Call it (or `waitForLeader`) between steps and not `isVisible()`.
 - `submitTeam`, `vote`, `voteAll`, `continueMission`, `rejectTeams` and `playMission(setup, 'success' | 'fail')` play a round. A failed mission puts as many spies on the team as it needs Fail cards.
