@@ -17,7 +17,11 @@ public class ResistancePlayer : LobbyPlayer, ILobbyPlayerFactory<ResistancePlaye
         return player;
     }
 
-    /// <summary>Null until the game is started.</summary>
+    /// <summary>
+    /// The side the player is on at the moment (their allegiance), which decides the win checks and which mission
+    /// cards they may play. Not the character: see <see cref="Character"/>. Readers that show it to somebody go
+    /// through <see cref="ResistanceKnowledge.Loyalty"/>. Null until the game is started.
+    /// </summary>
     public ResistanceRole? Role { get; internal set; }
 
     /// <summary>Whether the leader put the player on the team of the current mission.</summary>
@@ -36,7 +40,8 @@ public class ResistancePlayer : LobbyPlayer, ILobbyPlayerFactory<ResistancePlaye
     public ResistanceMissionCardKind? MissionCard { get; internal set; }
 
     /// <summary>
-    /// The player's special character, dealt at the start together with the <see cref="Role"/> and secret like it.
+    /// The player's special character, dealt at the start together with the <see cref="Role"/> and secret like it. It never changes during the game,
+    /// unlike the allegiance.
     /// <see cref="ResistanceCharacter.Standard"/> unless a module deals characters.
     /// </summary>
     public ResistanceCharacter Character { get; internal set; }

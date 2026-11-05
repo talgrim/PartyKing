@@ -109,7 +109,7 @@ public class ResistanceController : ResistanceControllerBase
 
     /// <summary>
     /// Host or admin: switches the Reverser module on or off and optionally chooses which sides get a Reverser (Both,
-    /// Resistance or Spy; omitted keeps the choice). 409 once the game has started.
+    /// Resistance or Spy) and whether a spy Reverser and the other spies know each other (omitted keeps the choices). 409 once the game has started.
     /// </summary>
     [HttpPut("rules/reverser")]
     [RequireSessionAccess]
@@ -118,7 +118,7 @@ public class ResistanceController : ResistanceControllerBase
         Guid sessionId, [FromBody] ResistanceReverserRequestDto request, CancellationToken cancellationToken)
     {
         var result = await Lobby.SetReverserAsync(
-            sessionId, request.Enabled, request.Sides, await Caller(sessionId), cancellationToken);
+            sessionId, request.Enabled, request.Sides, request.SpyKnowsSpies, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
     }

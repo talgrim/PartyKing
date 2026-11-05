@@ -65,12 +65,14 @@ public interface IResistanceLobbyService
 
     /// <summary>
     /// Host or admin: switches the Reverser module on or off and, when <paramref name="sides"/> is given, chooses
-    /// which sides get a Reverser. NotFound without a game, Conflict once the game has started.
+    /// which sides get a Reverser and <paramref name="spyKnowsSpies"/> whether a spy Reverser and the other spies know
+    /// each other. NotFound without a game, Conflict once the game has started.
     /// </summary>
     Task<ErrorOr<ResistanceGameDto>> SetReverserAsync(
         Guid sessionId,
         bool enabled,
         ResistanceReverserSidesDto? sides,
+        bool? spyKnowsSpies,
         GameCaller caller,
         CancellationToken cancellationToken);
 
@@ -227,6 +229,7 @@ internal class ResistanceLobbyService : IResistanceLobbyService
         Guid sessionId,
         bool enabled,
         ResistanceReverserSidesDto? sides,
+        bool? spyKnowsSpies,
         GameCaller caller,
         CancellationToken cancellationToken)
     {
@@ -237,7 +240,7 @@ internal class ResistanceLobbyService : IResistanceLobbyService
                 sessionId,
                 nameof(SetReverserAsync),
                 ResistanceOutcome.NoGame,
-                game => game.SetReverser(enabled, sides?.ToDomain()),
+                game => game.SetReverser(enabled, sides?.ToDomain(), spyKnowsSpies),
                 cancellationToken),
             cancellationToken);
     }

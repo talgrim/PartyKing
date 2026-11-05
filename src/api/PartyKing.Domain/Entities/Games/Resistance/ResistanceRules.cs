@@ -31,6 +31,13 @@ public class ResistanceRules
     /// <summary>Which sides get a Reverser while <see cref="ReverserEnabled"/>. Both by default; only editable before the game starts.</summary>
     public ResistanceReverserSides ReverserSides { get; set; }
 
+    /// <summary>
+    /// Whether a spy Reverser takes part in the spies' reveal while <see cref="ReverserEnabled"/>: they know the other
+    /// spies and the other spies know them. When off, the Reverser spy keeps their eyes closed, so neither knows the
+    /// other. On by default (also for rules saved before this setting existed); only editable before the game starts.
+    /// </summary>
+    public bool ReverserSpyKnowsSpies { get; set; } = true;
+
     /// <summary>How many copies of each plot card the deck holds (15 cards in all).</summary>
     public Dictionary<ResistancePlotCardType, int> PlotDeck { get; set; } = DefaultPlotDeck();
 
@@ -43,7 +50,8 @@ public class ResistanceRules
         bool? inquisitorEnabled = null,
         bool? blindSpiesEnabled = null,
         bool? reverserEnabled = null,
-        ResistanceReverserSides? reverserSides = null) => new()
+        ResistanceReverserSides? reverserSides = null,
+        bool? reverserSpyKnowsSpies = null) => new()
     {
         PlayerCounts = PlayerCounts.ToDictionary(
             x => x.Key, x => new ResistanceCountRules(x.Value.Spies, [.. x.Value.TeamSizes], [.. x.Value.RequiredFails])),
@@ -52,6 +60,7 @@ public class ResistanceRules
         BlindSpiesEnabled = blindSpiesEnabled ?? BlindSpiesEnabled,
         ReverserEnabled = reverserEnabled ?? ReverserEnabled,
         ReverserSides = reverserSides ?? ReverserSides,
+        ReverserSpyKnowsSpies = reverserSpyKnowsSpies ?? ReverserSpyKnowsSpies,
         PlotDeck = new Dictionary<ResistancePlotCardType, int>(PlotDeck),
     };
 
