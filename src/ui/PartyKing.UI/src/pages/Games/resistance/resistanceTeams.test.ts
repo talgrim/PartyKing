@@ -18,6 +18,10 @@ const rules: ResistanceRulesDto = {
   defectorEnabled: false,
   defectorsKnowEachOther: false,
   assassinEnabled: false,
+  bodyGuardEnabled: false,
+  deepCoverEnabled: false,
+  blindSpyEnabled: false,
+  falseCommanderEnabled: false,
 };
 
 describe('missionBoardFor', () => {

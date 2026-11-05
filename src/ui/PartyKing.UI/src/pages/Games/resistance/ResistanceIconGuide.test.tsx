@@ -52,6 +52,9 @@ describe('ResistanceIconGuide', () => {
     expect(within(group('Inquisitor (module)')).getByRole('heading', { name: 'Inquisitor' })).toBeInTheDocument();
     expect(within(group('Assassin (module)')).getByRole('heading', { name: 'Commander' })).toBeInTheDocument();
     expect(within(group('Assassin (module)')).getByRole('heading', { name: 'Assassin' })).toBeInTheDocument();
+    ['Body Guard', 'Deep Cover', 'Blind Spy', 'False Commander'].forEach((name) => {
+      expect(within(group('Assassin (module)')).getByRole('heading', { name })).toBeInTheDocument();
+    });
   });
 
   it('describes the cards of the base game', () => {

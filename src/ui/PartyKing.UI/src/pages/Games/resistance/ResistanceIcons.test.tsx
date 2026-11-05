@@ -6,6 +6,10 @@ import {
   DefectorCardIcon,
   CommanderCardIcon,
   AssassinCardIcon,
+  BodyGuardCardIcon,
+  DeepCoverCardIcon,
+  BlindSpyCardIcon,
+  FalseCommanderCardIcon,
   InquisitorCardIcon,
   LeaderTokenIcon,
   MissionBoardIcon,
@@ -54,6 +58,10 @@ const cards = {
   DefectorCardIcon,
   CommanderCardIcon,
   AssassinCardIcon,
+  BodyGuardCardIcon,
+  DeepCoverCardIcon,
+  BlindSpyCardIcon,
+  FalseCommanderCardIcon,
 };
 
 describe('ResistanceIcons', () => {

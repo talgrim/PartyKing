@@ -116,6 +116,31 @@ describe('ResistanceRoleCard with the Assassin module', () => {
     expect(screen.getByRole('list', { name: 'Fellow spies' })).toHaveTextContent('Darek');
   });
 
+  it('tells the Body Guard so and lists the players one of whom is the Commander', async () => {
+    await sees({ role: 'Resistance', character: 'BodyGuard', commanderCandidateIds: ['p2', 'p4'] });
+
+    expect(screen.getByText(/You are the Body Guard/)).toBeInTheDocument();
+    const list = screen.getByRole('list', { name: 'Possible Commanders' });
+    expect(Array.from(list.querySelectorAll('li')).map((item) => item.textContent)).toEqual(['Celina', 'Ewa']);
+  });
+
+  it.each([
+    ['DeepCover', /You are Deep Cover/],
+    ['FalseCommander', /You are the False Commander/],
+  ] as const)('tells a %s spy so and still lists the fellow spies', async (character, note) => {
+    await sees({ role: 'Spy', character, fellowSpyIds: ['p3'] });
+
+    expect(screen.getByText(note)).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Fellow spies' })).toHaveTextContent('Darek');
+  });
+
+  it('tells the Blind Spy so and lists no spy', async () => {
+    await sees({ role: 'Spy', character: 'BlindSpy', fellowSpyIds: [] });
+
+    expect(screen.getByText(/You are the Blind Spy/)).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Fellow spies' })).not.toBeInTheDocument();
+  });
+
   it('shows a plain Resistance member neither character nor spies', async () => {
     await sees({ role: 'Resistance', character: 'Standard' });
 
@@ -132,6 +157,10 @@ describe('the revealed characters', () => {
       revealedRoles: [
         { playerId: 'p0', role: 'Spy', character: 'Assassin' },
         { playerId: 'p2', role: 'Resistance', character: 'Commander' },
+        { playerId: 'p1', role: 'Resistance', character: 'BodyGuard' },
+        { playerId: 'p3', role: 'Spy', character: 'DeepCover' },
+        { playerId: 'p4', role: 'Spy', character: 'BlindSpy' },
+        { playerId: 'p5', role: 'Spy', character: 'FalseCommander' },
       ],
     });
 
@@ -139,6 +168,10 @@ describe('the revealed characters', () => {
     expect(screen.getByText('Assassin')).toBeInTheDocument();
     rerender(<ResistancePlayerMarks game={over} playerId="p2" />);
     expect(screen.getByText('Commander')).toBeInTheDocument();
+    ([['p1', 'Body Guard'], ['p3', 'Deep Cover'], ['p4', 'Blind Spy'], ['p5', 'False Commander']] as const).forEach(([id, badge]) => {
+      rerender(<ResistancePlayerMarks game={over} playerId={id} />);
+      expect(screen.getByText(badge)).toBeInTheDocument();
+    });
   });
 
   it('shows no character badge during the Assassination', () => {

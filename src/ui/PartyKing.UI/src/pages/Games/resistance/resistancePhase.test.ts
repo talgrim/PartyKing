@@ -45,6 +45,7 @@ const game = (count: number, extra: Partial<ResistanceGameDto> = {}): Resistance
   inquisitionExaminedPlayerId: null,
   yourInquisition: null,
   assassinationTargetPlayerId: null,
+  yourCommanderCandidates: null,
   rules: {
     playerCounts: [5, 6, 7, 8, 9, 10].map((playerCount) => ({
       playerCount,
@@ -62,6 +63,10 @@ const game = (count: number, extra: Partial<ResistanceGameDto> = {}): Resistance
     defectorEnabled: false,
     defectorsKnowEachOther: false,
     assassinEnabled: false,
+    bodyGuardEnabled: false,
+    deepCoverEnabled: false,
+    blindSpyEnabled: false,
+    falseCommanderEnabled: false,
   },
   ...extra,
 });
