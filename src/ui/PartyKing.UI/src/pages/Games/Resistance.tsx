@@ -13,7 +13,6 @@ import { PageNavigation } from '@/components/common/PageNavigation';
 import { ResistanceManagerControls } from '@/pages/Games/resistance/ResistanceManagerControls';
 import { ResistanceCompactBoard } from '@/pages/Games/resistance/ResistanceCompactBoard';
 import { ResistancePlotLog } from './resistance/ResistancePlotLog';
-import { ResistanceDefectorFlips } from '@/pages/Games/resistance/ResistanceDefectorFlips';
 import { ResistancePhaseBanner } from '@/pages/Games/resistance/ResistancePhaseBanner';
 import { ResistancePlayerView } from '@/pages/Games/resistance/ResistancePlayerView';
 import { ResistanceTvBoard } from '@/pages/Games/resistance/ResistanceTvBoard';
@@ -322,8 +321,10 @@ export const Resistance = (): ReactNode => {
 
   const banner = shownGame && (
     <>
-      <ResistancePhaseBanner text={resistancePhaseDescription(shownGame, { canManage, isAdmin }, board.teamSizes[0])} />
-      <ResistanceDefectorFlips flips={shownGame.rules.defectorEnabled ? shownGame.defectorFlips : []} />
+      <ResistancePhaseBanner
+        text={resistancePhaseDescription(shownGame, { canManage, isAdmin }, board.teamSizes[0])}
+        defectorFlips={shownGame.defectorFlips}
+      />
       {!logHidden && <ResistancePlotLog cards={shownGame.playedPlotCards} players={shownGame.players} />}
     </>
   );

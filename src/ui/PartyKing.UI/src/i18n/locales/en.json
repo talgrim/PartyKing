@@ -436,10 +436,12 @@
       "reverse": "Reverse"
     },
     "defectorFlips": {
-      "title": "Switch cards:",
-      "list": "Flipped switch cards",
       "noChange": "Mission {{mission}}: No Change",
-      "change": "Mission {{mission}}: Change Allegiance"
+      "change": "Mission {{mission}}: Change Allegiance",
+      "latestNoChange": "Latest switch card (mission {{mission}}): No Change",
+      "latestChange": "Latest switch card (mission {{mission}}): Change Allegiance",
+      "noChangeInfo": "Switch card: nobody changes sides.",
+      "changeInfo": "Switch card: both Defectors changed sides. Nobody is told who they are."
     },
     "characters": {
       "reverser": "Reverser",

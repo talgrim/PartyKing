@@ -444,10 +444,12 @@
       "reverse": "Odwrócenie"
     },
     "defectorFlips": {
-      "title": "Karty zmiany:",
-      "list": "Odkryte karty zmiany",
       "noChange": "Misja {{mission}}: bez zmian",
-      "change": "Misja {{mission}}: zmiana przynależności"
+      "change": "Misja {{mission}}: zmiana przynależności",
+      "latestNoChange": "Ostatnia karta zmiany (misja {{mission}}): bez zmian",
+      "latestChange": "Ostatnia karta zmiany (misja {{mission}}): zmiana przynależności",
+      "noChangeInfo": "Karta zmiany: nikt nie zmienia strony.",
+      "changeInfo": "Karta zmiany: obaj Dezerterzy zmienili stronę. Nikt nie wie, kim są."
     },
     "characters": {
       "reverser": "Reverser",
