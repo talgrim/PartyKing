@@ -108,7 +108,10 @@ test('a Strong Leader takes the lead in the window that follows a rejected team'
   expect(after.rejectedTeams).toBe(1);
   expect(after.missionNumber).toBe(view.missionNumber);
   await expect(
-    setup.guests.get(holderName)!.getByRole('region', { name: 'Plot cards played' }).getByText(/Strong Leader/),
+    setup.guests
+      .get(holderName)!
+      .getByRole('region', { name: 'Plot cards played' })
+      .getByText(/Strong Leader/),
   ).toBeVisible();
 });
 
@@ -217,7 +220,10 @@ test('Take Responsibility moves the visible Opinion Maker to the player who play
   await submitTeam(leader, others.slice(0, after.requiredTeamSize!));
   await waitForPhase(setup, 'Voting');
   await expect(
-    setup.guests.get(makerName)!.getByRole('status').filter({ hasText: `The Opinion Maker votes first: ${takerName}.` }),
+    setup.guests
+      .get(makerName)!
+      .getByRole('status')
+      .filter({ hasText: `The Opinion Maker votes first: ${takerName}.` }),
   ).toBeVisible();
   await vote(taker, 'Approve');
   for (const [name, page] of setup.guests) {
