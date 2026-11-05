@@ -49,7 +49,7 @@ The game rules (Polish) are in `resistance-rules.md` next to this file; card tex
 
 ### Start
 
-- `POST start` (host or admin through `AuthorizeManagerAsync`). `ResistanceGame.Start` needs an open game with at least 5 players (409 `NotOpen` / `NotEnoughPlayers` / `AlreadyStarted`), deals the roles with `ResistanceRoles.Deal` (spies are a third of the players, rounded up: 2, 2, 3, 3, 3, 4) and picks a random first leader, all in one save. The `Random` comes from `IRandomProvider` (`Create()` per action; `Random.Shared` by default). In Development, `Resistance:Seed` replaces it with `SeededRandomProvider`, which hands out a new `Random(seed)` each time (used by the e2e suite; ignored in other environments).
+- `POST start` (host or admin through `AuthorizeManagerAsync`). `ResistanceGame.Start` needs an open game with at least 5 players (409 `NotOpen` / `NotEnoughPlayers` / `AlreadyStarted`), deals the roles with `ResistanceRoles.Deal` (spies are a third of the players, rounded up: 2, 2, 3, 3, 3, 4) and picks a random first leader, all in one save. The `Random` comes from `IRandomProvider` (`Create()` per action; `Random.Shared` by default). In Development and the e2e environment, `Resistance:Seed` replaces it with `SeededRandomProvider`, which hands out a new `Random(seed)` each time (used by the e2e suite; ignored in other environments).
 - A started game locks its players: `LobbyGame` asks `IsLocked` (`IsStarted`) in join, kick and reorder, and the status is `LobbyStatus.Started` (409 `Resistance.Started`). `ResistanceLobbyDto.isStarted` hides the invite and makes `GameJoin` say the game already started.
 
 ### Roles are secret
