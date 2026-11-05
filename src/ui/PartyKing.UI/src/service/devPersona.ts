@@ -1,10 +1,32 @@
 const storageKey = 'partyking.devPersona';
 const queryParam = 'persona';
+const frameNamePrefix = 'partyking.devPersona:';
+
+/**
+ * Development only: this document is a frame of the multi-player Resistance page (`ResistanceDevPanels`). Same-origin
+ * frames share their tab's `sessionStorage`, so a frame must neither read nor write the persona there.
+ */
+export const isDevEmbedded: boolean = (() => {
+  if (!import.meta.env.DEV) return false;
+  try {
+    return window.self !== window.top;
+  } catch {
+    return false;
+  }
+})();
+
+/** The frame's `name` outlives a reload of the frame, which the `?persona=` of its first address may not. */
+export const devPersonaFrameName = (persona: string): string => `${frameNamePrefix}${persona}`;
+
+const readFramePersona = (): string | undefined =>
+  window.name.startsWith(frameNamePrefix) ? window.name.slice(frameNamePrefix.length) || undefined : undefined;
 
 const readPersona = (): string | undefined => {
   if (!import.meta.env.DEV) return undefined;
   try {
     const fromUrl = new URLSearchParams(window.location.search).get(queryParam);
+    if (isDevEmbedded) return fromUrl ?? readFramePersona();
+
     if (fromUrl) {
       sessionStorage.setItem(storageKey, fromUrl);
     }

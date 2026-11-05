@@ -7,6 +7,7 @@ import { useSessionMusicHub } from '@/service/realtime/useSessionMusicHub';
 import { resistanceKey } from '@/service/realtime/sessionMusicEvents';
 
 const mocks = vi.hoisted(() => ({
+  embedded: false,
   role: { isHost: false, isAdmin: true },
   getResistance: vi.fn(),
   getResistancePresence: vi.fn(),
@@ -23,6 +24,13 @@ const mocks = vi.hoisted(() => ({
   setResistanceSeatReleased: vi.fn(),
 }));
 
+vi.mock('@/service/devPersona', () => ({
+  devPersona: undefined,
+  withDevPersona: (path: string) => path,
+  get isDevEmbedded() {
+    return mocks.embedded;
+  },
+}));
 vi.mock('@/service/endpoints/sessions/useViewerRole', () => ({ useViewerRole: () => mocks.role }));
 vi.mock('@/service/realtime/useSessionMusicHub', () => ({ useSessionMusicHub: vi.fn() }));
 vi.mock('@/pages/Games/resistance/ResistanceQueuePanel', () => ({
@@ -115,6 +123,7 @@ const renderPage = (path = '/s/session-1/games/resistance') =>
 
 describe('Resistance', () => {
   beforeEach(() => {
+    mocks.embedded = false;
     mocks.role = { isHost: false, isAdmin: true };
     mocks.getResistance.mockReset();
     mocks.getResistancePresence.mockReset();
@@ -461,6 +470,31 @@ describe('Resistance', () => {
       );
 
     afterEach(() => vi.unstubAllGlobals());
+
+    it('shows nothing but the player view in a frame of the dev page, even on a wide screen', async () => {
+      stubWideScreen();
+      mocks.embedded = true;
+      mocks.getResistance.mockResolvedValue(joined());
+      renderPage();
+
+      expect(await screen.findByRole('button', { name: 'Show your role' })).toBeInTheDocument();
+      expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+      expect(screen.queryByRole('img', { name: 'Mission board' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('list', { name: 'Players' })).not.toBeInTheDocument();
+    });
+
+    it('offers the multi-player dev page to the host and admins only', async () => {
+      mocks.getResistance.mockResolvedValue(joined());
+      const view = renderPage();
+      await screen.findByRole('button', { name: 'Show your role' });
+      expect(screen.queryByRole('link', { name: 'Dev: all players' })).not.toBeInTheDocument();
+      view.unmount();
+
+      mocks.role = { isHost: false, isAdmin: true };
+      renderPage();
+      expect(await screen.findByRole('link', { name: 'Dev: all players' })).toHaveAttribute('href', '/dev/s/session-1/resistance');
+    });
 
     it('shows a player both views side by side on a wide screen, and the switch only picks the board or the queue', async () => {
       stubWideScreen();

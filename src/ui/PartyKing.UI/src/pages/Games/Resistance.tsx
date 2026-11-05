@@ -23,13 +23,14 @@ import { resistancePhaseDescription } from '@/pages/Games/resistance/resistanceP
 import { resistanceRules } from '@/pages/Games/resistance/resistanceRules';
 import { missionBoardFor } from '@/pages/Games/resistance/resistanceTeams';
 import {
+  devSessionResistancePanelsPath,
   sessionGamesPath,
   sessionPath,
   sessionResistanceJoinPath,
   sessionResistancePath,
 } from '@/router/constants';
 import { HTTP_STATUS_CODE } from '@/service/constants';
-import { withDevPersona } from '@/service/devPersona';
+import { isDevEmbedded, withDevPersona } from '@/service/devPersona';
 import { gamesApi } from '@/service/endpoints/games/gamesApi';
 import { useResistanceGame } from '@/service/endpoints/games/useResistanceGame';
 import { useResistancePresence } from '@/service/endpoints/games/useResistancePresence';
@@ -81,7 +82,9 @@ export const Resistance = (): ReactNode => {
   const { data: game, error, mutate } = useResistanceGame(sessionId);
   const { isHost, isAdmin } = useViewerRole(sessionId);
   const [searchParams] = useSearchParams();
-  const wide = useMediaQuery(WIDE_QUERY);
+  // A frame of the multi-player dev page (development only) shows nothing but the player's own view, however wide it is
+  const embedded = isDevEmbedded;
+  const wide = useMediaQuery(WIDE_QUERY) && !embedded;
   const [view, setView] = useResistanceView();
   const [logHidden, setLogHidden] = usePersistedFlag('partyking.resistanceLogHidden', false);
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -124,10 +127,10 @@ export const Resistance = (): ReactNode => {
   }
 
   const showSwitch = isPlayer && !tv;
-  const showPlayerView = isPlayer && !tv && (wide || view === 'player');
+  const showPlayerView = isPlayer && !tv && (embedded || wide || view === 'player');
   // From 1024 px wide the player view is always there, so the right column is the board unless the queue is chosen
-  const showQueue = isPlayer && !tv && view === 'queue';
-  const showBoard = !showQueue && (!showPlayerView || wide);
+  const showQueue = isPlayer && !tv && !embedded && view === 'queue';
+  const showBoard = !embedded && !showQueue && (!showPlayerView || wide);
   // The TV tab shares the player's cookies, so it must not show the role or the "Ty" badge of whoever is logged in
   const shownGame = game && tv ? { ...game, yourPlayerId: null, yourRole: null, fellowSpies: null, yourVote: null, yourMissionCard: null, yourPlotCards: [], yourReveals: [], yourPeeks: [] } : game;
 
@@ -329,8 +332,20 @@ export const Resistance = (): ReactNode => {
     </button>
   );
 
+  const devPanelsLink = import.meta.env.DEV && canManage && game && (
+    <a
+      href={devSessionResistancePanelsPath(sessionId)}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="px-2 py-1 text-xs text-slate-400 border border-dashed border-slate-600 rounded-md hover:text-slate-200"
+    >
+      {t('resistance.dev.open')}
+    </a>
+  );
+
   const trailingButtons = (
     <div className="ml-auto flex items-center gap-1">
+      {devPanelsLink}
       {rulesButton}
       {settingsButton}
     </div>
@@ -364,7 +379,7 @@ export const Resistance = (): ReactNode => {
       className={
         tvLayout
           ? 'relative w-full h-screen bg-slate-800 text-slate-400'
-          : 'flex flex-col gap-3 w-full min-h-screen p-3 pt-10 bg-slate-800 text-slate-400'
+          : `flex flex-col gap-3 w-full min-h-screen p-3 bg-slate-800 text-slate-400 ${embedded ? '' : 'pt-10'}`
       }
     >
       {tvLayout ? (
@@ -393,6 +408,8 @@ export const Resistance = (): ReactNode => {
             {trailingButtons}
           </div>
         </nav>
+      ) : embedded ? (
+        message && <span className="text-amber-500">{message}</span>
       ) : (
         <nav className="flex flex-wrap items-center gap-2">
           <PageNavigation links={[back]} />
@@ -456,7 +473,7 @@ export const Resistance = (): ReactNode => {
         />
       ) : (
         <>
-          {banner}
+          {!embedded && banner}
           <div className={wide ? 'flex items-start gap-6' : undefined}>
             {showPlayerView && game && (
               <div className={wide ? 'w-1/3 shrink-0' : undefined}>

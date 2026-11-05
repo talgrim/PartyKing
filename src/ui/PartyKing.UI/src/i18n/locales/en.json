@@ -474,6 +474,20 @@
       "releaseLabel": "Release the seat of {{name}}",
       "keepLabel": "Take back the release of {{name}}"
     },
+    "dev": {
+      "open": "Dev: all players",
+      "title": "Resistance: all players in one tab (development only)",
+      "playerCount": "Players",
+      "show": "Join and show",
+      "start": "Start game",
+      "back": "Back to the game",
+      "panel": "Player {{number}}",
+      "joinedCount": "{{count}} players joined",
+      "failedUnlock": "The session is locked in this browser: enter its password on the session page first, then try again.",
+      "failedRateLimit": "Too many joins in a minute: wait, or run the API with RateLimiting__Disabled=true.",
+      "failedJoin": "Joining {{name}} failed: {{reason}}",
+      "failedStart": "Starting the game failed: {{reason}}"
+    },
     "page": {
       "backToGames": "Back to the games",
       "joinAsPlayer": "Join as a player",
