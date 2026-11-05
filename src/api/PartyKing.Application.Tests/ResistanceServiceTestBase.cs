@@ -2,6 +2,7 @@ using PartyKing.Application.Admin.Services;
 using PartyKing.Application.Games.Services.Base;
 using PartyKing.Application.Games.Services.Resistance;
 using PartyKing.Application.Sessions.Services;
+using PartyKing.Application.System;
 using PartyKing.Contract.V1.Games.Resistance;
 
 namespace PartyKing.Application.Tests;
@@ -22,7 +23,11 @@ public abstract class ResistanceServiceTestBase
     private protected readonly ResistancePlotCardService _plotCardService;
     private protected readonly Guid _id;
 
-    private protected ResistanceServiceTestBase()
+    private protected ResistanceServiceTestBase() : this(new SharedRandomProvider())
+    {
+    }
+
+    private protected ResistanceServiceTestBase(IRandomProvider random)
     {
         _games = new FakeResistanceGamesRepository(TestEvents.Dispatcher(new FakeRingoNotifier(), _notifier));
         var clock = new FakeClock();
@@ -31,8 +36,8 @@ public abstract class ResistanceServiceTestBase
             sessionAuthorizer, _sessions, _games, clock);
         var gate = new ResistanceActionGate(lobby);
         _lobbyService = new ResistanceLobbyService(lobby, gate, _games, clock, _rules);
-        _roundService = new ResistanceRoundService(gate, _games, clock);
-        _plotCardService = new ResistancePlotCardService(gate, _games, clock);
+        _roundService = new ResistanceRoundService(gate, _games, clock, random);
+        _plotCardService = new ResistancePlotCardService(gate, _games, clock, random);
         _id = _sessions.AddSession(HostId, new PasswordHasher().Hash("secret")).Id;
     }
 

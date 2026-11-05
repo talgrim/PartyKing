@@ -1,11 +1,11 @@
 # E2E tests (Playwright, Chromium)
 
-From `src/ui/PartyKing.UI`: `npm run e2e`, about 3 min, 34 tests. First time only: `npx playwright install chromium`. Typecheck the suite with `npx tsc -p e2e/tsconfig.json`; `vite.config.ts` keeps `e2e` and `playwright.config.*` out of vitest.
+From `src/ui/PartyKing.UI`: `npm run e2e`, about 6 min, 43 tests. First time only: `npx playwright install chromium`. Typecheck the suite with `npx tsc -p e2e/tsconfig.json`; `vite.config.ts` keeps `e2e` and `playwright.config.*` out of vitest.
 
 ## Setup
 
 - `playwright.config.ts` starts both servers itself and never reuses running ones, so stop your dev API and Vite first (ports 4200 and 2137).
-- `e2e/start-api.mjs` runs the API in Development on a throw-away database. The web root and the *content root* are in the git-ignored `e2e/.work` (wiped on each start), so your `appsettings.Local.json` (which would override env vars) is not read. Admin: `e2e-admin` / `e2e-admin-password`. `RateLimiting__Disabled=true` — honoured in Development only (`Program.cs` skips `UseRateLimiter`), because the suite logs in and unlocks sessions far more often than the 10/min limits allow. Then `npm start` runs Vite.
+- `e2e/start-api.mjs` runs the API in Development on a throw-away database. The web root and the *content root* are in the git-ignored `e2e/.work` (wiped on each start), so your `appsettings.Local.json` (which would override env vars) is not read. Admin: `e2e-admin` / `e2e-admin-password`. `RateLimiting__Disabled=true` — honoured in Development only (`Program.cs` skips `UseRateLimiter`), because the suite logs in and unlocks sessions far more often than the 10/min limits allow. `Resistance__Seed=1` — also Development only (`SeededRandomProvider`): every Resistance action that needs randomness (the deal of roles and first leader, the plot deck shuffle, the card taken by Take Responsibility) gets a `Random` from this seed, so the same number of players joining in the same order always get the same deal (a different player count deals differently). Then `npm start` runs Vite.
 - The e2e API runs without `LlmSettings:ApiKey` on purpose, so the specs also guard that Ringo works without one.
 - `global-setup.ts` logs the admin in once and saves the cookies to `e2e/.auth` (git-ignored).
 - One worker; tests share one API and database.
@@ -33,15 +33,19 @@ From `src/ui/PartyKing.UI`: `npm run e2e`, about 3 min, 34 tests. First time onl
 - `resistance-spies-win.spec.ts`: three failed missions (banner, revealed roles on the admin's board), five rejected teams in a row, and the Fail card being disabled for the Resistance.
 - `resistance-hidden-info.spec.ts`: only spies are told who the spies are (screen and API), the admin and a watching guest get no role, an admin who plays gets none on `?tv=1`, votes stay secret until the last one and can be changed until then.
 - `resistance-lifecycle.spec.ts`: restart a finished game with the same players; "End game" asks first, then sends everybody away.
+- `resistance-plot-cards.spec.ts`: the add-on turned on with `startResistanceGame(..., {plotCards: true})`. Five players: the leader deals the drawn Open Up, its holder plays it, the target confirms the identity card; on the next mission a Strong Leader takes the lead in the Leader window after a rejected team. Seven players: an Opinion Maker votes first and a No Confidence card rejects the approved team in the Confidence window (counts as a rejected team). Ten players: Take Responsibility, played once the Open Up is resolved, takes the visible Opinion Maker from its holder, who then votes first. Nine players: an Overheard Conversation shows the identity card of a neighbour (the picker lists exactly the two seat neighbours) to its holder only.
+- `resistance-plot-cards-windows.spec.ts`: ten players, the cards that need windows (`playFirstMission` plays the first mission so that no card is left in a hand). Second mission: the leader plays Establish Confidence, an approved team opens the Confidence window (only the No Confidence holder is offered a card), and after the mission cards the Keeping a Close Eye holder looks at one in the Peek window (only they see it; the log shows who looked at whom). Fourth mission (a longer test with its own timeout): the In the Spotlight holder forces a team member to play their mission card openly, which everybody sees in the banner.
+- `resistance-two-fails.spec.ts`: seven players, fourth mission (two Fail cards needed). One Fail card among the four team members does not fail it (the fifth mission, which needs one, then does), two Fail cards do. The outcomes of the first three missions are chosen so that nobody has won by then.
 - `resistance-seat-takeover.spec.ts`: the host releases the seat of a player whose context was closed (needs the presence grace of 10 s, so the test waits up to 30 s for the button to enable); a new context claims it from the "Back in the game" picker; an unreleased seat is not offered.
-- Not covered: anything needing Spotify or YouTube (host login, the player, search), the plot cards add-on (needs a seeded deal or a configurable plot deck), the two-fails rule of mission 4 (7+ players), reordering the seats, and the Polish texts of a game.
+- Not covered: anything needing Spotify or YouTube (host login, the player, search), reordering the seats, and the Polish texts of a game.
 
 ## Resistance helpers
 
-Roles and the first leader are random, so the helpers first find out who is who:
+Roles and the first leader are seeded in e2e but depend on the player count and the order of joining, so the helpers still find out who is who instead of hard-coding it:
 - `viewOf(page, session)` / `viewOfPlayer(setup, name)` read `GET /sessions/:id/games/resistance` with that player's own cookies (they are shared across ports on 127.0.0.1). It is exactly the player's view of the game, so it also proves what a player must not know (`votes`, `fellowSpies`, `yourRole` of someone else). Use it to find who has to act (`waitForLeader`, `spyNames`, `waitForPhase`); the acting itself goes through the UI.
 - `waitForPhase` polls, because a click returns before the server has answered. Call it (or `waitForLeader`) between steps and not `isVisible()`.
-- `submitTeam`, `vote`, `voteAll`, `continueMission`, `rejectTeams` and `playMission(setup, 'success' | 'fail')` play a round. A failed mission puts as many spies on the team as it needs Fail cards.
+- The helpers keep a ten-player game under the 60 s test timeout (`playwright.config.ts`; a CI runner is slower than a laptop, and 30 s was too little): `startResistanceGame` opens all guest pages at once (the joining stays one by one, as the seats follow the order of joining), and `voteAll`, `playMissionCards` and `passWindow` click on all pages at once (`voteAll` lets an Opinion Maker go first, alone). Keep new helpers parallel where the order does not matter.
+- `submitTeam`, `vote`, `voteAll`, `continueMission`, `rejectTeams`, `playMissionCards(setup, team, failers)` and `playMission(setup, 'success' | 'fail', fails?)` play a round. A failed mission puts as many spies on the team as it needs Fail cards (or `fails`).
 - The team picker's checkbox is covered by a tick, so the tests tap the player's name inside the "Pick the team" group. Once the team is full the other checkboxes are disabled.
 - The Approve/Reject/Success/Fail cards are `role="button"` SVGs inside the "Voting" and "Mission" regions.
 - The mission panel disappears with the last card, so the tests do not wait for "Card played".
@@ -51,3 +55,13 @@ Roles and the first leader are random, so the helpers first find out who is who:
 ## CI
 
 The `e2e` job of `ci.yml`: setup-dotnet and setup-node, `npx playwright install --with-deps chromium`, `npm run e2e`. With `CI` set Playwright retries a failure once and writes an HTML report, uploaded with the traces as an artifact on failure. `deploy.yml` reuses `ci.yml`, so a failing e2e job also blocks a deploy.
+
+### Plot cards
+
+The deck is always the same 15 cards; what is drawn depends on the seeded `Random` (`Resistance__Seed=1`, see Setup) and on the number of players, which is why a spec states the player count and checks what the leader drew (`waitForDealing` returns `drawn`) before it relies on it. With the current seed (cards per round: 1 for 5-6 players, 2 for 7-8, 3 for 9-10):
+- 5 players: Open Up on mission 1, Strong Leader on mission 2.
+- 7 players: Opinion Maker and No Confidence on mission 1.
+- 9 players: Overheard Conversation, Opinion Maker and Open Up on mission 1.
+- 10 players: Open Up, Opinion Maker and Take Responsibility on mission 1; Establish Confidence (kept by the leader), Keeping a Close Eye and No Confidence on mission 2; Strong Leader, Keeping a Close Eye and No Confidence on mission 3; In the Spotlight and two Overheard Conversations on mission 4.
+
+If the deal code changes, the `drawn` assertion fails first; read the new order from the leader's view (`yourPlotCards`, `toDeal`) and adjust the specs. Helpers: `startResistanceGame(..., {plotCards: true})` / `enableModule(admin, 'Plot cards')` (the checkbox only ticks after the server answers), `waitForDealing`, `dealPlotCards(leader, {OpenUp: 'Bartek'})`. `playMission`, `submitTeam` and `playMissionCards` do not know the windows: once a playable card is in a hand (an Opinion Maker does not count), a rejected team opens the Leader window, an approved one the Confidence window, the last mission card the Peek window, and each mission starts with a Leader window before the draw. Every player has to pass (or play) before the game goes on. `passWindow(setup)` makes everybody pass the open window (wait for the phase first), `playMissionThroughWindows` plays a whole mission through the Confidence and Peek windows, and `pickTeam` is the team choice they share. `voteAll` lets an Opinion Maker vote first. Cards are played with `playImmediateCard`, `confirmIdentityCard` (returns whose card was shown and its role) and `takeResponsibility`; `dealPlotCards` takes an array for a card drawn twice.

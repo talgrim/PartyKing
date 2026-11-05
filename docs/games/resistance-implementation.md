@@ -44,7 +44,7 @@ The game rules (Polish) are in `resistance-rules.md` next to this file; card tex
 
 ### Start
 
-- `POST start` (host or admin through `AuthorizeManagerAsync`). `ResistanceGame.Start` needs an open game with at least 5 players (409 `NotOpen` / `NotEnoughPlayers` / `AlreadyStarted`), deals the roles with `ResistanceRoles.Deal` (spies are a third of the players, rounded up: 2, 2, 3, 3, 3, 4) and picks a random first leader, all in one save.
+- `POST start` (host or admin through `AuthorizeManagerAsync`). `ResistanceGame.Start` needs an open game with at least 5 players (409 `NotOpen` / `NotEnoughPlayers` / `AlreadyStarted`), deals the roles with `ResistanceRoles.Deal` (spies are a third of the players, rounded up: 2, 2, 3, 3, 3, 4) and picks a random first leader, all in one save. The `Random` comes from `IRandomProvider` (`Create()` per action; `Random.Shared` by default). In Development, `Resistance:Seed` replaces it with `SeededRandomProvider`, which hands out a new `Random(seed)` each time (used by the e2e suite; ignored in other environments).
 - A started game locks its players: `LobbyGame` asks `IsLocked` (`IsStarted`) in join, kick and reorder, and the status is `LobbyStatus.Started` (409 `Resistance.Started`). `ResistanceLobbyDto.isStarted` hides the invite and makes `GameJoin` say the game already started.
 
 ### Roles are secret
@@ -88,7 +88,7 @@ All nine plot cards are playable.
 
 ### Dealing
 
-- `ResistanceRules.PlotCardsEnabled` (default off, kept by `RefreshRulesAsync`) is switched by `PUT rules/plot-cards` (host or admin, 409 `RulesLocked` once open; the "Enable Plot cards" checkbox in the "Game settings" dialog, `ResistanceGameSettings`).
+- `ResistanceRules.PlotCardsEnabled` (default off, kept by `RefreshRulesAsync`) is switched by `PUT rules/plot-cards` (host or admin, 409 `PlotCardsLocked` once the game has started, so it can be switched while the game is open; the "Enable Plot cards" checkbox in the "Game settings" dialog, `ResistanceGameSettings`).
 - `PlotDeck` is the 15-card deck; `PlotCardsPerRound` is 1 for 5-6 players, 2 for 7-8, 3 for 9-10. `ResistancePlotCard` rows (`Location` Deck/Drawn/Hand, `DeckOrder`, `HolderPlayerId`) are built and shuffled by `ResistanceRoles.BuildPlotDeck` on `Deal`.
 - `ResistanceRoles.BeginMission` draws at the start of each mission (not after a rejected vote) and enters `DealingCards`; `SelectTeamAsync` answers 409 `CardsNotDealt` until the leader deals.
 - `PUT cards/deal` (`{assignments:[{cardId,playerId}]}`, leader only) gives every drawn card except Establish Confidence (which stays with the leader) to another player.

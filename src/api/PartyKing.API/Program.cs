@@ -27,6 +27,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddErrorHandling();
 builder.Services.RegisterServices(builder.Configuration);
+SeededRandomProvider.AddIfConfigured(builder.Services, builder.Environment, builder.Configuration);
 
 // The dev UI (port 2137) calls the API (port 4200) cross-origin; in production both share one origin behind nginx
 const string corsPolicy = "CorsPolicy";
