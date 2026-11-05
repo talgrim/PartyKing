@@ -1,6 +1,6 @@
 # Games: hub, lobby, Ringo, Never have I ever, LLM
 
-Resistance has its own file: `resistance-implementation.md` (rules in `resistance.md`).
+Resistance has its own file: `resistance-implementation.md` (rules in `resistance-rules.md`).
 
 ## Contents
 
