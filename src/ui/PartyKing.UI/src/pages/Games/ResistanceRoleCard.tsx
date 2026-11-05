@@ -15,6 +15,8 @@ type Props = {
   fellowSpyIds: readonly string[];
   /** The Blind Spies variant: the spies do not know each other, so a spy is told there is no one to see. */
   blindSpies?: boolean;
+  /** The spy Reverser keeps their eyes closed in the reveal (the rule is off): they are told they know no one. */
+  hiddenReverserSpy?: boolean;
   /** The Reverser module: the player's character, told next to the role while the card is face up. */
   character?: ResistanceCharacter | null;
 };
@@ -24,7 +26,7 @@ type Props = {
  * it). A spy also sees the other spies while the card is face up (or is told they don't know each
  * other, with the Blind Spies variant). The state is local and starts hidden after a reload.
  */
-export const ResistanceRoleCard = ({ role, players, fellowSpyIds, blindSpies = false, character = null }: Props): ReactNode => {
+export const ResistanceRoleCard = ({ role, players, fellowSpyIds, blindSpies = false, hiddenReverserSpy = false, character = null }: Props): ReactNode => {
   const { t } = useTranslation();
   const [revealed, setRevealed] = useState(false);
   const spies = players.filter((player) => fellowSpyIds.includes(player.id));
@@ -51,7 +53,11 @@ export const ResistanceRoleCard = ({ role, players, fellowSpyIds, blindSpies = f
         <p className="max-w-48 text-sm text-slate-200">{t('resistance.roleCard.blindSpies')}</p>
       )}
 
-      {revealed && role === 'Spy' && !blindSpies && (
+      {revealed && role === 'Spy' && !blindSpies && hiddenReverserSpy && (
+        <p className="max-w-48 text-sm text-slate-200">{t('resistance.roleCard.hiddenReverserSpy')}</p>
+      )}
+
+      {revealed && role === 'Spy' && !blindSpies && !hiddenReverserSpy && (
         <div>
           <h2 className="text-slate-200">{t('resistance.roleCard.fellowSpies')}</h2>
           <ul aria-label={t('resistance.roleCard.fellowSpiesList')} className="text-sm">

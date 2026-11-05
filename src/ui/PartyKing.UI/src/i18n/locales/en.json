@@ -424,7 +424,8 @@
       "fellowSpies": "Your fellow spies",
       "fellowSpiesList": "Fellow spies",
       "blindSpies": "Blind Spies: you do not know who the other spies are.",
-      "reverser": "You are a Reverser: you may play a Reverse card, which turns the result of the mission around."
+      "reverser": "You are a Reverser: you may play a Reverse card, which turns the result of the mission around.",
+      "hiddenReverserSpy": "Reverser spy: you keep your eyes closed in the reveal, so you do not know the other spies and they do not know you."
     },
     "missionCard": {
       "success": "Success",
@@ -470,7 +471,8 @@
         "sides": "Who gets a Reverser",
         "sidesBoth": "Both sides (the Resistance and the Spies)",
         "sidesResistance": "Only the Resistance",
-        "sidesSpy": "Only the Spies"
+        "sidesSpy": "Only the Spies",
+        "spyKnowsSpies": "Spy Reverser knows the other spies"
       }
     },
     "controls": {

@@ -66,6 +66,9 @@ export const ResistancePlayerView = ({ game, onSubmitTeam, onDealPlotCards, onPl
           players={game.players}
           fellowSpyIds={game.fellowSpies ?? []}
           blindSpies={game.rules.blindSpiesEnabled}
+          hiddenReverserSpy={
+            game.rules.reverserEnabled && !game.rules.reverserSpyKnowsSpies && game.yourCharacter === 'Reverser'
+          }
           character={game.yourCharacter}
         />
       )}

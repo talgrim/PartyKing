@@ -432,7 +432,8 @@
       "fellowSpies": "Twoi współszpiedzy",
       "fellowSpiesList": "Współszpiedzy",
       "blindSpies": "Ślepi Szpiedzy: nie wiesz, kim są pozostali szpiedzy.",
-      "reverser": "Jesteś Reverserem: możesz zagrać kartę Odwrócenie, która odwraca wynik misji."
+      "reverser": "Jesteś Reverserem: możesz zagrać kartę Odwrócenie, która odwraca wynik misji.",
+      "hiddenReverserSpy": "Reverser-szpieg: podczas ujawniania masz zamknięte oczy, więc nie znasz pozostałych szpiegów, a oni nie znają ciebie."
     },
     "missionCard": {
       "success": "Sukces",
@@ -478,7 +479,8 @@
         "sides": "Kto dostaje Reversera",
         "sidesBoth": "Obie strony (Ruch Oporu i Szpiedzy)",
         "sidesResistance": "Tylko Ruch Oporu",
-        "sidesSpy": "Tylko Szpiedzy"
+        "sidesSpy": "Tylko Szpiedzy",
+        "spyKnowsSpies": "Reverser-szpieg zna pozostałych szpiegów"
       }
     },
     "controls": {

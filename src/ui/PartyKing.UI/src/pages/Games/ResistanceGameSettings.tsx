@@ -2,7 +2,7 @@ import { ReactNode, useState } from 'react';
 import CloseIcon from '@mui/icons-material/Close';
 import { Dialog, DialogContent, DialogTitle } from '@mui/material';
 import { gamesApi } from '@/service/endpoints/games/gamesApi';
-import { ResistanceReverserSides } from '@/service/endpoints/games/types';
+import { ResistanceReverserOptions, ResistanceReverserSides } from '@/service/endpoints/games/types';
 import { useResistanceGame } from '@/service/endpoints/games/useResistanceGame';
 import { useTranslation } from 'react-i18next';
 
@@ -70,10 +70,10 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
     }
   };
 
-  const setReverser = async (enabled: boolean, sides?: ResistanceReverserSides) => {
+  const setReverser = async (enabled: boolean, options?: ResistanceReverserOptions) => {
     setMessage(undefined);
     try {
-      await mutate(gamesApi.setResistanceReverser(sessionId, enabled, sides), { revalidate: false });
+      await mutate(gamesApi.setResistanceReverser(sessionId, enabled, options), { revalidate: false });
     } catch {
       setMessage(t('resistance.settings.reverserFailed'));
     }
@@ -163,13 +163,22 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
             <select
               value={game?.rules.reverserSides ?? 'Both'}
               disabled={sidesDisabled}
-              onChange={(event) => void setReverser(true, event.target.value as ResistanceReverserSides)}
+              onChange={(event) => void setReverser(true, { sides: event.target.value as ResistanceReverserSides })}
               className="rounded bg-slate-700 p-1 text-slate-100 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500 disabled:opacity-60"
             >
               <option value="Both">{t('resistance.settings.reverser.sidesBoth')}</option>
               <option value="Resistance">{t('resistance.settings.reverser.sidesResistance')}</option>
               <option value="Spy">{t('resistance.settings.reverser.sidesSpy')}</option>
             </select>
+          </label>
+          <label className={`flex items-center gap-2 text-sm ${sidesDisabled ? 'text-slate-500' : 'text-slate-200'}`}>
+            <input
+              type="checkbox"
+              checked={game?.rules.reverserSpyKnowsSpies ?? true}
+              disabled={sidesDisabled}
+              onChange={(event) => void setReverser(true, { spyKnowsSpies: event.target.checked })}
+            />
+            {t('resistance.settings.reverser.spyKnowsSpies')}
           </label>
         </SettingsSection>
         {message && <p className="text-amber-500">{message}</p>}

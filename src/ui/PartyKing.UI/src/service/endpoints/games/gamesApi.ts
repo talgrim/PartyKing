@@ -1,5 +1,5 @@
 import { axios } from '@/service/request';
-import { GameDto, GameSuggestionsDto, ResistanceClaimableSeatDto, ResistanceGameDto, ResistanceLobbyDto, ResistanceMissionCardKind, ResistancePresenceDto, ResistanceReverserSides, RingoGameDto, RingoLobbyDto } from './types';
+import { GameDto, GameSuggestionsDto, ResistanceClaimableSeatDto, ResistanceGameDto, ResistanceLobbyDto, ResistanceMissionCardKind, ResistancePresenceDto, ResistanceReverserOptions, RingoGameDto, RingoLobbyDto } from './types';
 
 /** Development only (the multi-player Resistance page): acts as another dev persona than this tab's, see `devPersona`. */
 const personaHeaders = (persona?: string) => (persona ? { 'X-Dev-Persona': persona } : undefined);
@@ -167,9 +167,9 @@ export const gamesApi = {
       withCredentials: true,
     }) as unknown as Promise<ResistanceGameDto>,
 
-  /** Host or admin: switches the Reverser module on or off and optionally chooses which sides get a Reverser (omitted keeps the choice); 409 once the game has started. */
-  setResistanceReverser: (sessionId: string, enabled: boolean, sides?: ResistanceReverserSides) =>
-    axios.put(`/sessions/${sessionId}/games/resistance/rules/reverser`, { enabled, sides }, {
+  /** Host or admin: switches the Reverser module on or off and optionally chooses which sides get a Reverser and whether a spy Reverser knows the other spies (omitted keeps the choice); 409 once the game has started. */
+  setResistanceReverser: (sessionId: string, enabled: boolean, options: ResistanceReverserOptions = {}) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/rules/reverser`, { enabled, ...options }, {
       withCredentials: true,
     }) as unknown as Promise<ResistanceGameDto>,
 
