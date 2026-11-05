@@ -3,7 +3,7 @@ import { ResistanceGameDto } from '@/service/endpoints/games/types';
 import { ResistancePlayers } from '../ResistancePlayers';
 import { ResistanceMissionBoard } from './ResistanceMissionBoard';
 import { ResistanceMissionCards } from './ResistanceMissionCards';
-import { PlotOpinionMakerCardIcon } from './ResistanceIcons';
+import { InquisitorCardIcon, PlotOpinionMakerCardIcon } from './ResistanceIcons';
 import { ResistancePlayerMarks } from './ResistancePlayerMarks';
 import { ResistanceTeamCards } from './ResistanceTeamCards';
 import { ResistanceVoteCards } from './ResistanceVoteCards';
@@ -75,11 +75,18 @@ export const ResistanceTvBoard = ({ game, board, banner, yourPlayerId, onlinePla
           leaderId={game.leaderPlayerId}
           onlinePlayerIds={onlinePlayerIds}
           marks={(playerId) => <ResistancePlayerMarks game={game} playerId={playerId} />}
-          beside={(playerId) =>
-            game.opinionMakerPlayerIds.includes(playerId) ? (
-              <PlotOpinionMakerCardIcon className="w-full" title={t('resistance.marks.opinionMaker')} />
-            ) : null
-          }
+          beside={(playerId) => {
+            const maker = game.opinionMakerPlayerIds.includes(playerId);
+            const inquisitor = game.inquisitorPlayerId === playerId;
+            if (!maker && !inquisitor) return null;
+
+            return (
+              <span className="flex flex-col gap-1">
+                {maker && <PlotOpinionMakerCardIcon className="w-full" title={t('resistance.marks.opinionMaker')} />}
+                {inquisitor && <InquisitorCardIcon className="w-full" title={t('resistance.marks.inquisitor')} />}
+              </span>
+            );
+          }}
         />
       )}
     </>

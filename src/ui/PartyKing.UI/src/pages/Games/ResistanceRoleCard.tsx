@@ -1,7 +1,9 @@
 import { ReactNode, useState } from 'react';
 import {
   CardBackIcon,
+  DefectorCardIcon,
   OperativeCardIcon,
+  ReverserCardIcon,
   SpyCardIcon,
   SpyMarkerIcon,
 } from '@/pages/Games/resistance/ResistanceIcons';
@@ -48,8 +50,13 @@ export const ResistanceRoleCard = ({ role, players, fellowSpyIds, blindSpies = f
       </button>
 
       {revealed && character === 'Reverser' && (
-        <p className="max-w-48 text-sm text-amber-300">{t('resistance.roleCard.reverser')}</p>
+        <>
+          <ReverserCardIcon title={t('resistance.characters.reverser')} />
+          <p className="max-w-48 text-sm text-amber-300">{t('resistance.roleCard.reverser')}</p>
+        </>
       )}
+
+      {revealed && character === 'Defector' && <DefectorCardIcon title={t('resistance.characters.defector')} />}
 
       {revealed && character === 'Defector' && (
         <div className="max-w-48 text-sm text-amber-300">
