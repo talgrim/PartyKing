@@ -543,6 +543,68 @@ describe('Resistance', () => {
       expect(screen.queryByRole('button', { name: 'End game' })).not.toBeInTheDocument();
     });
 
+    describe('plot card log', () => {
+      const playedCard = {
+        id: 1,
+        type: 'OpenUp',
+        holderPlayerId: 'p1',
+        targetPlayerId: 'p2',
+        missionNumber: 1,
+        isConfirmed: true,
+      };
+
+      it('lets a host hide and show the log from the controls and remembers the choice', async () => {
+        mocks.role = { isHost: true, isAdmin: false };
+        mocks.getResistance.mockResolvedValue(joined({ playedPlotCards: [playedCard] }));
+        const view = renderPage();
+
+        expect(await screen.findByRole('region', { name: 'Plot cards played' })).toBeInTheDocument();
+        await userEvent.click(screen.getByRole('button', { name: 'Controls' }));
+
+        await userEvent.click(screen.getByRole('button', { name: 'Hide log' }));
+        expect(screen.queryByRole('region', { name: 'Plot cards played' })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Show log' })).toHaveAttribute('aria-pressed', 'true');
+        expect(localStorage.getItem('partyking.resistanceLogHidden')).toBe('true');
+
+        view.unmount();
+        renderPage();
+        await screen.findByRole('button', { name: 'Controls' });
+        expect(screen.queryByRole('region', { name: 'Plot cards played' })).not.toBeInTheDocument();
+
+        await userEvent.click(screen.getByRole('button', { name: 'Controls' }));
+        await userEvent.click(screen.getByRole('button', { name: 'Show log' }));
+        expect(screen.getByRole('region', { name: 'Plot cards played' })).toBeInTheDocument();
+      });
+
+      it('offers the toggle on the TV layout too', async () => {
+        mocks.role = { isHost: true, isAdmin: false };
+        mocks.getResistance.mockResolvedValue(joined({ playedPlotCards: [playedCard] }));
+        renderPage('/s/session-1/games/resistance?tv=1');
+
+        await userEvent.click(await screen.findByRole('button', { name: 'Hide log' }));
+
+        expect(screen.queryByRole('region', { name: 'Plot cards played' })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Show log' })).toBeInTheDocument();
+      });
+
+      it('has no toggle before a card is played', async () => {
+        mocks.role = { isHost: true, isAdmin: false };
+        mocks.getResistance.mockResolvedValue(joined());
+        renderPage('/s/session-1/games/resistance?tv=1');
+
+        await screen.findByRole('button', { name: 'End game' });
+        expect(screen.queryByRole('button', { name: /log$/ })).not.toBeInTheDocument();
+      });
+
+      it('gives a guest the log but no way to hide it', async () => {
+        mocks.getResistance.mockResolvedValue(joined({ playedPlotCards: [playedCard] }));
+        renderPage();
+
+        expect(await screen.findByRole('region', { name: 'Plot cards played' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Hide log' })).not.toBeInTheDocument();
+      });
+    });
+
     it('offers guests no controls', async () => {
       mocks.getResistance.mockResolvedValue(joined());
       renderPage();
