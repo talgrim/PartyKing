@@ -11,7 +11,7 @@
   "title": "PartyKing: Resistance fetches",
   "uid": "partyking-resistance-fetches",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "tags": [
     "partyking"
   ],
@@ -20,11 +20,103 @@
     "to": "now"
   },
   "refresh": "1m",
-  "description": "How many fetches a Resistance action causes: GET game and GET lobby per write, and how many game reads share a query. Requests that fail authorization before the action runs are not counted.",
+  "description": "How many fetches a Resistance action causes: GET game and GET lobby per write, and how many game reads share a query. Requests that fail authorization before the action runs are not counted. The top row is the machine: Fly's CPU balance and CPU by mode, to tell throttling from load.",
   "templating": {
     "list": []
   },
   "panels": [
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "CPU balance",
+      "description": "Fly's CPU credit of the shared-cpu machine (fly_instance_cpu_balance). While it is above 0 the machine may burst; at 0 the hypervisor throttles it, and the p95 panels below jump to seconds. A game that drains it is using more CPU than the machine's baseline earns.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "avg(fly_instance_cpu_balance{app=\"partyking\"})",
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Machine CPU by mode",
+      "description": "Non-idle CPU time of the machine by mode (fly_instance_cpu). user and system are the work of the processes (the API and nginx); steal is time the hypervisor took back, which appears once the balance is 0. Units are the ones Fly reports: read the changes and the proportions between modes rather than the absolute values.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum by (mode) (rate(fly_instance_cpu{app=\"partyking\",mode!=\"idle\"}[$__rate_interval]))",
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ]
+    },
     {
       "id": 1,
       "type": "timeseries",
@@ -38,7 +130,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 0
+        "y": 8
       },
       "fieldConfig": {
         "defaults": {
@@ -102,7 +194,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 0
+        "y": 8
       },
       "fieldConfig": {
         "defaults": {
@@ -166,7 +258,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 8
+        "y": 16
       },
       "fieldConfig": {
         "defaults": {
@@ -212,7 +304,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 8
+        "y": 16
       },
       "fieldConfig": {
         "defaults": {
@@ -258,7 +350,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 16
+        "y": 24
       },
       "fieldConfig": {
         "defaults": {
@@ -304,7 +396,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 16
+        "y": 24
       },
       "fieldConfig": {
         "defaults": {

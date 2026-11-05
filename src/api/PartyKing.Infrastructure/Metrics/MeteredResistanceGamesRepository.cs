@@ -16,8 +16,9 @@ internal sealed class MeteredResistanceGamesRepository
     }
 
     public Task<ResistanceLobbyState?> GetLobbyAsync(
-        Guid sessionId, Guid? playerId, CancellationToken cancellationToken)
+        Guid sessionId, Guid? playerId, Guid? playerStamp, CancellationToken cancellationToken)
     {
-        return MeasureAsync(nameof(GetLobbyAsync), () => _inner.GetLobbyAsync(sessionId, playerId, cancellationToken));
+        return MeasureAsync(
+            nameof(GetLobbyAsync), () => _inner.GetLobbyAsync(sessionId, playerId, playerStamp, cancellationToken));
     }
 }

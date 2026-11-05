@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using PartyKing.API.Controllers.Games.Resistance;
+using PartyKing.Application.Games.Services.Base;
 using PartyKing.Contract.V1.Games.Resistance;
 using PartyKing.Domain.Entities.Games.Base;
 
@@ -17,6 +18,7 @@ public class ResistanceControllerTests
     private readonly FakeResistanceLobbyService _lobbyService = new();
     private readonly FakeResistanceRoundService _roundService = new();
     private readonly FakeResistancePlotCardService _plotCardService = new();
+    private readonly FakeResistancePresenceService _presenceService = new();
     private readonly ResistanceController _lifecycle;
     private readonly ResistanceRoundController _round;
     private readonly ResistancePlotCardsController _plotCards;
@@ -33,9 +35,21 @@ public class ResistanceControllerTests
         var cookies = new FakeCookies(_playerId);
         var context = new ControllerContext { HttpContext = httpContext };
 
-        _lifecycle = new ResistanceController(accessor, _lobbyService, _roundService, cookies) { ControllerContext = context };
+        _lifecycle = new ResistanceController(accessor, _lobbyService, _roundService, _presenceService, cookies) { ControllerContext = context };
         _round = new ResistanceRoundController(accessor, _roundService, _plotCardService, cookies) { ControllerContext = context };
         _plotCards = new ResistancePlotCardsController(accessor, _plotCardService, _lobbyService, cookies) { ControllerContext = context };
+    }
+
+    [Fact]
+    public async Task GetPresence_ReturnsTheServicesOnlinePlayers()
+    {
+        var online = new ResistancePresenceDto([_playerId]);
+        _presenceService.Result = online;
+
+        var result = await _lifecycle.GetPresence(_sessionId, CancellationToken.None);
+
+        Assert.Same(online, Assert.IsType<OkObjectResult>(result).Value);
+        Assert.Equal((_sessionId, (Guid?)_playerId), _presenceService.LastCall);
     }
 
     [Fact]
@@ -223,9 +237,9 @@ public class ResistanceControllerTests
 
         public FakeCookies(Guid playerId) => _playerId = playerId;
 
-        public bool TryReadGamePlayer(GameKind game, HttpRequest request, Guid sessionId, out Guid playerId)
+        public bool TryReadGamePlayer(GameKind game, HttpRequest request, Guid sessionId, out GameSeat seat)
         {
-            playerId = _playerId;
+            seat = new GameSeat(_playerId, null);
             return game == GameKind.Resistance;
         }
 
@@ -242,7 +256,7 @@ public class ResistanceControllerTests
         public void RevokeAdmin(HttpContext? httpContext) => throw new NotSupportedException();
         public void GrantSessionAccess(Guid sessionId, string stamp, HttpContext? httpContext) => throw new NotSupportedException();
         public bool TryReadSessionAccess(HttpRequest request, Guid sessionId, out string stamp) => throw new NotSupportedException();
-        public void GrantGamePlayer(GameKind game, Guid sessionId, Guid playerId, HttpContext? httpContext) => throw new NotSupportedException();
+        public void GrantGamePlayer(GameKind game, Guid sessionId, GameSeat seat, HttpContext? httpContext) => throw new NotSupportedException();
     }
 
     private sealed class NoAuthenticationService : IAuthenticationService

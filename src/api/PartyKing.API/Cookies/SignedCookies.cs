@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.DataProtection;
+using PartyKing.Application.Games.Services.Base;
 using PartyKing.Domain.Entities.Games.Base;
 
 namespace PartyKing.API.Cookies;
@@ -103,29 +104,32 @@ internal class SignedCookies : ISignedCookies
         return stamp.Length > 0;
     }
 
-    public void GrantGamePlayer(GameKind game, Guid sessionId, Guid playerId, HttpContext context)
+    public void GrantGamePlayer(GameKind game, Guid sessionId, GameSeat seat, HttpContext context)
     {
         var (cookieName, protector) = _gamePlayerCookies[game];
 
         var players = ReadGamePlayers(game, context.Request)
             .Where(x => x.SessionId != sessionId)
-            .Append((SessionId: sessionId, PlayerId: playerId))
+            .Append((SessionId: sessionId, Seat: seat))
             .TakeLast(MaxUnlockedSessions);
 
+        // "session:player" for a seat that was never taken over, "session:player:stamp" after it
         context.Response.Cookies.Append(
             cookieName,
-            protector.Protect(string.Join(';', players.Select(x => $"{x.SessionId:N}:{x.PlayerId:N}"))),
+            protector.Protect(string.Join(';', players.Select(x => x.Seat.Stamp is { } stamp
+                ? $"{x.SessionId:N}:{x.Seat.PlayerId:N}:{stamp:N}"
+                : $"{x.SessionId:N}:{x.Seat.PlayerId:N}"))),
             GetOptions(SessionAccessExpirationTime, context));
     }
 
-    public bool TryReadGamePlayer(GameKind game, HttpRequest request, Guid sessionId, out Guid playerId)
+    public bool TryReadGamePlayer(GameKind game, HttpRequest request, Guid sessionId, out GameSeat seat)
     {
-        playerId = ReadGamePlayers(game, request).LastOrDefault(x => x.SessionId == sessionId).PlayerId;
+        seat = ReadGamePlayers(game, request).LastOrDefault(x => x.SessionId == sessionId).Seat;
 
-        return playerId != Guid.Empty;
+        return seat.PlayerId != Guid.Empty;
     }
 
-    private IEnumerable<(Guid SessionId, Guid PlayerId)> ReadGamePlayers(GameKind game, HttpRequest request)
+    private IEnumerable<(Guid SessionId, GameSeat Seat)> ReadGamePlayers(GameKind game, HttpRequest request)
     {
         var (cookieName, protector) = _gamePlayerCookies[game];
         if (!request.Cookies.TryGetValue(cookieName, out var protectedValue)
@@ -136,11 +140,24 @@ internal class SignedCookies : ISignedCookies
 
         foreach (var entry in value.Split(';', StringSplitOptions.RemoveEmptyEntries))
         {
-            if (entry.Split(':') is [var session, var player]
-                && Guid.TryParseExact(session, "N", out var sessionId)
-                && Guid.TryParseExact(player, "N", out var playerId))
+            var parts = entry.Split(':');
+            if (parts.Length is 2 or 3
+                && Guid.TryParseExact(parts[0], "N", out var sessionId)
+                && Guid.TryParseExact(parts[1], "N", out var playerId))
             {
-                yield return (sessionId, playerId);
+                Guid? stamp = null;
+                if (parts.Length == 3)
+                {
+                    // A stamp that doesn't parse is a damaged entry, not a seat that was never taken over
+                    if (!Guid.TryParseExact(parts[2], "N", out var parsed))
+                    {
+                        continue;
+                    }
+
+                    stamp = parsed;
+                }
+
+                yield return (sessionId, new GameSeat(playerId, stamp));
             }
         }
     }

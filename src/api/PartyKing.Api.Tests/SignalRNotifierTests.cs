@@ -3,6 +3,7 @@ using PartyKing.API.Hubs;
 using PartyKing.API.Hubs.Notifiers;
 using PartyKing.Application.Realtime;
 using PartyKing.Contract.V1.Enums;
+using PartyKing.Contract.V1.Games.Resistance;
 using PartyKing.Contract.V1.Lyrics;
 using PartyKing.Contract.V1.Player;
 using PartyKing.Contract.V1.Queue;
@@ -120,12 +121,27 @@ public class SignalRNotifierTests
         Assert.Empty(sent.Args);
     }
 
+    [Fact]
+    public async Task ResistanceNotifier_PushesPresenceWithTheListToThePresenceTopicOnly()
+    {
+        IResistanceNotifier notifier = new SignalRResistanceNotifier(_hub);
+        var presence = new ResistancePresenceDto([Guid.NewGuid()]);
+
+        await notifier.PresenceChangedAsync(_sessionId, presence, default);
+
+        var sent = Assert.Single(_hub.Sent);
+        Assert.Equal(SessionMusicHubEvents.ResistancePresenceChanged, sent.Method);
+        Assert.Equal(Group(SessionHubTopic.ResistancePresence), sent.Group);
+        Assert.Same(presence, Assert.Single(sent.Args));
+    }
+
     [Theory]
-    [InlineData(null, "Music,Slideshow,Ringo,Resistance,ResistanceLobby")]
-    [InlineData("", "Music,Slideshow,Ringo,Resistance,ResistanceLobby")]
+    [InlineData(null, "Music,Slideshow,Ringo,Resistance,ResistanceLobby,ResistancePresence")]
+    [InlineData("", "Music,Slideshow,Ringo,Resistance,ResistanceLobby,ResistancePresence")]
     [InlineData("ringo", "Ringo")]
     [InlineData("Music, resistance,music", "Music,Resistance")]
     [InlineData("resistanceLobby,ringo", "ResistanceLobby,Ringo")]
+    [InlineData("resistance,ResistancePresence", "Resistance,ResistancePresence")]
     public void Topics_AreParsedFromTheQuery(string? value, string expected)
     {
         Assert.True(SessionHubTopics.TryParse(value, out var topics));
@@ -149,7 +165,7 @@ public class SignalRNotifierTests
             [
                 "SongAdded", "SongRemoved", "QueueAdvanced", "PlayerStateChanged", "PlayerCommand",
                 "FallbackErrorChanged", "LyricsOffsetChanged", "SlideChanged", "RingoChanged", "RingoOpened",
-                "ResistanceChanged", "ResistanceOpened", "ResistanceLobbyChanged"
+                "ResistanceChanged", "ResistanceOpened", "ResistanceLobbyChanged", "ResistancePresenceChanged"
             ],
             typeof(SessionMusicHubEvents).GetFields().Select(x => (string)x.GetRawConstantValue()!));
     }

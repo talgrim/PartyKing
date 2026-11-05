@@ -385,6 +385,17 @@
     "join": "Dołącz",
     "kicked": "Usunięto cię z gry.",
     "started": "Ta gra już się rozpoczęła.",
+    "claim": {
+      "title": "Powrót do gry",
+      "hint": "Straciłeś/aś swoje miejsce, np. przez zamkniętą kartę prywatną? Wybierz swoje imię spośród miejsc zwolnionych przez hosta.",
+      "empty": "Żadne miejsce nie jest wolne. Poproś hosta o zwolnienie twojego.",
+      "take": "To ja",
+      "takeLabel": "Przejmij: {{name}}",
+      "failed": "Nie udało się przejąć tego miejsca. Mogło już zostać zajęte albo gracz wrócił."
+    },
+    "rejoinHost": "Wróć jako host",
+    "rejoinHostHint": "Jesteś hostem tej sesji, więc możesz odzyskać swoje miejsce.",
+    "rejoinHostFailed": "Nie masz miejsca w tej grze.",
     "notOpen": "Ta gra nie jest jeszcze otwarta.",
     "joinConflict": "Ktoś już używa tego imienia (albo gra jest zamknięta, pełna lub już się rozpoczęła).",
     "joinBadName": "To imię jest niepoprawne.",
@@ -446,6 +457,9 @@
       "label": "Sterowanie grą",
       "show": "Sterowanie",
       "openTv": "Otwórz widok na telewizor",
+      "queue": "Kolejka",
+      "showLog": "Pokaż log",
+      "hideLog": "Ukryj log",
       "restart": "Zagraj ponownie",
       "end": "Zakończ grę",
       "start": "Rozpocznij grę",
@@ -453,11 +467,26 @@
       "refreshRules": "Odśwież zasady",
       "refreshRulesOpen": "Zasady można odświeżyć tylko przed otwarciem gry",
       "refreshRulesHint": "Pobierz aktualną konfigurację zasad z serwera",
-      "open": "Otwórz grę"
+      "open": "Otwórz grę",
+      "seats": "Zwolnij miejsce",
+      "seatsHint": "Pozwól wrócić graczowi, który stracił swoje urządzenie"
+    },
+    "seats": {
+      "title": "Zwolnij miejsce",
+      "hint": "Zwolnij miejsce gracza, który jest offline (np. po zamknięciu karty prywatnej). Gość może wtedy przejąć je na stronie dołączania, a stare urządzenie traci je na dobre. Zwolnić można tylko gracza offline.",
+      "empty": "Nie ma miejsc do zwolnienia.",
+      "failed": "Nie udało się zmienić tego miejsca. Gracz może być online.",
+      "released": "Zwolnione",
+      "release": "Zwolnij",
+      "keep": "Cofnij",
+      "releaseLabel": "Zwolnij miejsce: {{name}}",
+      "keepLabel": "Cofnij zwolnienie miejsca: {{name}}"
     },
     "page": {
       "backToGames": "Wróć do gier",
       "joinAsPlayer": "Dołącz jako gracz",
+      "seatLost": "Nie jesteś już graczem w tej grze: twoje miejsce zostało przejęte na innym urządzeniu albo usunięte.",
+      "seatLostLink": "Wróć do gry",
       "playerCount": "{{current}}/{{max}} graczy",
       "rules": "Zasady",
       "rulesTitle": "Zasady gry Resistance",
@@ -485,7 +514,11 @@
     "viewSwitch": {
       "label": "Widok",
       "player": "Gracz",
-      "board": "Plansza"
+      "board": "Plansza",
+      "queue": "Kolejka"
+    },
+    "queue": {
+      "title": "Kolejka muzyki"
     },
     "board": {
       "title": "Plansza misji",
@@ -497,6 +530,10 @@
       "failed": "nieudana",
       "team": "Drużyna",
       "aria": "Drużyna misji {{n}}: {{names}}"
+    },
+    "presence": {
+      "online": "Połączony/a",
+      "offline": "Rozłączony/a"
     },
     "marks": {
       "opinionMaker": "Kreator opinii",

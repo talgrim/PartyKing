@@ -96,6 +96,13 @@ internal static class ResistanceErrors
             "Resistance.NotAllowed", "Only the leader, the host or an admin continues."),
         ResistanceFailure.NothingToContinue => Error.Conflict(
             "Resistance.NothingToContinue", "There is no finished mission to move on from."),
+        ResistanceFailure.UnknownSeat => Error.NotFound("Resistance.UnknownSeat", "There is no such player in the game."),
+        ResistanceFailure.ManagerSeat => Error.Conflict(
+            "Resistance.ManagerSeat", "The seat of the host or an admin can't be released."),
+        ResistanceFailure.SeatNotReleased => Error.Conflict(
+            "Resistance.SeatNotReleased", "That seat is not free to take over."),
+        ResistanceFailure.SeatOnline => Error.Conflict(
+            "Resistance.SeatOnline", "A device of that player is still connected."),
         _ => throw new ArgumentOutOfRangeException(nameof(failure), failure, "No error is defined for this failure."),
     };
 }

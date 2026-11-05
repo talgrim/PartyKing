@@ -115,4 +115,16 @@ public enum ResistanceFailure
 
     /// <summary>The votes are not in yet, or the approved team's mission is still being played.</summary>
     NothingToContinue,
+
+    /// <summary>The seat to release or take over is not a player of the game.</summary>
+    UnknownSeat,
+
+    /// <summary>The seat of the host or of an admin is never handed to a guest, so it can't be released.</summary>
+    ManagerSeat,
+
+    /// <summary>The seat was not released by the host or an admin (to take it over).</summary>
+    SeatNotReleased,
+
+    /// <summary>A device of the player is connected, so the seat is not free (to release it, or to take it over).</summary>
+    SeatOnline,
 }

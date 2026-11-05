@@ -251,6 +251,18 @@ describe('HostPlayer', () => {
     expect(screen.getByText('60%')).toBeVisible();
   });
 
+  it('follows a volume set from another tab of the browser', async () => {
+    await renderPlayer();
+
+    await act(async () => {
+      localStorage.setItem('partyking.volume', '0.2');
+      window.dispatchEvent(new StorageEvent('storage', { key: 'partyking.volume', newValue: '0.2' }));
+    });
+
+    expect(screen.getByText('volume 0.2')).toBeVisible();
+    expect(screen.getByText('20%')).toBeVisible();
+  });
+
   it('remembers the volume after a reload', async () => {
     localStorage.setItem('partyking.volume', '0.8');
     await renderPlayer();

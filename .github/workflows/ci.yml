@@ -32,3 +32,32 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: src/ui/PartyKing.UI
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/ui/PartyKing.UI/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      # Playwright starts the API (dotnet run) and Vite itself; see playwright.config.ts
+      - run: npm run e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            src/ui/PartyKing.UI/playwright-report
+            src/ui/PartyKing.UI/test-results
+          retention-days: 7

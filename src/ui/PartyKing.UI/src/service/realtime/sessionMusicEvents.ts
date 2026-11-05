@@ -16,6 +16,7 @@ export const SESSION_MUSIC_EVENTS = {
   ResistanceChanged: 'ResistanceChanged',
   ResistanceOpened: 'ResistanceOpened',
   ResistanceLobbyChanged: 'ResistanceLobbyChanged',
+  ResistancePresenceChanged: 'ResistancePresenceChanged',
 } as const;
 
 /**
@@ -23,8 +24,16 @@ export const SESSION_MUSIC_EVENTS = {
  * for. `music` is the queue, the player, the fallback playlist status and the lyrics offsets. `resistance` is every
  * action of a Resistance round, `resistanceLobby` only what the lobby shows (the game exists, opens, starts, ends,
  * a player joins or is kicked), so a page that only offers the game does not wake up for every vote.
+ * `resistancePresence` is who has the Resistance page open, pushed with the list in the payload; only the TV view asks.
  */
-export const SESSION_HUB_TOPICS = ['music', 'slideshow', 'ringo', 'resistance', 'resistanceLobby'] as const;
+export const SESSION_HUB_TOPICS = [
+  'music',
+  'slideshow',
+  'ringo',
+  'resistance',
+  'resistanceLobby',
+  'resistancePresence',
+] as const;
 
 export type SessionHubTopic = (typeof SESSION_HUB_TOPICS)[number];
 
@@ -36,6 +45,20 @@ export const MUSIC_QUEUE_HUB_TOPICS: readonly SessionHubTopic[] = ['music', 'sli
 
 /** The Resistance board shows both the game and the lobby (the invite, who joined, the kick). */
 export const RESISTANCE_HUB_TOPICS: readonly SessionHubTopic[] = ['resistance', 'resistanceLobby'];
+
+/** The TV view also follows who is connected; the phones never do, so a blinking signal wakes nobody else. */
+export const RESISTANCE_TV_HUB_TOPICS: readonly SessionHubTopic[] = [
+  'resistance',
+  'resistanceLobby',
+  'resistancePresence',
+];
+
+/**
+ * A Resistance page that offers the music queue (the player's phone, the managers' TV) also hears the music pushes.
+ * Only the queue and the player change the cache, with no fetch per push, so this costs a few messages.
+ */
+export const withMusicTopic = (topics: readonly SessionHubTopic[]): readonly SessionHubTopic[] =>
+  topics.includes('music') ? topics : [...topics, 'music'];
 
 /** The join page shows the lobby only; once the player joined the board opens its own connection. */
 export const RESISTANCE_JOIN_HUB_TOPICS: readonly SessionHubTopic[] = ['resistanceLobby'];
@@ -80,6 +103,9 @@ export const ringoKey = (sessionId: string) => ['ringo', sessionId] as const;
 export const ringoLobbyKey = (sessionId: string) => ['ringo-lobby', sessionId] as const;
 export const resistanceKey = (sessionId: string) => ['resistance', sessionId] as const;
 export const resistanceLobbyKey = (sessionId: string) => ['resistance-lobby', sessionId] as const;
+/** The seats of a started game a guest may take over; follows the lobby pushes (a seat released, claimed or its player back). */
+export const resistanceClaimableSeatsKey = (sessionId: string) => ['resistance-claimable-seats', sessionId] as const;
+export const resistancePresenceKey = (sessionId: string) => ['resistance-presence', sessionId] as const;
 export const slideshowKey = (sessionId: string) => ({ endpoint: `/sessions/${sessionId}/photos/current` });
 
 /** Puts a saved offset into the lyrics of the song it was saved for; lyrics that aren't loaded stay as they are. */

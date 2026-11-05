@@ -492,7 +492,7 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
     [Fact]
     public async Task TheLobby_IsNullWhenTheSessionHasNoGame()
     {
-        var lobby = await _repository.GetLobbyAsync(_sessionId, Guid.NewGuid(), CancellationToken.None);
+        var lobby = await _repository.GetLobbyAsync(_sessionId, Guid.NewGuid(), null, CancellationToken.None);
 
         Assert.Null(lobby);
     }
@@ -502,9 +502,9 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
     {
         var game = await CreateLobbyAsync(2, isOpen: false);
 
-        var closed = await _repository.GetLobbyAsync(_sessionId, null, CancellationToken.None);
+        var closed = await _repository.GetLobbyAsync(_sessionId, null, null, CancellationToken.None);
         await _repository.OpenAsync(_sessionId, CancellationToken.None);
-        var open = await _repository.GetLobbyAsync(_sessionId, null, CancellationToken.None);
+        var open = await _repository.GetLobbyAsync(_sessionId, null, null, CancellationToken.None);
 
         Assert.NotNull(closed);
         Assert.False(closed.IsOpen);
@@ -518,9 +518,70 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         var game = await CreateLobbyAsync(2, isOpen: true);
         var player = game.Players[0].PlayerId;
 
-        Assert.True((await _repository.GetLobbyAsync(_sessionId, player, CancellationToken.None))!.Joined);
-        Assert.False((await _repository.GetLobbyAsync(_sessionId, null, CancellationToken.None))!.Joined);
-        Assert.False((await _repository.GetLobbyAsync(_sessionId, Guid.NewGuid(), CancellationToken.None))!.Joined);
+        Assert.True((await _repository.GetLobbyAsync(_sessionId, player, null, CancellationToken.None))!.Joined);
+        Assert.False((await _repository.GetLobbyAsync(_sessionId, null, null, CancellationToken.None))!.Joined);
+        Assert.False((await _repository.GetLobbyAsync(_sessionId, Guid.NewGuid(), null, CancellationToken.None))!.Joined);
+    }
+
+    [Fact]
+    public async Task TheLobby_IsJoinedOnlyWithTheStampOfTheSeat()
+    {
+        var game = await CreateLobbyAsync(2, isOpen: true);
+        var player = game.Players[0].PlayerId;
+        var stamp = Guid.NewGuid();
+        await _repository.UpdateAsync(
+            _sessionId,
+            "test",
+            ResistanceOutcome.NoGame,
+            x =>
+            {
+                x.Players.Single(p => p.PlayerId == player).ClaimStamp = stamp;
+
+                return ResistanceOutcome.Success(x);
+            },
+            CancellationToken.None);
+
+        Assert.True((await _repository.GetLobbyAsync(_sessionId, player, stamp, CancellationToken.None))!.Joined);
+        Assert.False((await _repository.GetLobbyAsync(_sessionId, player, null, CancellationToken.None))!.Joined);
+        Assert.False((await _repository.GetLobbyAsync(_sessionId, player, Guid.NewGuid(), CancellationToken.None))!.Joined);
+    }
+
+    [Fact]
+    public async Task ASeat_KeepsItsReleaseStampAndAdminFlagInTheDatabase()
+    {
+        await CreateLobbyAsync(2, isOpen: true);
+        var admin = ResistancePlayer.Create(Guid.NewGuid(), "Ola", null, DateTimeOffset.UtcNow, isAdminSeat: true);
+        await _repository.JoinAsync(_sessionId, admin, CancellationToken.None);
+        var seat = (await _repository.GetAsync(_sessionId, CancellationToken.None))!.Players.First(x => x.Name == "Player 0").PlayerId;
+        var stamp = Guid.NewGuid();
+        await _repository.UpdateAsync(
+            _sessionId,
+            "test",
+            ResistanceOutcome.NoGame,
+            x =>
+            {
+                x.StartedAt = DateTimeOffset.UtcNow;
+                var outcome = x.SetSeatReleased(seat, true, playerOnline: false);
+                Assert.Null(outcome.Failure);
+
+                return outcome;
+            },
+            CancellationToken.None);
+
+        var released = (await _repository.GetAsync(_sessionId, CancellationToken.None))!;
+        await _repository.UpdateAsync(
+            _sessionId,
+            "test",
+            ResistanceOutcome.NoGame,
+            x => x.ClaimSeat(seat, playerOnline: false, stamp),
+            CancellationToken.None);
+        var claimed = (await _repository.GetAsync(_sessionId, CancellationToken.None))!;
+
+        Assert.True(released.Players.Single(x => x.PlayerId == seat).IsReclaimable);
+        Assert.True(released.Players.Single(x => x.PlayerId == admin.PlayerId).IsAdminSeat);
+        Assert.False(released.Players.Single(x => x.PlayerId == seat).IsAdminSeat);
+        Assert.False(claimed.Players.Single(x => x.PlayerId == seat).IsReclaimable);
+        Assert.Equal(stamp, claimed.Players.Single(x => x.PlayerId == seat).ClaimStamp);
     }
 
     [Fact]
@@ -531,7 +592,7 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         await NewSessionAsync("OTHER1");
         await CreateLobbyAsync(2, isOpen: true);
 
-        var lobby = await _repository.GetLobbyAsync(_sessionId, player, CancellationToken.None);
+        var lobby = await _repository.GetLobbyAsync(_sessionId, player, null, CancellationToken.None);
 
         Assert.False(lobby!.Joined);
     }
@@ -540,11 +601,11 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
     public async Task TheLobby_SaysWhenTheGameStarted()
     {
         await CreateLobbyAsync(5, isOpen: true);
-        Assert.False((await _repository.GetLobbyAsync(_sessionId, null, CancellationToken.None))!.IsStarted);
+        Assert.False((await _repository.GetLobbyAsync(_sessionId, null, null, CancellationToken.None))!.IsStarted);
 
         var started = await StartAsync();
         Assert.Null(started.Failure);
-        Assert.True((await _repository.GetLobbyAsync(_sessionId, null, CancellationToken.None))!.IsStarted);
+        Assert.True((await _repository.GetLobbyAsync(_sessionId, null, null, CancellationToken.None))!.IsStarted);
     }
 
     /// <summary>
@@ -561,7 +622,7 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
 
         foreach (var playerId in callers)
         {
-            var lobby = await _repository.GetLobbyAsync(_sessionId, playerId, CancellationToken.None);
+            var lobby = await _repository.GetLobbyAsync(_sessionId, playerId, null, CancellationToken.None);
             var caller = new Application.Games.Services.Base.GameCaller(null, false, playerId);
 
             Assert.Equal(game.IsOpen, lobby!.IsOpen);

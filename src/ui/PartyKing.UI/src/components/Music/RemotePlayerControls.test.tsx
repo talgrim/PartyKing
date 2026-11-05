@@ -1,14 +1,17 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { AdminPlayerControls } from './AdminPlayerControls';
+import { RemotePlayerControls } from './RemotePlayerControls';
 import { SongSource } from '@/service/endpoints/queue/types';
 
 const mocks = vi.hoisted(() => ({
-  sendPlayerCommand: vi.fn(),
+  sendCommand: vi.fn(),
   skipSong: vi.fn(),
+  next: vi.fn(),
 }));
 
-vi.mock('@/service/endpoints/admin/adminApi', () => ({ adminApi: mocks }));
+vi.mock('@/service/endpoints/admin/adminApi', () => ({ adminApi: { skipSong: mocks.skipSong } }));
+vi.mock('@/service/endpoints/player/playerApi', () => ({ playerApi: { sendCommand: mocks.sendCommand } }));
+vi.mock('@/service/endpoints/queue/queueApi', () => ({ queueApi: { next: mocks.next } }));
 
 const song = {
   id: 7,
@@ -20,16 +23,20 @@ const song = {
   durationMs: 1000,
 };
 
-const renderControls = (nowPlaying: { paused: boolean; playerConnected: boolean; song: typeof song | null }) => {
+const renderControls = (
+  nowPlaying: { paused: boolean; playerConnected: boolean; song: typeof song | null },
+  isAdmin = true,
+) => {
   const onChanged = vi.fn();
-  render(<AdminPlayerControls sessionId="session-1" nowPlaying={nowPlaying} onChanged={onChanged} />);
+  render(<RemotePlayerControls sessionId="session-1" isAdmin={isAdmin} nowPlaying={nowPlaying} onChanged={onChanged} />);
   return onChanged;
 };
 
-describe('AdminPlayerControls', () => {
+describe('RemotePlayerControls', () => {
   beforeEach(() => {
-    mocks.sendPlayerCommand.mockReset().mockResolvedValue(undefined);
+    mocks.sendCommand.mockReset().mockResolvedValue(undefined);
     mocks.skipSong.mockReset().mockResolvedValue(song);
+    mocks.next.mockReset().mockResolvedValue(song);
   });
 
   it('disables both buttons while no player is connected', () => {
@@ -44,7 +51,7 @@ describe('AdminPlayerControls', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Pause' }));
 
-    expect(mocks.sendPlayerCommand).toHaveBeenCalledWith('session-1', 'Pause');
+    expect(mocks.sendCommand).toHaveBeenCalledWith('session-1', 'Pause');
     await waitFor(() => expect(onChanged).toHaveBeenCalled());
   });
 
@@ -53,7 +60,7 @@ describe('AdminPlayerControls', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Play' }));
 
-    expect(mocks.sendPlayerCommand).toHaveBeenCalledWith('session-1', 'Resume');
+    expect(mocks.sendCommand).toHaveBeenCalledWith('session-1', 'Resume');
   });
 
   it('skips from the song the admin sees', async () => {
@@ -62,6 +69,15 @@ describe('AdminPlayerControls', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Next song' }));
 
     expect(mocks.skipSong).toHaveBeenCalledWith('session-1', 7);
+  });
+
+  it("skips through the host's own endpoint when the viewer is not an admin", async () => {
+    renderControls({ song, paused: false, playerConnected: true }, false);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Next song' }));
+
+    expect(mocks.next).toHaveBeenCalledWith('session-1', 7);
+    expect(mocks.skipSong).not.toHaveBeenCalled();
   });
 
   it('keeps Play/Pause disabled when nothing is playing, but allows starting the next song', () => {

@@ -4,7 +4,9 @@ using Microsoft.Extensions.Logging;
 using PartyKing.Application.Mappings;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Realtime;
+using PartyKing.Application.Sessions;
 using PartyKing.Application.Sessions.Helpers;
+using PartyKing.Application.Sessions.Services;
 using PartyKing.Contract.V1.Enums;
 using PartyKing.Contract.V1.Player;
 using PartyKing.Contract.V1.Queue;
@@ -25,10 +27,14 @@ public interface IPlayerService
         PlayerStateRequestDto state,
         CancellationToken cancellationToken);
 
-    /// <summary>Admin: asks the host's player to pause or resume. Conflict when no player is connected.</summary>
+    /// <summary>
+    /// Host or admin: asks the host's player to pause or resume. Forbidden for anyone else; conflict when no player
+    /// is connected.
+    /// </summary>
     Task<ErrorOr<Success>> SendCommandAsync(
         Guid sessionId,
         PlayerCommand command,
+        SessionCaller caller,
         CancellationToken cancellationToken);
 
     /// <summary>
@@ -41,6 +47,7 @@ public interface IPlayerService
 internal class PlayerService : IPlayerService
 {
     private readonly ISessionsRepository _sessionsRepository;
+    private readonly ISessionAuthorizer _sessionAuthorizer;
     private readonly IQueueRepository _queueRepository;
     private readonly IPlayerStateStore _playerStateStore;
     private readonly IPlayerNotifier _playerNotifier;
@@ -51,6 +58,7 @@ internal class PlayerService : IPlayerService
 
     public PlayerService(
         ISessionsRepository sessionsRepository,
+        ISessionAuthorizer sessionAuthorizer,
         IQueueRepository queueRepository,
         IPlayerStateStore playerStateStore,
         IPlayerNotifier playerNotifier,
@@ -60,6 +68,7 @@ internal class PlayerService : IPlayerService
         ILogger<PlayerService> logger)
     {
         _sessionsRepository = sessionsRepository;
+        _sessionAuthorizer = sessionAuthorizer;
         _queueRepository = queueRepository;
         _playerStateStore = playerStateStore;
         _playerNotifier = playerNotifier;
@@ -123,11 +132,13 @@ internal class PlayerService : IPlayerService
     public async Task<ErrorOr<Success>> SendCommandAsync(
         Guid sessionId,
         PlayerCommand command,
+        SessionCaller caller,
         CancellationToken cancellationToken)
     {
-        if (await _sessionsRepository.GetAsync(sessionId, cancellationToken) is null)
+        var authorized = await _sessionAuthorizer.AuthorizeManagerAsync(sessionId, caller, cancellationToken);
+        if (authorized.IsError)
         {
-            return SessionErrors.NotFound();
+            return authorized.Errors;
         }
 
         if (!_playerStateStore.TrySendCommand(sessionId, command))

@@ -1,5 +1,5 @@
 import { axios } from '@/service/request';
-import { GameDto, GameSuggestionsDto, ResistanceGameDto, ResistanceLobbyDto, RingoGameDto, RingoLobbyDto } from './types';
+import { GameDto, GameSuggestionsDto, ResistanceClaimableSeatDto, ResistanceGameDto, ResistanceLobbyDto, ResistancePresenceDto, RingoGameDto, RingoLobbyDto } from './types';
 
 // The axios response interceptor unwraps `response.data`, so this resolves to the payload itself.
 export const gamesApi = {
@@ -90,6 +90,30 @@ export const gamesApi = {
     axios.get(`/sessions/${sessionId}/games/resistance/lobby`, {
       withCredentials: true,
     }) as unknown as Promise<ResistanceLobbyDto>,
+
+  /** Host or admin: the players who have the Resistance page open right now (the TV view's start and refetch). */
+  getResistancePresence: (sessionId: string) =>
+    axios.get(`/sessions/${sessionId}/games/resistance/presence`, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistancePresenceDto>,
+
+  /** Anyone in the session: the seats of the started game a guest may take over (released and with nobody connected). */
+  getResistanceClaimableSeats: (sessionId: string) =>
+    axios.get(`/sessions/${sessionId}/games/resistance/claimable-seats`, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceClaimableSeatDto[]>,
+
+  /** Takes over a released seat; 409 when it is not released (any more) or its player is connected. The cookie moves to this device. */
+  claimResistanceSeat: (sessionId: string, playerId: string) =>
+    axios.post(`/sessions/${sessionId}/games/resistance/claim`, { playerId }, {
+      withCredentials: true,
+    }) as unknown as Promise<void>,
+
+  /** Host or admin: releases the seat of an offline player for a guest to take over, or takes the release back; 409 for an online player. */
+  setResistanceSeatReleased: (sessionId: string, playerId: string, released: boolean) =>
+    axios.put(`/sessions/${sessionId}/games/resistance/players/${playerId}/release`, { released }, {
+      withCredentials: true,
+    }) as unknown as Promise<ResistanceGameDto>,
 
   /** Host or admin: creates the Resistance lobby; rejects with status 409 when the session already has one. */
   createResistance: (sessionId: string) =>

@@ -15,5 +15,9 @@ public class RingoPlayerConfiguration : IEntityTypeConfiguration<RingoPlayer>
             .HasMaxLength(100);
         builder.Property(x => x.NormalizedName)
             .HasMaxLength(100);
+
+        // Taking a seat over is a Resistance feature (its players hold secrets)
+        builder.Ignore(x => x.ClaimStamp);
+        builder.Ignore(x => x.IsAdminSeat);
     }
 }

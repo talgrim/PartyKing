@@ -9,6 +9,8 @@ type Props = {
   yourPlayerId: string | null;
   /** The player leading the mission, who gets the crown token; none before the start. */
   leaderId?: string | null;
+  /** The players connected right now: a dot shows who is, and an offline seat is dimmed. Undefined (not known yet) shows no status. */
+  onlinePlayerIds?: string[];
   /** Extra badges after a player's name (votes, roles). */
   marks?: (playerId: string) => ReactNode;
   /** A card shown by a player's tag (face-up plot cards): above it along the bottom, below it along the side margins, so it stays out of the board. */
@@ -16,7 +18,7 @@ type Props = {
 };
 
 /** The players who joined, seated along the left, bottom and right edges in seating order. */
-export const ResistancePlayers = ({ players, yourPlayerId, leaderId = null, marks, beside }: Props): ReactNode => {
+export const ResistancePlayers = ({ players, yourPlayerId, leaderId = null, onlinePlayerIds, marks, beside }: Props): ReactNode => {
   const { t } = useTranslation();
   const seats = seatPositions(players.length);
 
@@ -28,6 +30,7 @@ export const ResistancePlayers = ({ players, yourPlayerId, leaderId = null, mark
         const seat = seats[index];
         const side = seat.top >= 90 ? 'bottom-full mb-1 left-1/2 -translate-x-1/2' : 'top-full mt-1 left-1/2 -translate-x-1/2';
         const card = beside?.(player.id);
+        const online = onlinePlayerIds ? onlinePlayerIds.includes(player.id) : null;
 
         return (
           <li
@@ -38,8 +41,18 @@ export const ResistancePlayers = ({ players, yourPlayerId, leaderId = null, mark
               you
                 ? 'bg-amber-400 text-slate-900 font-semibold ring-2 ring-amber-200 shadow-lg shadow-amber-400/40'
                 : 'bg-slate-900 text-slate-200'
-            }`}
+            } ${online === false ? 'opacity-50' : ''}`}
           >
+            {online !== null && (
+              <>
+                <span
+                  aria-hidden="true"
+                  data-online={online}
+                  className={`shrink-0 size-2 rounded-full ${online ? 'bg-emerald-400' : 'bg-slate-500'}`}
+                />
+                <span className="sr-only">{online ? t('resistance.presence.online') : t('resistance.presence.offline')}</span>
+              </>
+            )}
             {leader && <LeaderTokenIcon title={t('resistance.leader')} />}
             <span className="truncate">
               {player.name}

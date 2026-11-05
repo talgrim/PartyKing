@@ -377,6 +377,17 @@
     "join": "Join",
     "kicked": "You were removed from the game.",
     "started": "This game has already started.",
+    "claim": {
+      "title": "Back in the game",
+      "hint": "Lost your place, for example because a private tab was closed? Pick your name from the seats the host released.",
+      "empty": "No seat is free to take over. Ask the host to free yours.",
+      "take": "That's me",
+      "takeLabel": "Take over: {{name}}",
+      "failed": "Could not take over that seat. It may have been taken already, or the player is back."
+    },
+    "rejoinHost": "Rejoin as the host",
+    "rejoinHostHint": "You are the host of this session, so you can get your own seat back.",
+    "rejoinHostFailed": "You have no seat in this game.",
     "notOpen": "This game is not open yet.",
     "joinConflict": "Somebody already uses that name (or the game is closed, full or has already started).",
     "joinBadName": "That name is not valid.",
@@ -438,6 +449,9 @@
       "label": "Game controls",
       "show": "Controls",
       "openTv": "Open TV view",
+      "queue": "Queue",
+      "showLog": "Show log",
+      "hideLog": "Hide log",
       "restart": "Restart game",
       "end": "End game",
       "start": "Start game",
@@ -445,11 +459,26 @@
       "refreshRules": "Refresh rules",
       "refreshRulesOpen": "The rules can only be refreshed before the game is opened",
       "refreshRulesHint": "Fetch the current rules configuration from the server",
-      "open": "Open the game"
+      "open": "Open the game",
+      "seats": "Free a seat",
+      "seatsHint": "Let a player who lost their device come back"
+    },
+    "seats": {
+      "title": "Free a seat",
+      "hint": "Release the seat of a player who is offline (for example after a closed private tab). A guest can then take it over from the join page, and the old device loses it for good. Only an offline player can be released.",
+      "empty": "There are no seats to free.",
+      "failed": "Could not change that seat. The player may be online.",
+      "released": "Released",
+      "release": "Release",
+      "keep": "Take back",
+      "releaseLabel": "Release the seat of {{name}}",
+      "keepLabel": "Take back the release of {{name}}"
     },
     "page": {
       "backToGames": "Back to the games",
       "joinAsPlayer": "Join as a player",
+      "seatLost": "You are no longer a player in this game: your seat was taken over on another device or removed.",
+      "seatLostLink": "Return to the game",
       "playerCount": "{{current}}/{{max}} players",
       "rules": "Rules",
       "rulesTitle": "Resistance rules",
@@ -477,7 +506,11 @@
     "viewSwitch": {
       "label": "View",
       "player": "Player",
-      "board": "Board"
+      "board": "Board",
+      "queue": "Queue"
+    },
+    "queue": {
+      "title": "Music queue"
     },
     "board": {
       "title": "Mission board",
@@ -489,6 +522,10 @@
       "failed": "failed",
       "team": "Team",
       "aria": "Team of mission {{n}}: {{names}}"
+    },
+    "presence": {
+      "online": "Online",
+      "offline": "Offline"
     },
     "marks": {
       "opinionMaker": "Opinion Maker",

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 using PartyKing.Application.Realtime;
+using PartyKing.Contract.V1.Games.Resistance;
 
 namespace PartyKing.API.Hubs.Notifiers;
 
@@ -23,5 +24,12 @@ internal sealed class SignalRResistanceNotifier : SessionGroupNotifier, IResista
     {
         return Clients(sessionId, SessionHubTopic.ResistanceLobby)
             .SendAsync(SessionMusicHubEvents.ResistanceLobbyChanged, cancellationToken);
+    }
+
+    public Task PresenceChangedAsync(
+        Guid sessionId, ResistancePresenceDto presence, CancellationToken cancellationToken)
+    {
+        return Clients(sessionId, SessionHubTopic.ResistancePresence)
+            .SendAsync(SessionMusicHubEvents.ResistancePresenceChanged, presence, cancellationToken);
     }
 }

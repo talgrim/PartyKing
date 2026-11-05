@@ -6,9 +6,9 @@ import { ResistancePlotDealer } from './ResistancePlotDealer';
 import { ResistancePlotHand } from './ResistancePlotHand';
 
 const players = [
-  { id: 'p0', name: 'Ala' },
-  { id: 'p1', name: 'Bartek' },
-  { id: 'p2', name: 'Celina' },
+  { id: 'p0', name: 'Ala', isSeatReleased: false, isManagerSeat: false },
+  { id: 'p1', name: 'Bartek', isSeatReleased: false, isManagerSeat: false },
+  { id: 'p2', name: 'Celina', isSeatReleased: false, isManagerSeat: false },
 ];
 
 const card = (id: number, type: ResistancePlotCardDto['type'], toDeal = false, inPlay = false): ResistancePlotCardDto => ({

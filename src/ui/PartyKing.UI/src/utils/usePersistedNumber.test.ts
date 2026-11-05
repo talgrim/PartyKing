@@ -42,4 +42,19 @@ describe('usePersistedNumber', () => {
     expect(result.current[0]).toBe(0);
     expect(localStorage.getItem('key')).toBe('0');
   });
+
+  it('shows every user of a key a change made by another, and one made in another tab', () => {
+    const first = renderHook(() => usePersistedNumber('key', 0.5, 0, 1));
+    const second = renderHook(() => usePersistedNumber('key', 0.5, 0, 1));
+
+    act(() => first.result.current[1](0.3));
+    expect(second.result.current[0]).toBe(0.3);
+
+    act(() => {
+      localStorage.setItem('key', '0.9');
+      window.dispatchEvent(new StorageEvent('storage', { key: 'key', newValue: '0.9' }));
+    });
+    expect(first.result.current[0]).toBe(0.9);
+    expect(second.result.current[0]).toBe(0.9);
+  });
 });

@@ -15,16 +15,20 @@ public class ResistanceController : ResistanceControllerBase
         IHttpContextAccessor httpContextAccessor,
         IResistanceLobbyService lobbyService,
         IResistanceRoundService roundService,
+        IResistancePresenceService presenceService,
         ISignedCookies cookies)
         : base(httpContextAccessor, cookies)
     {
         Lobby = lobbyService;
         Rounds = roundService;
+        Presence = presenceService;
     }
 
     private IResistanceLobbyService Lobby { get; }
 
     private IResistanceRoundService Rounds { get; }
+
+    private IResistancePresenceService Presence { get; }
 
     /// <summary>
     /// The session's Resistance game. Anyone who unlocked the session may watch it once it is open; until then it is
@@ -47,6 +51,20 @@ public class ResistanceController : ResistanceControllerBase
     public async Task<IActionResult> GetLobby(Guid sessionId, CancellationToken cancellationToken)
     {
         var result = await Lobby.GetLobbyAsync(sessionId, await Caller(sessionId), cancellationToken);
+
+        return result.Match(Ok, Problem);
+    }
+
+    /// <summary>
+    /// Host or admin: the players that have the Resistance page open right now, which the TV view starts from and
+    /// refetches after a reconnect (changes are pushed as <c>ResistancePresenceChanged</c>).
+    /// </summary>
+    [HttpGet("presence")]
+    [RequireSessionAccess]
+    [ProducesResponseType<ResistancePresenceDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPresence(Guid sessionId, CancellationToken cancellationToken)
+    {
+        var result = await Presence.GetAsync(sessionId, await Caller(sessionId), cancellationToken);
 
         return result.Match(Ok, Problem);
     }
@@ -89,7 +107,8 @@ public class ResistanceController : ResistanceControllerBase
 
     /// <summary>
     /// Joins the open Resistance game as a player and remembers the player in a cookie. 400 for a bad name, 409 while
-    /// the game is closed or full or the name is taken. The session host's name comes from their Spotify profile, an
+    /// the game is closed or full or the name is taken, and 409 once it started (the session host gets their own seat
+    /// back, any other player returns through the seats the host released, see <c>ResistanceSeatsController</c>). The session host's name comes from their Spotify profile, an
     /// admin without a name joins as "admin".
     /// </summary>
     [HttpPost("join")]

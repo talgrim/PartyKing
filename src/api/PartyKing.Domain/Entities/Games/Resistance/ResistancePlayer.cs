@@ -9,10 +9,10 @@ public class ResistancePlayer : LobbyPlayer, ILobbyPlayerFactory<ResistancePlaye
     {
     }
 
-    public static ResistancePlayer Create(Guid playerId, string name, string? profileId, DateTimeOffset joinedAt)
+    public static ResistancePlayer Create(Guid playerId, string name, string? profileId, DateTimeOffset joinedAt, bool isAdminSeat = false)
     {
         var player = new ResistancePlayer();
-        player.Initialize(playerId, name, profileId, joinedAt);
+        player.Initialize(playerId, name, profileId, joinedAt, isAdminSeat);
 
         return player;
     }
@@ -34,6 +34,12 @@ public class ResistancePlayer : LobbyPlayer, ILobbyPlayerFactory<ResistancePlaye
     /// played. Never sent to anyone else, and cleared when the next team is picked.
     /// </summary>
     public bool? MissionCard { get; internal set; }
+
+    /// <summary>
+    /// Whether the host or an admin released the seat, so a guest may take it over from a device that is gone (see
+    /// <see cref="ResistanceGame.ClaimSeat"/>). Cleared by the claim, by the host and when the game restarts.
+    /// </summary>
+    public bool IsReclaimable { get; internal set; }
 
     /// <summary>Whether the player confirmed in the open <see cref="ResistancePhase.LeaderWindow"/> that they do not play a card.</summary>
     public bool PassedLeaderWindow { get; internal set; }

@@ -62,6 +62,14 @@ public class ResistanceFailureErrorsTests
             ErrorType.Forbidden, "Resistance.NotAllowed", "Only the leader, the host or an admin continues."),
         [ResistanceFailure.NothingToContinue] = new(
             ErrorType.Conflict, "Resistance.NothingToContinue", "There is no finished mission to move on from."),
+        [ResistanceFailure.UnknownSeat] = new(
+            ErrorType.NotFound, "Resistance.UnknownSeat", "There is no such player in the game."),
+        [ResistanceFailure.ManagerSeat] = new(
+            ErrorType.Conflict, "Resistance.ManagerSeat", "The seat of the host or an admin can't be released."),
+        [ResistanceFailure.SeatNotReleased] = new(
+            ErrorType.Conflict, "Resistance.SeatNotReleased", "That seat is not free to take over."),
+        [ResistanceFailure.SeatOnline] = new(
+            ErrorType.Conflict, "Resistance.SeatOnline", "A device of that player is still connected."),
         [ResistanceFailure.GameOver] = new(ErrorType.Conflict, "Resistance.GameOver", "The game is over."),
         [ResistanceFailure.NoGame] = new(ErrorType.NotFound, "Resistance.NotFound", "The session has no Resistance game."),
         [ResistanceFailure.NotLeaderToDeal] = new(

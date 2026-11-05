@@ -18,7 +18,13 @@ internal enum SessionHubTopic
     /// The Resistance lobby (exists, open, started, who joined): it changes a few times per game, not with every
     /// vote, so a tab that only shows the invite hears this and not <see cref="Resistance"/>.
     /// </summary>
-    ResistanceLobby
+    ResistanceLobby,
+
+    /// <summary>
+    /// Who has the Resistance page open (<c>ResistancePresenceChanged</c>, with the list in the payload). Only the TV
+    /// view follows it, so a phone is never woken because another player's connection blinked.
+    /// </summary>
+    ResistancePresence
 }
 
 internal static class SessionHubTopics

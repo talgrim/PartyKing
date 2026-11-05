@@ -4,15 +4,20 @@ import { SWRConfig } from 'swr';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ResistanceJoin } from './ResistanceJoin';
 
-const mocks = vi.hoisted(() => ({ getLobby: vi.fn(), join: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getLobby: vi.fn(), join: vi.fn(), getSeats: vi.fn(), claim: vi.fn(), viewer: { isHost: false, isAdmin: false } }));
 
 vi.mock('@/service/realtime/useSessionMusicHub', () => ({ useSessionMusicHub: vi.fn() }));
 vi.mock('@/service/endpoints/sessions/useViewerRole', () => ({
-  useViewerRole: () => ({ isHost: false, isAdmin: false }),
+  useViewerRole: () => mocks.viewer,
 }));
 vi.mock('./Resistance', () => ({ Resistance: () => <p>Board</p> }));
 vi.mock('@/service/endpoints/games/gamesApi', () => ({
-  gamesApi: { getResistanceLobby: mocks.getLobby, joinResistance: mocks.join },
+  gamesApi: {
+    getResistanceLobby: mocks.getLobby,
+    joinResistance: mocks.join,
+    getResistanceClaimableSeats: mocks.getSeats,
+    claimResistanceSeat: mocks.claim,
+  },
 }));
 
 const open = { createdAt: '2026-10-29T10:00:00Z', isOpen: true, isStarted: false, joined: false };
@@ -33,6 +38,10 @@ describe('ResistanceJoin', () => {
   beforeEach(() => {
     mocks.getLobby.mockReset();
     mocks.join.mockReset();
+    mocks.getSeats.mockReset();
+    mocks.claim.mockReset();
+    mocks.viewer.isHost = false;
+    mocks.viewer.isAdmin = false;
   });
 
   it('asks for a name and shows the board once the guest joined', async () => {
@@ -78,5 +87,94 @@ describe('ResistanceJoin', () => {
     renderPage();
 
     await waitFor(() => expect(screen.getByText('Session page')).toBeInTheDocument());
+  });
+});
+
+describe('ResistanceJoin, returning to a started game', () => {
+  const started = { ...open, isStarted: true };
+
+  beforeEach(() => {
+    mocks.getLobby.mockReset();
+    mocks.join.mockReset();
+    mocks.getSeats.mockReset();
+    mocks.claim.mockReset();
+    mocks.viewer.isHost = false;
+    mocks.viewer.isAdmin = false;
+  });
+
+  it('lists the seats the host released, with no name field', async () => {
+    mocks.getLobby.mockResolvedValue(started);
+    mocks.getSeats.mockResolvedValue([
+      { id: 'p1', name: 'Ola' },
+      { id: 'p2', name: 'Bartek' },
+    ]);
+    renderPage();
+
+    expect(await screen.findByRole('button', { name: 'Take over: Ola' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Take over: Bartek' })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Your name/)).not.toBeInTheDocument();
+  });
+
+  it('takes the chosen seat over without a name and shows the board', async () => {
+    mocks.getLobby.mockResolvedValueOnce(started).mockResolvedValue({ ...started, joined: true });
+    mocks.getSeats.mockResolvedValue([{ id: 'p1', name: 'Ola' }]);
+    mocks.claim.mockResolvedValue(undefined);
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Take over: Ola' }));
+
+    expect(mocks.claim).toHaveBeenCalledWith('session-1', 'p1');
+    expect(mocks.join).not.toHaveBeenCalled();
+    expect(await screen.findByText('Board')).toBeInTheDocument();
+  });
+
+  it('says when no seat is free', async () => {
+    mocks.getLobby.mockResolvedValue(started);
+    mocks.getSeats.mockResolvedValue([]);
+    renderPage();
+
+    expect(await screen.findByText(/No seat is free to take over/)).toBeInTheDocument();
+  });
+
+  it('tells the player when the seat is gone and fetches the seats again', async () => {
+    mocks.getLobby.mockResolvedValue(started);
+    mocks.getSeats.mockResolvedValue([{ id: 'p1', name: 'Ola' }]);
+    mocks.claim.mockRejectedValue({ status: 409 });
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Take over: Ola' }));
+
+    expect(await screen.findByText(/Could not take over that seat/)).toBeInTheDocument();
+    await waitFor(() => expect(mocks.getSeats.mock.calls.length).toBeGreaterThan(1));
+  });
+
+  it('offers the session host their own seat back', async () => {
+    mocks.viewer.isHost = true;
+    mocks.getLobby.mockResolvedValueOnce(started).mockResolvedValue({ ...started, joined: true });
+    mocks.getSeats.mockResolvedValue([]);
+    mocks.join.mockResolvedValue(undefined);
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Rejoin as the host' }));
+
+    expect(mocks.join).toHaveBeenCalledWith('session-1', '');
+    expect(await screen.findByText('Board')).toBeInTheDocument();
+  });
+
+  it('does not offer the host button to a guest', async () => {
+    mocks.getLobby.mockResolvedValue(started);
+    mocks.getSeats.mockResolvedValue([]);
+    renderPage();
+
+    await screen.findByText(/has already started/);
+    expect(screen.queryByRole('button', { name: 'Rejoin as the host' })).not.toBeInTheDocument();
+  });
+
+  it('does not ask for the seats while the game has not started', async () => {
+    mocks.getLobby.mockResolvedValue(open);
+    renderPage();
+
+    await screen.findByLabelText(/Your name/);
+    expect(mocks.getSeats).not.toHaveBeenCalled();
   });
 });

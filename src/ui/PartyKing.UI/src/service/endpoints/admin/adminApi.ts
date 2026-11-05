@@ -1,5 +1,4 @@
 import { axios } from '@/service/request';
-import { PlayerCommand } from '../player/types';
 import { SongDto } from '../queue/types';
 import { SessionDto } from '../sessions/types';
 
@@ -22,10 +21,6 @@ export const adminApi = {
   /** Also deletes the session's queue and uploaded photos. */
   deleteSession: (sessionId: string) =>
     unwrap<void>(axios.delete(`/admin/sessions/${sessionId}`, withCredentials)),
-
-  /** Asks the host's player to pause or resume; rejects with status 409 when no player is connected. */
-  sendPlayerCommand: (sessionId: string, command: PlayerCommand) =>
-    unwrap<void>(axios.post(`/admin/sessions/${sessionId}/player/commands`, { command }, withCredentials)),
 
   /**
    * Skips to the next song, which the host's player then picks up. Rejects with status 409 when no player is
