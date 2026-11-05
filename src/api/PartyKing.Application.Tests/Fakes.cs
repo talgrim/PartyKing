@@ -31,6 +31,12 @@ internal class FakeClock : IDateTimeProvider
     public void Advance(TimeSpan by) => UtcNow += by;
 }
 
+/// <summary>Hands every action a new <see cref="Random"/> from the same seed.</summary>
+internal class FakeRandomProvider(int seed) : IRandomProvider
+{
+    public Random Create() => new(seed);
+}
+
 internal class FakeSessionsRepository : ISessionsRepository
 {
     private readonly List<Session> _sessions = [];
