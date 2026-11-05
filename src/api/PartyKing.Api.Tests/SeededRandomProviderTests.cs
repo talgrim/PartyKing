@@ -39,6 +39,12 @@ public class SeededRandomProviderTests
     }
 
     [Fact]
+    public void AddIfConfigured_InTheE2eEnvironmentWithASeed_UsesTheSeededProvider()
+    {
+        Assert.IsType<SeededRandomProvider>(Resolve(DevelopmentEnvironmentExtensions.E2eEnvironment, "7"));
+    }
+
+    [Fact]
     public void AddIfConfigured_InDevelopmentWithoutASeed_KeepsTheDefault()
     {
         Assert.IsType<TestDefaultRandomProvider>(Resolve(Environments.Development, null));
