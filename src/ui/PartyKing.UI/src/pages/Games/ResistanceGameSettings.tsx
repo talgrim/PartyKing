@@ -97,8 +97,9 @@ export const ResistanceGameSettings = ({ sessionId, open, onClose }: Props): Rea
       aria-labelledby="resistance-settings-title"
       fullWidth
       maxWidth="sm"
-      // MUI's emotion styles are unlayered and beat Tailwind's layered utilities, hence the important modifier
-      slotProps={{ paper: { className: 'bg-slate-800! text-slate-200! rounded-xl!' } }}
+      // MUI's emotion styles are unlayered and beat Tailwind's layered utilities, hence the important modifier; from
+      // 1024 px wide the dialog grows from MUI's "sm" (600 px) to 56rem
+      slotProps={{ paper: { className: 'bg-slate-800! text-slate-200! rounded-xl! lg:max-w-4xl!' } }}
     >
       <DialogTitle id="resistance-settings-title" className="flex! items-center justify-between text-xl! font-semibold!">
         {t('resistance.settings.title')}
