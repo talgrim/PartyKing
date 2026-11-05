@@ -115,4 +115,19 @@ public class ResistanceGameDto
 
     /// <summary>The mission cards the caller looked at with Keeping a Close Eye this mission.</summary>
     public IReadOnlyList<ResistanceMissionPeekDto> YourPeeks { get; set; } = [];
+
+    /// <summary>Inquisitor module: the player holding the token (public); null when the module is off.</summary>
+    public Guid? InquisitorPlayerId { get; set; }
+
+    /// <summary>Inquisitor module: the players who held the token, so nobody can examine them any more (public).</summary>
+    public IReadOnlyList<Guid> PastInquisitorPlayerIds { get; set; } = [];
+
+    /// <summary>While the Inquisition waits for the examiner's confirmation: who picked the player (public).</summary>
+    public Guid? InquisitionExaminerPlayerId { get; set; }
+
+    /// <summary>While the Inquisition waits for the examiner's confirmation: the player who was picked (public).</summary>
+    public Guid? InquisitionExaminedPlayerId { get; set; }
+
+    /// <summary>The loyalty of the player the caller examined, until they confirm having seen it. Private to the examiner.</summary>
+    public ResistanceInquisitionDto? YourInquisition { get; set; }
 }
