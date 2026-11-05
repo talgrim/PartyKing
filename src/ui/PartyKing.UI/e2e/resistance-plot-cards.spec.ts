@@ -1,6 +1,8 @@
 import {
+  confirmIdentityCard,
   dealPlotCards,
   nameOf,
+  playImmediateCard,
   playMission,
   spyNames,
   startResistanceGame,
@@ -15,7 +17,8 @@ import {
 import { expect, test } from './fixtures/test';
 
 // The e2e API is seeded, so five players always draw Open Up first and Strong Leader on the second mission, and seven
-// players draw an Opinion Maker and No Confidence on the first one (see "Plot cards" in docs/testing-e2e.md).
+// players draw an Opinion Maker and No Confidence on the first one, ten players an Open Up, an Opinion Maker and a Take
+// Responsibility (see "Plot cards" in docs/testing-e2e.md).
 
 test('the leader deals the drawn card, the holder plays an immediate card and the team is picked after that', async ({
   createSession,
@@ -107,7 +110,10 @@ test('a Strong Leader takes the lead in the window that follows a rejected team'
   expect(after.rejectedTeams).toBe(1);
   expect(after.missionNumber).toBe(view.missionNumber);
   await expect(
-    setup.guests.get(holderName)!.getByRole('region', { name: 'Plot cards played' }).getByText(/Strong Leader/),
+    setup.guests
+      .get(holderName)!
+      .getByRole('region', { name: 'Plot cards played' })
+      .getByText(/Strong Leader/),
   ).toBeVisible();
 });
 
@@ -157,4 +163,127 @@ test('an Opinion Maker votes first and a No Confidence card rejects an approved 
   expect(after.missionNumber).toBe(picking.missionNumber);
   const newLeader = setup.guests.get(nameOf(after, after.leaderPlayerId!))!;
   await expect(newLeader.getByRole('status').filter({ hasText: 'Rejected teams in a row: 1/5' })).toBeVisible();
+});
+
+test('Take Responsibility moves the visible Opinion Maker to the player who plays it', async ({
+  createSession,
+  openAdmin,
+  openGuest,
+}) => {
+  const session = await createSession();
+  const setup = await startResistanceGame(session, { openAdmin, openGuest }, { plotCards: true, players: 10 });
+
+  // Ten players draw three cards on the first mission, so the one who takes the Opinion Maker has an Open Up besides
+  const { name: leaderName, page: leader, drawn } = await waitForDealing(setup);
+  expect([...drawn].sort()).toEqual(['OpenUp', 'OpinionMaker', 'TakeResponsibility']);
+  const [openUpName, makerName, takerName, targetName] = [...setup.guests.keys()].filter((name) => name !== leaderName);
+  await dealPlotCards(leader, { OpenUp: openUpName, OpinionMaker: makerName, TakeResponsibility: takerName });
+
+  // The card cannot be played while the immediate Open Up is still being resolved
+  await waitForPhase(setup, 'ResolvingCards');
+  const taker = setup.guests.get(takerName)!;
+  const section = taker.getByRole('region', { name: 'Take Responsibility', exact: true });
+  await expect(section).toBeHidden();
+
+  const played = setup.guests.get(openUpName)!.getByRole('region', { name: 'Immediate cards' });
+  await played.getByLabel(/Who do you play the .Open Up. card on/).selectOption({ label: targetName });
+  await played.getByRole('button', { name: 'Play the card' }).click();
+  await setup.guests.get(targetName)!.getByRole('button', { name: "I've seen it" }).click();
+  const before = await waitForPhase(setup, 'SelectingTeam');
+  const idOf = (name: string) => before.players.find((player) => player.name === name)!.id;
+  expect(before.opinionMakerPlayerIds).toEqual([idOf(makerName)]);
+
+  // The holder takes the visible card; the Opinion Maker is the only thing the target has, so the server takes it
+  await expect(section).toBeVisible();
+  await section.getByLabel('Which player do you take a card from').selectOption({ label: makerName });
+  await expect(section.getByRole('radio')).toHaveCount(0);
+  await section.getByRole('button', { name: 'Take the card' }).click();
+  await expect(section).toBeHidden();
+
+  const after = await viewOf(leader, session);
+  expect(after.opinionMakerPlayerIds).toEqual([idOf(takerName)]);
+  expect(after.playedPlotCards.map((card) => [card.type, card.holderPlayerId, card.targetPlayerId])).toContainEqual([
+    'TakeResponsibility',
+    idOf(takerName),
+    idOf(makerName),
+  ]);
+  expect((await viewOfPlayer(setup, takerName)).yourPlotCards).toEqual([
+    expect.objectContaining({ type: 'OpinionMaker', inPlay: true }),
+  ]);
+  expect((await viewOfPlayer(setup, makerName)).yourPlotCards).toEqual([]);
+  await expect(
+    leader
+      .getByRole('region', { name: 'Plot cards played' })
+      .getByText(`${takerName} played “Take Responsibility” and takes a Plot card from ${makerName}`),
+  ).toBeVisible();
+
+  // The card has moved for good: the new owner now votes first. No card is left in a hand, so no window follows
+  const others = [...setup.guests.keys()].filter((name) => name !== leaderName);
+  await submitTeam(leader, others.slice(0, after.requiredTeamSize!));
+  await waitForPhase(setup, 'Voting');
+  await expect(
+    setup.guests
+      .get(makerName)!
+      .getByRole('status')
+      .filter({ hasText: `The Opinion Maker votes first: ${takerName}.` }),
+  ).toBeVisible();
+  await vote(taker, 'Approve');
+  for (const [name, page] of setup.guests) {
+    if (name !== takerName) {
+      await vote(page, 'Approve');
+    }
+  }
+  await waitForPhase(setup, 'PlayingMission');
+});
+
+test('Overheard Conversation shows the identity card of a neighbour to its holder only', async ({
+  createSession,
+  openAdmin,
+  openGuest,
+}) => {
+  const session = await createSession();
+  const setup = await startResistanceGame(session, { openAdmin, openGuest }, { plotCards: true, players: 9 });
+
+  // Nine players draw three cards on the first mission, and all of them are played at once or stay face up
+  const { name: leaderName, page: leader, drawn } = await waitForDealing(setup);
+  expect([...drawn].sort()).toEqual(['OpenUp', 'OpinionMaker', 'OverheardConversation']);
+  const [listenerName, makerName, openUpName, openUpTarget, bystanderName] = [...setup.guests.keys()].filter(
+    (name) => name !== leaderName,
+  );
+  await dealPlotCards(leader, {
+    OverheardConversation: listenerName,
+    OpinionMaker: makerName,
+    OpenUp: openUpName,
+  });
+  const dealt = await waitForPhase(setup, 'ResolvingCards');
+
+  // Only the two players next to the holder at the table can be listened in on
+  const seats = dealt.players.map((player) => player.name);
+  const at = seats.indexOf(listenerName);
+  const neighbours = [seats[(at + seats.length - 1) % seats.length], seats[(at + 1) % seats.length]];
+  const listener = setup.guests.get(listenerName)!;
+  const picker = listener
+    .getByRole('region', { name: 'Immediate cards' })
+    .getByLabel(/Who do you play the .Overheard Conversation. card on/);
+  await expect(picker).toBeVisible();
+  expect((await picker.locator('option:not([disabled])').allInnerTexts()).sort()).toEqual([...neighbours].sort());
+
+  await playImmediateCard(listener, 'OverheardConversation', neighbours[0]);
+  await playImmediateCard(setup.guests.get(openUpName)!, 'OpenUp', openUpTarget);
+
+  // The holder reads the neighbour's card and nobody else is shown it; the log says who listened in, not what it saw
+  const heard = await confirmIdentityCard(listener);
+  expect(heard.name).toBe(neighbours[0]);
+  expect((await spyNames(setup)).includes(heard.name)).toBe(heard.role === 'Spy');
+  const bystander = setup.guests.get(bystanderName)!;
+  await expect(bystander.getByText(/Identity card of/)).toBeHidden();
+  await confirmIdentityCard(setup.guests.get(openUpTarget)!);
+
+  await waitForPhase(setup, 'SelectingTeam');
+  await expect(
+    bystander
+      .getByRole('region', { name: 'Plot cards played' })
+      .getByText(`${listenerName} played “Overheard Conversation” and looks at the identity card of ${neighbours[0]}`),
+  ).toBeVisible();
+  await expect(bystander.getByText(/Identity card of/)).toBeHidden();
 });

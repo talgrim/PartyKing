@@ -5,6 +5,8 @@ export default defineConfig({
   testDir: './e2e',
   testMatch: '**/*.spec.ts',
   globalSetup: './e2e/global-setup.ts',
+  // A game with ten players takes about 30 s on a CI runner, which is the default, so a test gets twice that
+  timeout: 60_000,
   // One API and one database for the whole run; the tests share its state, so they run one at a time
   fullyParallel: false,
   workers: 1,
