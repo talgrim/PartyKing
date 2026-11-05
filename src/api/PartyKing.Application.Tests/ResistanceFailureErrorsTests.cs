@@ -70,6 +70,20 @@ public class ResistanceFailureErrorsTests
             ErrorType.Conflict, "Resistance.SeatNotReleased", "That seat is not free to take over."),
         [ResistanceFailure.SeatOnline] = new(
             ErrorType.Conflict, "Resistance.SeatOnline", "A device of that player is still connected."),
+        [ResistanceFailure.InquisitorLocked] = new(
+            ErrorType.Conflict,
+            "Resistance.RulesLocked",
+            "The Inquisitor can only be switched before the game starts."),
+        [ResistanceFailure.NotInquisition] = new(
+            ErrorType.Conflict, "Resistance.NotInquisition", "Nobody is being examined now."),
+        [ResistanceFailure.NotInquisitor] = new(
+            ErrorType.Forbidden, "Resistance.NotInquisitor", "Only the holder of the Inquisitor token examines."),
+        [ResistanceFailure.InvalidExamineTarget] = new(
+            ErrorType.Validation, "Resistance.InvalidTarget", "That player can't be examined."),
+        [ResistanceFailure.AlreadyExamined] = new(
+            ErrorType.Conflict, "Resistance.AlreadyExamined", "You already picked the player to examine."),
+        [ResistanceFailure.NotExamined] = new(
+            ErrorType.Conflict, "Resistance.NotExamined", "Pick the player to examine first."),
         [ResistanceFailure.GameOver] = new(ErrorType.Conflict, "Resistance.GameOver", "The game is over."),
         [ResistanceFailure.NoGame] = new(ErrorType.NotFound, "Resistance.NotFound", "The session has no Resistance game."),
         [ResistanceFailure.NotLeaderToDeal] = new(

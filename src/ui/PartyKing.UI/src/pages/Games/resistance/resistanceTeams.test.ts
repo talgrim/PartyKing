@@ -10,6 +10,7 @@ const rules: ResistanceRulesDto = {
   ],
   plotCardsEnabled: false,
   plotCardsPerRound: 1,
+  inquisitorEnabled: false,
 };
 
 describe('missionBoardFor', () => {

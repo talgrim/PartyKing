@@ -235,6 +235,7 @@ public class ResistanceGamePlotCardTests
     public void PeekMissionCard_ADifferentPlayerMaySeeTheSameCard_ButNotTheSamePlayerTwice()
     {
         _game.Phase = ResistancePhase.PeekWindow;
+        _game.MissionResults.Add(new ResistanceMissionResult { MissionNumber = _game.MissionNumber, Succeeded = false });
         var first = _game.Players[3];
         var second = _game.Players[4];
         var member = _game.Players[1];

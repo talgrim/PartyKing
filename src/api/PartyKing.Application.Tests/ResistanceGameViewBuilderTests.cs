@@ -352,6 +352,73 @@ public class ResistanceGameViewBuilderTests
         Assert.Single(View(game, 2).YourReveals);
     }
 
+    // ---- inquisitor ----
+
+    /// <summary>The token started with seat 2 and passed to seat 4 (a spy), whom seat 2 has just picked.</summary>
+    private static ResistanceGame InquisitionGame()
+    {
+        var game = NewGame(ResistancePhase.Inquisition);
+        game.Rules.InquisitorEnabled = true;
+        game.InquisitorPlayerId = Ids[4];
+        game.InquisitionExaminerPlayerId = Ids[2];
+        Seat(game, 2).WasInquisitor = true;
+        Seat(game, 4).WasInquisitor = true;
+
+        return game;
+    }
+
+    [Fact]
+    public void Inquisition_ShowsTheLoyaltyOnlyToTheExaminer()
+    {
+        var game = InquisitionGame();
+
+        var yours = View(game, 2).YourInquisition;
+
+        Assert.NotNull(yours);
+        Assert.Equal((Ids[4], ResistanceRoleDto.Spy), (yours.PlayerId, yours.Role));
+        foreach (var seat in new int?[] { 0, 1, 3, 4, null })
+        {
+            Assert.Null(View(game, seat).YourInquisition);
+        }
+    }
+
+    [Fact]
+    public void Inquisition_TheLoyaltyIsGoneOnceTheExaminerConfirmed()
+    {
+        var game = InquisitionGame();
+        game.InquisitionExaminerPlayerId = null;
+        game.Phase = ResistancePhase.MissionResult;
+
+        Assert.Null(View(game, 2).YourInquisition);
+    }
+
+    [Fact]
+    public void Inquisition_BeforeAPlayerIsPicked_ShowsNothingPrivate()
+    {
+        var game = InquisitionGame();
+        game.InquisitionExaminerPlayerId = null;
+        game.InquisitorPlayerId = Ids[2];
+        Seat(game, 4).WasInquisitor = false;
+
+        for (var seat = 0; seat < Ids.Length; seat++)
+        {
+            Assert.Null(View(game, seat).YourInquisition);
+        }
+    }
+
+    [Fact]
+    public void Inquisition_TheTokenAndTheExaminationArePublic()
+    {
+        var view = View(InquisitionGame(), null);
+
+        Assert.True(view.Rules.InquisitorEnabled);
+        Assert.Equal(Ids[4], view.InquisitorPlayerId);
+        Assert.Equal(Ids[2], view.InquisitionExaminerPlayerId);
+        Assert.Equal(Ids[4], view.InquisitionExaminedPlayerId);
+        Assert.Equal([Ids[2], Ids[4]], view.PastInquisitorPlayerIds);
+        Assert.Equal(ResistancePhaseDto.Inquisition, view.Phase);
+    }
+
     // ---- windows ----
 
     [Theory]
@@ -384,6 +451,12 @@ public class ResistanceGameViewBuilderTests
     public void Peeks_AreSeenOnlyByThePeeker_AndOnlyAfterTheMission(ResistancePhase phase, bool visible)
     {
         var game = NewGame(phase);
+        if (phase != ResistancePhase.SelectingTeam)
+        {
+            // As in a real game, the result is recorded before the peek window opens
+            game.MissionResults.Add(new ResistanceMissionResult { MissionNumber = 1, Succeeded = false, FailCount = 1 });
+        }
+
         Seat(game, 3).MissionCard = false;
         Card(game, 1, ResistancePlotCardType.KeepingCloseEye, ResistancePlotCardLocation.Played, holder: 1, target: 3, confirmed: true);
 
@@ -407,7 +480,7 @@ public class ResistanceGameViewBuilderTests
 
     // ---- the public part is the same for everybody ----
 
-    public static TheoryData<string> Scenarios => ["voting", "mission", "peek-window", "game-over", "lobby"];
+    public static TheoryData<string> Scenarios => ["voting", "mission", "peek-window", "inquisition", "game-over", "lobby"];
 
     private static ResistanceGame Scenario(string name)
     {
@@ -463,6 +536,12 @@ public class ResistanceGameViewBuilderTests
 
                 return game;
             }
+            case "inquisition":
+            {
+                var game = InquisitionGame();
+
+                return game;
+            }
             case "game-over":
             {
                 var game = NewGame(ResistancePhase.GameOver);
@@ -485,7 +564,8 @@ public class ResistanceGameViewBuilderTests
             nameof(ResistanceGameDto.YourPlayerId), nameof(ResistanceGameDto.YourRole),
             nameof(ResistanceGameDto.FellowSpies), nameof(ResistanceGameDto.YourVote),
             nameof(ResistanceGameDto.YourMissionCard), nameof(ResistanceGameDto.YourPlotCards),
-            nameof(ResistanceGameDto.YourReveals), nameof(ResistanceGameDto.YourPeeks)
+            nameof(ResistanceGameDto.YourReveals), nameof(ResistanceGameDto.YourPeeks),
+            nameof(ResistanceGameDto.YourInquisition)
         ];
 
         foreach (var name in callerOnly)
