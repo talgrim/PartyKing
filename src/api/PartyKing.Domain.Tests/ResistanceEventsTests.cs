@@ -170,7 +170,7 @@ public class ResistanceEventsTests
         game.PlayMissionCard(game.Players[2].PlayerId, ResistanceMissionCardKind.Success);
 
         var completed = game.DrainEvents().OfType<ResistanceMissionCompleted>().Single();
-        Assert.Equal(new ResistanceMissionCompleted(game.SessionId, 1, false, 1), completed);
+        Assert.Equal(new ResistanceMissionCompleted(game.SessionId, 1, false, 1, 0), completed);
     }
 
     [Fact]

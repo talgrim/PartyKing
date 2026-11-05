@@ -166,7 +166,7 @@ export type ResistanceView = {
   yourVote: boolean | null;
   votes: { playerId: string; approve: boolean }[] | null;
   revealedRoles: { playerId: string; role: Role; character: 'Standard' | 'Reverser' }[] | null;
-  missionResults: { missionNumber: number; succeeded: boolean; failCount: number | null }[];
+  missionResults: { missionNumber: number; succeeded: boolean; failCount: number; reverseCount: number }[];
   /** The cards this player holds (the leader's `toDeal` ones are drawn and still have to be dealt). */
   yourPlotCards: { id: number; type: PlotCardType; toDeal: boolean; inPlay: boolean }[];
   /** Public: how many cards each player holds (an Opinion Maker in play is not counted). */

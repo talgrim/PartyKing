@@ -23,7 +23,7 @@ const game = (overrides: Partial<ResistanceGameDto> = {}): ResistanceGameDto =>
     votes: null,
     rejectedTeams: 0,
     leaderWindowPassedPlayerIds: [],
-    missionResults: [{ missionNumber: 2, succeeded: true, failCount: 0, teamPlayerIds: [] }],
+    missionResults: [{ missionNumber: 2, succeeded: true, failCount: 0, reverseCount: 0, teamPlayerIds: [] }],
     inquisitorPlayerId: 'p0',
     pastInquisitorPlayerIds: ['p0', 'p4'],
     inquisitionExaminerPlayerId: null,

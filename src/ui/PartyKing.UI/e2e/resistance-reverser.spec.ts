@@ -48,7 +48,8 @@ test('the Reverser module deals one Reverser to each side and a Reverse reverses
   await expect(mine.getByRole('button', { name: 'Reverse' })).toBeEnabled();
   await expect(mine.getByRole('button', { name: 'Fail' })).toHaveAttribute('aria-disabled', 'true');
   const theirs = setup.guests.get(partner)!.getByRole('region', { name: 'Mission' });
-  await expect(theirs.getByRole('button', { name: 'Reverse' })).toBeHidden();
+  // Everybody on the team has the card, so having one tells nothing, but only a Reverser may play it
+  await expect(theirs.getByRole('button', { name: 'Reverse' })).toHaveAttribute('aria-disabled', 'true');
 
   await mine.getByRole('button', { name: 'Reverse' }).click();
   await theirs.getByRole('button', { name: 'Success' }).click();
@@ -56,9 +57,8 @@ test('the Reverser module deals one Reverser to each side and a Reverse reverses
   const view = await waitForPhase(setup, 'MissionResult');
   expect(view.missionResults).toHaveLength(1);
   expect(view.missionResults[0].succeeded).toBe(false);
-  // The number of Fail cards would tell that a Reverser played, so nobody gets it
-  expect(view.missionResults[0].failCount).toBeNull();
-  const status = setup.admin.getByRole('status').filter({ hasText: /The mission failed\. Score/ });
+  // The played cards are public once the mission is over (not who played them)
+  expect(view.missionResults[0]).toMatchObject({ failCount: 0, reverseCount: 1 });
+  const status = setup.admin.getByRole('status').filter({ hasText: 'The mission failed (Fail cards: 0) (Reverse cards: 1)' });
   await expect(status).toBeVisible();
-  await expect(status).not.toContainText('Fail cards');
 });

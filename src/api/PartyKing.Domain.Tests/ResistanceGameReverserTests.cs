@@ -285,7 +285,7 @@ public class ResistanceGameReverserTests
     }
 
     [Fact]
-    public void AReverseCard_TurnsAFailedMissionIntoASuccess_AndTheFailCountStaysSecret()
+    public void AReverseCard_TurnsAFailedMissionIntoASuccess_AndTheCardsPlayedArePublic()
     {
         var game = MissionGame(0, 2, 3);
         Play(game, 0, Fail);
@@ -294,8 +294,9 @@ public class ResistanceGameReverserTests
 
         var result = Assert.Single(game.MissionResults);
         Assert.True(result.Succeeded);
+        Assert.Equal((1, 1), (result.FailCount, result.ReverseCount));
         var completed = game.DrainEvents().OfType<ResistanceMissionCompleted>().Single();
-        Assert.Equal(new ResistanceMissionCompleted(game.SessionId, 1, true, null), completed);
+        Assert.Equal(new ResistanceMissionCompleted(game.SessionId, 1, true, 1, 1), completed);
     }
 
     [Fact]
@@ -321,7 +322,7 @@ public class ResistanceGameReverserTests
     }
 
     [Fact]
-    public void WithoutTheModule_TheCompletedMissionStillCarriesTheFailCount()
+    public void WithoutReverseCards_TheCompletedMissionCountsNoReverse()
     {
         var game = MissionGame(0, 3);
         game.Rules = game.Rules.Clone(reverserEnabled: false);
@@ -329,6 +330,6 @@ public class ResistanceGameReverserTests
         Play(game, 3, Success);
 
         var completed = game.DrainEvents().OfType<ResistanceMissionCompleted>().Single();
-        Assert.Equal(1, completed.FailCount);
+        Assert.Equal((1, 0), (completed.FailCount, completed.ReverseCount));
     }
 }

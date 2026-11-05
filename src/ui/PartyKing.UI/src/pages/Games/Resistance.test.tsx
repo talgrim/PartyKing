@@ -89,7 +89,7 @@ const lobby = (names: string[], isOpen = false) => ({
   requiredFails: null as number | null,
   playedMissionPlayerIds: [] as string[],
   yourMissionCard: null as string | null,
-  missionResults: [] as { missionNumber: number; succeeded: boolean; failCount: number; teamPlayerIds: string[] }[],
+  missionResults: [] as { missionNumber: number; succeeded: boolean; failCount: number; reverseCount: number; teamPlayerIds: string[] }[],
   yourPlotCards: [] as unknown[],
   plotCardCounts: [] as unknown[],
   opinionMakerPlayerIds: [] as string[],
@@ -1126,7 +1126,7 @@ describe('Resistance', () => {
           voteApproved: true,
           phase: 'MissionResult',
           teamPlayerIds: ['p0', 'p1'],
-          missionResults: [{ missionNumber: 1, succeeded: false, failCount: 1, teamPlayerIds: [] }],
+          missionResults: [{ missionNumber: 1, succeeded: false, failCount: 1, reverseCount: 0, teamPlayerIds: [] }],
         }),
       );
       renderPage('/s/session-1/games/resistance?tv=1');
@@ -1204,7 +1204,7 @@ describe('Resistance', () => {
 
         expect(await screen.findByRole('button', { name: 'Success' })).toBeEnabled();
         expect(screen.getByRole('button', { name: 'Fail' })).toHaveAttribute('aria-disabled', 'true');
-        expect(screen.getByText(/so is the number of Fail cards/)).toBeInTheDocument();
+        expect(screen.getByText(/Only a Reverser can play the Reverse card/)).toBeInTheDocument();
         await userEvent.click(screen.getByRole('button', { name: 'Reverse' }));
 
         expect(mocks.playResistanceMissionCard).toHaveBeenCalledWith('session-1', 'Reverse');
@@ -1219,11 +1219,19 @@ describe('Resistance', () => {
         expect(screen.getByRole('button', { name: 'Fail' })).toHaveAttribute('aria-disabled', 'true');
       });
 
-      it('shows no Reverse card to the other players', async () => {
+      it('shows the Reverse card to the other players too, but disabled', async () => {
         mocks.getResistance.mockResolvedValue(reversers({ yourRole: 'Spy', yourCharacter: 'Standard', fellowSpies: [] }));
         renderPage();
 
         expect(await screen.findByRole('button', { name: 'Fail' })).toBeEnabled();
+        expect(screen.getByRole('button', { name: 'Reverse' })).toHaveAttribute('aria-disabled', 'true');
+      });
+
+      it('shows no Reverse card at all without the module', async () => {
+        mocks.getResistance.mockResolvedValue(playing({ yourRole: 'Resistance' }));
+        renderPage();
+
+        expect(await screen.findByRole('button', { name: 'Success' })).toBeEnabled();
         expect(screen.queryByRole('button', { name: 'Reverse' })).not.toBeInTheDocument();
       });
 
@@ -1241,7 +1249,7 @@ describe('Resistance', () => {
             phase: 'MissionResult',
             yourPlayerId: 'p1',
             leaderPlayerId: 'p1',
-            missionResults: [{ missionNumber: 1, succeeded: true, failCount: 0, teamPlayerIds: [] }],
+            missionResults: [{ missionNumber: 1, succeeded: true, failCount: 0, reverseCount: 0, teamPlayerIds: [] }],
           }),
         );
         mocks.continueResistance.mockResolvedValue(started(five, { yourPlayerId: 'p1', missionNumber: 2 }));

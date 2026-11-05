@@ -166,18 +166,17 @@ public class ResistanceGameViewBuilderTests
         Assert.Equal(1, revealed.Count(x => x.Character == ResistanceCharacterDto.Reverser));
     }
 
-    [Theory]
-    [InlineData(false, 1)]
-    [InlineData(true, null)]
-    public void TheFailCount_OfAFinishedMission_IsHiddenWithTheReverserModule(bool reverser, int? expected)
+    [Fact]
+    public void TheFailAndReverseCards_OfAFinishedMission_ArePublicButNotWhoPlayedThem()
     {
         var game = NewGame(ResistancePhase.MissionResult);
-        game.Rules.ReverserEnabled = reverser;
-        game.MissionResults.Add(new ResistanceMissionResult { MissionNumber = 1, Succeeded = false, FailCount = 1 });
+        game.Rules.ReverserEnabled = true;
+        game.MissionResults.Add(new ResistanceMissionResult { MissionNumber = 1, Succeeded = true, FailCount = 1, ReverseCount = 1 });
 
         foreach (var seat in new int?[] { 0, 3, null })
         {
-            Assert.Equal(expected, View(game, seat).MissionResults.Single().FailCount);
+            var result = View(game, seat).MissionResults.Single();
+            Assert.Equal((1, 1), (result.FailCount, result.ReverseCount));
         }
     }
 

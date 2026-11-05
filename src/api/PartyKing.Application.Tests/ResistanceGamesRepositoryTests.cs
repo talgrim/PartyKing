@@ -509,7 +509,9 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         var after = await ReloadAsync();
         Assert.Equal(ResistanceMissionCardKind.Reverse, after.Players.Single(x => x.PlayerId == reverser.PlayerId).MissionCard);
         Assert.Equal(ResistanceMissionCardKind.Success, after.Players.Single(x => x.PlayerId == other.PlayerId).MissionCard);
-        Assert.False(Assert.Single(after.MissionResults).Succeeded);
+        var result = Assert.Single(after.MissionResults);
+        Assert.False(result.Succeeded);
+        Assert.Equal((0, 1), (result.FailCount, result.ReverseCount));
     }
 
     [Fact]
