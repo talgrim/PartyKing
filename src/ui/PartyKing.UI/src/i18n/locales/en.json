@@ -443,6 +443,12 @@
         "title": "Plot cards",
         "description": "An add-on in which the leader draws Plot cards at the start of every mission and deals them to the other players. The cards reveal information about roles or change the course of the round: taking over the lead, cancelling a vote, peeking at a mission card.",
         "toggle": "Enable Plot cards"
+      },
+      "inquisitorFailed": "Could not change the Inquisitor setting.",
+      "inquisitor": {
+        "title": "Inquisitor",
+        "description": "A module in which a public token passes between players. After missions 2, 3 and 4 the token holder picks a player who never held it, privately learns whether they are a Spy or Resistance, and the token passes to that player. The Inquisitor may tell the others anything about it. Works best with 7 or more players.",
+        "toggle": "Enable Inquisitor"
       }
     },
     "controls": {
@@ -474,6 +480,20 @@
       "releaseLabel": "Release the seat of {{name}}",
       "keepLabel": "Take back the release of {{name}}"
     },
+    "dev": {
+      "open": "Dev: all players",
+      "title": "Resistance: all players in one tab (development only)",
+      "playerCount": "Players",
+      "show": "Join and show",
+      "start": "Start game",
+      "back": "Back to the game",
+      "panel": "Player {{number}}",
+      "joinedCount": "{{count}} players joined",
+      "failedUnlock": "The session is locked in this browser: enter its password on the session page first, then try again.",
+      "failedRateLimit": "Too many joins in a minute: wait, or run the API with RateLimiting__Disabled=true.",
+      "failedJoin": "Joining {{name}} failed: {{reason}}",
+      "failedStart": "Starting the game failed: {{reason}}"
+    },
     "page": {
       "backToGames": "Back to the games",
       "joinAsPlayer": "Join as a player",
@@ -501,7 +521,9 @@
       "missionCard": "Could not play the mission card.",
       "next": "Could not move on.",
       "restart": "Could not restart the game.",
-      "end": "Could not end the game."
+      "end": "Could not end the game.",
+      "examine": "Could not examine the player.",
+      "confirmInquisition": "Could not confirm."
     },
     "viewSwitch": {
       "label": "View",
@@ -531,7 +553,8 @@
       "opinionMaker": "Opinion Maker",
       "plotCards": "Plot cards: {{count}}",
       "playedCard": "Played a card",
-      "voted": "Voted"
+      "voted": "Voted",
+      "inquisitor": "Inquisitor"
     },
     "missionCards": {
       "title": "Mission cards"
@@ -732,7 +755,7 @@
           },
           "closeEye": {
             "name": "Keeping a Close Eye on You",
-            "text": "after the mission (before “Next”) lets you look at another player's mission card; each card can be looked at by one player only."
+            "text": "after the mission (before “Next”) lets you look at another player's mission card."
           }
         },
         "footer": "When anyone holds a card (other than the Opinion Maker), everyone confirms before the team is picked or after it is approved that they are not playing a card, so nobody can tell who holds one."
@@ -740,6 +763,10 @@
       "end": {
         "title": "End of the game",
         "text": "The Resistance wins after 3 successful missions. The Spies win after 3 failed missions or when 5 teams in a row are rejected in one mission."
+      },
+      "inquisitor": {
+        "title": "Inquisitor (module)",
+        "text": "When the host enables the module, a public Inquisitor token starts with the player to the right of the first leader. After missions 2, 3 and 4 the holder picks a player who never held the token and privately sees whether that player is a Spy or Resistance; the token passes to the examined player. The Inquisitor may say anything about the result, and nobody can check it. The module is skipped when the game ends after mission 3 or 4."
       }
     },
     "phase": {
@@ -799,7 +826,22 @@
       "waitingGuest": "Waiting for the other players",
       "notEnough": "{{waiting}}. At least {{min}} players are needed, {{missing}} more to go. The team sizes shown are for a {{min}}-player game.",
       "readyManager": "There are enough players. When everyone has joined, click “Start game” (nobody can join after the start). Roles are dealt at random.",
-      "readyGuest": "There are enough players. Waiting for the host or an admin to start the game."
+      "readyGuest": "There are enough players. Waiting for the host or an admin to start the game.",
+      "inquisition": "{{outcome}}. Score: {{score}}. {{task}}",
+      "inquisitionPickYou": "You hold the Inquisitor token: pick a player who never held it to examine.",
+      "inquisitionPick": "{{name}} holds the Inquisitor token and picks a player to examine.",
+      "inquisitionSeenYou": "You examined {{target}}, who now holds the token. Look at the result and confirm.",
+      "inquisitionSeen": "{{name}} examined {{target}}, who now holds the Inquisitor token, and is looking at the result."
+    },
+    "inquisitor": {
+      "title": "Inquisitor",
+      "effect": "You hold the token. Pick a player who never held it; you will see whether they are a Spy or Resistance, and the token passes to them.",
+      "target": "Player to examine",
+      "pick": "Pick a player",
+      "examine": "Examine",
+      "result": "{{name}} is",
+      "private": "Only you can see this. You may tell the others anything; nobody can check it.",
+      "seen": "I've seen it"
     }
   }
 }

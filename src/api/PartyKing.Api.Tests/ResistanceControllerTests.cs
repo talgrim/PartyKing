@@ -18,10 +18,12 @@ public class ResistanceControllerTests
     private readonly FakeResistanceLobbyService _lobbyService = new();
     private readonly FakeResistanceRoundService _roundService = new();
     private readonly FakeResistancePlotCardService _plotCardService = new();
+    private readonly FakeResistanceInquisitorService _inquisitorService = new();
     private readonly FakeResistancePresenceService _presenceService = new();
     private readonly ResistanceController _lifecycle;
     private readonly ResistanceRoundController _round;
     private readonly ResistancePlotCardsController _plotCards;
+    private readonly ResistanceInquisitorController _inquisitor;
 
     public ResistanceControllerTests()
     {
@@ -38,6 +40,7 @@ public class ResistanceControllerTests
         _lifecycle = new ResistanceController(accessor, _lobbyService, _roundService, _presenceService, cookies) { ControllerContext = context };
         _round = new ResistanceRoundController(accessor, _roundService, _plotCardService, cookies) { ControllerContext = context };
         _plotCards = new ResistancePlotCardsController(accessor, _plotCardService, _lobbyService, cookies) { ControllerContext = context };
+        _inquisitor = new ResistanceInquisitorController(accessor, _inquisitorService, _lobbyService, cookies) { ControllerContext = context };
     }
 
     [Fact]
@@ -213,6 +216,40 @@ public class ResistanceControllerTests
         Assert.IsType<OkObjectResult>(result);
     }
 
+    [Fact]
+    public async Task Examine_PassesTheCookiesPlayerAndTheTargetToTheService()
+    {
+        _inquisitorService.Result = Game();
+        var target = Guid.NewGuid();
+
+        var result = await _inquisitor.Examine(_sessionId, new ResistanceExamineRequestDto(target), CancellationToken.None);
+
+        Assert.Equal(($"examine-{target}", _sessionId, null, _playerId), _inquisitorService.LastCall);
+        Assert.IsType<OkObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task ConfirmInquisition_PassesTheCookiesPlayerToTheService()
+    {
+        _inquisitorService.Result = Game();
+
+        var result = await _inquisitor.Confirm(_sessionId, CancellationToken.None);
+
+        Assert.Equal(("confirm-inquisition", _sessionId, null, _playerId), _inquisitorService.LastCall);
+        Assert.IsType<OkObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task Examine_MapsServiceErrorsToTheirStatusCodes()
+    {
+        _inquisitorService.Result = Error.Forbidden("Resistance.NotInquisitor", "x");
+
+        var result = await _inquisitor.Examine(
+            _sessionId, new ResistanceExamineRequestDto(Guid.NewGuid()), CancellationToken.None);
+
+        Assert.Equal(StatusCodes.Status403Forbidden, Assert.IsType<ObjectResult>(result).StatusCode);
+    }
+
     public static TheoryData<Error, int> Errors => new()
     {
         { Error.Forbidden("Resistance.NotPlayer", "x"), StatusCodes.Status403Forbidden },
@@ -227,7 +264,7 @@ public class ResistanceControllerTests
         IsOpen = true,
         MaxPlayers = 10,
         MissionNumber = 1,
-        Rules = new ResistanceRulesDto([], false, 1)
+        Rules = new ResistanceRulesDto([], false, 1, false)
     };
 
     /// <summary>Only the player cookie of the Resistance game is read; the rest is not used by the controller.</summary>

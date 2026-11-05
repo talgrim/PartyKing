@@ -32,13 +32,15 @@ type StartOptions = {
   players?: number;
   /** Turns the Plot cards add-on on before the start (it cannot be changed afterwards). */
   plotCards?: boolean;
+  /** Turns the Inquisitor module on before the start. */
+  inquisitor?: boolean;
 };
 
 /** The admin creates and opens a Resistance game, the guests join it and the admin starts it. */
 export async function startResistanceGame(
   session: CreatedSession,
   { openAdmin, openGuest }: Openers,
-  { players = 5, plotCards = false }: StartOptions = {},
+  { players = 5, plotCards = false, inquisitor = false }: StartOptions = {},
 ): Promise<ResistanceGameSetup> {
   const admin = await openAdmin(session);
   await admin.goto(`/s/${session.id}/games`);
@@ -62,6 +64,9 @@ export async function startResistanceGame(
   if (plotCards) {
     await enableModule(admin, 'Plot cards');
   }
+  if (inquisitor) {
+    await enableModule(admin, 'Inquisitor');
+  }
   await admin.getByRole('button', { name: 'Start game' }).click();
   for (const guest of guests.values()) {
     await expect(guest.getByRole('button', { name: 'Show your role' })).toBeVisible();
@@ -70,7 +75,7 @@ export async function startResistanceGame(
 }
 
 /** Turns an add-on on in the "Game settings" dialog. It has to happen before the game starts. */
-export async function enableModule(admin: Page, module: 'Plot cards'): Promise<void> {
+export async function enableModule(admin: Page, module: 'Plot cards' | 'Inquisitor'): Promise<void> {
   await admin.getByRole('button', { name: 'Game settings' }).click();
   const dialog = admin.getByRole('dialog', { name: 'Game settings' });
   const checkbox = dialog.getByRole('checkbox', { name: `Enable ${module}` });
@@ -101,7 +106,8 @@ type Phase =
   | 'ResolvingCards'
   | 'LeaderWindow'
   | 'ConfidenceWindow'
-  | 'PeekWindow';
+  | 'PeekWindow'
+  | 'Inquisition';
 
 type Role = 'Resistance' | 'Spy';
 
@@ -156,6 +162,12 @@ export type ResistanceView = {
   opinionMakerPlayerIds: string[];
   playedPlotCards: { id: number; type: PlotCardType; holderPlayerId: string; targetPlayerId: string | null }[];
   leaderWindowPassedPlayerIds: string[];
+  inquisitorPlayerId: string | null;
+  pastInquisitorPlayerIds: string[];
+  inquisitionExaminerPlayerId: string | null;
+  inquisitionExaminedPlayerId: string | null;
+  /** The loyalty the examiner saw, private to them until they confirm. */
+  yourInquisition: { playerId: string; role: Role } | null;
 };
 
 /** The game as this player's page sees it. */
@@ -401,4 +413,51 @@ export async function passWindow(setup: ResistanceGameSetup): Promise<void> {
         .click(),
     ),
   );
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Inquisitor
+// ---------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Plays a mission up to the Inquisition (the module is on and the mission is the 2nd to 4th): the team is picked and
+ * approved, its cards are played, and the game waits for the holder of the token. Returns the leader's page.
+ */
+export async function playMissionToInquisition(
+  setup: ResistanceGameSetup,
+  outcome: 'success' | 'fail',
+): Promise<Page> {
+  const { leader, team, failers } = await pickTeam(setup, outcome);
+  await submitTeam(leader, team);
+  await voteAll(setup, 'Approve');
+  await playMissionCards(setup, team, failers);
+  await waitForPhase(setup, 'Inquisition');
+  return leader;
+}
+
+/** The names the token holder may pick, as the picker lists them. */
+export async function examineOptions(holder: Page): Promise<string[]> {
+  const region = holder.getByRole('region', { name: 'Inquisitor' });
+  // The panel appears after the page fetched its view; reading the options before that would see none
+  await expect(region.getByLabel('Player to examine')).toBeVisible();
+  const options = region.getByLabel('Player to examine').locator('option');
+  return (await options.allInnerTexts()).filter((text) => text !== 'Pick a player');
+}
+
+/** The holder examines `targetName` and reads the loyalty they are shown. */
+export async function examinePlayer(holder: Page, targetName: string): Promise<{ name: string; role: Role }> {
+  const region = holder.getByRole('region', { name: 'Inquisitor' });
+  await region.getByLabel('Player to examine').selectOption({ label: targetName });
+  await region.getByRole('button', { name: 'Examine' }).click();
+  const result = region.getByText(/.+ is (Spy|Resistance)\./);
+  await expect(result).toBeVisible();
+  const [, name, role] = (await result.innerText()).match(/(.+) is (Spy|Resistance)\./)!;
+  return { name, role: role as Role };
+}
+
+/** The examiner confirms having seen the loyalty, which ends the Inquisition. */
+export async function confirmInquisition(holder: Page): Promise<void> {
+  const region = holder.getByRole('region', { name: 'Inquisitor' });
+  await region.getByRole('button', { name: "I've seen it" }).click();
+  await expect(region).toBeHidden();
 }

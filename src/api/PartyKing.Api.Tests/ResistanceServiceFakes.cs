@@ -51,6 +51,10 @@ internal sealed class FakeResistanceLobbyService : IResistanceLobbyService
         Guid sessionId, bool enabled, GameCaller caller, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
 
+    public Task<ErrorOr<ResistanceGameDto>> SetInquisitorAsync(
+        Guid sessionId, bool enabled, GameCaller caller, CancellationToken cancellationToken) =>
+        throw new NotSupportedException();
+
     public Task<ErrorOr<ResistanceGameDto>> KickAsync(
         Guid sessionId, Guid playerId, GameCaller caller, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
@@ -158,6 +162,21 @@ internal sealed class FakeResistancePlotCardService : FakeResistanceCalls, IResi
     }
 }
 
+internal sealed class FakeResistanceInquisitorService : FakeResistanceCalls, IResistanceInquisitorService
+{
+    public Task<ErrorOr<ResistanceGameDto>> ExamineAsync(
+        Guid sessionId, Guid targetPlayerId, GameCaller caller, CancellationToken cancellationToken)
+    {
+        return Record($"examine-{targetPlayerId}", sessionId, null, caller);
+    }
+
+    public Task<ErrorOr<ResistanceGameDto>> ConfirmInquisitionAsync(
+        Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
+    {
+        return Record("confirm-inquisition", sessionId, null, caller);
+    }
+}
+
 internal sealed class FakeResistancePresenceService : IResistancePresenceService
 {
     public ErrorOr<ResistancePresenceDto> Result { get; set; } = new ResistancePresenceDto([]);
@@ -191,7 +210,7 @@ internal sealed class FakeResistanceSeatService : IResistanceSeatService
     {
         LastRelease = (playerId, released, caller);
 
-        return Task.FromResult(ErrorOrFactory.From(new ResistanceGameDto { Rules = new ResistanceRulesDto([], false, 1) }));
+        return Task.FromResult(ErrorOrFactory.From(new ResistanceGameDto { Rules = new ResistanceRulesDto([], false, 1, false) }));
     }
 
     public Task<ErrorOr<GameSeat>> ClaimAsync(Guid sessionId, Guid playerId, CancellationToken cancellationToken)

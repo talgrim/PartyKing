@@ -7,6 +7,7 @@ import { useSessionMusicHub } from '@/service/realtime/useSessionMusicHub';
 import { resistanceKey } from '@/service/realtime/sessionMusicEvents';
 
 const mocks = vi.hoisted(() => ({
+  embedded: false,
   role: { isHost: false, isAdmin: true },
   getResistance: vi.fn(),
   getResistancePresence: vi.fn(),
@@ -14,6 +15,9 @@ const mocks = vi.hoisted(() => ({
   startResistance: vi.fn(),
   refreshResistanceRules: vi.fn(),
   setResistancePlotCards: vi.fn(),
+  setResistanceInquisitor: vi.fn(),
+  examineResistancePlayer: vi.fn(),
+  confirmResistanceInquisition: vi.fn(),
   selectResistanceTeam: vi.fn(),
   voteResistanceTeam: vi.fn(),
   playResistanceMissionCard: vi.fn(),
@@ -23,6 +27,13 @@ const mocks = vi.hoisted(() => ({
   setResistanceSeatReleased: vi.fn(),
 }));
 
+vi.mock('@/service/devPersona', () => ({
+  devPersona: undefined,
+  withDevPersona: (path: string) => path,
+  get isDevEmbedded() {
+    return mocks.embedded;
+  },
+}));
 vi.mock('@/service/endpoints/sessions/useViewerRole', () => ({ useViewerRole: () => mocks.role }));
 vi.mock('@/service/realtime/useSessionMusicHub', () => ({ useSessionMusicHub: vi.fn() }));
 vi.mock('@/pages/Games/resistance/ResistanceQueuePanel', () => ({
@@ -36,6 +47,9 @@ vi.mock('@/service/endpoints/games/gamesApi', () => ({
     startResistance: mocks.startResistance,
     refreshResistanceRules: mocks.refreshResistanceRules,
     setResistancePlotCards: mocks.setResistancePlotCards,
+    setResistanceInquisitor: mocks.setResistanceInquisitor,
+    examineResistancePlayer: mocks.examineResistancePlayer,
+    confirmResistanceInquisition: mocks.confirmResistanceInquisition,
     selectResistanceTeam: mocks.selectResistanceTeam,
     voteResistanceTeam: mocks.voteResistanceTeam,
     playResistanceMissionCard: mocks.playResistanceMissionCard,
@@ -78,6 +92,11 @@ const lobby = (names: string[], isOpen = false) => ({
   playedPlotCards: [] as unknown[],
   yourReveals: [] as unknown[],
   yourPeeks: [] as unknown[],
+  inquisitorPlayerId: null,
+  pastInquisitorPlayerIds: [] as unknown[],
+  inquisitionExaminerPlayerId: null,
+  inquisitionExaminedPlayerId: null,
+  yourInquisition: null,
   leaderWindowPassedPlayerIds: [] as unknown[],
   rules: {
     playerCounts: [5, 6, 7, 8, 9, 10].map((playerCount) => ({
@@ -88,6 +107,7 @@ const lobby = (names: string[], isOpen = false) => ({
     })),
     plotCardsEnabled: false,
     plotCardsPerRound: 1,
+    inquisitorEnabled: false,
   },
 });
 
@@ -115,6 +135,7 @@ const renderPage = (path = '/s/session-1/games/resistance') =>
 
 describe('Resistance', () => {
   beforeEach(() => {
+    mocks.embedded = false;
     mocks.role = { isHost: false, isAdmin: true };
     mocks.getResistance.mockReset();
     mocks.getResistancePresence.mockReset();
@@ -125,6 +146,9 @@ describe('Resistance', () => {
     mocks.startResistance.mockReset();
     mocks.refreshResistanceRules.mockReset();
     mocks.setResistancePlotCards.mockReset();
+    mocks.setResistanceInquisitor.mockReset();
+    mocks.examineResistancePlayer.mockReset();
+    mocks.confirmResistanceInquisition.mockReset();
     mocks.selectResistanceTeam.mockReset();
     mocks.endResistance.mockReset();
     mocks.getResistance.mockResolvedValue(lobby([]));
@@ -218,6 +242,28 @@ describe('Resistance', () => {
     await userEvent.click(await screen.findByRole('checkbox', { name: 'Enable Plot cards' }));
 
     expect(await screen.findByText('Could not change the Plot cards setting.')).toBeInTheDocument();
+  });
+
+  it('switches the Inquisitor on before the game starts', async () => {
+    mocks.setResistanceInquisitor.mockResolvedValue(lobby([]));
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Game settings' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Game settings' });
+    expect(within(dialog).getByRole('region', { name: 'Inquisitor' })).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole('checkbox', { name: 'Enable Inquisitor' }));
+
+    expect(mocks.setResistanceInquisitor).toHaveBeenCalledWith('session-1', true);
+  });
+
+  it('shows a message when the Inquisitor cannot be switched', async () => {
+    mocks.setResistanceInquisitor.mockRejectedValue(new Error('boom'));
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Game settings' }));
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Enable Inquisitor' }));
+
+    expect(await screen.findByText('Could not change the Inquisitor setting.')).toBeInTheDocument();
   });
 
   it('keeps the game settings usable in the open lobby and disables them after the start', async () => {
@@ -462,6 +508,31 @@ describe('Resistance', () => {
 
     afterEach(() => vi.unstubAllGlobals());
 
+    it('shows nothing but the player view in a frame of the dev page, even on a wide screen', async () => {
+      stubWideScreen();
+      mocks.embedded = true;
+      mocks.getResistance.mockResolvedValue(joined());
+      renderPage();
+
+      expect(await screen.findByRole('button', { name: 'Show your role' })).toBeInTheDocument();
+      expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+      expect(screen.queryByRole('img', { name: 'Mission board' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('list', { name: 'Players' })).not.toBeInTheDocument();
+    });
+
+    it('offers the multi-player dev page to the host and admins only', async () => {
+      mocks.getResistance.mockResolvedValue(joined());
+      const view = renderPage();
+      await screen.findByRole('button', { name: 'Show your role' });
+      expect(screen.queryByRole('link', { name: 'Dev: all players' })).not.toBeInTheDocument();
+      view.unmount();
+
+      mocks.role = { isHost: false, isAdmin: true };
+      renderPage();
+      expect(await screen.findByRole('link', { name: 'Dev: all players' })).toHaveAttribute('href', '/dev/s/session-1/resistance');
+    });
+
     it('shows a player both views side by side on a wide screen, and the switch only picks the board or the queue', async () => {
       stubWideScreen();
       mocks.getResistance.mockResolvedValue(joined());
@@ -543,6 +614,52 @@ describe('Resistance', () => {
 
       expect(await screen.findByRole('list', { name: 'Players' })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Player' })).not.toBeInTheDocument();
+    });
+
+    const inquisition = (extra: object = {}) =>
+      joined({
+        phase: 'Inquisition',
+        inquisitorPlayerId: 'p3',
+        pastInquisitorPlayerIds: ['p2', 'p3'],
+        inquisitionExaminerPlayerId: 'p2',
+        inquisitionExaminedPlayerId: 'p3',
+        yourInquisition: { playerId: 'p3', role: 'Spy' },
+        ...extra,
+      });
+
+    it('shows the examiner the loyalty and lets them confirm having seen it', async () => {
+      mocks.getResistance.mockResolvedValue(inquisition());
+      mocks.confirmResistanceInquisition.mockResolvedValue(joined());
+      renderPage();
+
+      expect(await screen.findByText(/D is/)).toBeInTheDocument();
+      expect(screen.getByText('Spy')).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: "I've seen it" }));
+
+      expect(mocks.confirmResistanceInquisition).toHaveBeenCalledWith('session-1');
+    });
+
+    it('lets the holder of the token examine a player who never held it', async () => {
+      mocks.getResistance.mockResolvedValue(
+        inquisition({ inquisitorPlayerId: 'p2', pastInquisitorPlayerIds: ['p2'], inquisitionExaminerPlayerId: null, inquisitionExaminedPlayerId: null, yourInquisition: null }),
+      );
+      mocks.examineResistancePlayer.mockResolvedValue(joined());
+      renderPage();
+
+      await userEvent.selectOptions(await screen.findByLabelText('Player to examine'), 'p4');
+      await userEvent.click(screen.getByRole('button', { name: 'Examine' }));
+
+      expect(mocks.examineResistancePlayer).toHaveBeenCalledWith('session-1', 'p4');
+    });
+
+    it('gives the TV tab nothing of what the examiner saw', async () => {
+      mocks.role = { isHost: true, isAdmin: false };
+      mocks.getResistance.mockResolvedValue(inquisition());
+      renderPage('/s/session-1/games/resistance?tv=1');
+
+      await screen.findByRole('list', { name: 'Players' });
+      expect(screen.queryByRole('button', { name: "I've seen it" })).not.toBeInTheDocument();
+      expect(screen.queryByText(/D is/)).not.toBeInTheDocument();
     });
 
     it('gives the TV tab no role, no "You" and no switch, even for a host who plays', async () => {

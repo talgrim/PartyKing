@@ -451,6 +451,12 @@
         "title": "Karty Intryg",
         "description": "Dodatek, w którym Lider na początku każdej misji dobiera karty Intryg i rozdaje je innym graczom. Karty dają informacje o rolach albo zmieniają przebieg rundy: przejęcie przywództwa, unieważnienie głosowania, podgląd karty Misji.",
         "toggle": "Włącz karty Intryg"
+      },
+      "inquisitorFailed": "Nie udało się zmienić ustawienia Inkwizytora.",
+      "inquisitor": {
+        "title": "Inkwizytor",
+        "description": "Moduł, w którym jawny żeton przechodzi między graczami. Po misjach 2, 3 i 4 posiadacz żetonu wybiera gracza, który nigdy go nie miał, i prywatnie dowiaduje się, czy jest Szpiegiem, czy Ruchem Oporu; żeton przechodzi na badanego. Inkwizytor może powiedzieć pozostałym cokolwiek o wyniku. Najlepiej działa przy 7 lub więcej graczach.",
+        "toggle": "Włącz Inkwizytora"
       }
     },
     "controls": {
@@ -482,6 +488,20 @@
       "releaseLabel": "Zwolnij miejsce: {{name}}",
       "keepLabel": "Cofnij zwolnienie miejsca: {{name}}"
     },
+    "dev": {
+      "open": "Dev: wszyscy gracze",
+      "title": "Resistance: wszyscy gracze w jednej karcie (tylko development)",
+      "playerCount": "Gracze",
+      "show": "Dołącz i pokaż",
+      "start": "Rozpocznij grę",
+      "back": "Wróć do gry",
+      "panel": "Gracz {{number}}",
+      "joinedCount": "Dołączyło graczy: {{count}}",
+      "failedUnlock": "Sesja jest zablokowana w tej przeglądarce: najpierw wpisz jej hasło na stronie sesji, potem spróbuj ponownie.",
+      "failedRateLimit": "Za dużo dołączeń w minutę: poczekaj albo uruchom API z RateLimiting__Disabled=true.",
+      "failedJoin": "Nie udało się dołączyć {{name}}: {{reason}}",
+      "failedStart": "Nie udało się rozpocząć gry: {{reason}}"
+    },
     "page": {
       "backToGames": "Wróć do gier",
       "joinAsPlayer": "Dołącz jako gracz",
@@ -509,7 +529,9 @@
       "missionCard": "Nie udało się zagrać karty misji.",
       "next": "Nie udało się przejść dalej.",
       "restart": "Nie udało się zagrać ponownie.",
-      "end": "Nie udało się zakończyć gry."
+      "end": "Nie udało się zakończyć gry.",
+      "examine": "Nie udało się zbadać gracza.",
+      "confirmInquisition": "Nie udało się potwierdzić."
     },
     "viewSwitch": {
       "label": "Widok",
@@ -539,7 +561,8 @@
       "opinionMaker": "Kreator opinii",
       "plotCards": "Karty Intryg: {{count}}",
       "playedCard": "Zagrał/a kartę",
-      "voted": "Zagłosował/a"
+      "voted": "Zagłosował/a",
+      "inquisitor": "Inkwizytor"
     },
     "missionCards": {
       "title": "Karty misji"
@@ -740,7 +763,7 @@
           },
           "closeEye": {
             "name": "Mam cię na oku",
-            "text": "po misji (przed „Dalej”) pozwala podejrzeć kartę Misji innego gracza; każdą kartę może podejrzeć tylko jeden gracz."
+            "text": "po misji (przed „Dalej”) pozwala podejrzeć kartę Misji innego gracza."
           }
         },
         "footer": "Gdy ktoś ma w ręku jakąkolwiek kartę (poza Kreatorem opinii), przed wyborem drużyny albo po zatwierdzeniu wszyscy potwierdzają, że nie zagrywają karty, więc nie widać, kto ją ma."
@@ -748,6 +771,10 @@
       "end": {
         "title": "Koniec gry",
         "text": "Ruch Oporu wygrywa po 3 udanych misjach. Szpiedzy wygrywają po 3 nieudanych misjach albo gdy 5 drużyn z rzędu zostanie odrzuconych w jednej misji."
+      },
+      "inquisitor": {
+        "title": "Inkwizytor (moduł)",
+        "text": "Gdy host włączy moduł, jawny żeton Inkwizytora trafia na początku do gracza po prawej od pierwszego Lidera. Po misjach 2, 3 i 4 posiadacz wybiera gracza, który nigdy nie miał żetonu, i prywatnie widzi, czy jest on Szpiegiem, czy Ruchem Oporu; żeton przechodzi na badanego. Inkwizytor może powiedzieć o wyniku cokolwiek, a nikt nie może tego sprawdzić. Moduł pomija się, gdy gra kończy się po misji 3 lub 4."
       }
     },
     "phase": {
@@ -811,7 +838,22 @@
       "waitingGuest": "Czekamy na pozostałych graczy",
       "notEnough": "{{waiting}}. Potrzeba co najmniej {{min}} graczy, brakuje jeszcze {{missing}}. Pokazane rozmiary drużyn dotyczą gry w {{min}} osób.",
       "readyManager": "Jest wystarczająco graczy. Gdy wszyscy dołączą, kliknij „Rozpocznij grę” (po starcie nikt nie dołączy). Role zostaną rozdane losowo.",
-      "readyGuest": "Jest wystarczająco graczy. Czekamy, aż host lub admin rozpocznie grę."
+      "readyGuest": "Jest wystarczająco graczy. Czekamy, aż host lub admin rozpocznie grę.",
+      "inquisition": "{{outcome}}. Wynik: {{score}}. {{task}}",
+      "inquisitionPickYou": "Masz żeton Inkwizytora: wybierz do zbadania gracza, który nigdy go nie miał.",
+      "inquisitionPick": "{{name}} ma żeton Inkwizytora i wybiera gracza do zbadania.",
+      "inquisitionSeenYou": "Zbadałeś/aś gracza {{target}}, który ma teraz żeton. Zobacz wynik i potwierdź.",
+      "inquisitionSeen": "{{name}} zbadał/a gracza {{target}}, który ma teraz żeton Inkwizytora, i ogląda wynik."
+    },
+    "inquisitor": {
+      "title": "Inkwizytor",
+      "effect": "Masz żeton. Wybierz gracza, który nigdy go nie miał: zobaczysz, czy jest Szpiegiem, czy Ruchem Oporu, a żeton przejdzie na niego.",
+      "target": "Gracz do zbadania",
+      "pick": "Wybierz gracza",
+      "examine": "Zbadaj",
+      "result": "{{name}} to",
+      "private": "Widzisz to tylko ty. Możesz powiedzieć pozostałym cokolwiek; nikt tego nie sprawdzi.",
+      "seen": "Widziałem/am"
     }
   }
 }

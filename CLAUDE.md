@@ -10,6 +10,7 @@ PartyKing is a party app: guests upload photos that the API serves as a timed sl
 
 ## Conventions
 
+- ALL pull requests must target `develop`, never `master` (`master` is only for releases and deploys on push). Pass `--base develop` to `gh pr create`.
 - Commits follow the Conventional Commits format.
 - Use subagent Explore for codebase exploration.
 - Don't commit changes until explicitly stated.

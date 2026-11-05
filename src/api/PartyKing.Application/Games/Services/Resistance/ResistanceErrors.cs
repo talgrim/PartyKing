@@ -103,6 +103,18 @@ internal static class ResistanceErrors
             "Resistance.SeatNotReleased", "That seat is not free to take over."),
         ResistanceFailure.SeatOnline => Error.Conflict(
             "Resistance.SeatOnline", "A device of that player is still connected."),
+        ResistanceFailure.InquisitorLocked => Error.Conflict(
+            "Resistance.RulesLocked", "The Inquisitor can only be switched before the game starts."),
+        ResistanceFailure.NotInquisition => Error.Conflict(
+            "Resistance.NotInquisition", "Nobody is being examined now."),
+        ResistanceFailure.NotInquisitor => Error.Forbidden(
+            "Resistance.NotInquisitor", "Only the holder of the Inquisitor token examines."),
+        ResistanceFailure.InvalidExamineTarget => Error.Validation(
+            "Resistance.InvalidTarget", "That player can't be examined."),
+        ResistanceFailure.AlreadyExamined => Error.Conflict(
+            "Resistance.AlreadyExamined", "You already picked the player to examine."),
+        ResistanceFailure.NotExamined => Error.Conflict(
+            "Resistance.NotExamined", "Pick the player to examine first."),
         _ => throw new ArgumentOutOfRangeException(nameof(failure), failure, "No error is defined for this failure."),
     };
 }

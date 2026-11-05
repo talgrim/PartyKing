@@ -36,6 +36,11 @@ const game = (count: number, extra: Partial<ResistanceGameDto> = {}): Resistance
   openMissionCard: null,
   leaderWindowPassedPlayerIds: [],
   yourPeeks: [],
+  inquisitorPlayerId: null,
+  pastInquisitorPlayerIds: [],
+  inquisitionExaminerPlayerId: null,
+  inquisitionExaminedPlayerId: null,
+  yourInquisition: null,
   rules: {
     playerCounts: [5, 6, 7, 8, 9, 10].map((playerCount) => ({
       playerCount,
@@ -45,6 +50,7 @@ const game = (count: number, extra: Partial<ResistanceGameDto> = {}): Resistance
     })),
     plotCardsEnabled: false,
     plotCardsPerRound: 1,
+    inquisitorEnabled: false,
   },
   ...extra,
 });

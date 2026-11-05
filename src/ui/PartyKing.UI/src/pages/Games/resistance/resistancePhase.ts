@@ -140,6 +140,25 @@ export const resistancePhaseDescription = (
       return t('resistance.phase.peekWindow', { outcome, score, passed, count, mine: confirmation(game) });
     }
 
+    if (game.phase === 'Inquisition') {
+      const nameOf = (id: string | null) => game.players.find((player) => player.id === id)?.name ?? t('resistance.phase.aPlayer');
+      const examiner = game.inquisitionExaminerPlayerId;
+      const youExamine = game.yourPlayerId != null && (examiner ?? game.inquisitorPlayerId) === game.yourPlayerId;
+      const task =
+        examiner == null
+          ? youExamine
+            ? t('resistance.phase.inquisitionPickYou')
+            : t('resistance.phase.inquisitionPick', { name: nameOf(game.inquisitorPlayerId) })
+          : youExamine
+            ? t('resistance.phase.inquisitionSeenYou', { target: nameOf(game.inquisitionExaminedPlayerId) })
+            : t('resistance.phase.inquisitionSeen', {
+                name: nameOf(examiner),
+                target: nameOf(game.inquisitionExaminedPlayerId),
+              });
+
+      return t('resistance.phase.inquisition', { outcome, score, task });
+    }
+
     if (game.phase === 'MissionResult') {
       const next = t(youLead || viewer.canManage ? 'resistance.phase.nextClick' : 'resistance.phase.nextWait');
       const fails =

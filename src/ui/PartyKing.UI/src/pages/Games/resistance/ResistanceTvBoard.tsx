@@ -34,9 +34,8 @@ export const ResistanceTvBoard = ({ game, board, banner, yourPlayerId, onlinePla
   const votes = allVotes ?? earlyVotes;
 
   // The cards of the mission that just finished, until "Next" starts the next one (also when it ended the game).
-  const finished = game?.phase === 'PeekWindow' || game?.phase === 'MissionResult' || game?.phase === 'GameOver'
-    ? game.missionResults.find((result) => result.missionNumber === game.missionNumber)
-    : undefined;
+  // The number only advances on "Next", so a result for the current mission exists exactly until then, in whatever phase.
+  const finished = game?.missionResults.find((result) => result.missionNumber === game.missionNumber);
   const openPlayer = game?.players.find((player) => player.id === game.openMissionPlayerId);
   const open = openPlayer && game?.openMissionCard != null ? { name: openPlayer.name, success: game.openMissionCard } : null;
   const cards = finished && team.length > 0 ? { count: team.length, fails: finished.failCount } : null;
@@ -58,7 +57,7 @@ export const ResistanceTvBoard = ({ game, board, banner, yourPlayerId, onlinePla
           />
         </div>
         {(team.length > 0 || votes || showCards) && (
-          <div className="flex w-full shrink-0 items-start justify-center gap-[4vw]">
+          <div className="flex w-full shrink-0 flex-wrap items-stretch justify-center gap-3">
             {team.length > 0 && (
               <ResistanceTeamCards members={team} missionNumber={game!.missionNumber} leaderId={game!.leaderPlayerId} />
             )}

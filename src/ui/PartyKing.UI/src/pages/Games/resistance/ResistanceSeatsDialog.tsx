@@ -39,11 +39,19 @@ export const ResistanceSeatsDialog = ({ sessionId, open, onClose, players, onSet
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs" aria-labelledby="resistance-seats-title">
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth="xs"
+      aria-labelledby="resistance-seats-title"
+      // MUI's emotion styles are unlayered and beat Tailwind's layered utilities, hence the important modifier
+      slotProps={{ paper: { className: 'bg-slate-800! text-slate-200!' } }}
+    >
       <DialogTitle id="resistance-seats-title">{t('resistance.seats.title')}</DialogTitle>
       <DialogContent className="space-y-3">
-        <p>{t('resistance.seats.hint')}</p>
-        {failed && <p className="text-amber-600">{t('resistance.seats.failed')}</p>}
+        <p className="text-slate-400">{t('resistance.seats.hint')}</p>
+        {failed && <p className="text-amber-500">{t('resistance.seats.failed')}</p>}
         {seats.length === 0 && <p>{t('resistance.seats.empty')}</p>}
         <ul className="space-y-2">
           {seats.map((player) => {
@@ -53,11 +61,11 @@ export const ResistanceSeatsDialog = ({ sessionId, open, onClose, players, onSet
               <li key={player.id} className="flex items-center gap-2">
                 <span className="flex-1 truncate">{player.name}</span>
                 {online !== undefined && (
-                  <span className={online ? 'text-green-600' : 'text-slate-500'}>
+                  <span className={online ? 'text-green-400' : 'text-slate-400'}>
                     {online ? t('resistance.presence.online') : t('resistance.presence.offline')}
                   </span>
                 )}
-                {player.isSeatReleased && <span className="text-amber-600">{t('resistance.seats.released')}</span>}
+                {player.isSeatReleased && <span className="text-amber-500">{t('resistance.seats.released')}</span>}
                 <Button
                   size="small"
                   variant={player.isSeatReleased ? 'outlined' : 'contained'}
