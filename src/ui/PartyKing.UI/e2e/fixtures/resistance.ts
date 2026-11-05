@@ -45,9 +45,13 @@ export async function startResistanceGame(
   await admin.getByRole('button', { name: 'Create' }).click();
   await admin.getByRole('button', { name: 'Open the game' }).click();
 
+  // Opening a page (new context, loading the app, unlocking) is the slow part, so all of them open at once; the joining
+  // itself stays one by one, because the seats are taken in the order of joining
+  const names = PLAYER_NAMES.slice(0, players);
+  const pages = await Promise.all(names.map(() => openGuest(session)));
   const guests = new Map<string, Page>();
-  for (const [index, name] of PLAYER_NAMES.slice(0, players).entries()) {
-    const guest = await openGuest(session);
+  for (const [index, name] of names.entries()) {
+    const guest = pages[index];
     await guest.goto(`/s/${session.id}/games/resistance/join`);
     await guest.getByLabel('Your name').fill(name);
     await guest.getByRole('button', { name: 'Join' }).click();
@@ -216,15 +220,19 @@ export async function submitTeam(leader: Page, names: string[]): Promise<void> {
 export const vote = (page: Page, choice: 'Approve' | 'Reject') =>
   page.getByRole('region', { name: 'Voting' }).getByRole('button', { name: choice }).click();
 
-/** Every player casts the same vote. An Opinion Maker has to vote first, so they go before everybody else. */
+/**
+ * Every player casts the same vote. An Opinion Maker has to vote first, so they go one by one before everybody else,
+ * who vote at once.
+ */
 export async function voteAll(setup: ResistanceGameSetup, choice: 'Approve' | 'Reject'): Promise<void> {
   const [, page] = [...setup.guests][0];
   const view = await viewOf(page, setup.session);
   const makers = view.opinionMakerPlayerIds.map((id) => nameOf(view, id));
-  const voters = [...setup.guests.keys()].sort((a, b) => Number(makers.includes(b)) - Number(makers.includes(a)));
-  for (const name of voters) {
+  for (const name of makers) {
     await vote(setup.guests.get(name)!, choice);
   }
+  const others = [...setup.guests].filter(([name]) => !makers.includes(name));
+  await Promise.all(others.map(([, guest]) => vote(guest, choice)));
 }
 
 /** The leader of a finished mission starts the next one. */
@@ -237,11 +245,13 @@ export async function continueMission(leader: Page): Promise<void> {
 
 /** The approved team plays its cards: the `failers` play Fail, the rest Success. */
 export async function playMissionCards(setup: ResistanceGameSetup, team: string[], failers: string[]): Promise<void> {
-  for (const name of team) {
-    const mission = setup.guests.get(name)!.getByRole('region', { name: 'Mission' });
-    // The panel goes away with the last card (it resolves the mission), so only the clicks are made here
-    await mission.getByRole('button', { name: failers.includes(name) ? 'Fail' : 'Success' }).click();
-  }
+  await Promise.all(
+    team.map((name) => {
+      const mission = setup.guests.get(name)!.getByRole('region', { name: 'Mission' });
+      // The panel goes away with the last card (it resolves the mission), so only the clicks are made here
+      return mission.getByRole('button', { name: failers.includes(name) ? 'Fail' : 'Success' }).click();
+    }),
+  );
 }
 
 /**
@@ -383,10 +393,12 @@ export async function takeResponsibility(holder: Page, targetName: string): Prom
  * last confirmation, so the caller waits for the phase that follows.
  */
 export async function passWindow(setup: ResistanceGameSetup): Promise<void> {
-  for (const page of setup.guests.values()) {
-    await page
-      .getByRole('region', { name: 'Playing cards' })
-      .getByRole('button', { name: "I'm not playing a card" })
-      .click();
-  }
+  await Promise.all(
+    [...setup.guests.values()].map((page) =>
+      page
+        .getByRole('region', { name: 'Playing cards' })
+        .getByRole('button', { name: "I'm not playing a card" })
+        .click(),
+    ),
+  );
 }
