@@ -425,15 +425,25 @@
       "fellowSpiesList": "Fellow spies",
       "blindSpies": "Blind Spies: you do not know who the other spies are.",
       "reverser": "You are a Reverser: you may play a Reverse card, which turns the result of the mission around.",
-      "hiddenReverserSpy": "Reverser spy: you keep your eyes closed in the reveal, so you do not know the other spies and they do not know you."
+      "hiddenReverserSpy": "Reverser spy: you keep your eyes closed in the reveal, so you do not know the other spies and they do not know you.",
+      "defector": "You are a Defector: your side can change when a switch card is flipped at the start of mission 3, 4 or 5. Look at your card again after every flip.",
+      "defectorSpy": "As a Defector you do not know who the other spies are.",
+      "fellowDefector": "The other Defector is {{name}}."
     },
     "missionCard": {
       "success": "Success",
       "fail": "Fail",
       "reverse": "Reverse"
     },
+    "defectorFlips": {
+      "title": "Switch cards:",
+      "list": "Flipped switch cards",
+      "noChange": "Mission {{mission}}: No Change",
+      "change": "Mission {{mission}}: Change Allegiance"
+    },
     "characters": {
-      "reverser": "Reverser"
+      "reverser": "Reverser",
+      "defector": "Defector"
     },
     "vote": {
       "approve": "Approve",
@@ -473,6 +483,13 @@
         "sidesResistance": "Only the Resistance",
         "sidesSpy": "Only the Spies",
         "spyKnowsSpies": "Spy Reverser knows the other spies"
+      },
+      "defectorFailed": "Could not change the Defector setting.",
+      "defector": {
+        "title": "Defector",
+        "description": "A module in which two secret Defectors are dealt, one on the Resistance side and one among the Spies. At the start of missions 3, 4 and 5 a switch card is flipped for everyone to see: on Change Allegiance both Defectors change sides (they have to play by the rules of their new side and the win conditions follow), on No Change nothing happens. Nobody is told who the Defectors are, only that a switch happened. The Defector spy does not know the other spies, but they know him as long as he is among them.",
+        "toggle": "Enable Defectors",
+        "knowEachOther": "The Defectors know each other"
       }
     },
     "controls": {
@@ -797,6 +814,10 @@
       "reverser": {
         "title": "Reverser (module)",
         "text": "When the host enables the module, secret Reversers are dealt: by default one among the Resistance and one among the Spies, or only on the side the host chose. A Reverser on a mission team may play a Reverse card instead of Success. An odd number of Reverse cards turns the result of the mission around (it fails if it would have succeeded and the other way round), two cancel out; on the mission that needs two Fails, one Fail with one Reverse is a failure. A spy Reverser plays Success or Reverse, never Fail. Once the mission ends, the played cards (Fail and Reverse ones too) are shown without saying who played them."
+      },
+      "defector": {
+        "title": "Defectors (module)",
+        "text": "When the host enables the module, two secret Defectors are dealt: one on the Resistance side and one among the Spies. A deck of five switch cards (three No Change, two Change Allegiance) is shuffled, and at the start of missions 3, 4 and 5 one card is flipped for everyone to see. On Change Allegiance both Defectors change sides: the former spy is now Resistance and plays only Success, the former Resistance Defector is now a spy and may play Fail, and the win conditions follow the new sides. A Defector spy keeps their eyes closed in the reveal, so they know no spy, while the other spies know them as long as they are among them. The Defector who started on the Resistance side is never known to the spies. With the variant the host may choose, the Defectors know each other. Revealed identities show the current side, never the character."
       },
       "inquisitor": {
         "title": "Inquisitor (module)",

@@ -29,5 +29,6 @@ export const resistanceRules = (): RuleSection[] => [
   { title: i18n.t('resistance.rules.inquisitor.title'), text: i18n.t('resistance.rules.inquisitor.text') },
   { title: i18n.t('resistance.rules.blindSpies.title'), text: i18n.t('resistance.rules.blindSpies.text') },
   { title: i18n.t('resistance.rules.reverser.title'), text: i18n.t('resistance.rules.reverser.text') },
+  { title: i18n.t('resistance.rules.defector.title'), text: i18n.t('resistance.rules.defector.text') },
   { title: i18n.t('resistance.rules.end.title'), text: i18n.t('resistance.rules.end.text') },
 ];
