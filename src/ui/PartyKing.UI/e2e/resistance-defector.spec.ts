@@ -44,7 +44,7 @@ test('the Defector module deals one Defector to each side and flips a public swi
   expect((await viewOfPlayer(setup, spyDefector)).fellowSpies).toEqual([]);
   expect((await viewOfPlayer(setup, otherSpy)).fellowSpies).toEqual([spyDefectorId]);
   expect((await viewOfPlayer(setup, resistanceDefector)).fellowSpies).toBeNull();
-  await expect(setup.admin.getByRole('list', { name: 'Flipped switch cards' })).toBeHidden();
+  await expect(setup.admin.getByRole('img', { name: /Mission \d: (No Change|Change Allegiance)/ })).toBeHidden();
 
   // Nothing is flipped before mission 3
   await playMission(setup, 'success');
@@ -59,7 +59,7 @@ test('the Defector module deals one Defector to each side and flips a public swi
     expect(view.missionNumber).toBe(3);
   }
   const card = flips[0] ? 'Mission 3: Change Allegiance' : 'Mission 3: No Change';
-  await expect(setup.admin.getByRole('list', { name: 'Flipped switch cards' }).getByText(card)).toBeVisible();
+  await expect(setup.admin.getByRole('img', { name: card })).toBeVisible();
 
   // On Change Allegiance both Defectors are on the other side, and the spies no longer know the spy Defector
   const switched = flips[0];

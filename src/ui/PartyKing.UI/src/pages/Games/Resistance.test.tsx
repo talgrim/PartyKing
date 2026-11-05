@@ -645,9 +645,15 @@ describe('Resistance', () => {
       });
       renderPage();
 
-      const list = await screen.findByRole('list', { name: 'Flipped switch cards' });
-      expect(within(list).getByText('Mission 3: No Change')).toBeInTheDocument();
-      expect(within(list).getByText('Mission 4: Change Allegiance')).toBeInTheDocument();
+      // The latest card is beside the phase banner, so it is there without opening the board
+      expect(await screen.findByRole('img', { name: 'Latest switch card (mission 4): Change Allegiance' })).toBeInTheDocument();
+      expect(screen.queryByRole('img', { name: 'Mission 4: Change Allegiance' })).not.toBeInTheDocument();
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Board' }));
+
+      expect(await screen.findByRole('img', { name: 'Mission 3: No Change' })).toBeInTheDocument();
+      expect(screen.getByRole('img', { name: 'Mission 4: Change Allegiance' })).toBeInTheDocument();
+      expect(screen.queryByRole('img', { name: /Mission 5: / })).not.toBeInTheDocument();
     });
 
     it('tells a spy of the Blind Spies variant that they know no one, instead of listing spies', async () => {
@@ -1047,8 +1053,8 @@ describe('Resistance', () => {
         });
         renderPage('/s/session-1/games/resistance?tv=1');
 
-        const list = await screen.findByRole('list', { name: 'Flipped switch cards' });
-        expect(within(list).getByText('Mission 3: Change Allegiance')).toBeInTheDocument();
+        expect(await screen.findByRole('img', { name: 'Mission 3: Change Allegiance' })).toBeInTheDocument();
+        expect(screen.getByRole('img', { name: 'Latest switch card (mission 3): Change Allegiance' })).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Show your role' })).not.toBeInTheDocument();
         expect(screen.queryByText(/The other Defector is/)).not.toBeInTheDocument();
       });
