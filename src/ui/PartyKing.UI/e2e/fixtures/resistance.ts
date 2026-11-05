@@ -2,7 +2,18 @@ import { Page } from '@playwright/test';
 import { API_URL } from '../constants';
 import { CreatedSession, expect } from './test';
 
-export const PLAYER_NAMES = ['Anna', 'Bartek', 'Celina', 'Darek', 'Ela', 'Franek', 'Grażyna', 'Henryk', 'Irena', 'Janusz'];
+export const PLAYER_NAMES = [
+  'Anna',
+  'Bartek',
+  'Celina',
+  'Darek',
+  'Ela',
+  'Franek',
+  'Grażyna',
+  'Henryk',
+  'Irena',
+  'Janusz',
+];
 
 export type ResistanceGameSetup = {
   session: CreatedSession;
@@ -220,31 +231,38 @@ export async function continueMission(leader: Page): Promise<void> {
   await expect(next).toBeHidden();
 }
 
-/**
- * Plays one whole mission: the leader picks a team that gets the outcome (a failed mission needs the required number
- * of spies on it, a successful one has none), everybody approves and the team plays its cards. The leader then
- * continues unless that was the last mission. Returns the view once the mission is resolved.
- */
-export async function playMission(setup: ResistanceGameSetup, outcome: 'success' | 'fail'): Promise<ResistanceView> {
-  const [, leader] = await waitForLeader(setup);
-  const view = await viewOf(leader, setup.session);
-  const spies = await spyNames(setup);
-  const resistance = [...setup.guests.keys()].filter((name) => !spies.includes(name));
-
-  const failers = outcome === 'fail' ? spies.slice(0, view.requiredFails!) : [];
-  const team = [...failers, ...resistance].slice(0, view.requiredTeamSize!);
-  await submitTeam(leader, team);
-  await voteAll(setup, 'Approve');
-
+/** The approved team plays its cards: the `failers` play Fail, the rest Success. */
+export async function playMissionCards(setup: ResistanceGameSetup, team: string[], failers: string[]): Promise<void> {
   for (const name of team) {
     const mission = setup.guests.get(name)!.getByRole('region', { name: 'Mission' });
     // The panel goes away with the last card (it resolves the mission), so only the clicks are made here
     await mission.getByRole('button', { name: failers.includes(name) ? 'Fail' : 'Success' }).click();
   }
+}
 
-  await expect
-    .poll(async () => (await viewOf(leader, setup.session)).phase)
-    .toMatch(/MissionResult|GameOver/);
+/**
+ * Plays one whole mission: the leader picks a team that gets the outcome (a failed mission needs the required number
+ * of spies on it, a successful one has none), everybody approves and the team plays its cards. The leader then
+ * continues unless that was the last mission. Returns the view once the mission is resolved. `fails` overrides how
+ * many Fail cards a failed mission gets (the number the rules ask for by default).
+ */
+export async function playMission(
+  setup: ResistanceGameSetup,
+  outcome: 'success' | 'fail',
+  fails?: number,
+): Promise<ResistanceView> {
+  const [, leader] = await waitForLeader(setup);
+  const view = await viewOf(leader, setup.session);
+  const spies = await spyNames(setup);
+  const resistance = [...setup.guests.keys()].filter((name) => !spies.includes(name));
+
+  const failers = outcome === 'fail' ? spies.slice(0, fails ?? view.requiredFails!) : [];
+  const team = [...failers, ...resistance].slice(0, view.requiredTeamSize!);
+  await submitTeam(leader, team);
+  await voteAll(setup, 'Approve');
+  await playMissionCards(setup, team, failers);
+
+  await expect.poll(async () => (await viewOf(leader, setup.session)).phase).toMatch(/MissionResult|GameOver/);
   const resolved = await viewOf(leader, setup.session);
   if (resolved.phase === 'MissionResult') {
     await continueMission(leader);
@@ -272,7 +290,9 @@ export async function rejectTeams(setup: ResistanceGameSetup, count: number): Pr
 // ---------------------------------------------------------------------------------------------------------------------
 
 /** Waits for the leader to have to deal the drawn cards and returns who the leader is and what was drawn. */
-export async function waitForDealing(setup: ResistanceGameSetup): Promise<{ name: string; page: Page; drawn: PlotCardType[] }> {
+export async function waitForDealing(
+  setup: ResistanceGameSetup,
+): Promise<{ name: string; page: Page; drawn: PlotCardType[] }> {
   const view = await waitForPhase(setup, 'DealingCards');
   const name = nameOf(view, view.leaderPlayerId!);
   const page = setup.guests.get(name)!;
