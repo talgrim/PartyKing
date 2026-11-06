@@ -6,12 +6,9 @@ import {
   playImmediateCard,
   playMission,
   playMissionCards,
-  playMissionThroughWindows,
-  ResistanceGameSetup,
   spyNames,
   startResistanceGame,
   submitTeam,
-  takeResponsibility,
   viewOf,
   voteAll,
   waitForDealing,
@@ -19,28 +16,9 @@ import {
 } from './fixtures/resistance';
 import { expect, test } from './fixtures/test';
 
-// Ten players draw three cards a mission. With the seeded deal the first one gives an Open Up, an Opinion Maker and a
-// Take Responsibility, the second an Establish Confidence, a Keeping a Close Eye and a No Confidence (see "Plot cards" in
+// With the seeded deal, ten players draw an Establish Confidence, a Keeping a Close Eye and a No Confidence on the first
+// mission, six players an Overheard Conversation on the first and an In the Spotlight on the second (see "Plot cards" in
 // docs/testing-e2e.md).
-
-/**
- * Plays the first mission so that no card is left in a hand afterwards (a card in a hand opens a window at every step):
- * the Open Up is played, the Take Responsibility takes the Opinion Maker, the Opinion Maker votes first.
- */
-async function playFirstMission(setup: ResistanceGameSetup) {
-  const { name: leaderName, page: leader, drawn } = await waitForDealing(setup);
-  expect([...drawn].sort()).toEqual(['OpenUp', 'OpinionMaker', 'TakeResponsibility']);
-  const [openUpName, makerName, takerName, targetName] = [...setup.guests.keys()].filter((name) => name !== leaderName);
-  await dealPlotCards(leader, { OpenUp: openUpName, OpinionMaker: makerName, TakeResponsibility: takerName });
-
-  await waitForPhase(setup, 'ResolvingCards');
-  await playImmediateCard(setup.guests.get(openUpName)!, 'OpenUp', targetName);
-  await confirmIdentityCard(setup.guests.get(targetName)!);
-  await waitForPhase(setup, 'SelectingTeam');
-  await takeResponsibility(setup.guests.get(takerName)!, makerName);
-
-  await playMission(setup, 'success');
-}
 
 test('Establish Confidence, the Confidence window and a peek at a mission card', async ({
   createSession,
@@ -49,7 +27,6 @@ test('Establish Confidence, the Confidence window and a peek at a mission card',
 }) => {
   const session = await createSession();
   const setup = await startResistanceGame(session, { openAdmin, openGuest }, { plotCards: true, players: 10 });
-  await playFirstMission(setup);
 
   // The Establish Confidence stays with the leader, so only the other two cards are dealt
   const { name: leaderName, page: leader, drawn } = await waitForDealing(setup);
@@ -86,7 +63,7 @@ test('Establish Confidence, the Confidence window and a peek at a mission card',
 
   // The result is public at once, but the mission cards stay hidden until somebody looks at one
   const afterMission = await waitForPhase(setup, 'PeekWindow');
-  expect(afterMission.missionResults).toHaveLength(2);
+  expect(afterMission.missionResults).toHaveLength(1);
   const peeker = setup.guests.get(peekerName)!;
   const eye = peeker.getByRole('region', { name: 'Keeping a Close Eye on You' });
   const target =
@@ -113,54 +90,27 @@ test('In the Spotlight forces a team member to play their mission card openly', 
   openAdmin,
   openGuest,
 }) => {
-  // The In the Spotlight is only drawn on the fourth mission, and a card in a hand opens a window at every step before
-  test.setTimeout(150_000);
   const session = await createSession();
-  const setup = await startResistanceGame(session, { openAdmin, openGuest }, { plotCards: true, players: 10 });
-  await playFirstMission(setup);
+  const setup = await startResistanceGame(session, { openAdmin, openGuest }, { plotCards: true, players: 6 });
 
-  // The second mission: the Establish Confidence is played and the other two cards stay in the hands (nothing is played)
-  const second = await waitForDealing(setup);
-  expect([...second.drawn].sort()).toEqual(['KeepingCloseEye', 'NoConfidence']);
-  const secondOthers = [...setup.guests.keys()].filter((name) => name !== second.name);
-  await dealPlotCards(second.page, { KeepingCloseEye: secondOthers[0], NoConfidence: secondOthers[1] });
-  await waitForPhase(setup, 'ResolvingCards');
-  await playImmediateCard(second.page, 'EstablishConfidence', secondOthers[2]);
-  await confirmIdentityCard(setup.guests.get(secondOthers[2])!);
-  await playMissionThroughWindows(setup, 'success');
-
-  // The third one: a Strong Leader, a Keeping a Close Eye and a No Confidence more; the score stays open
-  await waitForPhase(setup, 'LeaderWindow');
-  await passWindow(setup);
-  const third = await waitForDealing(setup);
-  expect([...third.drawn].sort()).toEqual(['KeepingCloseEye', 'NoConfidence', 'StrongLeader']);
-  const thirdOthers = [...setup.guests.keys()].filter((name) => name !== third.name);
-  await dealPlotCards(third.page, {
-    KeepingCloseEye: thirdOthers[0],
-    NoConfidence: thirdOthers[1],
-    StrongLeader: thirdOthers[2],
-  });
-  await playMissionThroughWindows(setup, 'fail');
-
-  // The fourth one: two Overheard Conversations are played at once and the In the Spotlight waits for the Confidence window
-  await waitForPhase(setup, 'LeaderWindow');
-  await passWindow(setup);
-  const fourth = await waitForDealing(setup);
-  expect([...fourth.drawn].sort()).toEqual(['InTheSpotlight', 'OverheardConversation', 'OverheardConversation']);
-  const [spotlightName, firstListener, secondListener] = [...setup.guests.keys()].filter(
-    (name) => name !== fourth.name,
-  );
-  await dealPlotCards(fourth.page, {
-    InTheSpotlight: spotlightName,
-    OverheardConversation: [firstListener, secondListener],
-  });
+  // The first mission: the Overheard Conversation is played at once, so no card stays in a hand and no window opens
+  const first = await waitForDealing(setup);
+  expect(first.drawn).toEqual(['OverheardConversation']);
+  const listenerName = [...setup.guests.keys()].find((name) => name !== first.name)!;
+  await dealPlotCards(first.page, { OverheardConversation: listenerName });
   const dealt = await waitForPhase(setup, 'ResolvingCards');
   const seats = dealt.players.map((player) => player.name);
-  for (const listener of [firstListener, secondListener]) {
-    const next = seats[(seats.indexOf(listener) + 1) % seats.length];
-    await playImmediateCard(setup.guests.get(listener)!, 'OverheardConversation', next);
-    await confirmIdentityCard(setup.guests.get(listener)!);
-  }
+  const next = seats[(seats.indexOf(listenerName) + 1) % seats.length];
+  await playImmediateCard(setup.guests.get(listenerName)!, 'OverheardConversation', next);
+  await confirmIdentityCard(setup.guests.get(listenerName)!);
+  await playMission(setup, 'success');
+
+  // The second mission draws the In the Spotlight, which waits in a hand for the Confidence window
+  const second = await waitForDealing(setup);
+  expect(second.drawn).toEqual(['InTheSpotlight']);
+  const spotlightName = [...setup.guests.keys()].find((name) => name !== second.name)!;
+  await dealPlotCards(second.page, { InTheSpotlight: spotlightName });
+  await waitForPhase(setup, 'SelectingTeam');
 
   const { leader, team } = await pickTeam(setup, 'success');
   await submitTeam(leader, team);

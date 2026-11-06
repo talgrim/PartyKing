@@ -38,7 +38,7 @@ const child = spawn('dotnet', ['run', '--project', apiProject, '--no-launch-prof
     AdminSettings__Username: 'e2e-admin',
     AdminSettings__Password: 'e2e-admin-password',
     RateLimiting__Disabled: 'true',
-    Resistance__Seed: '1',
+    Resistance__Seed: '931902',
   },
 });
 
