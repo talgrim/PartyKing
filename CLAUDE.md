@@ -54,7 +54,7 @@ Rules that bite:
 - Game rules live in the Domain aggregates, not in repositories or services; a game action is a Domain method returning an outcome, run through `UpdateAsync` under the session write lock.
 - Pushes are payload-free and sent by domain event handlers, not by services; no event or push carries a secret.
 - Per-caller views that hide secrets (`ResistanceGameViewBuilder`, `RingoService.ToDto`, lobby DTOs) are hand-written on purpose; other mappings use Riok.Mapperly.
-- Error codes and messages are matched by the UI and tests; keep them stable. Only texts the server generates are localized (`UiLanguage`).
+- Error codes and messages are pinned by the tests (the UI reads only the HTTP status and shows the message, never the code); keep them stable. Only texts the server generates are localized (`UiLanguage`).
 
 ## Where the details are
 

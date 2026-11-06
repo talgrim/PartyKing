@@ -1,3 +1,5 @@
+using PartyKing.Domain.Entities.Games.Resistance.PlotCards;
+
 namespace PartyKing.Domain.Entities.Games.Resistance;
 
 /// <summary>What the plot cards in a Resistance game allow and show: who may play or see what, and which cards are in play.</summary>
@@ -36,20 +38,19 @@ public static class ResistancePlotCardQueries
     /// <summary>
     /// Whether anyone holds a playable plot card in their hand. The confirmation windows open exactly then, whatever
     /// the cards are, so that the window itself never tells which card is out there (the hand sizes are public anyway).
-    /// A face-up Opinion Maker is not a card to play.
+    /// A face-up Opinion Maker is not in a hand, so it never counts.
     /// </summary>
     public static bool HasPlayableCards(ResistanceGame game)
     {
         return game.Rules.PlotCardsEnabled
-               && game.PlotCards.Any(x => x.Location == ResistancePlotCardLocation.Hand
-                                          && x.Type != ResistancePlotCardType.OpinionMaker);
+               && game.PlotCards.Any(x => x.Location == ResistancePlotCardLocation.Hand);
     }
 
     /// <summary>Whether the leader still has to hand the card out: it is drawn and is not Establish Confidence, which the leader plays on themselves.</summary>
     public static bool NeedsDealing(ResistancePlotCard card)
     {
         return card.Location == ResistancePlotCardLocation.Drawn &&
-               card.Type != ResistancePlotCardType.EstablishConfidence;
+               ResistancePlotCardBehaviors.For(card.Type).IsDealtByLeader;
     }
 
     /// <summary>The cards the leader hands out (see <see cref="NeedsDealing"/>).</summary>
@@ -73,9 +74,7 @@ public static class ResistancePlotCardQueries
     /// <summary>Whether the card is played the moment it is dealt and needs its receiver to confirm what they saw.</summary>
     public static bool IsImmediate(ResistancePlotCardType type)
     {
-        return type is ResistancePlotCardType.OverheardConversation
-            or ResistancePlotCardType.EstablishConfidence
-            or ResistancePlotCardType.OpenUp;
+        return ResistancePlotCardBehaviors.For(type) is IImmediateBehavior;
     }
 
     /// <summary>The immediate cards in a hand that have not been played yet.</summary>
@@ -94,13 +93,17 @@ public static class ResistancePlotCardQueries
     /// <summary>The player who sees the identity card an immediate card shows: the holder of Overheard Conversation, else the target.</summary>
     public static Guid? Viewer(ResistancePlotCard card)
     {
-        return card.Type == ResistancePlotCardType.OverheardConversation ? card.HolderPlayerId : card.TargetPlayerId;
+        return ResistancePlotCardBehaviors.For(card.Type) is IImmediateBehavior immediate
+            ? immediate.Viewer(card)
+            : card.TargetPlayerId;
     }
 
     /// <summary>The player whose identity card an immediate card shows: the target of Overheard Conversation, else the holder.</summary>
     public static Guid? Revealed(ResistancePlotCard card)
     {
-        return card.Type == ResistancePlotCardType.OverheardConversation ? card.TargetPlayerId : card.HolderPlayerId;
+        return ResistancePlotCardBehaviors.For(card.Type) is IImmediateBehavior immediate
+            ? immediate.Revealed(card)
+            : card.HolderPlayerId;
     }
 
     /// <summary>

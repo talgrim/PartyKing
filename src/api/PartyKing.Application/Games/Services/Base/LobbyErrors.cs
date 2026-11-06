@@ -5,7 +5,7 @@ namespace PartyKing.Application.Games.Services.Base;
 
 /// <summary>
 /// The errors of a game lobby, with the game's name as the prefix of their codes ("Ringo.NotOpen"). The codes and
-/// messages are matched by the UI and the tests, so keep them stable.
+/// messages are pinned by the tests (the UI shows the message and reads only the status), so keep them stable.
 /// </summary>
 internal class LobbyErrors
 {
