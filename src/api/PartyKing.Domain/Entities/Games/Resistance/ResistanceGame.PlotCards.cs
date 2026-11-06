@@ -1,3 +1,4 @@
+using PartyKing.Domain.Entities.Games.Resistance.PlotCards;
 using PartyKing.Domain.Events.Games.Resistance;
 
 namespace PartyKing.Domain.Entities.Games.Resistance;
@@ -64,7 +65,7 @@ public partial class ResistanceGame
         {
             var card = toDeal[assignment.CardId];
             // An Opinion Maker is played the moment it is dealt and stays face up
-            card.Location = card.Type == ResistancePlotCardType.OpinionMaker
+            card.Location = ResistancePlotCardBehaviors.For(card.Type).StartsInPlay
                 ? ResistancePlotCardLocation.InPlay
                 : ResistancePlotCardLocation.Hand;
             card.HolderPlayerId = assignment.PlayerId;
@@ -102,18 +103,13 @@ public partial class ResistanceGame
             return ResistanceOutcome.Failed(ResistanceFailure.NotYourCard, this);
         }
 
-        var spotlight = card.Type == ResistancePlotCardType.InTheSpotlight;
-        if (spotlight && Phase != ResistancePhase.ConfidenceWindow)
+        var behavior = ResistancePlotCardBehaviors.For(card.Type);
+        if (Phase != behavior.PlayPhase)
         {
-            return ResistanceOutcome.Failed(ResistanceFailure.NotPlayingMission, this);
+            return ResistanceOutcome.Failed(behavior.WrongPlayPhase, this);
         }
 
-        if (!spotlight && Phase != ResistancePhase.ResolvingCards)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.NotResolving, this);
-        }
-
-        if (!(spotlight || ResistancePlotCardQueries.IsImmediate(card.Type))
+        if (!behavior.IsPlayedOnATarget
             || card.Location is not (ResistancePlotCardLocation.Hand or ResistancePlotCardLocation.Played))
         {
             return ResistanceOutcome.Failed(ResistanceFailure.UnknownCard, this);
@@ -124,26 +120,17 @@ public partial class ResistanceGame
             return ResistanceOutcome.Failed(ResistanceFailure.CardState, this);
         }
 
-        if (spotlight && ResistancePlotCardQueries.OpenMissionPlayerId(this) is not null)
+        if (!behavior.CanBePlayed(this))
         {
-            // One player is forced open per mission
             return ResistanceOutcome.Failed(ResistanceFailure.CardState, this);
         }
 
-        var validTarget = card.Type switch
-        {
-            ResistancePlotCardType.OverheardConversation =>
-                ResistancePlotCardQueries.Neighbours(this, card.HolderPlayerId!.Value).Contains(targetPlayerId),
-            ResistancePlotCardType.InTheSpotlight =>
-                ResistancePlotCardQueries.CanBeForcedOpen(this, card.HolderPlayerId!.Value, targetPlayerId),
-            _ => targetPlayerId != card.HolderPlayerId && Players.Any(x => x.PlayerId == targetPlayerId),
-        };
-        if (!validTarget)
+        if (!behavior.IsValidTarget(this, card, targetPlayerId))
         {
             return ResistanceOutcome.Failed(ResistanceFailure.InvalidTarget, this);
         }
 
-        MarkPlayed(card, targetPlayerId, playedAt, confirmed: spotlight);
+        MarkPlayed(card, targetPlayerId, playedAt, confirmed: behavior.IsConfirmedOnPlay);
 
         return Succeeded();
     }

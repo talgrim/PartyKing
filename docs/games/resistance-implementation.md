@@ -94,6 +94,15 @@ The game rules (Polish) are in `resistance-rules.md` next to this file; card tex
 
 All nine plot cards are playable.
 
+### Adding a card
+
+What sets a card type apart lives in one place per type, an `IResistancePlotCardBehavior` (`Domain/Entities/Games/Resistance/PlotCards`, registered in `ResistancePlotCardBehaviors`): whether it is immediate, whether the leader deals it, whether it starts face up, whether it opens the windows, the phase, target and confirmation of the play action, and who sees which identity card. Every default describes an ordinary card kept in a hand, so a card that sets itself apart in none needs only a `ResistancePlainPlotCardBehavior` line. `ResistancePlotCardBehaviorsTests` fails for a type without a behavior. For a new card:
+
+1. Append the type to `ResistancePlotCardType` (never reorder: the table stores ordinals, `BuildPlotDeck` sorts by the enum and the e2e seed depends on the order, and the rules JSON stores `PlotDeck` keys by name) and to `ResistancePlotCardTypeDto` (the Mapperly mapping fails to build otherwise), and add it to `ResistanceRules.DefaultPlotDeck` (the deck stays at 15 cards; the tests that count it need updating).
+2. Add its behavior to `ResistancePlotCardBehaviors`.
+3. A card that is played with the play endpoint on a target needs nothing more in the Domain. Any other card needs its own `ResistanceGame` method that opens with `TryGetPlayableCard` (the shared guard: ownership first so a probe of someone else's card learns nothing, then type and place, already played, phase), then checks its target and calls `MarkPlayed`; plus a service method and a route.
+4. Frontend: the type union in `types.ts`, `PLOT_CARDS` (icon, `plot.<Type>` texts in both languages), `IMMEDIATE_PLOT_CARDS` and `LOG_TYPES` where they apply (they repeat the backend facts), and a component for a card with its own step.
+
 ### Dealing
 
 - `ResistanceRules.PlotCardsEnabled` (default off, kept by `RefreshRulesAsync`) is switched by `PUT rules/plot-cards` (host or admin, 409 `PlotCardsLocked` once the game has started, so it can be switched while the game is open; the "Enable Plot cards" checkbox in the "Game settings" dialog, `ResistanceGameSettings`).
@@ -153,7 +162,7 @@ Overheard Conversation, Establish Confidence and Open Up (`ResistancePlotCardQue
 ### Keeping a Close Eye on You (`PeekWindow`)
 
 - The last mission card resolves the mission (the result is public at once). When any playable card is in a hand the phase is `PeekWindow` instead of `MissionResult` and "Dalej" stays hidden; when everyone confirmed, `AfterWindow` sets `MissionResult`.
-- The mission cards stay in `ResistancePlayer.MissionCard` until "Dalej". `PUT cards/{id}/peek` (`{targetPlayerId}`, holder only) is `ResistanceGame.PeekMissionCard`. Errors: 403 `NotYourCard`, 404 `UnknownCard`, 409 `CardState`, 409 `WrongPhase` / `CardNotPlayableNow` outside `PeekWindow`; 400 `InvalidTarget` for your own card, a player who played no card, or a player whose card the caller already looked at (a different holder may look at the same card; `ResistancePlotCardQueries.CanPeek`).
+- The mission cards stay in `ResistancePlayer.MissionCard` until "Dalej". `PUT cards/{id}/peek` (`{targetPlayerId}`, holder only) is `ResistanceGame.PeekMissionCard`. Errors: 403 `NotYourCard`, 404 `UnknownCard`, 409 `CardState`, 409 `CardNotPlayableNow` outside `PeekWindow`; 400 `InvalidTarget` for your own card, a player who played no card, or a player whose card the caller already looked at (a different holder may look at the same card; `ResistancePlotCardQueries.CanPeek`).
 - The play is public (the log names holder and target, `Played`, already confirmed); the card seen is the private `yourPeeks` (`ResistancePlotCardQueries.PeekedCards`, only in `MissionResult`, blanked in the TV tab).
 - A mission that ends the game leaves no window to peek (`GameOver`, 409 `GameOver`), and "Dalej" clears the cards, so a peek must happen before it. UI: `ResistanceCloseEye`.
 
