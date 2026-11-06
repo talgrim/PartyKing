@@ -1,11 +1,9 @@
 namespace PartyKing.Domain.Entities.Games.Resistance.PlotCards;
 
 /// <summary>The holder looks at the identity card of a neighbour.</summary>
-internal sealed class OverheardConversationBehavior : IResistancePlotCardBehavior
+internal sealed class OverheardConversationBehavior : IImmediateBehavior
 {
     public ResistancePlotCardType Type => ResistancePlotCardType.OverheardConversation;
-
-    public bool IsImmediate => true;
 
     public bool IsValidTarget(ResistanceGame game, ResistancePlotCard card, Guid targetPlayerId)
     {

@@ -1,29 +1,26 @@
 namespace PartyKing.Domain.Entities.Games.Resistance.PlotCards;
 
 /// <summary>
-/// The behavior of every plot card type. A new card needs an entry here (a test fails for a type without one) and
-/// the action of its own in <see cref="ResistanceGame"/>.
+/// The behavior of the plot card types that set themselves apart. Every other type is a plain card, so a type missing
+/// here never throws: it is dealt by the leader into a hand and has an action of its own.
 /// </summary>
 internal static class ResistancePlotCardBehaviors
 {
-    private static readonly IReadOnlyDictionary<ResistancePlotCardType, IResistancePlotCardBehavior> Registered =
+    private static readonly IReadOnlyDictionary<ResistancePlotCardType, IResistancePlotCardBehavior> Behaviors =
         new IResistancePlotCardBehavior[]
         {
             new OverheardConversationBehavior(),
             new OpinionMakerBehavior(),
             new EstablishConfidenceBehavior(),
             new OpenUpBehavior(),
-            new ResistancePlainPlotCardBehavior(ResistancePlotCardType.NoConfidence),
-            new ResistancePlainPlotCardBehavior(ResistancePlotCardType.KeepingCloseEye),
-            new ResistancePlainPlotCardBehavior(ResistancePlotCardType.StrongLeader),
             new InTheSpotlightBehavior(),
-            new ResistancePlainPlotCardBehavior(ResistancePlotCardType.TakeResponsibility),
         }.ToDictionary(x => x.Type);
 
-    public static IReadOnlyCollection<IResistancePlotCardBehavior> All => Registered.Values.ToList();
+    /// <summary>The registered behaviors, one per type.</summary>
+    public static IReadOnlyCollection<IResistancePlotCardBehavior> Registered { get; } = Behaviors.Values.ToList();
 
     public static IResistancePlotCardBehavior For(ResistancePlotCardType type)
     {
-        return Registered[type];
+        return Behaviors.TryGetValue(type, out var behavior) ? behavior : new ResistancePlainPlotCardBehavior(type);
     }
 }

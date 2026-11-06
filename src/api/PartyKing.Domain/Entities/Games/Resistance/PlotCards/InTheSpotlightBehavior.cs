@@ -1,11 +1,9 @@
 namespace PartyKing.Domain.Entities.Games.Resistance.PlotCards;
 
 /// <summary>Played while the mission is played, on a team member who has not played their mission card yet.</summary>
-internal sealed class InTheSpotlightBehavior : IResistancePlotCardBehavior
+internal sealed class InTheSpotlightBehavior : IPlayedOnATargetBehavior
 {
     public ResistancePlotCardType Type => ResistancePlotCardType.InTheSpotlight;
-
-    public bool IsPlayedOnATarget => true;
 
     public ResistancePhase PlayPhase => ResistancePhase.ConfidenceWindow;
 
