@@ -18,6 +18,21 @@ public static class ResistanceKnowledge
     }
 
     /// <summary>
+    /// Whether the viewer gets a list of spies at all: a spy does, and so does the Commander. What is in the list is up
+    /// to <see cref="KnowsSpy"/>.
+    /// </summary>
+    public static bool SeesSpies(ResistancePlayer viewer)
+    {
+        return Loyalty(viewer) == ResistanceRole.Spy || viewer.Character == ResistanceCharacter.Commander;
+    }
+
+    /// <summary>Whether the viewer gets a list of Commander candidates at all: only the Body Guard of an Assassin game.</summary>
+    public static bool SeesCommanderCandidates(ResistanceGame game, ResistancePlayer viewer)
+    {
+        return game.Rules.AssassinEnabled && viewer.Character == ResistanceCharacter.BodyGuard;
+    }
+
+    /// <summary>
     /// Whether the viewer knows the target to be a spy: the spies know each other at the start of the game, unless the
     /// Blind Spies variant is played, or one of them is a Reverser who keeps their eyes closed (see
     /// <see cref="IsHiddenReverserSpy"/>). Nobody learns from this about their own role; the viewer has it on their card.

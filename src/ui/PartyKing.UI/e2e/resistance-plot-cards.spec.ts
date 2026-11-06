@@ -2,6 +2,7 @@ import {
   confirmIdentityCard,
   dealPlotCards,
   nameOf,
+  passWindow,
   playImmediateCard,
   playMission,
   spyNames,
@@ -16,9 +17,9 @@ import {
 } from './fixtures/resistance';
 import { expect, test } from './fixtures/test';
 
-// The e2e API is seeded, so five players always draw Open Up first and Strong Leader on the second mission, and seven
-// players draw an Opinion Maker and No Confidence on the first one, ten players an Open Up, an Opinion Maker and a Take
-// Responsibility (see "Plot cards" in docs/testing-e2e.md).
+// The e2e API is seeded, so five players always draw Open Up first and Strong Leader on the second mission, seven
+// players an Opinion Maker and No Confidence on the first one, nine an Opinion Maker, a Keeping a Close Eye and a Take
+// Responsibility, six an Overheard Conversation (see "Plot cards" in docs/testing-e2e.md).
 
 test('the leader deals the drawn card, the holder plays an immediate card and the team is picked after that', async ({
   createSession,
@@ -85,7 +86,11 @@ test('a Strong Leader takes the lead in the window that follows a rejected team'
   const { name: leaderName, page: leader, drawn } = await waitForDealing(setup);
   expect(drawn).toEqual(['StrongLeader']);
   const others = [...setup.guests.keys()].filter((name) => name !== leaderName);
-  const holderName = others[0];
+
+  // A rejected team moves the lead to the next seat, and whoever already leads has no use for the card
+  const seats = (await viewOf(leader, session)).players.map((player) => player.name);
+  const nextLeaderName = seats[(seats.indexOf(leaderName) + 1) % seats.length];
+  const holderName = others.find((name) => name !== nextLeaderName)!;
   await dealPlotCards(leader, { StrongLeader: holderName });
   const view = await waitForPhase(setup, 'SelectingTeam');
 
@@ -171,29 +176,21 @@ test('Take Responsibility moves the visible Opinion Maker to the player who play
   openGuest,
 }) => {
   const session = await createSession();
-  const setup = await startResistanceGame(session, { openAdmin, openGuest }, { plotCards: true, players: 10 });
+  const setup = await startResistanceGame(session, { openAdmin, openGuest }, { plotCards: true, players: 9 });
 
-  // Ten players draw three cards on the first mission, so the one who takes the Opinion Maker has an Open Up besides
+  // Nine players draw three cards on the first mission; none of them is played at once, so the team is picked right away
   const { name: leaderName, page: leader, drawn } = await waitForDealing(setup);
-  expect([...drawn].sort()).toEqual(['OpenUp', 'OpinionMaker', 'TakeResponsibility']);
-  const [openUpName, makerName, takerName, targetName] = [...setup.guests.keys()].filter((name) => name !== leaderName);
-  await dealPlotCards(leader, { OpenUp: openUpName, OpinionMaker: makerName, TakeResponsibility: takerName });
+  expect([...drawn].sort()).toEqual(['KeepingCloseEye', 'OpinionMaker', 'TakeResponsibility']);
+  const [eyeName, makerName, takerName] = [...setup.guests.keys()].filter((name) => name !== leaderName);
+  await dealPlotCards(leader, { KeepingCloseEye: eyeName, OpinionMaker: makerName, TakeResponsibility: takerName });
 
-  // The card cannot be played while the immediate Open Up is still being resolved
-  await waitForPhase(setup, 'ResolvingCards');
-  const taker = setup.guests.get(takerName)!;
-  const section = taker.getByRole('region', { name: 'Take Responsibility', exact: true });
-  await expect(section).toBeHidden();
-
-  const played = setup.guests.get(openUpName)!.getByRole('region', { name: 'Immediate cards' });
-  await played.getByLabel(/Who do you play the .Open Up. card on/).selectOption({ label: targetName });
-  await played.getByRole('button', { name: 'Play the card' }).click();
-  await setup.guests.get(targetName)!.getByRole('button', { name: "I've seen it" }).click();
   const before = await waitForPhase(setup, 'SelectingTeam');
   const idOf = (name: string) => before.players.find((player) => player.name === name)!.id;
   expect(before.opinionMakerPlayerIds).toEqual([idOf(makerName)]);
 
   // The holder takes the visible card; the Opinion Maker is the only thing the target has, so the server takes it
+  const taker = setup.guests.get(takerName)!;
+  const section = taker.getByRole('region', { name: 'Take Responsibility', exact: true });
   await expect(section).toBeVisible();
   await section.getByLabel('Which player do you take a card from').selectOption({ label: makerName });
   await expect(section.getByRole('radio')).toHaveCount(0);
@@ -217,7 +214,7 @@ test('Take Responsibility moves the visible Opinion Maker to the player who play
       .getByText(`${takerName} played “Take Responsibility” and takes a Plot card from ${makerName}`),
   ).toBeVisible();
 
-  // The card has moved for good: the new owner now votes first. No card is left in a hand, so no window follows
+  // The card has moved for good: the new owner now votes first
   const others = [...setup.guests.keys()].filter((name) => name !== leaderName);
   await submitTeam(leader, others.slice(0, after.requiredTeamSize!));
   await waitForPhase(setup, 'Voting');
@@ -233,6 +230,10 @@ test('Take Responsibility moves the visible Opinion Maker to the player who play
       await vote(page, 'Approve');
     }
   }
+
+  // The Keeping a Close Eye is still in a hand, so the approved team waits for the Confidence window
+  await waitForPhase(setup, 'ConfidenceWindow');
+  await passWindow(setup);
   await waitForPhase(setup, 'PlayingMission');
 });
 
@@ -242,19 +243,13 @@ test('Overheard Conversation shows the identity card of a neighbour to its holde
   openGuest,
 }) => {
   const session = await createSession();
-  const setup = await startResistanceGame(session, { openAdmin, openGuest }, { plotCards: true, players: 9 });
+  const setup = await startResistanceGame(session, { openAdmin, openGuest }, { plotCards: true, players: 6 });
 
-  // Nine players draw three cards on the first mission, and all of them are played at once or stay face up
+  // Six players draw one card on the first mission
   const { name: leaderName, page: leader, drawn } = await waitForDealing(setup);
-  expect([...drawn].sort()).toEqual(['OpenUp', 'OpinionMaker', 'OverheardConversation']);
-  const [listenerName, makerName, openUpName, openUpTarget, bystanderName] = [...setup.guests.keys()].filter(
-    (name) => name !== leaderName,
-  );
-  await dealPlotCards(leader, {
-    OverheardConversation: listenerName,
-    OpinionMaker: makerName,
-    OpenUp: openUpName,
-  });
+  expect(drawn).toEqual(['OverheardConversation']);
+  const [listenerName, bystanderName] = [...setup.guests.keys()].filter((name) => name !== leaderName);
+  await dealPlotCards(leader, { OverheardConversation: listenerName });
   const dealt = await waitForPhase(setup, 'ResolvingCards');
 
   // Only the two players next to the holder at the table can be listened in on
@@ -269,7 +264,6 @@ test('Overheard Conversation shows the identity card of a neighbour to its holde
   expect((await picker.locator('option:not([disabled])').allInnerTexts()).sort()).toEqual([...neighbours].sort());
 
   await playImmediateCard(listener, 'OverheardConversation', neighbours[0]);
-  await playImmediateCard(setup.guests.get(openUpName)!, 'OpenUp', openUpTarget);
 
   // The holder reads the neighbour's card and nobody else is shown it; the log says who listened in, not what it saw
   const heard = await confirmIdentityCard(listener);
@@ -277,7 +271,6 @@ test('Overheard Conversation shows the identity card of a neighbour to its holde
   expect((await spyNames(setup)).includes(heard.name)).toBe(heard.role === 'Spy');
   const bystander = setup.guests.get(bystanderName)!;
   await expect(bystander.getByText(/Identity card of/)).toBeHidden();
-  await confirmIdentityCard(setup.guests.get(openUpTarget)!);
 
   await waitForPhase(setup, 'SelectingTeam');
   await expect(

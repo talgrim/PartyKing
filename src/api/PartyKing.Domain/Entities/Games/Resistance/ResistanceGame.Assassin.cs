@@ -2,7 +2,7 @@ using PartyKing.Domain.Events.Games.Resistance;
 
 namespace PartyKing.Domain.Entities.Games.Resistance;
 
-// The Assassin module (Hidden Agenda): see ResistanceRoles.Deal for the dealing, ResistanceRoles.ResolveMission for
+// The Assassin module (Hidden Agenda): see ResistanceDealer.Deal for the dealing, ResistanceFlow.ResolveMission for
 // where the third success opens the Assassination and ResistanceKnowledge.KnowsSpy for the Commander's knowledge.
 public partial class ResistanceGame
 {

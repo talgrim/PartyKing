@@ -6,7 +6,7 @@ namespace PartyKing.Domain.Entities.Games.Resistance;
 
 /// <summary>
 /// The Resistance game of one session (at most one). An admin opens it, guests join by name, and the host or an admin
-/// starts it once at least <see cref="MinPlayers"/> joined: that deals the roles (see <see cref="ResistanceRoles"/>),
+/// starts it once at least <see cref="MinPlayers"/> joined: that deals the roles (see <see cref="ResistanceDealer"/>),
 /// picks the first mission leader and locks the players.
 /// </summary>
 public partial class ResistanceGame : LobbyGame<ResistancePlayer>
@@ -81,7 +81,7 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
 
     protected override int PlayerLimit => MaxPlayers;
 
-    /// <summary>Lets <see cref="ResistanceRoles"/>, which does the transitions, raise events.</summary>
+    /// <summary>Lets <see cref="ResistanceFlow"/> and <see cref="ResistanceDealer"/>, which do the transitions, raise events.</summary>
     internal void Publish(IDomainEvent domainEvent)
     {
         Raise(domainEvent);
@@ -131,7 +131,7 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
     }
 
     /// <summary>
-    /// Starts the open game: deals the roles and picks the first leader (see <see cref="ResistanceRoles"/>), which
+    /// Starts the open game: deals the roles and picks the first leader (see <see cref="ResistanceDealer"/>), which
     /// locks the players.
     /// </summary>
     public ResistanceOutcome Start(DateTimeOffset startedAt, Random random)
@@ -156,7 +156,7 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
             return ResistanceOutcome.Failed(invalid, this);
         }
 
-        ResistanceRoles.Deal(this, random);
+        ResistanceDealer.Deal(this, random);
         StartedAt = startedAt;
         Raise(new ResistanceStarted(SessionId));
 
@@ -177,7 +177,7 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
             return ResistanceOutcome.Failed(ResistanceFailure.NotOver, this);
         }
 
-        ResistanceRoles.Reset(this);
+        ResistanceDealer.Reset(this);
         StartedAt = null;
         Raise(new ResistanceRestarted(SessionId));
 
