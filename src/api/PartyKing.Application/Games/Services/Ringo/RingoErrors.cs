@@ -3,7 +3,7 @@ using PartyKing.Domain.Entities.Games.Ringo;
 
 namespace PartyKing.Application.Games.Services.Ringo;
 
-/// <summary>The error each <see cref="RingoFailure"/> becomes. Codes are matched by the UI.</summary>
+/// <summary>The error each <see cref="RingoFailure"/> becomes. Codes are pinned by the tests; the UI shows the message.</summary>
 internal static class RingoErrors
 {
     public const string GameName = "Ringo";

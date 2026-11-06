@@ -27,4 +27,4 @@
 ## Errors
 
 - `CoreController` maps `ErrorOr` errors to ProblemDetails: Validation→400, Unauthorized→401, NotFound→404, Conflict→409. Unhandled exceptions answer a 500 ProblemDetails.
-- Error messages stay in English. Codes and messages are matched by the UI and tests, so keep them stable.
+- Error messages stay in English. The tests pin the codes and messages (the UI reads the HTTP status and shows the message, not the code), so keep them stable.

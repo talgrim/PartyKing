@@ -40,7 +40,7 @@ The game rules (Polish) are in `resistance-rules.md` next to this file; card tex
 - `IResistanceInquisitorService`: examine, confirm.
 - `IResistanceAssassinService`: name the Commander (`AssassinateAsync`); the module switch is `IResistanceLobbyService.SetAssassinAsync`.
 - `ResistanceActionGate` (composition, not a base class, so it can be tested alone) runs a player or manager action: access check (`RunAsPlayerAsync`: caller must be allowed and a game must exist; `RunAsManagerAsync`: host or admin), the action on the game through `UpdateAsync`, the failure-to-error mapping, and the caller's view.
-- `ResistanceErrors` holds the shared errors and `From(outcome)`, one error per `ResistanceFailure`, pinned by the golden table in `ResistanceFailureErrorsTests`. Codes and messages are matched by the UI and tests: keep them stable.
+- `ResistanceErrors` holds the shared errors and `From(outcome)`, one error per `ResistanceFailure`, pinned by the golden table in `ResistanceFailureErrorsTests`. The tests pin the codes and messages (the UI reads the HTTP status and shows the message, not the code): keep them stable.
 
 ## Rules snapshot
 
