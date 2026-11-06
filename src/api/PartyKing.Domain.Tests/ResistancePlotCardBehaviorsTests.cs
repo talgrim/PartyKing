@@ -3,12 +3,14 @@ using PartyKing.Domain.Entities.Games.Resistance.PlotCards;
 
 namespace PartyKing.Domain.Tests;
 
-/// <summary>The behavior registered for each plot card type: none may be missing, and the facts stay as the rules have them.</summary>
+/// <summary>The behavior of each plot card type: none may be missing or throw, and the facts stay as the rules have them.</summary>
 public class ResistancePlotCardBehaviorsTests
 {
+    private static readonly ResistancePlotCardType[] Types = Enum.GetValues<ResistancePlotCardType>();
+
     public static TheoryData<ResistancePlotCardType> AllTypes()
     {
-        return new TheoryData<ResistancePlotCardType>(Enum.GetValues<ResistancePlotCardType>());
+        return new TheoryData<ResistancePlotCardType>(Types);
     }
 
     [Theory]
@@ -19,11 +21,23 @@ public class ResistancePlotCardBehaviorsTests
     }
 
     [Fact]
-    public void NoTwoBehaviors_ShareACardType()
+    public void ATypeNobodyRegistered_IsAPlainCard_AndNeverThrows()
     {
-        var types = ResistancePlotCardBehaviors.All.Select(x => x.Type).ToList();
+        var unknown = (ResistancePlotCardType)999;
 
-        Assert.Equal(Enum.GetValues<ResistancePlotCardType>().Length, types.Count);
+        var behavior = ResistancePlotCardBehaviors.For(unknown);
+
+        Assert.Equal(unknown, behavior.Type);
+        Assert.True(behavior.IsDealtByLeader);
+        Assert.False(behavior.StartsInPlay);
+        Assert.IsNotAssignableFrom<IPlayedOnATargetBehavior>(behavior);
+    }
+
+    [Fact]
+    public void NoTwoRegisteredBehaviors_ShareACardType()
+    {
+        var types = ResistancePlotCardBehaviors.Registered.Select(x => x.Type).ToList();
+
         Assert.Equal(types.Count, types.Distinct().Count());
     }
 
@@ -39,27 +53,24 @@ public class ResistancePlotCardBehaviorsTests
     [InlineData(ResistancePlotCardType.TakeResponsibility, false)]
     public void OnlyThreeCardsAreImmediate(ResistancePlotCardType type, bool immediate)
     {
-        Assert.Equal(immediate, ResistancePlotCardBehaviors.For(type).IsImmediate);
+        Assert.Equal(immediate, ResistancePlotCardBehaviors.For(type) is IImmediateBehavior);
         Assert.Equal(immediate, ResistancePlotCardQueries.IsImmediate(type));
     }
 
     [Fact]
-    public void OnlyTheOpinionMaker_StartsInPlayAndOpensNoWindow()
+    public void OnlyTheOpinionMaker_StartsInPlay()
     {
-        foreach (var type in Enum.GetValues<ResistancePlotCardType>())
+        foreach (var type in Types)
         {
-            var isOpinionMaker = type == ResistancePlotCardType.OpinionMaker;
-            var behavior = ResistancePlotCardBehaviors.For(type);
-
-            Assert.Equal(isOpinionMaker, behavior.StartsInPlay);
-            Assert.Equal(!isOpinionMaker, behavior.OpensWindows);
+            Assert.Equal(
+                type == ResistancePlotCardType.OpinionMaker, ResistancePlotCardBehaviors.For(type).StartsInPlay);
         }
     }
 
     [Fact]
     public void OnlyEstablishConfidence_IsKeptByTheLeader()
     {
-        foreach (var type in Enum.GetValues<ResistancePlotCardType>())
+        foreach (var type in Types)
         {
             Assert.Equal(
                 type != ResistancePlotCardType.EstablishConfidence, ResistancePlotCardBehaviors.For(type).IsDealtByLeader);
@@ -67,20 +78,33 @@ public class ResistancePlotCardBehaviorsTests
     }
 
     [Fact]
+    public void TheImmediateCardsAndInTheSpotlight_AreThePlayedOnATarget()
+    {
+        foreach (var type in Types)
+        {
+            var behavior = ResistancePlotCardBehaviors.For(type);
+            var expected = type == ResistancePlotCardType.InTheSpotlight || behavior is IImmediateBehavior;
+
+            Assert.Equal(expected, behavior is IPlayedOnATargetBehavior);
+        }
+    }
+
+    [Fact]
     public void OnlyInTheSpotlight_IsPlayedInTheConfidenceWindow_AndOpenAtOnce()
     {
-        foreach (var type in Enum.GetValues<ResistancePlotCardType>())
+        foreach (var type in Types)
         {
-            var spotlight = type == ResistancePlotCardType.InTheSpotlight;
-            var behavior = ResistancePlotCardBehaviors.For(type);
+            if (ResistancePlotCardBehaviors.For(type) is not IPlayedOnATargetBehavior play)
+            {
+                continue;
+            }
 
-            Assert.Equal(spotlight, behavior.IsConfirmedOnPlay);
+            var spotlight = type == ResistancePlotCardType.InTheSpotlight;
+
+            Assert.Equal(spotlight, play.IsConfirmedOnPlay);
+            Assert.Equal(spotlight ? ResistancePhase.ConfidenceWindow : ResistancePhase.ResolvingCards, play.PlayPhase);
             Assert.Equal(
-                spotlight ? ResistancePhase.ConfidenceWindow : ResistancePhase.ResolvingCards, behavior.PlayPhase);
-            Assert.Equal(
-                spotlight ? ResistanceFailure.NotPlayingMission : ResistanceFailure.NotResolving,
-                behavior.WrongPlayPhase);
-            Assert.Equal(spotlight || behavior.IsImmediate, behavior.IsPlayedOnATarget);
+                spotlight ? ResistanceFailure.NotPlayingMission : ResistanceFailure.NotResolving, play.WrongPlayPhase);
         }
     }
 
@@ -90,7 +114,7 @@ public class ResistancePlotCardBehaviorsTests
         var holder = Guid.NewGuid();
         var target = Guid.NewGuid();
 
-        foreach (var type in Enum.GetValues<ResistancePlotCardType>())
+        foreach (var type in Types)
         {
             var card = new ResistancePlotCard { Type = type, HolderPlayerId = holder, TargetPlayerId = target };
             var overheard = type == ResistancePlotCardType.OverheardConversation;
