@@ -1,6 +1,6 @@
 namespace PartyKing.Domain.Entities.Games.Resistance;
 
-// The Defector module: see ResistanceRoles.Deal for the dealing, ResistanceRoles.BeginMission for the flips and
+// The Defector module: see ResistanceDealer.Deal for the dealing, ResistanceFlow.BeginMission for the flips and
 // ResistanceKnowledge.KnowsSpy for who knows whom.
 public partial class ResistanceGame
 {

@@ -27,9 +27,9 @@ internal sealed class ResistanceGameViewBuilder
         _you = you;
         _players = game.Players.OrderBy(x => x.Order).ToList();
         _yourRole = game.IsStarted && you is not null ? ResistanceKnowledge.Loyalty(you) : null;
-        _votesRevealed = ResistanceRoles.VotesRevealed(game);
-        _opinionMakers = ResistanceRoles.OpinionMakerIds(game);
-        _openMissionPlayerId = ResistanceRoles.OpenMissionPlayerId(game);
+        _votesRevealed = ResistanceFlow.VotesRevealed(game);
+        _opinionMakers = ResistancePlotCardQueries.OpinionMakerIds(game);
+        _openMissionPlayerId = ResistancePlotCardQueries.OpenMissionPlayerId(game);
         _view = new ResistanceGameDto { Rules = BuildRules(game) };
     }
 
@@ -109,7 +109,7 @@ internal sealed class ResistanceGameViewBuilder
         _view.VotedPlayerIds = PlayerIds(x => x.Vote is not null);
         _view.YourVote = _you?.Vote;
         _view.Votes = _votesRevealed ? BuildVotes(_players) : null;
-        _view.VoteApproved = _votesRevealed ? ResistanceRoles.IsApproved(_game) : null;
+        _view.VoteApproved = _votesRevealed ? ResistanceFlow.IsApproved(_game) : null;
 
         return this;
     }
@@ -248,7 +248,7 @@ internal sealed class ResistanceGameViewBuilder
             return [];
         }
 
-        return ResistanceRoles.PeekedCards(_game, you.PlayerId)
+        return ResistancePlotCardQueries.PeekedCards(_game, you.PlayerId)
             .Select(x => new ResistanceMissionPeekDto(x.PlayerId, x.Card.ToDto()))
             .ToList();
     }
@@ -267,7 +267,7 @@ internal sealed class ResistanceGameViewBuilder
             .Select(x => new ResistancePlotCardDto(
                 x.CardId,
                 x.Type.ToDto(),
-                ResistanceRoles.NeedsDealing(x),
+                ResistancePlotCardQueries.NeedsDealing(x),
                 x.Location == ResistancePlotCardLocation.InPlay))
             .ToList();
     }
@@ -293,7 +293,7 @@ internal sealed class ResistanceGameViewBuilder
     /// <summary>The Opinion Makers' votes, once every one of them has voted (before the others may).</summary>
     private List<ResistanceVoteDto> BuildOpinionMakerVotes()
     {
-        if (!ResistanceRoles.OpinionMakerVotesRevealed(_game))
+        if (!ResistancePlotCardQueries.OpinionMakerVotesRevealed(_game))
         {
             return [];
         }
@@ -322,9 +322,9 @@ internal sealed class ResistanceGameViewBuilder
         }
 
         var reveals = new List<ResistanceCardRevealDto>();
-        foreach (var card in ResistanceRoles.UnconfirmedCards(_game).Where(x => ResistanceRoles.Viewer(x) == you.PlayerId))
+        foreach (var card in ResistancePlotCardQueries.UnconfirmedCards(_game).Where(x => ResistancePlotCardQueries.Viewer(x) == you.PlayerId))
         {
-            var revealedId = ResistanceRoles.Revealed(card)!.Value;
+            var revealedId = ResistancePlotCardQueries.Revealed(card)!.Value;
             var role = ResistanceKnowledge.Loyalty(_players.First(x => x.PlayerId == revealedId))!.Value;
             reveals.Add(new ResistanceCardRevealDto(card.CardId, revealedId, role.ToDto()));
         }
@@ -353,7 +353,7 @@ internal sealed class ResistanceGameViewBuilder
     /// <summary>Who confirmed in a window, never who holds a card.</summary>
     private List<Guid> BuildWindowPassedPlayerIds()
     {
-        if (!ResistanceRoles.IsConfirmationWindow(_game))
+        if (!ResistanceFlow.IsConfirmationWindow(_game))
         {
             return [];
         }

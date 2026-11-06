@@ -1,6 +1,6 @@
 namespace PartyKing.Domain.Entities.Games.Resistance;
 
-// The Reverser module: see ResistanceMissionRules.HasSucceeded for the result and ResistanceRoles.Deal for the dealing.
+// The Reverser module: see ResistanceMissionRules.HasSucceeded for the result and ResistanceDealer.Deal for the dealing.
 public partial class ResistanceGame
 {
     /// <summary>

@@ -2,7 +2,7 @@ using PartyKing.Domain.Events.Games.Resistance;
 
 namespace PartyKing.Domain.Entities.Games.Resistance;
 
-// The Inquisitor module (Hostile Intent): see ResistanceRoles.AfterMissionResolved for when it happens.
+// The Inquisitor module (Hostile Intent): see ResistanceFlow.AfterMissionResolved for when it happens.
 public partial class ResistanceGame
 {
     /// <summary>
@@ -61,7 +61,7 @@ public partial class ResistanceGame
             return ResistanceOutcome.Failed(ResistanceFailure.AlreadyExamined, this);
         }
 
-        if (!ResistanceRoles.CanExamine(this, callerPlayerId.Value, targetPlayerId))
+        if (!ResistanceFlow.CanExamine(this, callerPlayerId.Value, targetPlayerId))
         {
             return ResistanceOutcome.Failed(ResistanceFailure.InvalidExamineTarget, this);
         }

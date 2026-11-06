@@ -43,7 +43,7 @@ public partial class ResistanceGame
             return ResistanceOutcome.Failed(ResistanceFailure.NotDealing, this);
         }
 
-        var toDeal = ResistanceRoles.CardsToDeal(this).ToDictionary(x => x.CardId);
+        var toDeal = ResistancePlotCardQueries.CardsToDeal(this).ToDictionary(x => x.CardId);
         if (assignments.Any(x => !toDeal.ContainsKey(x.CardId))
             || assignments.Select(x => x.CardId).Distinct().Count() != assignments.Count)
         {
@@ -76,7 +76,7 @@ public partial class ResistanceGame
             kept.Location = ResistancePlotCardLocation.Hand;
         }
 
-        ResistanceRoles.AfterDeal(this);
+        ResistanceFlow.AfterDeal(this);
 
         return Succeeded();
     }
@@ -113,7 +113,7 @@ public partial class ResistanceGame
             return ResistanceOutcome.Failed(ResistanceFailure.NotResolving, this);
         }
 
-        if (!(spotlight || ResistanceRoles.IsImmediate(card.Type))
+        if (!(spotlight || ResistancePlotCardQueries.IsImmediate(card.Type))
             || card.Location is not (ResistancePlotCardLocation.Hand or ResistancePlotCardLocation.Played))
         {
             return ResistanceOutcome.Failed(ResistanceFailure.UnknownCard, this);
@@ -124,7 +124,7 @@ public partial class ResistanceGame
             return ResistanceOutcome.Failed(ResistanceFailure.CardState, this);
         }
 
-        if (spotlight && ResistanceRoles.OpenMissionPlayerId(this) is not null)
+        if (spotlight && ResistancePlotCardQueries.OpenMissionPlayerId(this) is not null)
         {
             // One player is forced open per mission
             return ResistanceOutcome.Failed(ResistanceFailure.CardState, this);
@@ -133,9 +133,9 @@ public partial class ResistanceGame
         var validTarget = card.Type switch
         {
             ResistancePlotCardType.OverheardConversation =>
-                ResistanceRoles.Neighbours(this, card.HolderPlayerId!.Value).Contains(targetPlayerId),
+                ResistancePlotCardQueries.Neighbours(this, card.HolderPlayerId!.Value).Contains(targetPlayerId),
             ResistancePlotCardType.InTheSpotlight =>
-                ResistanceRoles.CanBeForcedOpen(this, card.HolderPlayerId!.Value, targetPlayerId),
+                ResistancePlotCardQueries.CanBeForcedOpen(this, card.HolderPlayerId!.Value, targetPlayerId),
             _ => targetPlayerId != card.HolderPlayerId && Players.Any(x => x.PlayerId == targetPlayerId),
         };
         if (!validTarget)
@@ -166,12 +166,12 @@ public partial class ResistanceGame
         // The holder and the viewer are the only ones who may ask about a card; anyone else learns nothing about it
         var card = PlotCards.Find(x => x.CardId == cardId);
         if (card is null || callerPlayerId is null
-            || (card.HolderPlayerId != callerPlayerId && ResistanceRoles.Viewer(card) != callerPlayerId))
+            || (card.HolderPlayerId != callerPlayerId && ResistancePlotCardQueries.Viewer(card) != callerPlayerId))
         {
             return ResistanceOutcome.Failed(ResistanceFailure.NotYourCard, this);
         }
 
-        if (!ResistanceRoles.IsImmediate(card.Type)
+        if (!ResistancePlotCardQueries.IsImmediate(card.Type)
             || card.Location is not (ResistancePlotCardLocation.Hand or ResistancePlotCardLocation.Played))
         {
             return ResistanceOutcome.Failed(ResistanceFailure.UnknownCard, this);
@@ -182,13 +182,13 @@ public partial class ResistanceGame
             return ResistanceOutcome.Failed(ResistanceFailure.CardState, this);
         }
 
-        if (ResistanceRoles.Viewer(card) != callerPlayerId)
+        if (ResistancePlotCardQueries.Viewer(card) != callerPlayerId)
         {
             return ResistanceOutcome.Failed(ResistanceFailure.NotYourCard, this);
         }
 
         card.IsConfirmed = true;
-        if (!ResistanceRoles.UnplayedImmediateCards(this).Any() && !ResistanceRoles.UnconfirmedCards(this).Any())
+        if (!ResistancePlotCardQueries.UnplayedImmediateCards(this).Any() && !ResistancePlotCardQueries.UnconfirmedCards(this).Any())
         {
             Phase = ResistancePhase.SelectingTeam;
         }
@@ -305,7 +305,7 @@ public partial class ResistanceGame
 
         MarkPlayed(card, LeaderPlayerId, playedAt, confirmed: true);
         ChangeLeader(callerPlayerId);
-        ResistanceRoles.AfterWindow(this);
+        ResistanceFlow.AfterWindow(this);
 
         return Succeeded();
     }
@@ -345,7 +345,7 @@ public partial class ResistanceGame
             return ResistanceOutcome.Failed(ResistanceFailure.CardNotPlayableNow, this);
         }
 
-        if (!ResistanceRoles.CanPeek(this, callerPlayerId.Value, targetPlayerId))
+        if (!ResistancePlotCardQueries.CanPeek(this, callerPlayerId.Value, targetPlayerId))
         {
             return ResistanceOutcome.Failed(ResistanceFailure.InvalidTarget, this);
         }
@@ -407,7 +407,7 @@ public partial class ResistanceGame
             spotlight.IsConfirmed = false;
         }
 
-        ResistanceRoles.RejectTeam(this);
+        ResistanceFlow.RejectTeam(this);
 
         return Succeeded();
     }
@@ -429,7 +429,7 @@ public partial class ResistanceGame
             return ResistanceOutcome.Failed(ResistanceFailure.NotPlayerToConfirm, this);
         }
 
-        if (!ResistanceRoles.IsConfirmationWindow(this))
+        if (!ResistanceFlow.IsConfirmationWindow(this))
         {
             return ResistanceOutcome.Failed(ResistanceFailure.CardNotPlayableNow, this);
         }
@@ -437,7 +437,7 @@ public partial class ResistanceGame
         player.PassedLeaderWindow = true;
         if (Players.All(x => x.PassedLeaderWindow))
         {
-            ResistanceRoles.AfterWindow(this);
+            ResistanceFlow.AfterWindow(this);
         }
 
         return Succeeded();
