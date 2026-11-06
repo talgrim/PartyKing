@@ -28,7 +28,7 @@ public class ResistanceGameDefectorTests
     private static List<ResistancePlayer> Defectors(ResistanceGame game) =>
         game.Players.Where(x => x.Character == ResistanceCharacter.Defector).ToList();
 
-    private static void NextMission(ResistanceGame game) => ResistanceRoles.PassLeadership(game);
+    private static void NextMission(ResistanceGame game) => ResistanceFlow.PassLeadership(game);
 
     [Fact]
     public void TheDefectorsAreOffByDefault_AndTheFlagsSurviveClone()

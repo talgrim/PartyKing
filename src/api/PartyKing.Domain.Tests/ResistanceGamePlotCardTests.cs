@@ -251,8 +251,8 @@ public class ResistanceGamePlotCardTests
             ResistanceFailure.InvalidTarget,
             _game.PeekMissionCard(first.PlayerId, firstSpare.CardId, member.PlayerId, Now).Failure);
         Assert.Equal(ResistancePlotCardLocation.Hand, firstSpare.Location);
-        Assert.Equal(member.PlayerId, Assert.Single(ResistanceRoles.PeekedCards(_game, first.PlayerId)).PlayerId);
-        Assert.Equal(member.PlayerId, Assert.Single(ResistanceRoles.PeekedCards(_game, second.PlayerId)).PlayerId);
+        Assert.Equal(member.PlayerId, Assert.Single(ResistancePlotCardQueries.PeekedCards(_game, first.PlayerId)).PlayerId);
+        Assert.Equal(member.PlayerId, Assert.Single(ResistancePlotCardQueries.PeekedCards(_game, second.PlayerId)).PlayerId);
     }
 
     [Fact]

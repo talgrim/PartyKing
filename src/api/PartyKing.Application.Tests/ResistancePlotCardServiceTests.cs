@@ -144,7 +144,7 @@ public class ResistancePlotCardServiceTests : ResistanceServiceTestBase
         var logged = Assert.Single(view.PlayedPlotCards);
         Assert.Null(logged.TargetPlayerId);
         Assert.Empty(view.YourReveals);
-        Assert.Empty(ResistanceRoles.UnconfirmedCards(game));
+        Assert.Empty(ResistancePlotCardQueries.UnconfirmedCards(game));
     }
 
     [Fact]

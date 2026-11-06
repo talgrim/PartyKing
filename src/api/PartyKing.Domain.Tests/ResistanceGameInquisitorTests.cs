@@ -161,7 +161,7 @@ public class ResistanceGameInquisitorTests
         CompleteMission(game);
         Assert.Equal(ResistancePhase.PeekWindow, game.Phase);
 
-        ResistanceRoles.AfterWindow(game);
+        ResistanceFlow.AfterWindow(game);
 
         Assert.Equal(ResistancePhase.Inquisition, game.Phase);
     }
@@ -321,7 +321,7 @@ public class ResistanceGameInquisitorTests
         CompleteMission(game);
         Assert.Equal(ResistancePhase.Inquisition, game.Phase);
 
-        var peeks = ResistanceRoles.PeekedCards(game, peeker.PlayerId).ToList();
+        var peeks = ResistancePlotCardQueries.PeekedCards(game, peeker.PlayerId).ToList();
 
         Assert.Equal([(game.Players[0].PlayerId, ResistanceMissionCardKind.Success)], peeks);
     }

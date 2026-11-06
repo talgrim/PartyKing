@@ -226,7 +226,7 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         var game = await ReloadAsync();
         Assert.Equal(ResistancePhase.SelectingTeam, game.Phase);
         Assert.Equal(1, game.RejectedTeams);
-        Assert.False(ResistanceRoles.IsApproved(game));
+        Assert.False(ResistanceFlow.IsApproved(game));
     }
 
     [Fact]
