@@ -50,6 +50,51 @@ internal static class ResistanceModules
     /// <summary>The modules that restrict the mission cards, in the order of <see cref="Registered"/>.</summary>
     public static IReadOnlyList<IMissionCardBehavior> MissionCards { get; } = Registered.OfType<IMissionCardBehavior>().ToList();
 
+    /// <summary>The modules that hook into the flow of the game, in the order of <see cref="Registered"/>.</summary>
+    public static IReadOnlyList<IFlowBehavior> Flow { get; } = Registered.OfType<IFlowBehavior>().ToList();
+
+    /// <summary>Lets every module that is on do its part as a mission begins, in the order of <see cref="Flow"/>.</summary>
+    public static void MissionBegun(ResistanceGame game)
+    {
+        MissionBegun(Flow, game);
+    }
+
+    internal static void MissionBegun(IReadOnlyList<IFlowBehavior> modules, ResistanceGame game)
+    {
+        foreach (var module in modules.Where(x => x.IsOn(game.Rules)))
+        {
+            module.OnMissionBegun(game);
+        }
+    }
+
+    /// <summary>The phase a module that is on puts after the scored mission instead of the end, or null: the first module in the order that names one.</summary>
+    public static ResistancePhase? PhaseAfterScoring(ResistanceGame game)
+    {
+        return PhaseAfterScoring(Flow, game);
+    }
+
+    internal static ResistancePhase? PhaseAfterScoring(IReadOnlyList<IFlowBehavior> modules, ResistanceGame game)
+    {
+        return modules
+            .Where(x => x.IsOn(game.Rules))
+            .Select(x => x.PhaseAfterScoring(game))
+            .FirstOrDefault(x => x is not null);
+    }
+
+    /// <summary>The phase a module that is on puts before the "Dalej" step, or null: the first module in the order that names one.</summary>
+    public static ResistancePhase? PhaseAfterMissionResolved(ResistanceGame game)
+    {
+        return PhaseAfterMissionResolved(Flow, game);
+    }
+
+    internal static ResistancePhase? PhaseAfterMissionResolved(IReadOnlyList<IFlowBehavior> modules, ResistanceGame game)
+    {
+        return modules
+            .Where(x => x.IsOn(game.Rules))
+            .Select(x => x.PhaseAfterMissionResolved(game))
+            .FirstOrDefault(x => x is not null);
+    }
+
     /// <summary>Why the player may not play the card for a module's sake, or null: the first module in the order that refuses.</summary>
     public static ResistanceFailure? MissionCardFailure(ResistancePlayer player, ResistanceMissionCardKind card)
     {
