@@ -61,7 +61,7 @@ internal static class ResistanceModules
 
     internal static void MissionBegun(IReadOnlyList<IFlowBehavior> modules, ResistanceGame game)
     {
-        foreach (var module in modules.Where(x => x.IsOn(game.Rules)))
+        foreach (var module in ThatAreOn(modules, game))
         {
             module.OnMissionBegun(game);
         }
@@ -75,10 +75,7 @@ internal static class ResistanceModules
 
     internal static ResistancePhase? PhaseAfterScoring(IReadOnlyList<IFlowBehavior> modules, ResistanceGame game)
     {
-        return modules
-            .Where(x => x.IsOn(game.Rules))
-            .Select(x => x.PhaseAfterScoring(game))
-            .FirstOrDefault(x => x is not null);
+        return FirstPhase(modules, game, x => x.PhaseAfterScoring(game));
     }
 
     /// <summary>The phase a module that is on puts before the "Dalej" step, or null: the first module in the order that names one.</summary>
@@ -89,10 +86,19 @@ internal static class ResistanceModules
 
     internal static ResistancePhase? PhaseAfterMissionResolved(IReadOnlyList<IFlowBehavior> modules, ResistanceGame game)
     {
-        return modules
-            .Where(x => x.IsOn(game.Rules))
-            .Select(x => x.PhaseAfterMissionResolved(game))
-            .FirstOrDefault(x => x is not null);
+        return FirstPhase(modules, game, x => x.PhaseAfterMissionResolved(game));
+    }
+
+    private static IEnumerable<IFlowBehavior> ThatAreOn(IReadOnlyList<IFlowBehavior> modules, ResistanceGame game)
+    {
+        return modules.Where(x => x.IsOn(game.Rules));
+    }
+
+    /// <summary>The first phase a module that is on names, asking in the order given and no further than the first answer.</summary>
+    private static ResistancePhase? FirstPhase(
+        IReadOnlyList<IFlowBehavior> modules, ResistanceGame game, Func<IFlowBehavior, ResistancePhase?> ask)
+    {
+        return ThatAreOn(modules, game).Select(ask).FirstOrDefault(x => x is not null);
     }
 
     /// <summary>Why the player may not play the card for a module's sake, or null: the first module in the order that refuses.</summary>

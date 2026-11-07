@@ -174,12 +174,6 @@ public static class ResistanceFlow
         game.Phase = ResistancePhase.DealingCards;
     }
 
-    /// <summary>Whether the game is in a window in which every player confirms (see <see cref="ResistancePhases.IsConfirmationWindow"/>).</summary>
-    public static bool IsConfirmationWindow(ResistanceGame game)
-    {
-        return ResistancePhases.IsConfirmationWindow(game.Phase);
-    }
-
     /// <summary>
     /// Whether everybody's vote is public: all have voted and the vote is no longer on (also while the next leader
     /// picks after a rejection). While it is on, only who voted is known, not how.

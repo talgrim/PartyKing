@@ -338,7 +338,7 @@ public partial class ResistanceGame
             return ResistanceOutcome.Failed(ResistanceFailure.NotPlayerToConfirm, this);
         }
 
-        if (!ResistanceFlow.IsConfirmationWindow(this))
+        if (!ResistancePhases.IsConfirmationWindow(Phase))
         {
             return ResistanceOutcome.Failed(ResistanceFailure.CardNotPlayableNow, this);
         }
