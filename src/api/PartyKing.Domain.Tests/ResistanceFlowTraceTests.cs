@@ -9,14 +9,16 @@ namespace PartyKing.Domain.Tests;
 /// the Inquisitor, the Defectors, the Assassin). A scripted player plays each game to its end through the public
 /// actions, and the phase after every step is recorded, so the places where the modules hook into the flow (a Defector
 /// card flipped as a mission begins, the Assassination instead of the end, the Inquisition after a mission) are pinned
-/// together with their order against the plot card windows. The snapshot is <c>Golden/ResistanceFlowTrace.txt</c>.
+/// by what they lead to. The snapshot is <c>Golden/ResistanceFlowTrace.txt</c>.
 /// </summary>
 /// <remarks>
 /// Each line is one game: the rules, the script and the player count, then one token per phase change: the mission, the
 /// phase (see <see cref="Code"/>) and, with Defectors in the game, in braces the side each one is on (S or R). After
 /// the arrow come the winner and the missions in order (R resistance, S spies). A change of behaviour fails with the
 /// first differing game; when it is intended, regenerate with
-/// <c>PARTYKING_UPDATE_GOLDEN=1 dotnet test --filter ResistanceFlowTraceTests</c> and review the diff.
+/// <c>PARTYKING_UPDATE_GOLDEN=1 dotnet test --filter ResistanceFlowTraceTests</c> and review the diff. The order of a hook
+/// against the plot card windows is not visible here, as both effects land before the next token is recorded: it is the
+/// contract of <c>IFlowBehavior</c> (a hook is asked right after the phase is set, before the window opens).
 /// </remarks>
 public class ResistanceFlowTraceTests
 {
@@ -27,6 +29,9 @@ public class ResistanceFlowTraceTests
     private const int StepLimit = 600;
 
     private static readonly int[] PlayerCounts = [5, 7];
+
+    /// <summary>The snapshot takes a game's worth of plays 168 times, so the tests share one.</summary>
+    private static readonly Lazy<string> Pinned = new(Snapshot);
 
     private sealed record Config(string Name, Action<ResistanceRules> Configure);
 
@@ -200,7 +205,9 @@ public class ResistanceFlowTraceTests
 
             var missions = string.Concat(_game.MissionResults.OrderBy(x => x.MissionNumber).Select(x => x.Succeeded ? 'R' : 'S'));
 
-            return $"{string.Join(' ', tokens)} -> {_game.Winner?.ToString() ?? "none"} {missions}";
+            var winner = _game.Winner?.ToString() ?? "none";
+
+            return $"{string.Join(' ', tokens)} -> {winner}{(missions.Length == 0 ? "" : " " + missions)}";
         }
 
         private string Token()
@@ -472,25 +479,25 @@ public class ResistanceFlowTraceTests
     [Fact]
     public void TheSnapshot_IsTheSameEveryTime()
     {
-        Assert.Equal(Snapshot(), Snapshot());
+        Assert.Equal(Pinned.Value, Snapshot());
     }
 
     [Fact]
     public void EveryGame_IsPlayedToItsEnd()
     {
-        var snapshot = Snapshot();
+        var snapshot = Pinned.Value;
 
         Assert.DoesNotContain("STUCK", snapshot);
         foreach (var line in snapshot.Split('\n', StringSplitOptions.RemoveEmptyEntries).Where(x => !x.Contains("=> refused")))
         {
-            Assert.Matches(@" \d+End(\{[SR]+\})? -> (Resistance|Spy) [RS]*$", line);
+            Assert.Matches(@" \d+End(\{[SR]+\})? -> (Resistance|Spy)( [RS]+)?$", line);
         }
     }
 
     [Fact]
     public void TheSnapshot_VisitsEveryPhaseAWholeGameCanReach_AndEndsWithBothWinners()
     {
-        var snapshot = Snapshot();
+        var snapshot = Pinned.Value;
 
         foreach (var phase in Enum.GetValues<ResistancePhase>().Where(x => x != ResistancePhase.VoteResult))
         {
@@ -504,7 +511,7 @@ public class ResistanceFlowTraceTests
     [Fact]
     public void TheSnapshot_ShowsTheDefectorsChangeSides_AndTheInquisitionAndTheAssassinationOpen()
     {
-        var snapshot = Snapshot();
+        var snapshot = Pinned.Value;
         var flipped = snapshot
             .Split('\n')
             .Where(x => x.Contains("Defector/"))
@@ -518,6 +525,6 @@ public class ResistanceFlowTraceTests
     [Fact]
     public void TheFlowOfEveryGame_IsAsPinned()
     {
-        GoldenFiles.AssertMatches(GoldenFile, Snapshot());
+        GoldenFiles.AssertMatches(GoldenFile, Pinned.Value);
     }
 }
