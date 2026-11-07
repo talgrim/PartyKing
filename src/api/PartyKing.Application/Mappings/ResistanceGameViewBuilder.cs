@@ -77,9 +77,7 @@ internal sealed class ResistanceGameViewBuilder
     {
         _view.YourRole = _yourRole?.ToDto();
         _view.FellowSpies = BuildFellowSpies();
-        _view.YourCharacter = _game.IsStarted && _game.Rules is { ReverserEnabled: true } or { DefectorEnabled: true } or { AssassinEnabled: true }
-            ? _you?.Character.ToDto()
-            : null;
+        _view.YourCharacter = ResistanceKnowledge.OwnCharacter(_game, _you)?.ToDto();
         _view.YourCommanderCandidates = BuildCommanderCandidates();
         _view.FellowDefectorId = BuildFellowDefector();
         _view.DefectorFlips = _game.Rules.DefectorEnabled ? _game.DefectorFlips : [];

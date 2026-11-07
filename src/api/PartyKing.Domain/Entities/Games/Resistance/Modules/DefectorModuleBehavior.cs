@@ -19,6 +19,11 @@ internal sealed class DefectorModuleBehavior : IKnowledgeBehavior, IDealBehavior
         rules.DefectorEnabled = on;
     }
 
+    public bool DealsCharacters(ResistanceRules rules)
+    {
+        return rules.DefectorEnabled;
+    }
+
     /// <summary>
     /// One Defector on each side, taken from the players still without a character (there are always some, as a side has
     /// at least two spies and three members of the resistance and takes one Reverser at most), and a shuffled switch

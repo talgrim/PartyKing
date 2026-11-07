@@ -54,6 +54,11 @@ internal sealed class AssassinModuleBehavior : IKnowledgeBehavior, IDealBehavior
         return null;
     }
 
+    public bool DealsCharacters(ResistanceRules rules)
+    {
+        return rules.AssassinEnabled;
+    }
+
     /// <summary>The player count at which a Body Guard needs Deep Cover or False Commander next to them.</summary>
     internal const int BodyGuardCoverPlayerCount = 5;
 

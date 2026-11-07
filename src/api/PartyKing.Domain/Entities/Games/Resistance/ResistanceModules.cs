@@ -44,6 +44,15 @@ internal static class ResistanceModules
     /// <summary>The modules that deal, check the start or reset something, in the order of <see cref="Registered"/>.</summary>
     public static IReadOnlyList<IDealBehavior> Dealing { get; } = Registered.OfType<IDealBehavior>().ToList();
 
+    /// <summary>The modules that restrict the mission cards, in the order of <see cref="Registered"/>.</summary>
+    public static IReadOnlyList<IMissionCardBehavior> MissionCards { get; } = Registered.OfType<IMissionCardBehavior>().ToList();
+
+    /// <summary>Why the player may not play the card for a module's sake, or null: the first module in the order that refuses.</summary>
+    public static ResistanceFailure? MissionCardFailure(ResistancePlayer player, ResistanceMissionCardKind card)
+    {
+        return MissionCards.Select(x => x.CardFailure(player, card)).FirstOrDefault(x => x is not null);
+    }
+
     /// <summary>Why the game cannot be started with the modules it has on, or null: the first module in the order that fails.</summary>
     public static ResistanceFailure? StartFailure(ResistanceGame game)
     {

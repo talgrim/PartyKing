@@ -32,6 +32,16 @@ internal interface IDealBehavior : IResistanceModuleBehavior
     {
     }
 
+    /// <summary>
+    /// Whether the module, as <paramref name="rules"/> have it, gives players a character that each of them is told
+    /// about (<see cref="ResistanceKnowledge.OwnCharacter"/>). A module that deals characters says so here;
+    /// <c>ResistanceModuleBehaviorsTests</c> fails for one that deals a character and does not.
+    /// </summary>
+    bool DealsCharacters(ResistanceRules rules)
+    {
+        return false;
+    }
+
     /// <summary>Deals what depends on the first leader (a token, a deck). Runs after the leader is picked.</summary>
     void DealTable(ResistanceGame game, Random random)
     {

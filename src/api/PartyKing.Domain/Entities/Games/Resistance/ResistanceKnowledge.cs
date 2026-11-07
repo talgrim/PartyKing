@@ -20,6 +20,21 @@ public static class ResistanceKnowledge
     }
 
     /// <summary>
+    /// The character the viewer is told about on their own card: only in a started game with a module that deals
+    /// characters on (a game without one has only standard players, which would only show an empty card), and never
+    /// anybody else's. Null for an observer.
+    /// </summary>
+    public static ResistanceCharacter? OwnCharacter(ResistanceGame game, ResistancePlayer? viewer)
+    {
+        if (!game.IsStarted || viewer is null || !ResistanceModules.Dealing.Any(x => x.DealsCharacters(game.Rules)))
+        {
+            return null;
+        }
+
+        return viewer.Character;
+    }
+
+    /// <summary>
     /// Whether the viewer gets a list of spies at all: a spy does, and so does the Commander. What is in the list is up
     /// to <see cref="KnowsSpy"/>.
     /// </summary>

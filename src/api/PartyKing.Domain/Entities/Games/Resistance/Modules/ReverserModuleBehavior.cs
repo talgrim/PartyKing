@@ -1,7 +1,7 @@
 namespace PartyKing.Domain.Entities.Games.Resistance.Modules;
 
 /// <summary>The Reverser module.</summary>
-internal sealed class ReverserModuleBehavior : IKnowledgeBehavior, IDealBehavior
+internal sealed class ReverserModuleBehavior : IKnowledgeBehavior, IDealBehavior, IMissionCardBehavior
 {
     public ResistanceModule Module => ResistanceModule.Reverser;
 
@@ -15,6 +15,24 @@ internal sealed class ReverserModuleBehavior : IKnowledgeBehavior, IDealBehavior
     public void Switch(ResistanceRules rules, bool on)
     {
         rules.ReverserEnabled = on;
+    }
+
+    public bool DealsCharacters(ResistanceRules rules)
+    {
+        return rules.ReverserEnabled;
+    }
+
+    /// <summary>Reverse only from a Reverser, and a Reverser who is a spy never plays Fail (they play Success or Reverse).</summary>
+    public ResistanceFailure? CardFailure(ResistancePlayer player, ResistanceMissionCardKind card)
+    {
+        return card switch
+        {
+            ResistanceMissionCardKind.Reverse when player.Character != ResistanceCharacter.Reverser =>
+                ResistanceFailure.NotReverser,
+            ResistanceMissionCardKind.Fail when player.Character == ResistanceCharacter.Reverser =>
+                ResistanceFailure.ReverserCannotFail,
+            _ => null,
+        };
     }
 
     /// <summary>A Reverser on each side the rules ask for: the first standard player of the side in the shuffle.</summary>
