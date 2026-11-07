@@ -351,7 +351,7 @@ internal sealed class ResistanceGameViewBuilder
     /// <summary>Who confirmed in a window, never who holds a card.</summary>
     private List<Guid> BuildWindowPassedPlayerIds()
     {
-        if (!ResistanceFlow.IsConfirmationWindow(_game))
+        if (!ResistancePhases.IsConfirmationWindow(_game.Phase))
         {
             return [];
         }

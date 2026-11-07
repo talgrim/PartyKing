@@ -23,7 +23,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <!-- The snapshot of who knows whom (ResistanceKnowledgeMatrixTests) -->
+        <!-- The snapshots of who knows whom (ResistanceKnowledgeMatrixTests) and of the phase flow of whole games (ResistanceFlowTraceTests) -->
         <None Include="Golden\**" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 

@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using System.Text;
 using PartyKing.Domain.Entities.Games.Resistance;
 
@@ -207,11 +206,6 @@ public class ResistanceKnowledgeMatrixTests
         }
     }
 
-    private static string GoldenPath([CallerFilePath] string testFile = "")
-    {
-        return Path.Combine(Path.GetDirectoryName(testFile)!, "Golden", GoldenFile);
-    }
-
     [Fact]
     public void TheSnapshot_IsTheSameEveryTime()
     {
@@ -246,28 +240,6 @@ public class ResistanceKnowledgeMatrixTests
     [Fact]
     public void WhoKnowsWhatAndWhoIsDealtWhat_IsAsPinned()
     {
-        var actual = Snapshot();
-
-        if (Environment.GetEnvironmentVariable("PARTYKING_UPDATE_GOLDEN") == "1")
-        {
-            var path = GoldenPath();
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            File.WriteAllText(path, actual);
-
-            return;
-        }
-
-        var expected = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Golden", GoldenFile));
-        var expectedLines = expected.Split('\n');
-        var actualLines = actual.Split('\n');
-        for (var i = 0; i < Math.Max(expectedLines.Length, actualLines.Length); i++)
-        {
-            var wanted = i < expectedLines.Length ? expectedLines[i] : "<no line>";
-            var got = i < actualLines.Length ? actualLines[i] : "<no line>";
-
-            Assert.True(
-                wanted == got,
-                $"Scenario {i + 1} differs.\nExpected: {wanted}\nActual:   {got}");
-        }
+        GoldenFiles.AssertMatches(GoldenFile, Snapshot());
     }
 }

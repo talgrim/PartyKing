@@ -3,7 +3,7 @@ using PartyKing.Domain.Entities.Games.Base;
 namespace PartyKing.Domain.Entities.Games.Resistance.Modules;
 
 /// <summary>The Defector module (Hidden Agenda).</summary>
-internal sealed class DefectorModuleBehavior : IKnowledgeBehavior, ICharacterDealBehavior, IDealBehavior
+internal sealed class DefectorModuleBehavior : IKnowledgeBehavior, ICharacterDealBehavior, IDealBehavior, IFlowBehavior
 {
     public ResistanceModule Module => ResistanceModule.Defector;
 
@@ -45,6 +45,25 @@ internal sealed class DefectorModuleBehavior : IKnowledgeBehavior, ICharacterDea
     public void Reset(ResistanceGame game)
     {
         game.DefectorDeck = string.Empty;
+    }
+
+    /// <summary>
+    /// From the third mission on, the card on top of the switch deck is flipped as the mission begins; Change Allegiance
+    /// puts both Defectors on the other side, so the win checks and the mission card rules follow from
+    /// <see cref="ResistancePlayer.Role"/> at once. A rejected team does not begin a mission, so it flips nothing.
+    /// </summary>
+    public void OnMissionBegun(ResistanceGame game)
+    {
+        var index = game.MissionNumber - ResistanceGame.DefectorFirstFlipMission;
+        if (index < 0 || index >= game.DefectorDeck.Length || game.DefectorDeck[index] != ResistanceGame.DefectorChangeAllegiance)
+        {
+            return;
+        }
+
+        foreach (var defector in game.Players.Where(x => x.Character == ResistanceCharacter.Defector))
+        {
+            defector.SwitchAllegiance();
+        }
     }
 
     /// <summary>A Defector keeps their eyes closed in the reveal, and the Defector who started as resistance is not in it.</summary>

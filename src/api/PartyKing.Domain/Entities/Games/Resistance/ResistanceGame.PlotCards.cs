@@ -187,10 +187,7 @@ public partial class ResistanceGame
                 callerPlayerId,
                 cardId,
                 ResistancePlotCardType.TakeResponsibility,
-                [
-                    ResistancePhase.SelectingTeam, ResistancePhase.PlayingMission, ResistancePhase.PeekWindow,
-                    ResistancePhase.MissionResult,
-                ],
+                ResistancePhases.TakeResponsibility,
                 out var card,
                 out var refusal))
         {
@@ -341,7 +338,7 @@ public partial class ResistanceGame
             return ResistanceOutcome.Failed(ResistanceFailure.NotPlayerToConfirm, this);
         }
 
-        if (!ResistanceFlow.IsConfirmationWindow(this))
+        if (!ResistancePhases.IsConfirmationWindow(Phase))
         {
             return ResistanceOutcome.Failed(ResistanceFailure.CardNotPlayableNow, this);
         }

@@ -46,19 +46,6 @@ public class ResistanceViewRulesTests
         Assert.False(ResistanceFlow.VotesRevealed(game));
     }
 
-    // ---- IsConfirmationWindow ----
-
-    [Fact]
-    public void IsConfirmationWindow_IsTrueForExactlyTheThreeWindows()
-    {
-        var windows = new[] { ResistancePhase.LeaderWindow, ResistancePhase.ConfidenceWindow, ResistancePhase.PeekWindow };
-
-        foreach (var phase in Enum.GetValues<ResistancePhase>())
-        {
-            Assert.Equal(windows.Contains(phase), ResistanceFlow.IsConfirmationWindow(NewGame(phase)));
-        }
-    }
-
     // ---- NeedsDealing ----
 
     [Fact]
