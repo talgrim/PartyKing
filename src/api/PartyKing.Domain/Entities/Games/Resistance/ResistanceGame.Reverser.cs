@@ -20,20 +20,4 @@ public partial class ResistanceGame
                 x.ReverserSpyKnowsSpies = spyKnowsSpies ?? x.ReverserSpyKnowsSpies;
             });
     }
-
-    /// <summary>
-    /// The failure of a Reverser-related card play, or null when the card is allowed: Reverse only from a Reverser, and
-    /// a Reverser who is a spy never plays Fail (they play Success or Reverse).
-    /// </summary>
-    private static ResistanceFailure? ReverserCardFailure(ResistancePlayer player, ResistanceMissionCardKind card)
-    {
-        return card switch
-        {
-            ResistanceMissionCardKind.Reverse when player.Character != ResistanceCharacter.Reverser =>
-                ResistanceFailure.NotReverser,
-            ResistanceMissionCardKind.Fail when player.Character == ResistanceCharacter.Reverser =>
-                ResistanceFailure.ReverserCannotFail,
-            _ => null,
-        };
-    }
 }

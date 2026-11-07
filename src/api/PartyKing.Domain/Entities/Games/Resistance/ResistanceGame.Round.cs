@@ -145,9 +145,9 @@ public partial class ResistanceGame
             return ResistanceOutcome.Failed(ResistanceFailure.MustSucceed, this);
         }
 
-        if (ReverserCardFailure(player, card) is { } reverserFailure)
+        if (ResistanceModules.MissionCardFailure(player, card) is { } cardFailure)
         {
-            return ResistanceOutcome.Failed(reverserFailure, this);
+            return ResistanceOutcome.Failed(cardFailure, this);
         }
 
         player.MissionCard = card;
