@@ -325,7 +325,7 @@ public class ResistanceGameReverserTests
     public void WithoutReverseCards_TheCompletedMissionCountsNoReverse()
     {
         var game = MissionGame(0, 3);
-        game.Rules = game.Rules.Clone(reverserEnabled: false);
+        game.Rules.ReverserEnabled = false;
         Play(game, 0, Fail);
         Play(game, 3, Success);
 
@@ -340,7 +340,9 @@ public class ResistanceGameReverserTests
 
         Assert.True(rules.ReverserSpyKnowsSpies);
         Assert.True(rules.Clone().ReverserSpyKnowsSpies);
-        Assert.False(rules.Clone(reverserSpyKnowsSpies: false).ReverserSpyKnowsSpies);
+
+        rules.ReverserSpyKnowsSpies = false;
+        Assert.False(rules.Clone().ReverserSpyKnowsSpies);
     }
 
     [Fact]
@@ -384,7 +386,8 @@ public class ResistanceGameReverserTests
     public void KnowsSpy_EveryViewerAndTarget_WithAReverserSpy(bool reverser, bool spyKnowsSpies)
     {
         var game = MissionGame();
-        game.Rules = game.Rules.Clone(reverserEnabled: reverser, reverserSpyKnowsSpies: spyKnowsSpies);
+        game.Rules.ReverserEnabled = reverser;
+        game.Rules.ReverserSpyKnowsSpies = spyKnowsSpies;
         if (!reverser)
         {
             // Without the module nobody holds the character

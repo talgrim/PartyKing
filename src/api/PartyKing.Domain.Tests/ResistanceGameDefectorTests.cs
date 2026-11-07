@@ -37,10 +37,14 @@ public class ResistanceGameDefectorTests
 
         Assert.False(rules.DefectorEnabled);
         Assert.False(rules.DefectorsKnowEachOther);
-        Assert.True(rules.Clone(defectorEnabled: true).DefectorEnabled);
-        Assert.False(rules.Clone(defectorEnabled: true).DefectorsKnowEachOther);
-        Assert.True(rules.Clone(defectorsKnowEachOther: true).DefectorsKnowEachOther);
-        Assert.True(rules.Clone(defectorEnabled: true, defectorsKnowEachOther: true).Clone().DefectorsKnowEachOther);
+
+        rules.DefectorEnabled = true;
+        var copy = rules.Clone();
+        Assert.True(copy.DefectorEnabled);
+        Assert.False(copy.DefectorsKnowEachOther);
+
+        rules.DefectorsKnowEachOther = true;
+        Assert.True(rules.Clone().Clone().DefectorsKnowEachOther);
     }
 
     [Fact]
