@@ -21,8 +21,12 @@ public partial class ResistanceGame
             return ResistanceOutcome.Failed(ResistanceFailure.AssassinConflict, this);
         }
 
-        // Rules is a JSON column compared by reference, so assign a copy to have the change detected.
-        Rules = Rules.Clone(reverserEnabled: enabled, reverserSides: sides, reverserSpyKnowsSpies: spyKnowsSpies);
+        ConfigureRules(x =>
+        {
+            x.ReverserEnabled = enabled;
+            x.ReverserSides = sides ?? x.ReverserSides;
+            x.ReverserSpyKnowsSpies = spyKnowsSpies ?? x.ReverserSpyKnowsSpies;
+        });
 
         return Succeeded();
     }

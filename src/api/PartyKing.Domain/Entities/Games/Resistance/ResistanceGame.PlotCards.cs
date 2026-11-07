@@ -18,8 +18,7 @@ public partial class ResistanceGame
             return ResistanceOutcome.Failed(ResistanceFailure.PlotCardsLocked, this);
         }
 
-        // Rules is a JSON column compared by reference, so assign a copy to have the change detected.
-        Rules = Rules.Clone(enabled);
+        ConfigureRules(x => x.PlotCardsEnabled = enabled);
 
         return Succeeded();
     }

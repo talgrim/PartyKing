@@ -112,22 +112,22 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
         }
 
         // A copy, so the caller's object is neither changed nor shared with the game
-        Rules = rules.Clone(
-            Rules.PlotCardsEnabled,
-            Rules.InquisitorEnabled,
-            Rules.BlindSpiesEnabled,
-            Rules.ReverserEnabled,
-            Rules.ReverserSides,
-            Rules.ReverserSpyKnowsSpies,
-            Rules.DefectorEnabled,
-            Rules.DefectorsKnowEachOther,
-            Rules.AssassinEnabled,
-            Rules.BodyGuardEnabled,
-            Rules.DeepCoverEnabled,
-            Rules.BlindSpyEnabled,
-            Rules.FalseCommanderEnabled);
+        var fresh = rules.Clone();
+        fresh.CopyModulesFrom(Rules);
+        Rules = fresh;
 
         return Succeeded();
+    }
+
+    /// <summary>
+    /// Changes the rules through a copy. Rules is a JSON column compared by reference, so the change is only noticed
+    /// (and saved) when a new instance is assigned.
+    /// </summary>
+    private void ConfigureRules(Action<ResistanceRules> change)
+    {
+        var copy = Rules.Clone();
+        change(copy);
+        Rules = copy;
     }
 
     /// <summary>

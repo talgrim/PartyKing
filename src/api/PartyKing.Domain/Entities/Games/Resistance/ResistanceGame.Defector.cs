@@ -53,8 +53,11 @@ public partial class ResistanceGame
             return ResistanceOutcome.Failed(ResistanceFailure.AssassinConflict, this);
         }
 
-        // Rules is a JSON column compared by reference, so assign a copy to have the change detected.
-        Rules = Rules.Clone(defectorEnabled: enabled, defectorsKnowEachOther: defectorsKnowEachOther);
+        ConfigureRules(x =>
+        {
+            x.DefectorEnabled = enabled;
+            x.DefectorsKnowEachOther = defectorsKnowEachOther ?? x.DefectorsKnowEachOther;
+        });
 
         return Succeeded();
     }
