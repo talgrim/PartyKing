@@ -4,8 +4,9 @@ namespace PartyKing.Domain.Entities.Games.Resistance;
 
 /// <summary>
 /// The switch deck of the Defector module (Hidden Agenda), one character per card, top first. Secret until a card is
-/// flipped, so only <see cref="Flips"/> leaves the Domain. Stored in a column of the game (a complex property), never
-/// null; empty unless the Defector module is played in a started game. See <c>DefectorModuleBehavior</c> for the flips.
+/// flipped, so <see cref="Cards"/> is internal and only <see cref="ResistanceGame.DefectorFlips"/> leaves the Domain.
+/// Stored in a column of the game (a complex property), never null; empty unless the Defector module is played in a
+/// started game. See <c>DefectorModuleBehavior</c> for the flips.
 /// </summary>
 public class ResistanceDefectorDeck
 {
@@ -22,7 +23,7 @@ public class ResistanceDefectorDeck
     internal const char ChangeAllegiance = 'C';
 
     /// <summary>The cards as one character per card: <see cref="NoChange"/> or <see cref="ChangeAllegiance"/>.</summary>
-    public string Cards { get; internal set; } = string.Empty;
+    internal string Cards { get; set; } = string.Empty;
 
     /// <summary>
     /// The cards flipped when the game is at <paramref name="missionNumber"/>, in order, true for Change Allegiance: one
@@ -31,24 +32,29 @@ public class ResistanceDefectorDeck
     /// </summary>
     internal IReadOnlyList<bool> Flips(int missionNumber)
     {
-        return Cards
-            .Take(Math.Max(0, missionNumber - FirstFlipMission + 1))
-            .Select(x => x == ChangeAllegiance)
-            .ToList();
+        return Flipped(missionNumber).Select(x => x == ChangeAllegiance).ToList();
     }
 
     /// <summary>Whether the card flipped as <paramref name="missionNumber"/> begins is a Change Allegiance.</summary>
     internal bool ChangesAllegianceAt(int missionNumber)
     {
-        var index = missionNumber - FirstFlipMission;
+        var flipped = Flipped(missionNumber).ToList();
 
-        return index >= 0 && index < Cards.Length && Cards[index] == ChangeAllegiance;
+        return flipped.Count > 0
+               && flipped.Count == missionNumber - FirstFlipMission + 1
+               && flipped[^1] == ChangeAllegiance;
     }
 
     /// <summary>Whether the Defectors are on the opposite side to the one they started on at <paramref name="missionNumber"/>.</summary>
     internal bool Switched(int missionNumber)
     {
-        return Flips(missionNumber).Count(x => x) % 2 == 1;
+        return Flipped(missionNumber).Count(x => x == ChangeAllegiance) % 2 == 1;
+    }
+
+    /// <summary>The cards flipped by <paramref name="missionNumber"/>: the one place that says which those are.</summary>
+    private IEnumerable<char> Flipped(int missionNumber)
+    {
+        return Cards.Take(Math.Max(0, missionNumber - FirstFlipMission + 1));
     }
 
     /// <summary>A shuffled deck of <see cref="Size"/> cards, two of them Change Allegiance.</summary>

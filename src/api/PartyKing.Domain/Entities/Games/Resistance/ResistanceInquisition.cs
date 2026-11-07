@@ -7,17 +7,20 @@ namespace PartyKing.Domain.Entities.Games.Resistance;
 /// </summary>
 public class ResistanceInquisition
 {
+    // The setters are private on purpose: ExaminedPlayerId and ActingPlayerId follow from the two ids, so they only
+    // change together, through Hold, Pick, Finish and Clear (EF sets them by reflection).
+
     /// <summary>
     /// The player holding the token, who examines after the next mission 2, 3 or 4 (public); null when the module is off
     /// or the game is not started.
     /// </summary>
-    public Guid? HolderPlayerId { get; internal set; }
+    public Guid? HolderPlayerId { get; private set; }
 
     /// <summary>
     /// While <see cref="ResistancePhase.Inquisition"/>: the player who picked someone and has yet to confirm they saw
     /// the loyalty (the token already moved on to the examined player); null until they pick.
     /// </summary>
-    public Guid? ExaminerPlayerId { get; internal set; }
+    public Guid? ExaminerPlayerId { get; private set; }
 
     /// <summary>Whether the examiner picked someone in the current Inquisition.</summary>
     public bool HasPicked => ExaminerPlayerId is not null;
@@ -31,10 +34,11 @@ public class ResistanceInquisition
     /// </summary>
     public Guid? ActingPlayerId => ExaminerPlayerId ?? HolderPlayerId;
 
-    /// <summary>Gives the token to a player, at the start of the game.</summary>
+    /// <summary>Gives the token to a player, at the start of the game, with no Inquisition going on.</summary>
     internal void Hold(Guid playerId)
     {
         HolderPlayerId = playerId;
+        ExaminerPlayerId = null;
     }
 
     /// <summary>The examiner picks a player: the token passes to them at once and the examiner is remembered.</summary>
