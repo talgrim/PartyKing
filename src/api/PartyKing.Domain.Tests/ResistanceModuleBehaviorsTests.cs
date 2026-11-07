@@ -25,6 +25,22 @@ public class ResistanceModuleBehaviorsTests
         }
     }
 
+    /// <summary>A module that only fails the start with the failure it is given.</summary>
+    private sealed class FailingStart(ResistanceModule module, ResistanceFailure? failure) : IDealBehavior
+    {
+        public ResistanceModule Module => module;
+
+        public ResistanceFailure LockedFailure => ResistanceFailure.PlotCardsLocked;
+
+        public bool IsOn(ResistanceRules rules) => true;
+
+        public void Switch(ResistanceRules rules, bool on)
+        {
+        }
+
+        public ResistanceFailure? StartFailure(ResistanceGame game) => failure;
+    }
+
     [Fact]
     public void TheRegistry_HasOneBehaviorPerModule_InTheOrderOfTheEnum()
     {
@@ -130,5 +146,54 @@ public class ResistanceModuleBehaviorsTests
         Assert.True(rules.BodyGuardEnabled);
         Assert.True(rules.FalseCommanderEnabled);
         Assert.False(rules.DeepCoverEnabled);
+    }
+
+    [Fact]
+    public void TheModulesThatDeal_AreAskedInTheOrderOfTheRegistry_WithTheCharactersInTheOrderTheyAreTakenIn()
+    {
+        Assert.Equal(
+            [
+                ResistanceModule.PlotCards,
+                ResistanceModule.Inquisitor,
+                ResistanceModule.Reverser,
+                ResistanceModule.Defector,
+                ResistanceModule.Assassin,
+            ],
+            ResistanceModules.Dealing.Select(x => x.Module));
+    }
+
+    [Fact]
+    public void TheStartFailure_IsTheFirstOneInTheOrderOfTheModules()
+    {
+        var game = new ResistanceGame { Rules = ResistanceRules.Default() };
+        var none = new FailingStart(ResistanceModule.PlotCards, null);
+        var first = new FailingStart(ResistanceModule.Inquisitor, ResistanceFailure.TooManySpyCharacters);
+        var second = new FailingStart(ResistanceModule.Reverser, ResistanceFailure.BodyGuardNeedsCover);
+
+        Assert.Equal(ResistanceFailure.TooManySpyCharacters, ResistanceModules.StartFailure([none, first, second], game));
+        Assert.Equal(ResistanceFailure.BodyGuardNeedsCover, ResistanceModules.StartFailure([none, second, first], game));
+        Assert.Null(ResistanceModules.StartFailure([none], game));
+    }
+
+    [Fact]
+    public void Reset_ClearsWhatTheModulesAccumulated_WhetherTheyAreOnOrNot()
+    {
+        var game = new ResistanceGame { SessionId = Guid.NewGuid(), Rules = ResistanceRules.Default() };
+        game.Players.Add(new ResistancePlayer { PlayerId = Guid.NewGuid(), Order = 0, WasInquisitor = true });
+        game.Players.Add(new ResistancePlayer { PlayerId = Guid.NewGuid(), Order = 1 });
+        game.InquisitorPlayerId = game.Players[0].PlayerId;
+        game.InquisitionExaminerPlayerId = game.Players[1].PlayerId;
+        game.DefectorDeck = "CNNNN";
+        game.AssassinationTargetPlayerId = game.Players[1].PlayerId;
+        game.PlotCards.Add(new ResistancePlotCard { CardId = 0, SessionId = game.SessionId });
+
+        ResistanceDealer.Reset(game);
+
+        Assert.All(game.Players, x => Assert.False(x.WasInquisitor));
+        Assert.Null(game.InquisitorPlayerId);
+        Assert.Null(game.InquisitionExaminerPlayerId);
+        Assert.Equal(string.Empty, game.DefectorDeck);
+        Assert.Null(game.AssassinationTargetPlayerId);
+        Assert.Empty(game.PlotCards);
     }
 }
