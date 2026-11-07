@@ -405,7 +405,7 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         Assert.Null((await StartAsync()).Failure);
         var started = await ReloadAsync();
         _players = started.Players.OrderBy(x => x.Order).Select(x => x.PlayerId).ToList();
-        var holder = started.InquisitorPlayerId!.Value;
+        var holder = started.Inquisition.HolderPlayerId!.Value;
         Assert.Equal([holder], started.Players.Where(x => x.WasInquisitor).Select(x => x.PlayerId));
 
         await PlayApprovedMissionAsync();
@@ -421,9 +421,9 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         Assert.Null(examined.Failure);
 
         var after = await ReloadAsync();
-        Assert.Equal(target, after.InquisitorPlayerId);
-        Assert.Equal(holder, after.InquisitionExaminerPlayerId);
-        Assert.Equal(target, after.InquisitionExaminedPlayerId);
+        Assert.Equal(target, after.Inquisition.HolderPlayerId);
+        Assert.Equal(holder, after.Inquisition.ExaminerPlayerId);
+        Assert.Equal(target, after.Inquisition.ExaminedPlayerId);
         Assert.Equal(2, after.Players.Count(x => x.WasInquisitor));
 
         var confirmed = await _repository.UpdateAsync(
@@ -431,8 +431,8 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         Assert.Null(confirmed.Failure);
         var done = await ReloadAsync();
         Assert.Equal(ResistancePhase.MissionResult, done.Phase);
-        Assert.Null(done.InquisitionExaminerPlayerId);
-        Assert.Equal(target, done.InquisitorPlayerId);
+        Assert.Null(done.Inquisition.ExaminerPlayerId);
+        Assert.Equal(target, done.Inquisition.HolderPlayerId);
     }
 
     /// <summary>The leader picks a team that everybody approves and whose members all play Success.</summary>
@@ -507,8 +507,8 @@ public class ResistanceGamesRepositoryTests : IAsyncLifetime
         var started = await ReloadAsync();
         Assert.Single(started.Players, x => x.Character == ResistanceCharacter.Defector && x.Role == ResistanceRole.Spy);
         Assert.Single(started.Players, x => x.Character == ResistanceCharacter.Defector && x.Role == ResistanceRole.Resistance);
-        Assert.Equal(5, started.DefectorDeck.Length);
-        Assert.Equal(2, started.DefectorDeck.Count(x => x == 'C'));
+        Assert.Equal(5, started.DefectorDeck.Cards.Length);
+        Assert.Equal(2, started.DefectorDeck.Cards.Count(x => x == 'C'));
 
         var locked = await _repository.UpdateAsync(
             _sessionId, "SetDefectorAsync", ResistanceOutcome.NoGame, game => game.SetDefector(false), CancellationToken.None);

@@ -452,8 +452,8 @@ public class ResistanceFlowTraceTests
 
         private void Inquire()
         {
-            var examiner = _game.InquisitionExaminerPlayerId ?? _game.InquisitorPlayerId;
-            if (_game.InquisitionExaminerPlayerId is not null)
+            var examiner = _game.Inquisition.ExaminerPlayerId ?? _game.Inquisition.HolderPlayerId;
+            if (_game.Inquisition.ExaminerPlayerId is not null)
             {
                 _game.ConfirmInquisition(examiner);
 

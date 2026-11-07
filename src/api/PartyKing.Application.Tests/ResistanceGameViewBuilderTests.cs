@@ -351,7 +351,7 @@ public class ResistanceGameViewBuilderTests
     {
         var game = NewGame();
         game.Rules.DefectorEnabled = true;
-        game.DefectorDeck = "NCNCN";
+        game.DefectorDeck.Cards = "NCNCN";
 
         foreach (var seat in new int?[] { 0, 3, null })
         {
@@ -372,7 +372,7 @@ public class ResistanceGameViewBuilderTests
     public void DefectorFlips_WithTheModuleOff_AreEmpty()
     {
         var game = NewGame();
-        game.DefectorDeck = "NCNCN";
+        game.DefectorDeck.Cards = "NCNCN";
         game.MissionNumber = 5;
 
         Assert.Empty(View(game, 0).DefectorFlips);
@@ -387,7 +387,7 @@ public class ResistanceGameViewBuilderTests
         Seat(game, 3).Character = ResistanceCharacter.Defector;
         Seat(game, 2).Role = ResistanceRole.Spy;
         Seat(game, 3).Role = ResistanceRole.Resistance;
-        game.DefectorDeck = "CNNNN";
+        game.DefectorDeck.Cards = "CNNNN";
         game.MissionNumber = 3;
 
         Assert.Equal(ResistanceRoleDto.Spy, View(game, 2).YourRole);
@@ -405,7 +405,7 @@ public class ResistanceGameViewBuilderTests
         game.Rules.DefectorEnabled = true;
         Seat(game, 1).Character = ResistanceCharacter.Defector;
         Seat(game, 4).Character = ResistanceCharacter.Defector;
-        game.DefectorDeck = "CNNNN";
+        game.DefectorDeck.Cards = "CNNNN";
 
         // Before a switch: the spy Defector (seat 4) is known to the other spy but knows no spy
         Assert.Equal([Ids[4]], View(game, 3).FellowSpies);
@@ -754,8 +754,8 @@ public class ResistanceGameViewBuilderTests
     {
         var game = NewGame(ResistancePhase.Inquisition);
         game.Rules.InquisitorEnabled = true;
-        game.InquisitorPlayerId = Ids[4];
-        game.InquisitionExaminerPlayerId = Ids[2];
+        game.Inquisition.HolderPlayerId = Ids[4];
+        game.Inquisition.ExaminerPlayerId = Ids[2];
         Seat(game, 2).WasInquisitor = true;
         Seat(game, 4).WasInquisitor = true;
 
@@ -781,7 +781,7 @@ public class ResistanceGameViewBuilderTests
     public void Inquisition_TheLoyaltyIsGoneOnceTheExaminerConfirmed()
     {
         var game = InquisitionGame();
-        game.InquisitionExaminerPlayerId = null;
+        game.Inquisition.ExaminerPlayerId = null;
         game.Phase = ResistancePhase.MissionResult;
 
         Assert.Null(View(game, 2).YourInquisition);
@@ -791,8 +791,8 @@ public class ResistanceGameViewBuilderTests
     public void Inquisition_BeforeAPlayerIsPicked_ShowsNothingPrivate()
     {
         var game = InquisitionGame();
-        game.InquisitionExaminerPlayerId = null;
-        game.InquisitorPlayerId = Ids[2];
+        game.Inquisition.ExaminerPlayerId = null;
+        game.Inquisition.HolderPlayerId = Ids[2];
         Seat(game, 4).WasInquisitor = false;
 
         for (var seat = 0; seat < Ids.Length; seat++)
@@ -1003,7 +1003,7 @@ public class ResistanceGameViewBuilderTests
         var game = NewGame(phase);
         game.Rules.DefectorEnabled = true;
         game.Rules.DefectorsKnowEachOther = true;
-        game.DefectorDeck = "CNNNN";
+        game.DefectorDeck.Cards = "CNNNN";
         game.MissionNumber = 3;
         Seat(game, 1).Character = ResistanceCharacter.Defector;
         Seat(game, 1).Role = ResistanceRole.Spy;

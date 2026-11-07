@@ -162,8 +162,8 @@ public class ResistanceKnowledgeMatrixTests
 
         var text = new StringBuilder();
         text.Append("leader=").Append(SeatOf(game.LeaderPlayerId));
-        text.Append(" inquisitor=").Append(SeatOf(game.InquisitorPlayerId)?.ToString() ?? "-");
-        text.Append(" deck=").Append(game.DefectorDeck.Length == 0 ? "-" : game.DefectorDeck);
+        text.Append(" inquisitor=").Append(SeatOf(game.Inquisition.HolderPlayerId)?.ToString() ?? "-");
+        text.Append(" deck=").Append(game.DefectorDeck.Cards.Length == 0 ? "-" : game.DefectorDeck.Cards);
         text.Append(" switched=").Append(game.DefectorsSwitched ? 'Y' : 'N');
 
         var cards = game.PlotCards
