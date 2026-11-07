@@ -55,7 +55,7 @@ public partial class ResistanceGame
             player.MissionCard = null;
         }
 
-        Phase = ResistancePhase.Voting;
+        ResistanceFlow.StartVote(this);
         Raise(new ResistanceTeamSubmitted(SessionId, MissionNumber, LeaderPlayerId!.Value, playerIds.ToList()));
 
         return Succeeded();

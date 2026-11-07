@@ -73,7 +73,7 @@ public partial class ResistanceGame
         }
 
         Inquisition.Finish();
-        Phase = ResistancePhase.MissionResult;
+        ResistanceFlow.AfterInquisition(this);
 
         return Succeeded();
     }
