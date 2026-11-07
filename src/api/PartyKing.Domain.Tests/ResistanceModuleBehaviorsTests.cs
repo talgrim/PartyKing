@@ -221,6 +221,14 @@ public class ResistanceModuleBehaviorsTests
     }
 
     [Fact]
+    public void TheModulesThatHookIntoTheFlow_AreTheInquisitorTheDefectorAndTheAssassin()
+    {
+        Assert.Equal(
+            [ResistanceModule.Inquisitor, ResistanceModule.Defector, ResistanceModule.Assassin],
+            ResistanceModules.Flow.Select(x => x.Module));
+    }
+
+    [Fact]
     public void TheMissionBegun_IsToldToTheModulesThatAreOn_InTheirOrder()
     {
         var game = new ResistanceGame { Rules = ResistanceRules.Default() };
