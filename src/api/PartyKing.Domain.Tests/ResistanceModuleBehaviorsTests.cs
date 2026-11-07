@@ -281,18 +281,17 @@ public class ResistanceModuleBehaviorsTests
         var game = new ResistanceGame { SessionId = Guid.NewGuid(), Rules = ResistanceRules.Default() };
         game.Players.Add(new ResistancePlayer { PlayerId = Guid.NewGuid(), Order = 0, WasInquisitor = true });
         game.Players.Add(new ResistancePlayer { PlayerId = Guid.NewGuid(), Order = 1 });
-        game.InquisitorPlayerId = game.Players[0].PlayerId;
-        game.InquisitionExaminerPlayerId = game.Players[1].PlayerId;
-        game.DefectorDeck = "CNNNN";
+        game.Inquisition.Pick(game.Players[1].PlayerId, game.Players[0].PlayerId);
+        game.DefectorDeck.Cards = "CNNNN";
         game.AssassinationTargetPlayerId = game.Players[1].PlayerId;
         game.PlotCards.Add(new ResistancePlotCard { CardId = 0, SessionId = game.SessionId });
 
         ResistanceDealer.Reset(game);
 
         Assert.All(game.Players, x => Assert.False(x.WasInquisitor));
-        Assert.Null(game.InquisitorPlayerId);
-        Assert.Null(game.InquisitionExaminerPlayerId);
-        Assert.Equal(string.Empty, game.DefectorDeck);
+        Assert.Null(game.Inquisition.HolderPlayerId);
+        Assert.Null(game.Inquisition.ExaminerPlayerId);
+        Assert.Equal(string.Empty, game.DefectorDeck.Cards);
         Assert.Null(game.AssassinationTargetPlayerId);
         Assert.Empty(game.PlotCards);
     }
@@ -368,7 +367,7 @@ public class ResistanceModuleBehaviorsTests
             x.DefectorEnabled = true;
             x.PlotCardsEnabled = true;
         });
-        Assert.NotEmpty(game.DefectorDeck);
+        Assert.NotEmpty(game.DefectorDeck.Cards);
         Assert.NotEmpty(game.PlotCards);
         game.Phase = ResistancePhase.GameOver;
 
@@ -377,7 +376,7 @@ public class ResistanceModuleBehaviorsTests
         Assert.Null(game.SetPlotCards(false).Failure);
         Assert.Null(game.Start(new DateTimeOffset(2026, 11, 7, 13, 0, 0, TimeSpan.Zero), new Random(5)).Failure);
 
-        Assert.Equal(string.Empty, game.DefectorDeck);
+        Assert.Equal(string.Empty, game.DefectorDeck.Cards);
         Assert.Empty(game.PlotCards);
         Assert.All(game.Players, x => Assert.Equal(ResistanceCharacter.Standard, x.Character));
     }

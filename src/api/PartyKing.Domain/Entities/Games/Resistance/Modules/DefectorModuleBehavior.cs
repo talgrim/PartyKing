@@ -1,5 +1,3 @@
-using PartyKing.Domain.Entities.Games.Base;
-
 namespace PartyKing.Domain.Entities.Games.Resistance.Modules;
 
 /// <summary>The Defector module (Hidden Agenda).</summary>
@@ -37,14 +35,12 @@ internal sealed class DefectorModuleBehavior : IKnowledgeBehavior, ICharacterDea
                 .Character = ResistanceCharacter.Defector;
         }
 
-        var cards = Enumerable.Repeat(ResistanceGame.DefectorNoChange, ResistanceGame.DefectorDeckSize - 2)
-            .Concat([ResistanceGame.DefectorChangeAllegiance, ResistanceGame.DefectorChangeAllegiance]);
-        game.DefectorDeck = new string(cards.Shuffled(random).ToArray());
+        game.DefectorDeck.Deal(random);
     }
 
     public void Reset(ResistanceGame game)
     {
-        game.DefectorDeck = string.Empty;
+        game.DefectorDeck.Clear();
     }
 
     /// <summary>
@@ -54,8 +50,7 @@ internal sealed class DefectorModuleBehavior : IKnowledgeBehavior, ICharacterDea
     /// </summary>
     public void OnMissionBegun(ResistanceGame game)
     {
-        var index = game.MissionNumber - ResistanceGame.DefectorFirstFlipMission;
-        if (index < 0 || index >= game.DefectorDeck.Length || game.DefectorDeck[index] != ResistanceGame.DefectorChangeAllegiance)
+        if (!game.DefectorDeck.ChangesAllegianceAt(game.MissionNumber))
         {
             return;
         }

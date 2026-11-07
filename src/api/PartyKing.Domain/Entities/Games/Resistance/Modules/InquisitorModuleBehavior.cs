@@ -33,7 +33,7 @@ internal sealed class InquisitorModuleBehavior : IDealBehavior, IFlowBehavior
         var seats = game.Players.OrderBy(x => x.Order).ToList();
         var holder = seats[(seats.FindIndex(x => x.PlayerId == game.LeaderPlayerId) + seats.Count - 1) % seats.Count];
         holder.WasInquisitor = true;
-        game.InquisitorPlayerId = holder.PlayerId;
+        game.Inquisition.Hold(holder.PlayerId);
     }
 
     public void Reset(ResistanceGame game)
@@ -43,14 +43,13 @@ internal sealed class InquisitorModuleBehavior : IDealBehavior, IFlowBehavior
             player.WasInquisitor = false;
         }
 
-        game.InquisitorPlayerId = null;
-        game.InquisitionExaminerPlayerId = null;
+        game.Inquisition.Clear();
     }
 
     /// <summary>The Inquisition comes before the "Dalej" step after missions 2 to 4, when somebody holds the token.</summary>
     public ResistancePhase? PhaseAfterMissionResolved(ResistanceGame game)
     {
-        return game.InquisitorPlayerId is not null
+        return game.Inquisition.HolderPlayerId is not null
                && game.MissionNumber is >= FirstInquisitionMission and <= LastInquisitionMission
             ? ResistancePhase.Inquisition
             : null;

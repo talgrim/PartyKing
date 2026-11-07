@@ -42,7 +42,7 @@ public class ResistanceGameInquisitorTests
         game.LeaderPlayerId = game.Players[0].PlayerId;
         if (inquisitor)
         {
-            game.InquisitorPlayerId = game.Players[4].PlayerId;
+            game.Inquisition.Hold(game.Players[4].PlayerId);
             game.Players[4].WasInquisitor = true;
         }
 
@@ -79,7 +79,7 @@ public class ResistanceGameInquisitorTests
             game.Start(Now, new Random(seed));
 
             var leader = game.Players.First(x => x.PlayerId == game.LeaderPlayerId).Order;
-            var holder = game.Players.Single(x => x.PlayerId == game.InquisitorPlayerId);
+            var holder = game.Players.Single(x => x.PlayerId == game.Inquisition.HolderPlayerId);
             Assert.Equal((leader + 4) % 5, holder.Order);
             Assert.Equal([holder.PlayerId], game.Players.Where(x => x.WasInquisitor).Select(x => x.PlayerId));
             leaderSeats.Add(leader);
@@ -99,7 +99,7 @@ public class ResistanceGameInquisitorTests
 
         game.Start(Now, new Random(3));
 
-        Assert.Null(game.InquisitorPlayerId);
+        Assert.Null(game.Inquisition.HolderPlayerId);
         Assert.DoesNotContain(game.Players, x => x.WasInquisitor);
     }
 
@@ -177,10 +177,10 @@ public class ResistanceGameInquisitorTests
         var outcome = game.Examine(holder.PlayerId, target.PlayerId);
 
         Assert.Null(outcome.Failure);
-        Assert.Equal(target.PlayerId, game.InquisitorPlayerId);
+        Assert.Equal(target.PlayerId, game.Inquisition.HolderPlayerId);
         Assert.True(target.WasInquisitor);
-        Assert.Equal(holder.PlayerId, game.InquisitionExaminerPlayerId);
-        Assert.Equal(target.PlayerId, game.InquisitionExaminedPlayerId);
+        Assert.Equal(holder.PlayerId, game.Inquisition.ExaminerPlayerId);
+        Assert.Equal(target.PlayerId, game.Inquisition.ExaminedPlayerId);
         Assert.Equal(ResistancePhase.Inquisition, game.Phase);
         var passed = game.DrainEvents().OfType<ResistanceInquisitorTokenPassed>().Single();
         Assert.Equal((holder.PlayerId, target.PlayerId), (passed.FromPlayerId, passed.ToPlayerId));
@@ -196,8 +196,8 @@ public class ResistanceGameInquisitorTests
         Assert.Equal(ResistanceFailure.NotInquisitor, game.Examine(game.Players[0].PlayerId, game.Players[1].PlayerId).Failure);
         Assert.Equal(ResistanceFailure.InvalidExamineTarget, game.Examine(holder.PlayerId, holder.PlayerId).Failure);
         Assert.Equal(ResistanceFailure.InvalidExamineTarget, game.Examine(holder.PlayerId, Guid.NewGuid()).Failure);
-        Assert.Equal(holder.PlayerId, game.InquisitorPlayerId);
-        Assert.Null(game.InquisitionExaminerPlayerId);
+        Assert.Equal(holder.PlayerId, game.Inquisition.HolderPlayerId);
+        Assert.Null(game.Inquisition.ExaminerPlayerId);
         Assert.DoesNotContain(game.Players.Where(x => x != holder), x => x.WasInquisitor);
     }
 
@@ -218,7 +218,7 @@ public class ResistanceGameInquisitorTests
 
         Assert.Equal(ResistanceFailure.AlreadyExamined, game.Examine(holder.PlayerId, game.Players[2].PlayerId).Failure);
         Assert.Equal(ResistanceFailure.NotInquisitor, game.Examine(game.Players[1].PlayerId, game.Players[2].PlayerId).Failure);
-        Assert.Equal(game.Players[1].PlayerId, game.InquisitorPlayerId);
+        Assert.Equal(game.Players[1].PlayerId, game.Inquisition.HolderPlayerId);
     }
 
     [Fact]
@@ -253,9 +253,9 @@ public class ResistanceGameInquisitorTests
 
         Assert.Null(outcome.Failure);
         Assert.Equal(ResistancePhase.MissionResult, game.Phase);
-        Assert.Null(game.InquisitionExaminerPlayerId);
-        Assert.Null(game.InquisitionExaminedPlayerId);
-        Assert.Equal(game.Players[1].PlayerId, game.InquisitorPlayerId);
+        Assert.Null(game.Inquisition.ExaminerPlayerId);
+        Assert.Null(game.Inquisition.ExaminedPlayerId);
+        Assert.Equal(game.Players[1].PlayerId, game.Inquisition.HolderPlayerId);
         Assert.Equal(ResistanceFailure.NotInquisition, game.ConfirmInquisition(game.Players[4].PlayerId).Failure);
         Assert.Null(game.Continue(game.LeaderPlayerId, isManager: true).Failure);
         Assert.Equal(3, game.MissionNumber);
@@ -365,8 +365,8 @@ public class ResistanceGameInquisitorTests
 
         game.Restart();
 
-        Assert.Null(game.InquisitorPlayerId);
-        Assert.Null(game.InquisitionExaminerPlayerId);
+        Assert.Null(game.Inquisition.HolderPlayerId);
+        Assert.Null(game.Inquisition.ExaminerPlayerId);
         Assert.DoesNotContain(game.Players, x => x.WasInquisitor);
     }
 
