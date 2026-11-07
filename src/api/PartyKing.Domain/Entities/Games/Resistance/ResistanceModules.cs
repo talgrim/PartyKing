@@ -1,3 +1,5 @@
+using PartyKing.Domain.Entities.Games.Resistance.Modules;
+
 namespace PartyKing.Domain.Entities.Games.Resistance;
 
 /// <summary>A rules module that is switched on or off before the game starts (see <see cref="ResistanceModules"/>).</summary>
@@ -12,54 +14,46 @@ internal enum ResistanceModule
 }
 
 /// <summary>
-/// What is known about each <see cref="ResistanceModule"/>: the single table that <see cref="ResistanceGame"/>
-/// switches modules by. A new module is one row in <see cref="Descriptors"/>, which also says which modules it does
-/// not combine with, so no row of an existing module changes.
+/// The registry of the rules modules: one <see cref="IResistanceModuleBehavior"/> per <see cref="ResistanceModule"/>,
+/// which <see cref="ResistanceGame"/> switches the modules by. A new module is a new behavior class in
+/// <c>Modules/</c> and one line in <see cref="Registered"/>; it declares which modules it does not combine with, so no
+/// existing module changes.
 /// </summary>
 internal static class ResistanceModules
 {
-    /// <summary>A module that is not switched on together with another, and what the refused one answers with.</summary>
-    private sealed record Conflict(ResistanceModule With, ResistanceFailure Failure);
-
     /// <summary>
-    /// The switch of a module in <see cref="ResistanceRules"/>, the failure for switching it too late and the modules
-    /// it does not combine with. A conflict is declared on one side only and holds both ways.
+    /// The modules in the order they are checked in, which is the order of <see cref="ResistanceModule"/> (a test pins
+    /// it). The order decides which failure a switch answers with when more than one conflict applies at once.
     /// </summary>
-    private sealed record Descriptor(
-        ResistanceFailure Locked,
-        Func<ResistanceRules, bool> IsOn,
-        Action<ResistanceRules, bool> Switch,
-        params Conflict[] Conflicts);
+    public static IReadOnlyList<IResistanceModuleBehavior> Registered { get; } =
+    [
+        new PlotCardsModuleBehavior(),
+        new InquisitorModuleBehavior(),
+        new BlindSpiesModuleBehavior(),
+        new ReverserModuleBehavior(),
+        new DefectorModuleBehavior(),
+        new AssassinModuleBehavior(),
+    ];
 
-    private static readonly Dictionary<ResistanceModule, Descriptor> Descriptors = new()
+    private static readonly IReadOnlyDictionary<ResistanceModule, IResistanceModuleBehavior> Behaviors =
+        Registered.ToDictionary(x => x.Module);
+
+    public static IResistanceModuleBehavior For(ResistanceModule module)
     {
-        [ResistanceModule.PlotCards] = new(
-            ResistanceFailure.PlotCardsLocked, x => x.PlotCardsEnabled, (x, on) => x.PlotCardsEnabled = on),
-        [ResistanceModule.Inquisitor] = new(
-            ResistanceFailure.InquisitorLocked, x => x.InquisitorEnabled, (x, on) => x.InquisitorEnabled = on),
-        [ResistanceModule.BlindSpies] = new(
-            ResistanceFailure.BlindSpiesLocked, x => x.BlindSpiesEnabled, (x, on) => x.BlindSpiesEnabled = on),
-        [ResistanceModule.Reverser] = new(
-            ResistanceFailure.ReverserLocked, x => x.ReverserEnabled, (x, on) => x.ReverserEnabled = on),
-        [ResistanceModule.Defector] = new(
-            ResistanceFailure.DefectorLocked, x => x.DefectorEnabled, (x, on) => x.DefectorEnabled = on),
-
-        // The Assassin takes the place of what the other three change about who knows whom
-        [ResistanceModule.Assassin] = new(
-            ResistanceFailure.AssassinLocked,
-            x => x.AssassinEnabled,
-            (x, on) => x.AssassinEnabled = on,
-            new Conflict(ResistanceModule.Defector, ResistanceFailure.AssassinConflict),
-            new Conflict(ResistanceModule.Reverser, ResistanceFailure.AssassinConflict),
-            new Conflict(ResistanceModule.BlindSpies, ResistanceFailure.AssassinConflict)),
-    };
+        return Behaviors.TryGetValue(module, out var behavior)
+            ? behavior
+            : throw new InvalidOperationException($"The module {module} has no behavior registered.");
+    }
 
     /// <summary>What switching the module answers with once the game started.</summary>
-    public static ResistanceFailure LockedFailure(ResistanceModule module) => Descriptors[module].Locked;
+    public static ResistanceFailure LockedFailure(ResistanceModule module) => For(module).LockedFailure;
 
+    /// <summary>Switches the module in <paramref name="rules"/>, together with what the module's rules say follows from it.</summary>
     public static void Switch(ResistanceRules rules, ResistanceModule module, bool on)
     {
-        Descriptors[module].Switch(rules, on);
+        var behavior = For(module);
+        behavior.Switch(rules, on);
+        behavior.AfterSwitch(rules, on);
     }
 
     /// <summary>
@@ -68,12 +62,22 @@ internal static class ResistanceModules
     /// </summary>
     public static ResistanceFailure? ConflictFailure(ResistanceRules rules, ResistanceModule module)
     {
-        foreach (var (other, descriptor) in Descriptors)
+        return ConflictFailure(Registered, rules, module);
+    }
+
+    /// <summary>
+    /// The same over the given modules. When more than one conflict applies the answer is the first one in the order
+    /// the modules are given in, and within a module in the order it declares them.
+    /// </summary>
+    internal static ResistanceFailure? ConflictFailure(
+        IReadOnlyList<IResistanceModuleBehavior> modules, ResistanceRules rules, ResistanceModule module)
+    {
+        foreach (var declaring in modules)
         {
-            foreach (var conflict in descriptor.Conflicts)
+            foreach (var conflict in declaring.Conflicts)
             {
-                var declaredByThis = other == module && Descriptors[conflict.With].IsOn(rules);
-                var declaredByTheOther = conflict.With == module && descriptor.IsOn(rules);
+                var declaredByThis = declaring.Module == module && IsOn(modules, rules, conflict.With);
+                var declaredByTheOther = conflict.With == module && declaring.IsOn(rules);
 
                 if (declaredByThis || declaredByTheOther)
                 {
@@ -83,5 +87,10 @@ internal static class ResistanceModules
         }
 
         return null;
+    }
+
+    private static bool IsOn(IReadOnlyList<IResistanceModuleBehavior> modules, ResistanceRules rules, ResistanceModule module)
+    {
+        return modules.Single(x => x.Module == module).IsOn(rules);
     }
 }

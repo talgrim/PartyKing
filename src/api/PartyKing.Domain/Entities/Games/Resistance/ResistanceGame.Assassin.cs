@@ -30,11 +30,14 @@ public partial class ResistanceGame
             enabled,
             x =>
             {
-                // Switching the module off switches its characters off, an omitted choice keeps its value while it is on
-                x.BodyGuardEnabled = enabled && (bodyGuard ?? x.BodyGuardEnabled);
-                x.DeepCoverEnabled = enabled && (deepCover ?? x.DeepCoverEnabled);
-                x.BlindSpyEnabled = enabled && (blindSpy ?? x.BlindSpyEnabled);
-                x.FalseCommanderEnabled = enabled && (falseCommander ?? x.FalseCommanderEnabled);
+                // Switching the module off already switched its characters off (see AssassinModuleBehavior); an omitted choice keeps its value
+                if (enabled)
+                {
+                    x.BodyGuardEnabled = bodyGuard ?? x.BodyGuardEnabled;
+                    x.DeepCoverEnabled = deepCover ?? x.DeepCoverEnabled;
+                    x.BlindSpyEnabled = blindSpy ?? x.BlindSpyEnabled;
+                    x.FalseCommanderEnabled = falseCommander ?? x.FalseCommanderEnabled;
+                }
             });
     }
 
