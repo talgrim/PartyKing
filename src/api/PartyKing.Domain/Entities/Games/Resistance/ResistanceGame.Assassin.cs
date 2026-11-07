@@ -70,10 +70,9 @@ public partial class ResistanceGame
         }
 
         AssassinationTargetPlayerId = target.PlayerId;
-        Phase = ResistancePhase.GameOver;
-        Winner = target.Character == ResistanceCharacter.Commander ? ResistanceRole.Spy : ResistanceRole.Resistance;
         Raise(new ResistanceAssassinated(SessionId, assassin.PlayerId, target.PlayerId));
-        Raise(new ResistanceGameOver(SessionId, Winner.Value));
+        var winner = target.Character == ResistanceCharacter.Commander ? ResistanceRole.Spy : ResistanceRole.Resistance;
+        ResistanceFlow.EndGame(this, winner);
 
         return Succeeded();
     }

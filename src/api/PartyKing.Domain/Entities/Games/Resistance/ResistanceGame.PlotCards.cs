@@ -166,10 +166,7 @@ public partial class ResistanceGame
         }
 
         card.IsConfirmed = true;
-        if (!ResistancePlotCardQueries.UnplayedImmediateCards(this).Any() && !ResistancePlotCardQueries.UnconfirmedCards(this).Any())
-        {
-            Phase = ResistancePhase.SelectingTeam;
-        }
+        ResistanceFlow.AfterConfirmation(this);
 
         return Succeeded();
     }

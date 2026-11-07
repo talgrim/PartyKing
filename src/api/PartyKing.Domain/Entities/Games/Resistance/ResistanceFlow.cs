@@ -42,10 +42,27 @@ public static class ResistanceFlow
         RejectTeam(game);
     }
 
+    /// <summary>The leader submitted the team: everybody votes on it.</summary>
+    public static void StartVote(ResistanceGame game)
+    {
+        game.Phase = ResistancePhase.Voting;
+    }
+
     private static void StartMission(ResistanceGame game)
     {
         game.RejectedTeams = 0;
         game.Phase = ResistancePhase.PlayingMission;
+    }
+
+    /// <summary>
+    /// Ends the game with a winner and says so. The reasons to end it (five rejected teams, the third success or
+    /// failure, the Assassin's guess) are decided by their callers.
+    /// </summary>
+    public static void EndGame(ResistanceGame game, ResistanceRole winner)
+    {
+        game.Phase = ResistancePhase.GameOver;
+        game.Winner = winner;
+        game.Publish(new ResistanceGameOver(game.SessionId, winner));
     }
 
     /// <summary>
@@ -58,9 +75,7 @@ public static class ResistanceFlow
         game.Publish(new ResistanceTeamRejected(game.SessionId, game.MissionNumber, game.RejectedTeams));
         if (game.RejectedTeams >= ResistanceRules.MaxRejectedTeams)
         {
-            game.Phase = ResistancePhase.GameOver;
-            game.Winner = ResistanceRole.Spy;
-            game.Publish(new ResistanceGameOver(game.SessionId, ResistanceRole.Spy));
+            EndGame(game, ResistanceRole.Spy);
             return;
         }
 
@@ -191,6 +206,27 @@ public static class ResistanceFlow
             : ResistancePhase.SelectingTeam;
     }
 
+    /// <summary>
+    /// After an identity card was confirmed: once every immediate card is played and confirmed, the leader picks the
+    /// team.
+    /// </summary>
+    public static void AfterConfirmation(ResistanceGame game)
+    {
+        if (ResistancePlotCardQueries.UnplayedImmediateCards(game).Any()
+            || ResistancePlotCardQueries.UnconfirmedCards(game).Any())
+        {
+            return;
+        }
+
+        game.Phase = ResistancePhase.SelectingTeam;
+    }
+
+    /// <summary>The examiner saw the loyalty: the "Dalej" step follows.</summary>
+    public static void AfterInquisition(ResistanceGame game)
+    {
+        game.Phase = ResistancePhase.MissionResult;
+    }
+
     /// <summary>Whether every member of the approved team has played a card.</summary>
     public static bool AllCardsPlayed(ResistanceGame game)
     {
@@ -232,9 +268,11 @@ public static class ResistanceFlow
 
         if (game.ResistanceScore >= ResistanceRules.MissionsToWin || game.SpyScore >= ResistanceRules.MissionsToWin)
         {
-            game.Phase = ResistancePhase.GameOver;
-            game.Winner = game.ResistanceScore >= ResistanceRules.MissionsToWin ? ResistanceRole.Resistance : ResistanceRole.Spy;
-            game.Publish(new ResistanceGameOver(game.SessionId, game.Winner.Value));
+            var winner = game.ResistanceScore >= ResistanceRules.MissionsToWin
+                ? ResistanceRole.Resistance
+                : ResistanceRole.Spy;
+
+            EndGame(game, winner);
             return;
         }
 
