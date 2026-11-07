@@ -112,9 +112,7 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
         }
 
         // A copy, so the caller's object is neither changed nor shared with the game
-        var fresh = rules.Clone();
-        fresh.CopyModulesFrom(Rules);
-        Rules = fresh;
+        Rules = Rules.WithNumbersOf(rules);
 
         return Succeeded();
     }

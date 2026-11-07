@@ -83,44 +83,28 @@ public class ResistanceRules
 
     /// <summary>
     /// A deep copy, so a game never shares dictionaries or arrays with the object it was built from. The result is
-    /// always a new instance, which the JSON column needs to detect a change. A new module setting is copied in
-    /// <see cref="CopyModulesFrom"/>.
+    /// always a new instance, which the JSON column needs to detect a change. The settings (flags and choices) are
+    /// copied as they are, so a new one needs no line here; a property that holds a reference (like the two
+    /// dictionaries) has to be copied deeply in <see cref="WithNumbersOf"/>.
     /// </summary>
     public ResistanceRules Clone()
     {
-        var copy = new ResistanceRules
-        {
-            PlayerCounts = PlayerCounts.ToDictionary(
-                x => x.Key,
-                x => new ResistanceCountRules(x.Value.Spies, [.. x.Value.TeamSizes], [.. x.Value.RequiredFails])),
-            PlotDeck = new Dictionary<ResistancePlotCardType, int>(PlotDeck),
-        };
-
-        copy.CopyModulesFrom(this);
-
-        return copy;
+        return WithNumbersOf(this);
     }
 
     /// <summary>
-    /// Takes over which modules are on, and their settings, from <paramref name="source"/>, leaving the numbers
-    /// (<see cref="PlayerCounts"/>) and the <see cref="PlotDeck"/> alone. The one place that lists the module settings:
-    /// a new one is copied here.
+    /// A copy that keeps the settings of this object (which modules are on, and their choices) and takes the numbers
+    /// (<see cref="PlayerCounts"/> and <see cref="PlotDeck"/>) from <paramref name="numbers"/>, copied deeply.
     /// </summary>
-    internal void CopyModulesFrom(ResistanceRules source)
+    internal ResistanceRules WithNumbersOf(ResistanceRules numbers)
     {
-        PlotCardsEnabled = source.PlotCardsEnabled;
-        InquisitorEnabled = source.InquisitorEnabled;
-        BlindSpiesEnabled = source.BlindSpiesEnabled;
-        ReverserEnabled = source.ReverserEnabled;
-        ReverserSides = source.ReverserSides;
-        ReverserSpyKnowsSpies = source.ReverserSpyKnowsSpies;
-        DefectorEnabled = source.DefectorEnabled;
-        DefectorsKnowEachOther = source.DefectorsKnowEachOther;
-        AssassinEnabled = source.AssassinEnabled;
-        BodyGuardEnabled = source.BodyGuardEnabled;
-        DeepCoverEnabled = source.DeepCoverEnabled;
-        BlindSpyEnabled = source.BlindSpyEnabled;
-        FalseCommanderEnabled = source.FalseCommanderEnabled;
+        var copy = (ResistanceRules)MemberwiseClone();
+        copy.PlayerCounts = numbers.PlayerCounts.ToDictionary(
+            x => x.Key,
+            x => new ResistanceCountRules(x.Value.Spies, [.. x.Value.TeamSizes], [.. x.Value.RequiredFails]));
+        copy.PlotDeck = new Dictionary<ResistancePlotCardType, int>(numbers.PlotDeck);
+
+        return copy;
     }
 
     /// <summary>A third of the players as spies, rounded up; the official team sizes; two fails on mission 4 from 7 players.</summary>

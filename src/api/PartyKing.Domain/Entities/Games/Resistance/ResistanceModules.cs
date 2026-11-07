@@ -57,8 +57,10 @@ internal static class ResistanceModules
     /// <summary>What switching the module answers with once the game started.</summary>
     public static ResistanceFailure LockedFailure(ResistanceModule module) => Descriptors[module].Locked;
 
-    public static void Switch(ResistanceRules rules, ResistanceModule module, bool on) =>
+    public static void Switch(ResistanceRules rules, ResistanceModule module, bool on)
+    {
         Descriptors[module].Switch(rules, on);
+    }
 
     /// <summary>
     /// The failure for switching <paramref name="module"/> on while a module it does not combine with is on already, or
