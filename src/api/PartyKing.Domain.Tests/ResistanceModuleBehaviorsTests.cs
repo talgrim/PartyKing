@@ -149,17 +149,24 @@ public class ResistanceModuleBehaviorsTests
     }
 
     [Fact]
-    public void TheModulesThatDeal_AreAskedInTheOrderOfTheRegistry_WithTheCharactersInTheOrderTheyAreTakenIn()
+    public void TheModulesThatDealACardOrAToken_AreAskedInTheOrderOfTheRegistry()
     {
         Assert.Equal(
             [
                 ResistanceModule.PlotCards,
                 ResistanceModule.Inquisitor,
-                ResistanceModule.Reverser,
                 ResistanceModule.Defector,
                 ResistanceModule.Assassin,
             ],
             ResistanceModules.Dealing.Select(x => x.Module));
+    }
+
+    [Fact]
+    public void TheModulesThatDealCharacters_TakePlayersInTheOrderOfTheRegistry()
+    {
+        Assert.Equal(
+            [ResistanceModule.Reverser, ResistanceModule.Defector, ResistanceModule.Assassin],
+            ResistanceModules.CharacterDealers.Select(x => x.Module));
     }
 
     [Fact]
@@ -212,7 +219,10 @@ public class ResistanceModuleBehaviorsTests
         return game;
     }
 
-    /// <summary>The guard for a new character module: dealing a character and not saying so would leave its players with a blank card.</summary>
+    /// <summary>
+    /// A module that deals a character does it through <see cref="ICharacterDealBehavior"/>, which is also what lets its
+    /// players be told their own character: a module that deals one some other way would leave them a blank card.
+    /// </summary>
     [Theory]
     [MemberData(nameof(EveryModule))]
     public void AModuleThatDealsACharacter_SaysSo_AndItsPlayersAreToldTheirOwn(string moduleName)
@@ -220,9 +230,8 @@ public class ResistanceModuleBehaviorsTests
         var module = Enum.Parse<ResistanceModule>(moduleName);
         var game = StartedGame(x => ResistanceModules.Switch(x, module, true));
         var dealsACharacter = game.Players.Any(x => x.Character != ResistanceCharacter.Standard);
-        var behavior = ResistanceModules.Dealing.SingleOrDefault(x => x.Module == module);
 
-        Assert.Equal(dealsACharacter, behavior?.DealsCharacters(game.Rules) ?? false);
+        Assert.Equal(dealsACharacter, ResistanceModules.For(module) is ICharacterDealBehavior);
         foreach (var player in game.Players)
         {
             Assert.Equal(dealsACharacter ? player.Character : null, ResistanceKnowledge.OwnCharacter(game, player));
@@ -256,5 +265,27 @@ public class ResistanceModuleBehaviorsTests
     public void TheModulesThatRestrictTheMissionCards_AreAskedInTheOrderOfTheRegistry()
     {
         Assert.Equal([ResistanceModule.Reverser], ResistanceModules.MissionCards.Select(x => x.Module));
+    }
+
+    [Fact]
+    public void ARestartedGame_DealtWithTheModulesOff_KeepsNothingOfTheFirstDeal()
+    {
+        var game = StartedGame(x =>
+        {
+            x.DefectorEnabled = true;
+            x.PlotCardsEnabled = true;
+        });
+        Assert.NotEmpty(game.DefectorDeck);
+        Assert.NotEmpty(game.PlotCards);
+        game.Phase = ResistancePhase.GameOver;
+
+        Assert.Null(game.Restart().Failure);
+        Assert.Null(game.SetDefector(false).Failure);
+        Assert.Null(game.SetPlotCards(false).Failure);
+        Assert.Null(game.Start(new DateTimeOffset(2026, 11, 7, 13, 0, 0, TimeSpan.Zero), new Random(5)).Failure);
+
+        Assert.Equal(string.Empty, game.DefectorDeck);
+        Assert.Empty(game.PlotCards);
+        Assert.All(game.Players, x => Assert.Equal(ResistanceCharacter.Standard, x.Character));
     }
 }

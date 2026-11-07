@@ -37,8 +37,10 @@ public class ResistanceKnowledgeOrderTests
         return game;
     }
 
-    private static bool Knows(ResistanceGame game, int viewer, int target) =>
-        ResistanceKnowledge.KnowsSpy(game, game.Players[viewer], game.Players[target]);
+    private static bool Knows(ResistanceGame game, int viewer, int target)
+    {
+        return ResistanceKnowledge.KnowsSpy(game, game.Players[viewer], game.Players[target]);
+    }
 
     [Fact]
     public void TheModulesThatChangeWhoKnowsWhom_AreAskedInTheOrderOfTheRegistry()
