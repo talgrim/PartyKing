@@ -143,10 +143,10 @@ internal sealed class ResistanceGameViewBuilder
     /// <summary>The Inquisitor module: the public token and the examination, and the examiner's own private result.</summary>
     private ResistanceGameViewBuilder WithInquisitor()
     {
-        _view.InquisitorPlayerId = _game.InquisitorPlayerId;
+        _view.InquisitorPlayerId = _game.Inquisition.HolderPlayerId;
         _view.PastInquisitorPlayerIds = PlayerIds(x => x.WasInquisitor);
-        _view.InquisitionExaminerPlayerId = _game.InquisitionExaminerPlayerId;
-        _view.InquisitionExaminedPlayerId = _game.InquisitionExaminedPlayerId;
+        _view.InquisitionExaminerPlayerId = _game.Inquisition.ExaminerPlayerId;
+        _view.InquisitionExaminedPlayerId = _game.Inquisition.ExaminedPlayerId;
         _view.YourInquisition = BuildYourInquisition();
 
         return this;
@@ -338,8 +338,8 @@ internal sealed class ResistanceGameViewBuilder
     {
         if (_you is not { } you
             || _game.Phase != ResistancePhase.Inquisition
-            || _game.InquisitionExaminerPlayerId != you.PlayerId
-            || _game.InquisitionExaminedPlayerId is not { } examinedId)
+            || _game.Inquisition.ExaminerPlayerId != you.PlayerId
+            || _game.Inquisition.ExaminedPlayerId is not { } examinedId)
         {
             return null;
         }
