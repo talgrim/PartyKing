@@ -30,42 +30,16 @@ public partial class ResistanceGame
             enabled,
             x =>
             {
-                // Switching the module off switches its characters off, an omitted choice keeps its value while it is on
-                x.BodyGuardEnabled = enabled && (bodyGuard ?? x.BodyGuardEnabled);
-                x.DeepCoverEnabled = enabled && (deepCover ?? x.DeepCoverEnabled);
-                x.BlindSpyEnabled = enabled && (blindSpy ?? x.BlindSpyEnabled);
-                x.FalseCommanderEnabled = enabled && (falseCommander ?? x.FalseCommanderEnabled);
+                // Switching the module off already switched its characters off (see AssassinModuleBehavior); an omitted choice keeps its value
+                if (enabled)
+                {
+                    x.BodyGuardEnabled = bodyGuard ?? x.BodyGuardEnabled;
+                    x.DeepCoverEnabled = deepCover ?? x.DeepCoverEnabled;
+                    x.BlindSpyEnabled = blindSpy ?? x.BlindSpyEnabled;
+                    x.FalseCommanderEnabled = falseCommander ?? x.FalseCommanderEnabled;
+                }
             });
     }
-
-    /// <summary>
-    /// The failure of the optional characters for the players of this game, or null when they fit: the Assassin takes
-    /// one spy seat, the other spy characters share the rest, and with 5 players a Body Guard needs Deep Cover or False
-    /// Commander (or the Commander, the Body Guard and the spies' side would give the game away).
-    /// </summary>
-    private ResistanceFailure? AssassinCharactersFailure()
-    {
-        if (!Rules.AssassinEnabled)
-        {
-            return null;
-        }
-
-        if (Rules.OptionalSpyCharacters > Rules.SpyCount(Players.Count) - 1)
-        {
-            return ResistanceFailure.TooManySpyCharacters;
-        }
-
-        if (Rules.BodyGuardEnabled && Players.Count == BodyGuardCoverPlayerCount
-                                   && !Rules.DeepCoverEnabled && !Rules.FalseCommanderEnabled)
-        {
-            return ResistanceFailure.BodyGuardNeedsCover;
-        }
-
-        return null;
-    }
-
-    /// <summary>The player count at which a Body Guard needs Deep Cover or False Commander next to them.</summary>
-    internal const int BodyGuardCoverPlayerCount = 5;
 
     /// <summary>
     /// The Assassin names the player they take for the Commander. The spies win when it is the Commander, the
