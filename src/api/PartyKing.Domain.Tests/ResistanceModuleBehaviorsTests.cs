@@ -196,4 +196,65 @@ public class ResistanceModuleBehaviorsTests
         Assert.Null(game.AssassinationTargetPlayerId);
         Assert.Empty(game.PlotCards);
     }
+
+    private static ResistanceGame StartedGame(Action<ResistanceRules> configure, int players = 7)
+    {
+        var rules = ResistanceRules.Default();
+        configure(rules);
+        var game = new ResistanceGame { SessionId = Guid.NewGuid(), IsOpen = true, Rules = rules };
+        for (var i = 0; i < players; i++)
+        {
+            game.Players.Add(new ResistancePlayer { PlayerId = Guid.NewGuid(), Order = i });
+        }
+
+        Assert.Null(game.Start(new DateTimeOffset(2026, 11, 7, 12, 0, 0, TimeSpan.Zero), new Random(4)).Failure);
+
+        return game;
+    }
+
+    /// <summary>The guard for a new character module: dealing a character and not saying so would leave its players with a blank card.</summary>
+    [Theory]
+    [MemberData(nameof(EveryModule))]
+    public void AModuleThatDealsACharacter_SaysSo_AndItsPlayersAreToldTheirOwn(string moduleName)
+    {
+        var module = Enum.Parse<ResistanceModule>(moduleName);
+        var game = StartedGame(x => ResistanceModules.Switch(x, module, true));
+        var dealsACharacter = game.Players.Any(x => x.Character != ResistanceCharacter.Standard);
+        var behavior = ResistanceModules.Dealing.SingleOrDefault(x => x.Module == module);
+
+        Assert.Equal(dealsACharacter, behavior?.DealsCharacters(game.Rules) ?? false);
+        foreach (var player in game.Players)
+        {
+            Assert.Equal(dealsACharacter ? player.Character : null, ResistanceKnowledge.OwnCharacter(game, player));
+        }
+    }
+
+    public static TheoryData<string> EveryModule()
+    {
+        var modules = new TheoryData<string>();
+        foreach (var name in Enum.GetNames<ResistanceModule>())
+        {
+            modules.Add(name);
+        }
+
+        return modules;
+    }
+
+    [Fact]
+    public void OwnCharacter_IsNullForAnObserver_AndBeforeTheStart()
+    {
+        var started = StartedGame(x => x.AssassinEnabled = true);
+        var lobby = new ResistanceGame { Rules = ResistanceRules.Default() };
+        lobby.Rules.AssassinEnabled = true;
+        lobby.Players.Add(new ResistancePlayer { PlayerId = Guid.NewGuid(), Order = 0 });
+
+        Assert.Null(ResistanceKnowledge.OwnCharacter(started, null));
+        Assert.Null(ResistanceKnowledge.OwnCharacter(lobby, lobby.Players[0]));
+    }
+
+    [Fact]
+    public void TheModulesThatRestrictTheMissionCards_AreAskedInTheOrderOfTheRegistry()
+    {
+        Assert.Equal([ResistanceModule.Reverser], ResistanceModules.MissionCards.Select(x => x.Module));
+    }
 }
