@@ -5,11 +5,6 @@ namespace PartyKing.Domain.Entities.Games.Resistance;
 /// <summary>Moving a Resistance game from one step to the next: the vote, the windows, the mission and its result.</summary>
 public static class ResistanceFlow
 {
-    /// <summary>The Inquisitor examines right after these missions (2 to 4), three times in all.</summary>
-    public const int FirstInquisitionMission = 2;
-
-    public const int LastInquisitionMission = 4;
-
     /// <summary>A team is approved by a strict majority of all the players; a tie rejects it.</summary>
     public static bool IsApproved(ResistanceGame game)
     {
@@ -149,7 +144,7 @@ public static class ResistanceFlow
     public static void BeginMission(ResistanceGame game)
     {
         game.Phase = ResistancePhase.SelectingTeam;
-        FlipDefectorCard(game);
+        ResistanceModules.MissionBegun(game);
         if (!game.Rules.PlotCardsEnabled)
         {
             return;
@@ -162,25 +157,6 @@ public static class ResistanceFlow
         }
 
         DrawPlotCards(game);
-    }
-
-    /// <summary>
-    /// Defector module: from the third mission on, the card on top of the switch deck is flipped as the mission begins;
-    /// Change Allegiance puts both Defectors on the other side, so the win checks and the mission card rules follow
-    /// from <see cref="ResistancePlayer.Role"/> at once. A rejected team does not begin a mission, so it flips nothing.
-    /// </summary>
-    private static void FlipDefectorCard(ResistanceGame game)
-    {
-        var index = game.MissionNumber - ResistanceGame.DefectorFirstFlipMission;
-        if (index < 0 || index >= game.DefectorDeck.Length || game.DefectorDeck[index] != ResistanceGame.DefectorChangeAllegiance)
-        {
-            return;
-        }
-
-        foreach (var defector in game.Players.Where(x => x.Character == ResistanceCharacter.Defector))
-        {
-            defector.SwitchAllegiance();
-        }
     }
 
     private static void DrawPlotCards(ResistanceGame game)
@@ -255,11 +231,12 @@ public static class ResistanceFlow
 
         game.Publish(new ResistanceMissionCompleted(game.SessionId, game.MissionNumber, succeeded, fails, reverses));
 
-        // Assassin module: the third success is not the end yet, the Assassin still names the Commander. Nothing else
-        // happens in between (no peek window, no Inquisition), as after any mission that decides the game.
-        if (game.Rules.AssassinEnabled && game.ResistanceScore >= ResistanceRules.MissionsToWin)
+        // A module may have a phase of its own instead of the end (the Assassin names the Commander after the third
+        // success). Nothing else happens in between (no peek window, no Inquisition), as after any mission that decides
+        // the game.
+        if (ResistanceModules.PhaseAfterScoring(game) is { } phase)
         {
-            game.Phase = ResistancePhase.Assassination;
+            game.Phase = phase;
             return;
         }
 
@@ -282,15 +259,12 @@ public static class ResistanceFlow
     }
 
     /// <summary>
-    /// The outcome of a mission that did not end the game is public and its windows are over: the Inquisitor, when the
-    /// module is on, examines after missions 2, 3 and 4; then the "Dalej" step.
+    /// The outcome of a mission that did not end the game is public and its windows are over: a module may have a phase
+    /// of its own first (the Inquisitor examines after missions 2, 3 and 4); then the "Dalej" step.
     /// </summary>
     private static void AfterMissionResolved(ResistanceGame game)
     {
-        game.Phase = game.Rules.InquisitorEnabled && game.InquisitorPlayerId is not null
-                                                  && game.MissionNumber is >= FirstInquisitionMission and <= LastInquisitionMission
-            ? ResistancePhase.Inquisition
-            : ResistancePhase.MissionResult;
+        game.Phase = ResistanceModules.PhaseAfterMissionResolved(game) ?? ResistancePhase.MissionResult;
     }
 
     /// <summary>

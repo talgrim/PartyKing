@@ -4,7 +4,7 @@ namespace PartyKing.Domain.Entities.Games.Resistance.Modules;
 /// The Assassin module (Hidden Agenda). It takes the place of what the Defector, the Reverser and Blind Spies change
 /// about who knows whom, so it does not combine with them.
 /// </summary>
-internal sealed class AssassinModuleBehavior : IKnowledgeBehavior, ICharacterDealBehavior, IDealBehavior
+internal sealed class AssassinModuleBehavior : IKnowledgeBehavior, ICharacterDealBehavior, IDealBehavior, IFlowBehavior
 {
     public ResistanceModule Module => ResistanceModule.Assassin;
 
@@ -91,6 +91,12 @@ internal sealed class AssassinModuleBehavior : IKnowledgeBehavior, ICharacterDea
     public void Reset(ResistanceGame game)
     {
         game.AssassinationTargetPlayerId = null;
+    }
+
+    /// <summary>The third success is not the end yet: the Assassin still names the Commander.</summary>
+    public ResistancePhase? PhaseAfterScoring(ResistanceGame game)
+    {
+        return game.ResistanceScore >= ResistanceRules.MissionsToWin ? ResistancePhase.Assassination : null;
     }
 
     public bool SeesSpies(ResistancePlayer viewer)

@@ -1,8 +1,13 @@
 namespace PartyKing.Domain.Entities.Games.Resistance.Modules;
 
 /// <summary>The Inquisitor module (Hostile Intent).</summary>
-internal sealed class InquisitorModuleBehavior : IDealBehavior
+internal sealed class InquisitorModuleBehavior : IDealBehavior, IFlowBehavior
 {
+    /// <summary>The Inquisitor examines right after these missions (2 to 4), three times in all.</summary>
+    public const int FirstInquisitionMission = 2;
+
+    public const int LastInquisitionMission = 4;
+
     public ResistanceModule Module => ResistanceModule.Inquisitor;
 
     public ResistanceFailure LockedFailure => ResistanceFailure.InquisitorLocked;
@@ -40,5 +45,14 @@ internal sealed class InquisitorModuleBehavior : IDealBehavior
 
         game.InquisitorPlayerId = null;
         game.InquisitionExaminerPlayerId = null;
+    }
+
+    /// <summary>The Inquisition comes before the "Dalej" step after missions 2 to 4, when somebody holds the token.</summary>
+    public ResistancePhase? PhaseAfterMissionResolved(ResistanceGame game)
+    {
+        return game.InquisitorPlayerId is not null
+               && game.MissionNumber is >= FirstInquisitionMission and <= LastInquisitionMission
+            ? ResistancePhase.Inquisition
+            : null;
     }
 }
