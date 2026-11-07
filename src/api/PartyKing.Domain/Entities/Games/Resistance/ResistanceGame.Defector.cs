@@ -43,19 +43,9 @@ public partial class ResistanceGame
     /// </summary>
     public ResistanceOutcome SetDefector(bool enabled, bool? defectorsKnowEachOther = null)
     {
-        if (IsStarted)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.DefectorLocked, this);
-        }
-
-        if (enabled && Rules.AssassinEnabled)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.AssassinConflict, this);
-        }
-
-        // Rules is a JSON column compared by reference, so assign a copy to have the change detected.
-        Rules = Rules.Clone(defectorEnabled: enabled, defectorsKnowEachOther: defectorsKnowEachOther);
-
-        return Succeeded();
+        return SwitchModule(
+            ResistanceModule.Defector,
+            enabled,
+            x => x.DefectorsKnowEachOther = defectorsKnowEachOther ?? x.DefectorsKnowEachOther);
     }
 }

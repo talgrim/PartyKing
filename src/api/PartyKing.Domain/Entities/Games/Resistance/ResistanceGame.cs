@@ -112,20 +112,7 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
         }
 
         // A copy, so the caller's object is neither changed nor shared with the game
-        Rules = rules.Clone(
-            Rules.PlotCardsEnabled,
-            Rules.InquisitorEnabled,
-            Rules.BlindSpiesEnabled,
-            Rules.ReverserEnabled,
-            Rules.ReverserSides,
-            Rules.ReverserSpyKnowsSpies,
-            Rules.DefectorEnabled,
-            Rules.DefectorsKnowEachOther,
-            Rules.AssassinEnabled,
-            Rules.BodyGuardEnabled,
-            Rules.DeepCoverEnabled,
-            Rules.BlindSpyEnabled,
-            Rules.FalseCommanderEnabled);
+        Rules = Rules.WithNumbersOf(rules);
 
         return Succeeded();
     }

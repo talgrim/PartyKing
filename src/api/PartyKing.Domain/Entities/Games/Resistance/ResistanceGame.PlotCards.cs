@@ -11,18 +11,7 @@ public partial class ResistanceGame
     public List<ResistancePlotCard> PlotCards { get; internal set; } = [];
 
     /// <summary>Switches the plot cards add-on on or off in the rules. Allowed until the game starts, open or not.</summary>
-    public ResistanceOutcome SetPlotCards(bool enabled)
-    {
-        if (IsStarted)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.PlotCardsLocked, this);
-        }
-
-        // Rules is a JSON column compared by reference, so assign a copy to have the change detected.
-        Rules = Rules.Clone(enabled);
-
-        return Succeeded();
-    }
+    public ResistanceOutcome SetPlotCards(bool enabled) => SwitchModule(ResistanceModule.PlotCards, enabled);
 
     /// <summary>
     /// The leader hands the cards drawn for this mission to the other players (every card but Establish Confidence,

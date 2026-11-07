@@ -25,32 +25,17 @@ public partial class ResistanceGame
         bool? blindSpy = null,
         bool? falseCommander = null)
     {
-        if (IsStarted)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.AssassinLocked, this);
-        }
-
-        if (enabled && (Rules.DefectorEnabled || Rules.ReverserEnabled || Rules.BlindSpiesEnabled))
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.AssassinConflict, this);
-        }
-
-        // Rules is a JSON column compared by reference, so assign a copy to have the change detected.
-        Rules = enabled
-            ? Rules.Clone(
-                assassinEnabled: true,
-                bodyGuardEnabled: bodyGuard,
-                deepCoverEnabled: deepCover,
-                blindSpyEnabled: blindSpy,
-                falseCommanderEnabled: falseCommander)
-            : Rules.Clone(
-                assassinEnabled: false,
-                bodyGuardEnabled: false,
-                deepCoverEnabled: false,
-                blindSpyEnabled: false,
-                falseCommanderEnabled: false);
-
-        return Succeeded();
+        return SwitchModule(
+            ResistanceModule.Assassin,
+            enabled,
+            x =>
+            {
+                // Switching the module off switches its characters off, an omitted choice keeps its value while it is on
+                x.BodyGuardEnabled = enabled && (bodyGuard ?? x.BodyGuardEnabled);
+                x.DeepCoverEnabled = enabled && (deepCover ?? x.DeepCoverEnabled);
+                x.BlindSpyEnabled = enabled && (blindSpy ?? x.BlindSpyEnabled);
+                x.FalseCommanderEnabled = enabled && (falseCommander ?? x.FalseCommanderEnabled);
+            });
     }
 
     /// <summary>

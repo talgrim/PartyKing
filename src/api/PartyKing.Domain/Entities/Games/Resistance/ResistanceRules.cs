@@ -83,40 +83,29 @@ public class ResistanceRules
 
     /// <summary>
     /// A deep copy, so a game never shares dictionaries or arrays with the object it was built from. The result is
-    /// always a new instance, which the JSON column needs to detect a change. Every property must be copied here.
+    /// always a new instance, which the JSON column needs to detect a change. The settings (flags and choices) are
+    /// copied as they are, so a new one needs no line here; a property that holds a reference (like the two
+    /// dictionaries) has to be copied deeply in <see cref="WithNumbersOf"/>.
     /// </summary>
-    public ResistanceRules Clone(
-        bool? plotCardsEnabled = null,
-        bool? inquisitorEnabled = null,
-        bool? blindSpiesEnabled = null,
-        bool? reverserEnabled = null,
-        ResistanceReverserSides? reverserSides = null,
-        bool? reverserSpyKnowsSpies = null,
-        bool? defectorEnabled = null,
-        bool? defectorsKnowEachOther = null,
-        bool? assassinEnabled = null,
-        bool? bodyGuardEnabled = null,
-        bool? deepCoverEnabled = null,
-        bool? blindSpyEnabled = null,
-        bool? falseCommanderEnabled = null) => new()
+    public ResistanceRules Clone()
     {
-        PlayerCounts = PlayerCounts.ToDictionary(
-            x => x.Key, x => new ResistanceCountRules(x.Value.Spies, [.. x.Value.TeamSizes], [.. x.Value.RequiredFails])),
-        PlotCardsEnabled = plotCardsEnabled ?? PlotCardsEnabled,
-        InquisitorEnabled = inquisitorEnabled ?? InquisitorEnabled,
-        BlindSpiesEnabled = blindSpiesEnabled ?? BlindSpiesEnabled,
-        ReverserEnabled = reverserEnabled ?? ReverserEnabled,
-        ReverserSides = reverserSides ?? ReverserSides,
-        ReverserSpyKnowsSpies = reverserSpyKnowsSpies ?? ReverserSpyKnowsSpies,
-        DefectorEnabled = defectorEnabled ?? DefectorEnabled,
-        DefectorsKnowEachOther = defectorsKnowEachOther ?? DefectorsKnowEachOther,
-        AssassinEnabled = assassinEnabled ?? AssassinEnabled,
-        BodyGuardEnabled = bodyGuardEnabled ?? BodyGuardEnabled,
-        DeepCoverEnabled = deepCoverEnabled ?? DeepCoverEnabled,
-        BlindSpyEnabled = blindSpyEnabled ?? BlindSpyEnabled,
-        FalseCommanderEnabled = falseCommanderEnabled ?? FalseCommanderEnabled,
-        PlotDeck = new Dictionary<ResistancePlotCardType, int>(PlotDeck),
-    };
+        return WithNumbersOf(this);
+    }
+
+    /// <summary>
+    /// A copy that keeps the settings of this object (which modules are on, and their choices) and takes the numbers
+    /// (<see cref="PlayerCounts"/> and <see cref="PlotDeck"/>) from <paramref name="numbers"/>, copied deeply.
+    /// </summary>
+    internal ResistanceRules WithNumbersOf(ResistanceRules numbers)
+    {
+        var copy = (ResistanceRules)MemberwiseClone();
+        copy.PlayerCounts = numbers.PlayerCounts.ToDictionary(
+            x => x.Key,
+            x => new ResistanceCountRules(x.Value.Spies, [.. x.Value.TeamSizes], [.. x.Value.RequiredFails]));
+        copy.PlotDeck = new Dictionary<ResistancePlotCardType, int>(numbers.PlotDeck);
+
+        return copy;
+    }
 
     /// <summary>A third of the players as spies, rounded up; the official team sizes; two fails on mission 4 from 7 players.</summary>
     public static ResistanceRules Default() => new()
