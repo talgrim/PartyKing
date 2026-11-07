@@ -25,28 +25,17 @@ public partial class ResistanceGame
         bool? blindSpy = null,
         bool? falseCommander = null)
     {
-        if (IsStarted)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.AssassinLocked, this);
-        }
-
-        if (enabled && (Rules.DefectorEnabled || Rules.ReverserEnabled || Rules.BlindSpiesEnabled))
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.AssassinConflict, this);
-        }
-
-        ConfigureRules(x =>
-        {
-            x.AssassinEnabled = enabled;
-
-            // Switching the module off switches its characters off, an omitted choice keeps its value while it is on
-            x.BodyGuardEnabled = enabled && (bodyGuard ?? x.BodyGuardEnabled);
-            x.DeepCoverEnabled = enabled && (deepCover ?? x.DeepCoverEnabled);
-            x.BlindSpyEnabled = enabled && (blindSpy ?? x.BlindSpyEnabled);
-            x.FalseCommanderEnabled = enabled && (falseCommander ?? x.FalseCommanderEnabled);
-        });
-
-        return Succeeded();
+        return SwitchModule(
+            ResistanceModule.Assassin,
+            enabled,
+            x =>
+            {
+                // Switching the module off switches its characters off, an omitted choice keeps its value while it is on
+                x.BodyGuardEnabled = enabled && (bodyGuard ?? x.BodyGuardEnabled);
+                x.DeepCoverEnabled = enabled && (deepCover ?? x.DeepCoverEnabled);
+                x.BlindSpyEnabled = enabled && (blindSpy ?? x.BlindSpyEnabled);
+                x.FalseCommanderEnabled = enabled && (falseCommander ?? x.FalseCommanderEnabled);
+            });
     }
 
     /// <summary>

@@ -21,17 +21,7 @@ public partial class ResistanceGame
     public Guid? InquisitionExaminedPlayerId => InquisitionExaminerPlayerId is null ? null : InquisitorPlayerId;
 
     /// <summary>Switches the Inquisitor module on or off in the rules. Allowed until the game starts, open or not.</summary>
-    public ResistanceOutcome SetInquisitor(bool enabled)
-    {
-        if (IsStarted)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.InquisitorLocked, this);
-        }
-
-        ConfigureRules(x => x.InquisitorEnabled = enabled);
-
-        return Succeeded();
-    }
+    public ResistanceOutcome SetInquisitor(bool enabled) => SwitchModule(ResistanceModule.Inquisitor, enabled);
 
     /// <summary>
     /// The holder of the token picks a player who never held it. The token passes to that player at once (publicly);

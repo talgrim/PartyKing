@@ -120,17 +120,6 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
     }
 
     /// <summary>
-    /// Changes the rules through a copy. Rules is a JSON column compared by reference, so the change is only noticed
-    /// (and saved) when a new instance is assigned.
-    /// </summary>
-    private void ConfigureRules(Action<ResistanceRules> change)
-    {
-        var copy = Rules.Clone();
-        change(copy);
-        Rules = copy;
-    }
-
-    /// <summary>
     /// Starts the open game: deals the roles and picks the first leader (see <see cref="ResistanceDealer"/>), which
     /// locks the players.
     /// </summary>

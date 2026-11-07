@@ -11,24 +11,14 @@ public partial class ResistanceGame
     public ResistanceOutcome SetReverser(
         bool enabled, ResistanceReverserSides? sides = null, bool? spyKnowsSpies = null)
     {
-        if (IsStarted)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.ReverserLocked, this);
-        }
-
-        if (enabled && Rules.AssassinEnabled)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.AssassinConflict, this);
-        }
-
-        ConfigureRules(x =>
-        {
-            x.ReverserEnabled = enabled;
-            x.ReverserSides = sides ?? x.ReverserSides;
-            x.ReverserSpyKnowsSpies = spyKnowsSpies ?? x.ReverserSpyKnowsSpies;
-        });
-
-        return Succeeded();
+        return SwitchModule(
+            ResistanceModule.Reverser,
+            enabled,
+            x =>
+            {
+                x.ReverserSides = sides ?? x.ReverserSides;
+                x.ReverserSpyKnowsSpies = spyKnowsSpies ?? x.ReverserSpyKnowsSpies;
+            });
     }
 
     /// <summary>

@@ -4,20 +4,5 @@ namespace PartyKing.Domain.Entities.Games.Resistance;
 public partial class ResistanceGame
 {
     /// <summary>Switches the Blind Spies variant on or off in the rules. Allowed until the game starts, open or not.</summary>
-    public ResistanceOutcome SetBlindSpies(bool enabled)
-    {
-        if (IsStarted)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.BlindSpiesLocked, this);
-        }
-
-        if (enabled && Rules.AssassinEnabled)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.AssassinConflict, this);
-        }
-
-        ConfigureRules(x => x.BlindSpiesEnabled = enabled);
-
-        return Succeeded();
-    }
+    public ResistanceOutcome SetBlindSpies(bool enabled) => SwitchModule(ResistanceModule.BlindSpies, enabled);
 }

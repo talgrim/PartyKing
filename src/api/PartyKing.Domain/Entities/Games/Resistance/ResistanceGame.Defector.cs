@@ -43,22 +43,9 @@ public partial class ResistanceGame
     /// </summary>
     public ResistanceOutcome SetDefector(bool enabled, bool? defectorsKnowEachOther = null)
     {
-        if (IsStarted)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.DefectorLocked, this);
-        }
-
-        if (enabled && Rules.AssassinEnabled)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.AssassinConflict, this);
-        }
-
-        ConfigureRules(x =>
-        {
-            x.DefectorEnabled = enabled;
-            x.DefectorsKnowEachOther = defectorsKnowEachOther ?? x.DefectorsKnowEachOther;
-        });
-
-        return Succeeded();
+        return SwitchModule(
+            ResistanceModule.Defector,
+            enabled,
+            x => x.DefectorsKnowEachOther = defectorsKnowEachOther ?? x.DefectorsKnowEachOther);
     }
 }
