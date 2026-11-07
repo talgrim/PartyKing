@@ -41,6 +41,44 @@ public class ResistanceModuleBehaviorsTests
         public ResistanceFailure? StartFailure(ResistanceGame game) => failure;
     }
 
+    /// <summary>A module that is on or off as it is told, and answers every flow hook with what it is given, noting that it was asked.</summary>
+    private sealed class FakeFlow(
+        ResistanceModule module,
+        bool on,
+        List<ResistanceModule> asked,
+        ResistancePhase? afterScoring = null,
+        ResistancePhase? afterMissionResolved = null) : IFlowBehavior
+    {
+        public ResistanceModule Module => module;
+
+        public ResistanceFailure LockedFailure => ResistanceFailure.PlotCardsLocked;
+
+        public bool IsOn(ResistanceRules rules) => on;
+
+        public void Switch(ResistanceRules rules, bool on)
+        {
+        }
+
+        public void OnMissionBegun(ResistanceGame game)
+        {
+            asked.Add(module);
+        }
+
+        public ResistancePhase? PhaseAfterScoring(ResistanceGame game)
+        {
+            asked.Add(module);
+
+            return afterScoring;
+        }
+
+        public ResistancePhase? PhaseAfterMissionResolved(ResistanceGame game)
+        {
+            asked.Add(module);
+
+            return afterMissionResolved;
+        }
+    }
+
     [Fact]
     public void TheRegistry_HasOneBehaviorPerModule_InTheOrderOfTheEnum()
     {
@@ -180,6 +218,53 @@ public class ResistanceModuleBehaviorsTests
         Assert.Equal(ResistanceFailure.TooManySpyCharacters, ResistanceModules.StartFailure([none, first, second], game));
         Assert.Equal(ResistanceFailure.BodyGuardNeedsCover, ResistanceModules.StartFailure([none, second, first], game));
         Assert.Null(ResistanceModules.StartFailure([none], game));
+    }
+
+    [Fact]
+    public void TheMissionBegun_IsToldToTheModulesThatAreOn_InTheirOrder()
+    {
+        var game = new ResistanceGame { Rules = ResistanceRules.Default() };
+        var asked = new List<ResistanceModule>();
+
+        ResistanceModules.MissionBegun(
+            [
+                new FakeFlow(ResistanceModule.Inquisitor, true, asked),
+                new FakeFlow(ResistanceModule.Reverser, false, asked),
+                new FakeFlow(ResistanceModule.Defector, true, asked),
+            ],
+            game);
+
+        Assert.Equal([ResistanceModule.Inquisitor, ResistanceModule.Defector], asked);
+    }
+
+    [Fact]
+    public void ThePhaseAfterTheScoring_IsTheFirstOneAModuleThatIsOnNames_AndNoModuleAfterItIsAsked()
+    {
+        var game = new ResistanceGame { Rules = ResistanceRules.Default() };
+        var asked = new List<ResistanceModule>();
+        var silent = new FakeFlow(ResistanceModule.PlotCards, true, asked);
+        var off = new FakeFlow(ResistanceModule.Inquisitor, false, asked, ResistancePhase.Inquisition);
+        var first = new FakeFlow(ResistanceModule.Defector, true, asked, ResistancePhase.Assassination);
+        var second = new FakeFlow(ResistanceModule.Assassin, true, asked, ResistancePhase.Inquisition);
+
+        Assert.Equal(ResistancePhase.Assassination, ResistanceModules.PhaseAfterScoring([silent, off, first, second], game));
+        Assert.Equal([ResistanceModule.PlotCards, ResistanceModule.Defector], asked);
+        Assert.Equal(ResistancePhase.Inquisition, ResistanceModules.PhaseAfterScoring([second, first], game));
+        Assert.Null(ResistanceModules.PhaseAfterScoring([silent, off], game));
+    }
+
+    [Fact]
+    public void ThePhaseAfterAMissionResolved_IsTheFirstOneAModuleThatIsOnNames_AndNullIsTheDalejStep()
+    {
+        var game = new ResistanceGame { Rules = ResistanceRules.Default() };
+        var asked = new List<ResistanceModule>();
+        var silent = new FakeFlow(ResistanceModule.PlotCards, true, asked);
+        var off = new FakeFlow(ResistanceModule.Inquisitor, false, asked, null, ResistancePhase.Inquisition);
+        var named = new FakeFlow(ResistanceModule.Defector, true, asked, null, ResistancePhase.Inquisition);
+
+        Assert.Equal(ResistancePhase.Inquisition, ResistanceModules.PhaseAfterMissionResolved([silent, off, named], game));
+        Assert.Null(ResistanceModules.PhaseAfterMissionResolved([silent, off], game));
+        Assert.Equal([ResistanceModule.PlotCards, ResistanceModule.Defector, ResistanceModule.PlotCards], asked);
     }
 
     [Fact]
