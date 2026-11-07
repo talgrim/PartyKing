@@ -174,14 +174,10 @@ public static class ResistanceFlow
         game.Phase = ResistancePhase.DealingCards;
     }
 
-    /// <summary>
-    /// A window in which every player confirms (or the holder of a card plays it) before the game goes on: the leader
-    /// window, the confidence window and the peek window.
-    /// </summary>
+    /// <summary>Whether the game is in a window in which every player confirms (see <see cref="ResistancePhases.IsConfirmationWindow"/>).</summary>
     public static bool IsConfirmationWindow(ResistanceGame game)
     {
-        return game.Phase is ResistancePhase.LeaderWindow or ResistancePhase.ConfidenceWindow
-            or ResistancePhase.PeekWindow;
+        return ResistancePhases.IsConfirmationWindow(game.Phase);
     }
 
     /// <summary>

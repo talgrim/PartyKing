@@ -187,10 +187,7 @@ public partial class ResistanceGame
                 callerPlayerId,
                 cardId,
                 ResistancePlotCardType.TakeResponsibility,
-                [
-                    ResistancePhase.SelectingTeam, ResistancePhase.PlayingMission, ResistancePhase.PeekWindow,
-                    ResistancePhase.MissionResult,
-                ],
+                ResistancePhases.TakeResponsibility,
                 out var card,
                 out var refusal))
         {

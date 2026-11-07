@@ -159,7 +159,7 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
         }
 
         // A game waiting for the Assassin can be restarted too, so an absent Assassin never strands it
-        if (Phase is not (ResistancePhase.GameOver or ResistancePhase.Assassination))
+        if (!ResistancePhases.CanRestart(Phase))
         {
             return ResistanceOutcome.Failed(ResistanceFailure.NotOver, this);
         }
