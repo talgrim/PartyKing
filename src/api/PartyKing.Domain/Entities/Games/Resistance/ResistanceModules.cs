@@ -38,6 +38,9 @@ internal static class ResistanceModules
     private static readonly IReadOnlyDictionary<ResistanceModule, IResistanceModuleBehavior> Behaviors =
         Registered.ToDictionary(x => x.Module);
 
+    /// <summary>The modules that change who knows which players are spies, in the order of <see cref="Registered"/>.</summary>
+    public static IReadOnlyList<IKnowledgeBehavior> Knowledge { get; } = Registered.OfType<IKnowledgeBehavior>().ToList();
+
     public static IResistanceModuleBehavior For(ResistanceModule module)
     {
         return Behaviors.TryGetValue(module, out var behavior)
