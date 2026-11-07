@@ -36,6 +36,28 @@ public class ResistanceGameModuleCombinationTests
         (first == "Assassin" && AgainstTheAssassin.Contains(second))
         || (second == "Assassin" && AgainstTheAssassin.Contains(first));
 
+    [Fact]
+    public void EveryModule_HasARowInTheTable()
+    {
+        foreach (var module in Enum.GetValues<ResistanceModule>())
+        {
+            var rules = ResistanceRules.Default();
+
+            // A module without a row throws here
+            ResistanceModules.Switch(rules, module, true);
+            Assert.Null(ResistanceModules.ConflictFailure(ResistanceRules.Default(), module));
+        }
+
+        var lockedFailures = Enum.GetValues<ResistanceModule>().Select(ResistanceModules.LockedFailure).ToList();
+        Assert.Equal(lockedFailures.Count, lockedFailures.Distinct().Count());
+    }
+
+    [Fact]
+    public void ThePairTests_TryEveryModule()
+    {
+        Assert.Equal(Enum.GetNames<ResistanceModule>().Order(), Switches.Keys.Order());
+    }
+
     [Theory]
     [MemberData(nameof(EveryOrderedPair))]
     public void SwitchingASecondModuleOn_IsRefusedOnlyAgainstTheAssassinConflict(string first, string second)
