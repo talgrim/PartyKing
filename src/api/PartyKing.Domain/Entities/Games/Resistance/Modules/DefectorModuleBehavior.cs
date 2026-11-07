@@ -3,7 +3,7 @@ using PartyKing.Domain.Entities.Games.Base;
 namespace PartyKing.Domain.Entities.Games.Resistance.Modules;
 
 /// <summary>The Defector module (Hidden Agenda).</summary>
-internal sealed class DefectorModuleBehavior : IKnowledgeBehavior, IDealBehavior
+internal sealed class DefectorModuleBehavior : IKnowledgeBehavior, ICharacterDealBehavior, IDealBehavior
 {
     public ResistanceModule Module => ResistanceModule.Defector;
 
@@ -19,11 +19,6 @@ internal sealed class DefectorModuleBehavior : IKnowledgeBehavior, IDealBehavior
         rules.DefectorEnabled = on;
     }
 
-    public bool DealsCharacters(ResistanceRules rules)
-    {
-        return rules.DefectorEnabled;
-    }
-
     /// <summary>
     /// One Defector on each side, taken from the players still without a character (there are always some, as a side has
     /// at least two spies and three members of the resistance and takes one Reverser at most), and a shuffled switch
@@ -31,7 +26,6 @@ internal sealed class DefectorModuleBehavior : IKnowledgeBehavior, IDealBehavior
     /// </summary>
     public void DealCharacters(ResistanceGame game, List<ResistancePlayer> shuffled, Random random)
     {
-        game.DefectorDeck = string.Empty;
         if (!game.Rules.DefectorEnabled)
         {
             return;

@@ -4,7 +4,7 @@ namespace PartyKing.Domain.Entities.Games.Resistance.Modules;
 /// The Assassin module (Hidden Agenda). It takes the place of what the Defector, the Reverser and Blind Spies change
 /// about who knows whom, so it does not combine with them.
 /// </summary>
-internal sealed class AssassinModuleBehavior : IKnowledgeBehavior, IDealBehavior
+internal sealed class AssassinModuleBehavior : IKnowledgeBehavior, ICharacterDealBehavior, IDealBehavior
 {
     public ResistanceModule Module => ResistanceModule.Assassin;
 
@@ -54,11 +54,6 @@ internal sealed class AssassinModuleBehavior : IKnowledgeBehavior, IDealBehavior
         return null;
     }
 
-    public bool DealsCharacters(ResistanceRules rules)
-    {
-        return rules.AssassinEnabled;
-    }
-
     /// <summary>The player count at which a Body Guard needs Deep Cover or False Commander next to them.</summary>
     internal const int BodyGuardCoverPlayerCount = 5;
 
@@ -69,7 +64,6 @@ internal sealed class AssassinModuleBehavior : IKnowledgeBehavior, IDealBehavior
     /// </summary>
     public void DealCharacters(ResistanceGame game, List<ResistancePlayer> shuffled, Random random)
     {
-        game.AssassinationTargetPlayerId = null;
         if (!game.Rules.AssassinEnabled)
         {
             return;

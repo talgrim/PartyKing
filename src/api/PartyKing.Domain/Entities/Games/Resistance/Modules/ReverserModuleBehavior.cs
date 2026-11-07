@@ -1,7 +1,7 @@
 namespace PartyKing.Domain.Entities.Games.Resistance.Modules;
 
 /// <summary>The Reverser module.</summary>
-internal sealed class ReverserModuleBehavior : IKnowledgeBehavior, IDealBehavior, IMissionCardBehavior
+internal sealed class ReverserModuleBehavior : IKnowledgeBehavior, ICharacterDealBehavior, IMissionCardBehavior
 {
     public ResistanceModule Module => ResistanceModule.Reverser;
 
@@ -15,11 +15,6 @@ internal sealed class ReverserModuleBehavior : IKnowledgeBehavior, IDealBehavior
     public void Switch(ResistanceRules rules, bool on)
     {
         rules.ReverserEnabled = on;
-    }
-
-    public bool DealsCharacters(ResistanceRules rules)
-    {
-        return rules.ReverserEnabled;
     }
 
     /// <summary>Reverse only from a Reverser, and a Reverser who is a spy never plays Fail (they play Success or Reverse).</summary>

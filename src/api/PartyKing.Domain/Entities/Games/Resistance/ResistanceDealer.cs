@@ -34,7 +34,9 @@ public static class ResistanceDealer
     /// <summary>
     /// Gives every player a random side, lets the modules deal their characters, picks a random first leader, lets the
     /// modules deal what depends on the leader and starts the first mission. The modules go in the order of
-    /// <see cref="ResistanceModules.Registered"/> (see <see cref="Modules.IDealBehavior"/>).
+    /// <see cref="ResistanceModules.Registered"/> (see <see cref="Modules.ICharacterDealBehavior"/> and
+    /// <see cref="Modules.IDealBehavior"/>). A game is dealt once, new or after <see cref="Reset"/>, so no module clears
+    /// its own state here.
     /// </summary>
     public static void Deal(ResistanceGame game, Random random)
     {
@@ -47,7 +49,7 @@ public static class ResistanceDealer
             shuffled[i].Character = ResistanceCharacter.Standard;
         }
 
-        foreach (var module in ResistanceModules.Dealing)
+        foreach (var module in ResistanceModules.CharacterDealers)
         {
             module.DealCharacters(game, shuffled, random);
         }

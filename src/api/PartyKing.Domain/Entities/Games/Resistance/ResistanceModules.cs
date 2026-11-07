@@ -41,6 +41,9 @@ internal static class ResistanceModules
     /// <summary>The modules that change who knows which players are spies, in the order of <see cref="Registered"/>.</summary>
     public static IReadOnlyList<IKnowledgeBehavior> Knowledge { get; } = Registered.OfType<IKnowledgeBehavior>().ToList();
 
+    /// <summary>The modules that give players a character, in the order of <see cref="Registered"/>, which is the order they take players in.</summary>
+    public static IReadOnlyList<ICharacterDealBehavior> CharacterDealers { get; } = Registered.OfType<ICharacterDealBehavior>().ToList();
+
     /// <summary>The modules that deal, check the start or reset something, in the order of <see cref="Registered"/>.</summary>
     public static IReadOnlyList<IDealBehavior> Dealing { get; } = Registered.OfType<IDealBehavior>().ToList();
 

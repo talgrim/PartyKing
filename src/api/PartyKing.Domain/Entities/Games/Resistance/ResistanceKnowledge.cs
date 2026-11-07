@@ -26,7 +26,7 @@ public static class ResistanceKnowledge
     /// </summary>
     public static ResistanceCharacter? OwnCharacter(ResistanceGame game, ResistancePlayer? viewer)
     {
-        if (!game.IsStarted || viewer is null || !ResistanceModules.Dealing.Any(x => x.DealsCharacters(game.Rules)))
+        if (!game.IsStarted || viewer is null || !ResistanceModules.CharacterDealers.Any(x => x.IsOn(game.Rules)))
         {
             return null;
         }

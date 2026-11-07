@@ -20,14 +20,13 @@ internal sealed class PlotCardsModuleBehavior : IDealBehavior
     }
 
     /// <summary>
-    /// Builds and shuffles the deck from the rules' composition, or clears it when the add-on is off (after the leader is picked: it draws from the same random). The deck holds at
+    /// Builds and shuffles the deck from the rules' composition when the add-on is on (after the leader is picked: it draws from the same random). The deck holds at
     /// most 15 cards and a game draws at most 5 missions x 3 cards, so it never runs out.
     /// </summary>
     public void DealTable(ResistanceGame game, Random random)
     {
         if (!game.Rules.PlotCardsEnabled)
         {
-            game.PlotCards.Clear();
             return;
         }
 
