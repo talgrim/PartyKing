@@ -41,6 +41,20 @@ internal static class ResistanceModules
     /// <summary>The modules that change who knows which players are spies, in the order of <see cref="Registered"/>.</summary>
     public static IReadOnlyList<IKnowledgeBehavior> Knowledge { get; } = Registered.OfType<IKnowledgeBehavior>().ToList();
 
+    /// <summary>The modules that deal, check the start or reset something, in the order of <see cref="Registered"/>.</summary>
+    public static IReadOnlyList<IDealBehavior> Dealing { get; } = Registered.OfType<IDealBehavior>().ToList();
+
+    /// <summary>Why the game cannot be started with the modules it has on, or null: the first module in the order that fails.</summary>
+    public static ResistanceFailure? StartFailure(ResistanceGame game)
+    {
+        return StartFailure(Dealing, game);
+    }
+
+    internal static ResistanceFailure? StartFailure(IReadOnlyList<IDealBehavior> modules, ResistanceGame game)
+    {
+        return modules.Select(x => x.StartFailure(game)).FirstOrDefault(x => x is not null);
+    }
+
     public static IResistanceModuleBehavior For(ResistanceModule module)
     {
         return Behaviors.TryGetValue(module, out var behavior)

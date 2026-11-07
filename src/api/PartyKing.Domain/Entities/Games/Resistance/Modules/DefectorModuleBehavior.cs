@@ -1,7 +1,9 @@
+using PartyKing.Domain.Entities.Games.Base;
+
 namespace PartyKing.Domain.Entities.Games.Resistance.Modules;
 
 /// <summary>The Defector module (Hidden Agenda).</summary>
-internal sealed class DefectorModuleBehavior : IKnowledgeBehavior
+internal sealed class DefectorModuleBehavior : IKnowledgeBehavior, IDealBehavior
 {
     public ResistanceModule Module => ResistanceModule.Defector;
 
@@ -15,6 +17,35 @@ internal sealed class DefectorModuleBehavior : IKnowledgeBehavior
     public void Switch(ResistanceRules rules, bool on)
     {
         rules.DefectorEnabled = on;
+    }
+
+    /// <summary>
+    /// One Defector on each side, taken from the players still without a character (there are always some, as a side has
+    /// at least two spies and three members of the resistance and takes one Reverser at most), and a shuffled switch
+    /// deck. The only module that draws from the random here.
+    /// </summary>
+    public void DealCharacters(ResistanceGame game, List<ResistancePlayer> shuffled, Random random)
+    {
+        game.DefectorDeck = string.Empty;
+        if (!game.Rules.DefectorEnabled)
+        {
+            return;
+        }
+
+        foreach (var side in new[] { ResistanceRole.Spy, ResistanceRole.Resistance })
+        {
+            shuffled.First(x => x.Role == side && x.Character == ResistanceCharacter.Standard)
+                .Character = ResistanceCharacter.Defector;
+        }
+
+        var cards = Enumerable.Repeat(ResistanceGame.DefectorNoChange, ResistanceGame.DefectorDeckSize - 2)
+            .Concat([ResistanceGame.DefectorChangeAllegiance, ResistanceGame.DefectorChangeAllegiance]);
+        game.DefectorDeck = new string(cards.Shuffled(random).ToArray());
+    }
+
+    public void Reset(ResistanceGame game)
+    {
+        game.DefectorDeck = string.Empty;
     }
 
     /// <summary>A Defector keeps their eyes closed in the reveal, and the Defector who started as resistance is not in it.</summary>

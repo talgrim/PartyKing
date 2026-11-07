@@ -138,7 +138,7 @@ public partial class ResistanceGame : LobbyGame<ResistancePlayer>
             return ResistanceOutcome.Failed(ResistanceFailure.NotEnoughPlayers, this);
         }
 
-        if (AssassinCharactersFailure() is { } invalid)
+        if (ResistanceModules.StartFailure(this) is { } invalid)
         {
             return ResistanceOutcome.Failed(invalid, this);
         }
