@@ -875,7 +875,11 @@ public class ResistanceGameViewBuilderTests
 
     // ---- the public part is the same for everybody ----
 
-    public static TheoryData<string> Scenarios => ["voting", "mission", "peek-window", "inquisition", "game-over", "lobby"];
+    public static TheoryData<string> Scenarios =>
+    [
+        "voting", "mission", "peek-window", "inquisition", "game-over", "lobby",
+        "assassination", "assassinated", "defectors", "defectors-game-over"
+    ];
 
     private static ResistanceGame Scenario(string name)
     {
@@ -945,9 +949,68 @@ public class ResistanceGameViewBuilderTests
 
                 return game;
             }
+            case "assassination":
+            {
+                var game = AssassinGame(ResistancePhase.Assassination);
+                AddOptionalCharacters(game);
+
+                return game;
+            }
+            case "assassinated":
+            {
+                var game = AssassinGame(ResistancePhase.GameOver);
+                AddOptionalCharacters(game);
+                game.Winner = ResistanceRole.Resistance;
+                game.AssassinationTargetPlayerId = Ids[1];
+
+                return game;
+            }
+            case "defectors":
+            {
+                var game = DefectorGame(ResistancePhase.Voting);
+                Seat(game, 0).Vote = true;
+                Seat(game, 3).Vote = false;
+
+                return game;
+            }
+            case "defectors-game-over":
+            {
+                var game = DefectorGame(ResistancePhase.GameOver);
+                game.Winner = ResistanceRole.Resistance;
+
+                return game;
+            }
             default:
                 return NewGame(started: false);
         }
+    }
+
+    /// <summary>The Body Guard and the False Commander of the Assassin module on top of <see cref="AssassinGame"/>.</summary>
+    private static void AddOptionalCharacters(ResistanceGame game)
+    {
+        game.Rules.BodyGuardEnabled = true;
+        game.Rules.FalseCommanderEnabled = true;
+        Seat(game, 0).Character = ResistanceCharacter.BodyGuard;
+        Seat(game, 4).Character = ResistanceCharacter.FalseCommander;
+    }
+
+    /// <summary>
+    /// Both Defectors known to each other, three missions in, one switch card flipped (seat 3 started as a spy and is
+    /// among the resistance now, seat 1 started as resistance and is among the spies).
+    /// </summary>
+    private static ResistanceGame DefectorGame(ResistancePhase phase)
+    {
+        var game = NewGame(phase);
+        game.Rules.DefectorEnabled = true;
+        game.Rules.DefectorsKnowEachOther = true;
+        game.DefectorDeck = "CNNNN";
+        game.MissionNumber = 3;
+        Seat(game, 1).Character = ResistanceCharacter.Defector;
+        Seat(game, 1).Role = ResistanceRole.Spy;
+        Seat(game, 3).Character = ResistanceCharacter.Defector;
+        Seat(game, 3).Role = ResistanceRole.Resistance;
+
+        return game;
     }
 
     /// <summary>The caller-only fields blanked: what is left is what every viewer is allowed to see.</summary>
@@ -960,7 +1023,8 @@ public class ResistanceGameViewBuilderTests
             nameof(ResistanceGameDto.FellowSpies), nameof(ResistanceGameDto.YourVote),
             nameof(ResistanceGameDto.YourMissionCard), nameof(ResistanceGameDto.YourPlotCards),
             nameof(ResistanceGameDto.YourReveals), nameof(ResistanceGameDto.YourPeeks),
-            nameof(ResistanceGameDto.YourInquisition)
+            nameof(ResistanceGameDto.YourInquisition), nameof(ResistanceGameDto.YourCharacter),
+            nameof(ResistanceGameDto.YourCommanderCandidates), nameof(ResistanceGameDto.FellowDefectorId)
         ];
 
         foreach (var name in callerOnly)
