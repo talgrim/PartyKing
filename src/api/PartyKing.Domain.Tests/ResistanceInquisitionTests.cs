@@ -32,6 +32,19 @@ public class ResistanceInquisitionTests
     }
 
     [Fact]
+    public void Holding_EndsAnInquisitionGoingOn_SoTheExaminedPlayerCannotBeStale()
+    {
+        var inquisition = new ResistanceInquisition();
+        inquisition.Pick(Holder, Examined);
+
+        inquisition.Hold(Holder);
+
+        Assert.False(inquisition.HasPicked);
+        Assert.Null(inquisition.ExaminedPlayerId);
+        Assert.Equal(Holder, inquisition.ActingPlayerId);
+    }
+
+    [Fact]
     public void PickingAPlayer_PassesTheTokenAtOnce_AndTheExaminerIsTheOneToAct()
     {
         var inquisition = new ResistanceInquisition();

@@ -42,7 +42,7 @@ public class ResistanceGameInquisitorTests
         game.LeaderPlayerId = game.Players[0].PlayerId;
         if (inquisitor)
         {
-            game.Inquisition.HolderPlayerId = game.Players[4].PlayerId;
+            game.Inquisition.Hold(game.Players[4].PlayerId);
             game.Players[4].WasInquisitor = true;
         }
 

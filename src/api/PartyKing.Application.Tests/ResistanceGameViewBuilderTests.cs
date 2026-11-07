@@ -754,8 +754,7 @@ public class ResistanceGameViewBuilderTests
     {
         var game = NewGame(ResistancePhase.Inquisition);
         game.Rules.InquisitorEnabled = true;
-        game.Inquisition.HolderPlayerId = Ids[4];
-        game.Inquisition.ExaminerPlayerId = Ids[2];
+        game.Inquisition.Pick(Ids[2], Ids[4]);
         Seat(game, 2).WasInquisitor = true;
         Seat(game, 4).WasInquisitor = true;
 
@@ -781,7 +780,7 @@ public class ResistanceGameViewBuilderTests
     public void Inquisition_TheLoyaltyIsGoneOnceTheExaminerConfirmed()
     {
         var game = InquisitionGame();
-        game.Inquisition.ExaminerPlayerId = null;
+        game.Inquisition.Finish();
         game.Phase = ResistancePhase.MissionResult;
 
         Assert.Null(View(game, 2).YourInquisition);
@@ -791,8 +790,7 @@ public class ResistanceGameViewBuilderTests
     public void Inquisition_BeforeAPlayerIsPicked_ShowsNothingPrivate()
     {
         var game = InquisitionGame();
-        game.Inquisition.ExaminerPlayerId = null;
-        game.Inquisition.HolderPlayerId = Ids[2];
+        game.Inquisition.Hold(Ids[2]);
         Seat(game, 4).WasInquisitor = false;
 
         for (var seat = 0; seat < Ids.Length; seat++)

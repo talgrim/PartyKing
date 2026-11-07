@@ -281,8 +281,7 @@ public class ResistanceModuleBehaviorsTests
         var game = new ResistanceGame { SessionId = Guid.NewGuid(), Rules = ResistanceRules.Default() };
         game.Players.Add(new ResistancePlayer { PlayerId = Guid.NewGuid(), Order = 0, WasInquisitor = true });
         game.Players.Add(new ResistancePlayer { PlayerId = Guid.NewGuid(), Order = 1 });
-        game.Inquisition.HolderPlayerId = game.Players[0].PlayerId;
-        game.Inquisition.ExaminerPlayerId = game.Players[1].PlayerId;
+        game.Inquisition.Pick(game.Players[1].PlayerId, game.Players[0].PlayerId);
         game.DefectorDeck.Cards = "CNNNN";
         game.AssassinationTargetPlayerId = game.Players[1].PlayerId;
         game.PlotCards.Add(new ResistancePlotCard { CardId = 0, SessionId = game.SessionId });
