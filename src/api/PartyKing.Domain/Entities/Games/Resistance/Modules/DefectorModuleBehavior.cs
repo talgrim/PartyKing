@@ -1,0 +1,81 @@
+namespace PartyKing.Domain.Entities.Games.Resistance.Modules;
+
+/// <summary>The Defector module (Hidden Agenda).</summary>
+internal sealed class DefectorModuleBehavior : IKnowledgeBehavior, ICharacterDealBehavior, IDealBehavior, IFlowBehavior
+{
+    public ResistanceModule Module => ResistanceModule.Defector;
+
+    public ResistanceFailure LockedFailure => ResistanceFailure.DefectorLocked;
+
+    public bool IsOn(ResistanceRules rules)
+    {
+        return rules.DefectorEnabled;
+    }
+
+    public void Switch(ResistanceRules rules, bool on)
+    {
+        rules.DefectorEnabled = on;
+    }
+
+    /// <summary>
+    /// One Defector on each side, taken from the players still without a character (there are always some, as a side has
+    /// at least two spies and three members of the resistance and takes one Reverser at most), and a shuffled switch
+    /// deck. The only module that draws from the random here.
+    /// </summary>
+    public void DealCharacters(ResistanceGame game, List<ResistancePlayer> shuffled, Random random)
+    {
+        if (!game.Rules.DefectorEnabled)
+        {
+            return;
+        }
+
+        foreach (var side in new[] { ResistanceRole.Spy, ResistanceRole.Resistance })
+        {
+            shuffled.First(x => x.Role == side && x.Character == ResistanceCharacter.Standard)
+                .Character = ResistanceCharacter.Defector;
+        }
+
+        game.DefectorDeck.Deal(random);
+    }
+
+    public void Reset(ResistanceGame game)
+    {
+        game.DefectorDeck.Clear();
+    }
+
+    /// <summary>
+    /// From the third mission on, the card on top of the switch deck is flipped as the mission begins; Change Allegiance
+    /// puts both Defectors on the other side, so the win checks and the mission card rules follow from
+    /// <see cref="ResistancePlayer.Role"/> at once. A rejected team does not begin a mission, so it flips nothing.
+    /// </summary>
+    public void OnMissionBegun(ResistanceGame game)
+    {
+        if (!game.DefectorDeck.ChangesAllegianceAt(game.MissionNumber))
+        {
+            return;
+        }
+
+        foreach (var defector in game.Players.Where(x => x.Character == ResistanceCharacter.Defector))
+        {
+            defector.SwitchAllegiance();
+        }
+    }
+
+    /// <summary>A Defector keeps their eyes closed in the reveal, and the Defector who started as resistance is not in it.</summary>
+    public bool HidesSpyFrom(ResistanceGame game, ResistancePlayer viewer, ResistancePlayer target)
+    {
+        return viewer.Character == ResistanceCharacter.Defector || IsUnknown(game, target);
+    }
+
+    /// <summary>
+    /// Whether the player is the Defector who started on the resistance side. At the table the spies' reveal never
+    /// includes them, so the spies do not know them even while a switch card has put them among the spies. The Defector
+    /// who started as a spy shows a thumb in the reveal: the spies know them while they are spies, but they keep their
+    /// eyes closed and know no spy.
+    /// </summary>
+    public static bool IsUnknown(ResistanceGame game, ResistancePlayer player)
+    {
+        return player.Character == ResistanceCharacter.Defector
+               && (ResistanceKnowledge.Loyalty(player) == ResistanceRole.Spy) == game.DefectorsSwitched;
+    }
+}

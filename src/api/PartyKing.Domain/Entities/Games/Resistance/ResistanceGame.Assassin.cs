@@ -2,7 +2,7 @@ using PartyKing.Domain.Events.Games.Resistance;
 
 namespace PartyKing.Domain.Entities.Games.Resistance;
 
-// The Assassin module (Hidden Agenda): see ResistanceRoles.Deal for the dealing, ResistanceRoles.ResolveMission for
+// The Assassin module (Hidden Agenda): see ResistanceDealer.Deal for the dealing, ResistanceFlow.ResolveMission for
 // where the third success opens the Assassination and ResistanceKnowledge.KnowsSpy for the Commander's knowledge.
 public partial class ResistanceGame
 {
@@ -25,62 +25,21 @@ public partial class ResistanceGame
         bool? blindSpy = null,
         bool? falseCommander = null)
     {
-        if (IsStarted)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.AssassinLocked, this);
-        }
-
-        if (enabled && (Rules.DefectorEnabled || Rules.ReverserEnabled || Rules.BlindSpiesEnabled))
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.AssassinConflict, this);
-        }
-
-        // Rules is a JSON column compared by reference, so assign a copy to have the change detected.
-        Rules = enabled
-            ? Rules.Clone(
-                assassinEnabled: true,
-                bodyGuardEnabled: bodyGuard,
-                deepCoverEnabled: deepCover,
-                blindSpyEnabled: blindSpy,
-                falseCommanderEnabled: falseCommander)
-            : Rules.Clone(
-                assassinEnabled: false,
-                bodyGuardEnabled: false,
-                deepCoverEnabled: false,
-                blindSpyEnabled: false,
-                falseCommanderEnabled: false);
-
-        return Succeeded();
+        return SwitchModule(
+            ResistanceModule.Assassin,
+            enabled,
+            x =>
+            {
+                // Switching the module off already switched its characters off (see AssassinModuleBehavior); an omitted choice keeps its value
+                if (enabled)
+                {
+                    x.BodyGuardEnabled = bodyGuard ?? x.BodyGuardEnabled;
+                    x.DeepCoverEnabled = deepCover ?? x.DeepCoverEnabled;
+                    x.BlindSpyEnabled = blindSpy ?? x.BlindSpyEnabled;
+                    x.FalseCommanderEnabled = falseCommander ?? x.FalseCommanderEnabled;
+                }
+            });
     }
-
-    /// <summary>
-    /// The failure of the optional characters for the players of this game, or null when they fit: the Assassin takes
-    /// one spy seat, the other spy characters share the rest, and with 5 players a Body Guard needs Deep Cover or False
-    /// Commander (or the Commander, the Body Guard and the spies' side would give the game away).
-    /// </summary>
-    private ResistanceFailure? AssassinCharactersFailure()
-    {
-        if (!Rules.AssassinEnabled)
-        {
-            return null;
-        }
-
-        if (Rules.OptionalSpyCharacters > Rules.SpyCount(Players.Count) - 1)
-        {
-            return ResistanceFailure.TooManySpyCharacters;
-        }
-
-        if (Rules.BodyGuardEnabled && Players.Count == BodyGuardCoverPlayerCount
-                                   && !Rules.DeepCoverEnabled && !Rules.FalseCommanderEnabled)
-        {
-            return ResistanceFailure.BodyGuardNeedsCover;
-        }
-
-        return null;
-    }
-
-    /// <summary>The player count at which a Body Guard needs Deep Cover or False Commander next to them.</summary>
-    internal const int BodyGuardCoverPlayerCount = 5;
 
     /// <summary>
     /// The Assassin names the player they take for the Commander. The spies win when it is the Commander, the
@@ -111,10 +70,9 @@ public partial class ResistanceGame
         }
 
         AssassinationTargetPlayerId = target.PlayerId;
-        Phase = ResistancePhase.GameOver;
-        Winner = target.Character == ResistanceCharacter.Commander ? ResistanceRole.Spy : ResistanceRole.Resistance;
         Raise(new ResistanceAssassinated(SessionId, assassin.PlayerId, target.PlayerId));
-        Raise(new ResistanceGameOver(SessionId, Winner.Value));
+        var winner = target.Character == ResistanceCharacter.Commander ? ResistanceRole.Spy : ResistanceRole.Resistance;
+        ResistanceFlow.EndGame(this, winner);
 
         return Succeeded();
     }

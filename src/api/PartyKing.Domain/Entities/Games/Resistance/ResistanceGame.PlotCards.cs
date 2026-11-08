@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+using PartyKing.Domain.Entities.Games.Resistance.PlotCards;
 using PartyKing.Domain.Events.Games.Resistance;
 
 namespace PartyKing.Domain.Entities.Games.Resistance;
@@ -9,18 +11,7 @@ public partial class ResistanceGame
     public List<ResistancePlotCard> PlotCards { get; internal set; } = [];
 
     /// <summary>Switches the plot cards add-on on or off in the rules. Allowed until the game starts, open or not.</summary>
-    public ResistanceOutcome SetPlotCards(bool enabled)
-    {
-        if (IsStarted)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.PlotCardsLocked, this);
-        }
-
-        // Rules is a JSON column compared by reference, so assign a copy to have the change detected.
-        Rules = Rules.Clone(enabled);
-
-        return Succeeded();
-    }
+    public ResistanceOutcome SetPlotCards(bool enabled) => SwitchModule(ResistanceModule.PlotCards, enabled);
 
     /// <summary>
     /// The leader hands the cards drawn for this mission to the other players (every card but Establish Confidence,
@@ -43,7 +34,7 @@ public partial class ResistanceGame
             return ResistanceOutcome.Failed(ResistanceFailure.NotDealing, this);
         }
 
-        var toDeal = ResistanceRoles.CardsToDeal(this).ToDictionary(x => x.CardId);
+        var toDeal = ResistancePlotCardQueries.CardsToDeal(this).ToDictionary(x => x.CardId);
         if (assignments.Any(x => !toDeal.ContainsKey(x.CardId))
             || assignments.Select(x => x.CardId).Distinct().Count() != assignments.Count)
         {
@@ -64,7 +55,7 @@ public partial class ResistanceGame
         {
             var card = toDeal[assignment.CardId];
             // An Opinion Maker is played the moment it is dealt and stays face up
-            card.Location = card.Type == ResistancePlotCardType.OpinionMaker
+            card.Location = ResistancePlotCardBehaviors.For(card.Type).StartsInPlay
                 ? ResistancePlotCardLocation.InPlay
                 : ResistancePlotCardLocation.Hand;
             card.HolderPlayerId = assignment.PlayerId;
@@ -76,7 +67,7 @@ public partial class ResistanceGame
             kept.Location = ResistancePlotCardLocation.Hand;
         }
 
-        ResistanceRoles.AfterDeal(this);
+        ResistanceFlow.AfterDeal(this);
 
         return Succeeded();
     }
@@ -96,24 +87,20 @@ public partial class ResistanceGame
         }
 
         // Ownership first, so neither the error nor the phase check tells the type of someone else's card
-        var card = PlotCards.Find(x => x.CardId == cardId);
-        if (card is null || callerPlayerId is null || card.HolderPlayerId != callerPlayerId)
+        var card = OwnedCard(callerPlayerId, cardId);
+        if (card is null)
         {
             return ResistanceOutcome.Failed(ResistanceFailure.NotYourCard, this);
         }
 
-        var spotlight = card.Type == ResistancePlotCardType.InTheSpotlight;
-        if (spotlight && Phase != ResistancePhase.ConfidenceWindow)
+        // A card that is not played on a target is refused for its place only, whichever the phase is
+        var play = ResistancePlotCardBehaviors.For(card.Type) as IPlayedOnATargetBehavior;
+        if (Phase != (play?.PlayPhase ?? ResistancePhase.ResolvingCards))
         {
-            return ResistanceOutcome.Failed(ResistanceFailure.NotPlayingMission, this);
+            return ResistanceOutcome.Failed(play?.WrongPlayPhase ?? ResistanceFailure.NotResolving, this);
         }
 
-        if (!spotlight && Phase != ResistancePhase.ResolvingCards)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.NotResolving, this);
-        }
-
-        if (!(spotlight || ResistanceRoles.IsImmediate(card.Type))
+        if (play is null
             || card.Location is not (ResistancePlotCardLocation.Hand or ResistancePlotCardLocation.Played))
         {
             return ResistanceOutcome.Failed(ResistanceFailure.UnknownCard, this);
@@ -124,26 +111,17 @@ public partial class ResistanceGame
             return ResistanceOutcome.Failed(ResistanceFailure.CardState, this);
         }
 
-        if (spotlight && ResistanceRoles.OpenMissionPlayerId(this) is not null)
+        if (!play.CanBePlayed(this))
         {
-            // One player is forced open per mission
             return ResistanceOutcome.Failed(ResistanceFailure.CardState, this);
         }
 
-        var validTarget = card.Type switch
-        {
-            ResistancePlotCardType.OverheardConversation =>
-                ResistanceRoles.Neighbours(this, card.HolderPlayerId!.Value).Contains(targetPlayerId),
-            ResistancePlotCardType.InTheSpotlight =>
-                ResistanceRoles.CanBeForcedOpen(this, card.HolderPlayerId!.Value, targetPlayerId),
-            _ => targetPlayerId != card.HolderPlayerId && Players.Any(x => x.PlayerId == targetPlayerId),
-        };
-        if (!validTarget)
+        if (!play.IsValidTarget(this, card, targetPlayerId))
         {
             return ResistanceOutcome.Failed(ResistanceFailure.InvalidTarget, this);
         }
 
-        MarkPlayed(card, targetPlayerId, playedAt, confirmed: spotlight);
+        MarkPlayed(card, targetPlayerId, playedAt, confirmed: play.IsConfirmedOnPlay);
 
         return Succeeded();
     }
@@ -166,12 +144,12 @@ public partial class ResistanceGame
         // The holder and the viewer are the only ones who may ask about a card; anyone else learns nothing about it
         var card = PlotCards.Find(x => x.CardId == cardId);
         if (card is null || callerPlayerId is null
-            || (card.HolderPlayerId != callerPlayerId && ResistanceRoles.Viewer(card) != callerPlayerId))
+            || (card.HolderPlayerId != callerPlayerId && ResistancePlotCardQueries.Viewer(card) != callerPlayerId))
         {
             return ResistanceOutcome.Failed(ResistanceFailure.NotYourCard, this);
         }
 
-        if (!ResistanceRoles.IsImmediate(card.Type)
+        if (!ResistancePlotCardQueries.IsImmediate(card.Type)
             || card.Location is not (ResistancePlotCardLocation.Hand or ResistancePlotCardLocation.Played))
         {
             return ResistanceOutcome.Failed(ResistanceFailure.UnknownCard, this);
@@ -182,16 +160,13 @@ public partial class ResistanceGame
             return ResistanceOutcome.Failed(ResistanceFailure.CardState, this);
         }
 
-        if (ResistanceRoles.Viewer(card) != callerPlayerId)
+        if (ResistancePlotCardQueries.Viewer(card) != callerPlayerId)
         {
             return ResistanceOutcome.Failed(ResistanceFailure.NotYourCard, this);
         }
 
         card.IsConfirmed = true;
-        if (!ResistanceRoles.UnplayedImmediateCards(this).Any() && !ResistanceRoles.UnconfirmedCards(this).Any())
-        {
-            Phase = ResistancePhase.SelectingTeam;
-        }
+        ResistanceFlow.AfterConfirmation(this);
 
         return Succeeded();
     }
@@ -205,33 +180,15 @@ public partial class ResistanceGame
         Guid? callerPlayerId, int cardId, Guid targetPlayerId, bool? takeOpinionMaker, DateTimeOffset playedAt,
         Random random)
     {
-        if (Inactive() is { } inactive)
+        if (!TryGetPlayableCard(
+                callerPlayerId,
+                cardId,
+                ResistancePlotCardType.TakeResponsibility,
+                ResistancePhases.TakeResponsibility,
+                out var card,
+                out var refusal))
         {
-            return inactive;
-        }
-
-        // Ownership first, so a probe of someone else's card id learns nothing about it
-        var card = PlotCards.Find(x => x.CardId == cardId);
-        if (card is null || callerPlayerId is null || card.HolderPlayerId != callerPlayerId)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.NotYourCard, this);
-        }
-
-        if (card.Type != ResistancePlotCardType.TakeResponsibility
-            || card.Location is not (ResistancePlotCardLocation.Hand or ResistancePlotCardLocation.Played))
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.UnknownCard, this);
-        }
-
-        if (card.Location == ResistancePlotCardLocation.Played)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.CardState, this);
-        }
-
-        if (Phase is not (ResistancePhase.SelectingTeam or ResistancePhase.PlayingMission
-            or ResistancePhase.PeekWindow or ResistancePhase.MissionResult))
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.CardNotPlayableNow, this);
+            return refusal;
         }
 
         if (targetPlayerId == callerPlayerId || Players.All(x => x.PlayerId != targetPlayerId))
@@ -269,32 +226,15 @@ public partial class ResistanceGame
     /// </summary>
     public ResistanceOutcome TakeLead(Guid? callerPlayerId, int cardId, DateTimeOffset playedAt)
     {
-        if (Inactive() is { } inactive)
+        if (!TryGetPlayableCard(
+                callerPlayerId,
+                cardId,
+                ResistancePlotCardType.StrongLeader,
+                [ResistancePhase.LeaderWindow],
+                out var card,
+                out var refusal))
         {
-            return inactive;
-        }
-
-        // Ownership first, so a probe of someone else's card id learns nothing about it
-        var card = PlotCards.Find(x => x.CardId == cardId);
-        if (card is null || callerPlayerId is null || card.HolderPlayerId != callerPlayerId)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.NotYourCard, this);
-        }
-
-        if (card.Type != ResistancePlotCardType.StrongLeader
-            || card.Location is not (ResistancePlotCardLocation.Hand or ResistancePlotCardLocation.Played))
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.UnknownCard, this);
-        }
-
-        if (card.Location == ResistancePlotCardLocation.Played)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.CardState, this);
-        }
-
-        if (Phase != ResistancePhase.LeaderWindow)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.CardNotPlayableNow, this);
+            return refusal;
         }
 
         if (callerPlayerId == LeaderPlayerId)
@@ -305,7 +245,7 @@ public partial class ResistanceGame
 
         MarkPlayed(card, LeaderPlayerId, playedAt, confirmed: true);
         ChangeLeader(callerPlayerId);
-        ResistanceRoles.AfterWindow(this);
+        ResistanceFlow.AfterWindow(this);
 
         return Succeeded();
     }
@@ -317,35 +257,18 @@ public partial class ResistanceGame
     public ResistanceOutcome PeekMissionCard(
         Guid? callerPlayerId, int cardId, Guid targetPlayerId, DateTimeOffset playedAt)
     {
-        if (Inactive() is { } inactive)
+        if (!TryGetPlayableCard(
+                callerPlayerId,
+                cardId,
+                ResistancePlotCardType.KeepingCloseEye,
+                [ResistancePhase.PeekWindow],
+                out var card,
+                out var refusal))
         {
-            return inactive;
+            return refusal;
         }
 
-        // Ownership first, so a probe of someone else's card id learns nothing about it
-        var card = PlotCards.Find(x => x.CardId == cardId);
-        if (card is null || callerPlayerId is null || card.HolderPlayerId != callerPlayerId)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.NotYourCard, this);
-        }
-
-        if (card.Type != ResistancePlotCardType.KeepingCloseEye
-            || card.Location is not (ResistancePlotCardLocation.Hand or ResistancePlotCardLocation.Played))
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.UnknownCard, this);
-        }
-
-        if (card.Location == ResistancePlotCardLocation.Played)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.CardState, this);
-        }
-
-        if (Phase != ResistancePhase.PeekWindow)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.CardNotPlayableNow, this);
-        }
-
-        if (!ResistanceRoles.CanPeek(this, callerPlayerId.Value, targetPlayerId))
+        if (!ResistancePlotCardQueries.CanPeek(this, callerPlayerId!.Value, targetPlayerId))
         {
             return ResistanceOutcome.Failed(ResistanceFailure.InvalidTarget, this);
         }
@@ -361,32 +284,15 @@ public partial class ResistanceGame
     /// </summary>
     public ResistanceOutcome PlayNoConfidence(Guid? callerPlayerId, int cardId, DateTimeOffset playedAt)
     {
-        if (Inactive() is { } inactive)
+        if (!TryGetPlayableCard(
+                callerPlayerId,
+                cardId,
+                ResistancePlotCardType.NoConfidence,
+                [ResistancePhase.ConfidenceWindow],
+                out var card,
+                out var refusal))
         {
-            return inactive;
-        }
-
-        // Ownership first, so a probe of someone else's card id learns nothing about it
-        var card = PlotCards.Find(x => x.CardId == cardId);
-        if (card is null || callerPlayerId is null || card.HolderPlayerId != callerPlayerId)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.NotYourCard, this);
-        }
-
-        if (card.Type != ResistancePlotCardType.NoConfidence
-            || card.Location is not (ResistancePlotCardLocation.Hand or ResistancePlotCardLocation.Played))
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.UnknownCard, this);
-        }
-
-        if (card.Location == ResistancePlotCardLocation.Played)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.CardState, this);
-        }
-
-        if (Phase != ResistancePhase.ConfidenceWindow)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.CardNotPlayableNow, this);
+            return refusal;
         }
 
         MarkPlayed(card, LeaderPlayerId, playedAt, confirmed: true);
@@ -407,7 +313,7 @@ public partial class ResistanceGame
             spotlight.IsConfirmed = false;
         }
 
-        ResistanceRoles.RejectTeam(this);
+        ResistanceFlow.RejectTeam(this);
 
         return Succeeded();
     }
@@ -429,7 +335,7 @@ public partial class ResistanceGame
             return ResistanceOutcome.Failed(ResistanceFailure.NotPlayerToConfirm, this);
         }
 
-        if (!ResistanceRoles.IsConfirmationWindow(this))
+        if (!ResistancePhases.IsConfirmationWindow(Phase))
         {
             return ResistanceOutcome.Failed(ResistanceFailure.CardNotPlayableNow, this);
         }
@@ -437,10 +343,74 @@ public partial class ResistanceGame
         player.PassedLeaderWindow = true;
         if (Players.All(x => x.PassedLeaderWindow))
         {
-            ResistanceRoles.AfterWindow(this);
+            ResistanceFlow.AfterWindow(this);
         }
 
         return Succeeded();
+    }
+
+    /// <summary>The card of the caller, or null when there is no such card or it is someone else's (the two look the same).</summary>
+    private ResistancePlotCard? OwnedCard(Guid? callerPlayerId, int cardId)
+    {
+        var card = PlotCards.Find(x => x.CardId == cardId);
+
+        return card is null || callerPlayerId is null || card.HolderPlayerId != callerPlayerId ? null : card;
+    }
+
+    /// <summary>
+    /// The shared guard of the cards that have one step of their own. It refuses, in this order: a game that is not
+    /// running, a card that is not the caller's (first, so a probe of someone else's card id learns nothing about its
+    /// type, place or phase), a card of another type or not in a hand or played, a card already played, and a phase
+    /// that is not one of <paramref name="phases"/>. The target and what the card does are left to the caller.
+    /// </summary>
+    private bool TryGetPlayableCard(
+        Guid? callerPlayerId,
+        int cardId,
+        ResistancePlotCardType type,
+        IReadOnlyCollection<ResistancePhase> phases,
+        [NotNullWhen(true)] out ResistancePlotCard? card,
+        [NotNullWhen(false)] out ResistanceOutcome? refusal)
+    {
+        card = null;
+        refusal = Inactive();
+        if (refusal is not null)
+        {
+            return false;
+        }
+
+        var owned = OwnedCard(callerPlayerId, cardId);
+        if (owned is null)
+        {
+            refusal = ResistanceOutcome.Failed(ResistanceFailure.NotYourCard, this);
+
+            return false;
+        }
+
+        if (owned.Type != type
+            || owned.Location is not (ResistancePlotCardLocation.Hand or ResistancePlotCardLocation.Played))
+        {
+            refusal = ResistanceOutcome.Failed(ResistanceFailure.UnknownCard, this);
+
+            return false;
+        }
+
+        if (owned.Location == ResistancePlotCardLocation.Played)
+        {
+            refusal = ResistanceOutcome.Failed(ResistanceFailure.CardState, this);
+
+            return false;
+        }
+
+        if (!phases.Contains(Phase))
+        {
+            refusal = ResistanceOutcome.Failed(ResistanceFailure.CardNotPlayableNow, this);
+
+            return false;
+        }
+
+        card = owned;
+
+        return true;
     }
 
     private void MarkPlayed(ResistancePlotCard card, Guid? targetPlayerId, DateTimeOffset playedAt, bool confirmed)

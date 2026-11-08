@@ -97,7 +97,7 @@ public class ResistanceGameBlindSpiesTests
         rules.BlindSpiesEnabled = true;
 
         Assert.True(rules.Clone().BlindSpiesEnabled);
-        Assert.False(rules.Clone(blindSpiesEnabled: false).BlindSpiesEnabled);
+        Assert.False(ResistanceRules.Default().Clone().BlindSpiesEnabled);
     }
 
     /// <summary>The whole viewer x target table: a leak here is a security bug, so every pair is pinned.</summary>

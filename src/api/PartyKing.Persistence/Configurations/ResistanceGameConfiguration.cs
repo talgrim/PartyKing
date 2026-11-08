@@ -18,6 +18,16 @@ public class ResistanceGameConfiguration : IEntityTypeConfiguration<ResistanceGa
                 x => JsonSerializer.Serialize(x, (JsonSerializerOptions?)null),
                 x => JsonSerializer.Deserialize<ResistanceRules>(x, (JsonSerializerOptions?)null)!)
             .HasDefaultValue(ResistanceRules.Default());
+        // The state objects are columns of ResistanceGames: renaming a column name below needs a migration
+        // (ResistanceGameColumnsTests pins them).
+        builder.ComplexProperty(x => x.Inquisition, inquisition =>
+        {
+            inquisition.Property(x => x.HolderPlayerId).HasColumnName("InquisitorPlayerId");
+            inquisition.Property(x => x.ExaminerPlayerId).HasColumnName("InquisitionExaminerPlayerId");
+        });
+        builder.ComplexProperty(
+            x => x.DefectorDeck,
+            deck => deck.Property(x => x.Cards).HasColumnName("DefectorDeck"));
         builder
             .HasOne<Session>()
             .WithOne()

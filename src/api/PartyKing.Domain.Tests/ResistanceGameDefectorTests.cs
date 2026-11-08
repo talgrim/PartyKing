@@ -28,7 +28,7 @@ public class ResistanceGameDefectorTests
     private static List<ResistancePlayer> Defectors(ResistanceGame game) =>
         game.Players.Where(x => x.Character == ResistanceCharacter.Defector).ToList();
 
-    private static void NextMission(ResistanceGame game) => ResistanceRoles.PassLeadership(game);
+    private static void NextMission(ResistanceGame game) => ResistanceFlow.PassLeadership(game);
 
     [Fact]
     public void TheDefectorsAreOffByDefault_AndTheFlagsSurviveClone()
@@ -37,10 +37,14 @@ public class ResistanceGameDefectorTests
 
         Assert.False(rules.DefectorEnabled);
         Assert.False(rules.DefectorsKnowEachOther);
-        Assert.True(rules.Clone(defectorEnabled: true).DefectorEnabled);
-        Assert.False(rules.Clone(defectorEnabled: true).DefectorsKnowEachOther);
-        Assert.True(rules.Clone(defectorsKnowEachOther: true).DefectorsKnowEachOther);
-        Assert.True(rules.Clone(defectorEnabled: true, defectorsKnowEachOther: true).Clone().DefectorsKnowEachOther);
+
+        rules.DefectorEnabled = true;
+        var copy = rules.Clone();
+        Assert.True(copy.DefectorEnabled);
+        Assert.False(copy.DefectorsKnowEachOther);
+
+        rules.DefectorsKnowEachOther = true;
+        Assert.True(rules.Clone().Clone().DefectorsKnowEachOther);
     }
 
     [Fact]
@@ -92,9 +96,9 @@ public class ResistanceGameDefectorTests
             Assert.Equal(
                 [ResistanceRole.Resistance, ResistanceRole.Spy],
                 defectors.Select(x => x.Role!.Value).Order().ToArray());
-            Assert.Equal(5, game.DefectorDeck.Length);
-            Assert.Equal(3, game.DefectorDeck.Count(x => x == 'N'));
-            Assert.Equal(2, game.DefectorDeck.Count(x => x == 'C'));
+            Assert.Equal(5, game.DefectorDeck.Cards.Length);
+            Assert.Equal(3, game.DefectorDeck.Cards.Count(x => x == 'N'));
+            Assert.Equal(2, game.DefectorDeck.Cards.Count(x => x == 'C'));
             Assert.Empty(game.DefectorFlips);
         }
     }
@@ -102,7 +106,7 @@ public class ResistanceGameDefectorTests
     [Fact]
     public void Start_ShufflesTheDeck()
     {
-        var decks = Enumerable.Range(0, 40).Select(seed => StartedGame(5, seed).DefectorDeck).Distinct().ToList();
+        var decks = Enumerable.Range(0, 40).Select(seed => StartedGame(5, seed).DefectorDeck.Cards).Distinct().ToList();
 
         Assert.True(decks.Count > 3);
     }
@@ -113,7 +117,7 @@ public class ResistanceGameDefectorTests
         var game = StartedGame(6, 1, defector: false);
 
         Assert.Empty(Defectors(game));
-        Assert.Empty(game.DefectorDeck);
+        Assert.Empty(game.DefectorDeck.Cards);
         Assert.Empty(game.DefectorFlips);
     }
 
@@ -135,7 +139,7 @@ public class ResistanceGameDefectorTests
     public void TheFirstTwoMissions_FlipNothing_AndTheThirdTheFourthAndTheFifthFlipOneCardEach()
     {
         var game = StartedGame(5, 3);
-        game.DefectorDeck = "NNNCC";
+        game.DefectorDeck.Cards = "NNNCC";
 
         NextMission(game);
         Assert.Equal(2, game.MissionNumber);
@@ -156,7 +160,7 @@ public class ResistanceGameDefectorTests
     public void ChangeAllegiance_PutsBothDefectorsOnTheOtherSide_AndTheNextOneBack()
     {
         var game = StartedGame(5, 3);
-        game.DefectorDeck = "CCNNN";
+        game.DefectorDeck.Cards = "CCNNN";
         var spyDefector = Defectors(game).Single(x => x.Role == ResistanceRole.Spy);
         var resistanceDefector = Defectors(game).Single(x => x.Role == ResistanceRole.Resistance);
         var others = game.Players.Where(x => x.Character == ResistanceCharacter.Standard).Select(x => (x, x.Role)).ToList();
@@ -179,7 +183,7 @@ public class ResistanceGameDefectorTests
     public void ARejectedTeam_FlipsNoCard()
     {
         var game = StartedGame(5, 3);
-        game.DefectorDeck = "NNCCN";
+        game.DefectorDeck.Cards = "NNCCN";
         NextMission(game);
         NextMission(game);
         Assert.Equal([false], game.DefectorFlips);
@@ -202,7 +206,7 @@ public class ResistanceGameDefectorTests
     public void AfterASwitch_TheDefectorsPlayByTheirNewSide()
     {
         var game = StartedGame(5, 3);
-        game.DefectorDeck = "CNNNN";
+        game.DefectorDeck.Cards = "CNNNN";
         var formerSpy = Defectors(game).Single(x => x.Role == ResistanceRole.Spy);
         var formerResistance = Defectors(game).Single(x => x.Role == ResistanceRole.Resistance);
         NextMission(game);
@@ -223,18 +227,18 @@ public class ResistanceGameDefectorTests
     public void Restart_ClearsTheDeck_AndTheNextStartDealsANewOne()
     {
         var game = StartedGame(5, 3);
-        game.DefectorDeck = "NNNCC";
+        game.DefectorDeck.Cards = "NNNCC";
         game.Phase = ResistancePhase.GameOver;
 
         Assert.Null(game.Restart().Failure);
 
-        Assert.Empty(game.DefectorDeck);
+        Assert.Empty(game.DefectorDeck.Cards);
         Assert.Empty(game.DefectorFlips);
         Assert.All(game.Players, x => Assert.Equal(ResistanceCharacter.Standard, x.Character));
 
         game.IsOpen = true;
         Assert.Null(game.Start(Now, new Random(9)).Failure);
-        Assert.Equal(5, game.DefectorDeck.Length);
+        Assert.Equal(5, game.DefectorDeck.Cards.Length);
         Assert.Equal(2, Defectors(game).Count);
     }
 
@@ -250,7 +254,7 @@ public class ResistanceGameDefectorTests
     public void KnowsSpy_EveryViewerAndTarget_BeforeAndAfterTheSwitches(int switches)
     {
         var game = StartedGame(7, 4);
-        game.DefectorDeck = "CCNNN";
+        game.DefectorDeck.Cards = "CCNNN";
         var startedAsSpy = Defectors(game).Single(x => x.Role == ResistanceRole.Spy);
         var startedAsResistance = Defectors(game).Single(x => x.Role == ResistanceRole.Resistance);
         var standardSpies = game.Players
@@ -322,7 +326,7 @@ public class ResistanceGameDefectorTests
     public void KnowsDefector_StaysTrueAfterASwitch()
     {
         var game = StartedGame(5, 2, knowEachOther: true);
-        game.DefectorDeck = "CNNNN";
+        game.DefectorDeck.Cards = "CNNNN";
         NextMission(game);
         NextMission(game);
         var defectors = Defectors(game);

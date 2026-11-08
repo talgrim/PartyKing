@@ -5,7 +5,7 @@ namespace PartyKing.Application.Games.Services.Resistance;
 
 /// <summary>
 /// The errors of the Resistance game: the ones every action shares, and the error each <see cref="ResistanceFailure"/>
-/// becomes. Codes are matched by the UI.
+/// becomes. Codes are pinned by the tests; the UI shows the message.
 /// </summary>
 internal static class ResistanceErrors
 {
@@ -20,7 +20,7 @@ internal static class ResistanceErrors
 
     public static Error GameOver => Error.Conflict("Resistance.GameOver", "The game is over.");
 
-    /// <summary>The error of an action's outcome, or null when the action happened. Codes are matched by the UI.</summary>
+    /// <summary>The error of an action's outcome, or null when the action happened. Codes are pinned by the tests; the UI shows the message.</summary>
     public static Error? From(ResistanceOutcome outcome)
     {
         return outcome.Failure is { } failure ? From(failure, outcome.Game) : null;

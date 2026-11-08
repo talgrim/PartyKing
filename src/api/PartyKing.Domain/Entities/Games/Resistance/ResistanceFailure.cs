@@ -3,7 +3,7 @@ namespace PartyKing.Domain.Entities.Games.Resistance;
 /// <summary>
 /// Why a Resistance action did not happen. One member per distinct answer the caller gets: two actions that refuse
 /// for a similar reason in different words have their own member (for example the three "not a player" ones), because
-/// the error codes and messages built from them are matched by the UI.
+/// the error codes and messages built from them are pinned by the tests.
 /// </summary>
 public enum ResistanceFailure
 {

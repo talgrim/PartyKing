@@ -9,7 +9,7 @@ Aggregates raise domain events; handlers in Application react to them, mostly by
 - Ringo: `RingoStarted`, `RingoCardFlipped`, `RingoGameOver`, `RingoTurnPassed`.
 - Resistance: `ResistanceCreated`, `ResistanceStarted`, `ResistanceRestarted`, `ResistanceTeamSubmitted`, `ResistanceVoteCast`, `ResistanceTeamApproved`, `ResistanceTeamRejected`, `ResistanceMissionCardPlayed`, `ResistanceMissionCompleted`, `ResistanceLeaderChanged`, `ResistanceGameOver`, `ResistancePlotCardPlayed`, `ResistanceInquisitorTokenPassed` (who examined whom, never the loyalty), `ResistanceAssassinated` (which player the Assassin named, published when the game is over), plus the seat events (see `../games/resistance-implementation.md`) and the catch-all `ResistanceChanged`, which every successful action raises through `ResistanceGame.Succeeded()`.
 - No event carries a secret: `ResistanceVoteCast` names the voter, not the vote; `ResistanceMissionCardPlayed` not the card.
-- `ResistanceRoles` (static) raises through `game.Publish` and passes the lead with `game.ChangeLeader`.
+- `ResistanceFlow` and `ResistanceDealer` (static) raise through `game.Publish` and passes the lead with `game.ChangeLeader`.
 
 ## Dispatch
 

@@ -3,7 +3,7 @@ using PartyKing.Domain.Entities.Games.Resistance;
 namespace PartyKing.Domain.Tests;
 
 /// <summary>The rules that decide what a Resistance game shows to everybody.</summary>
-public class ResistanceRolesViewRulesTests
+public class ResistanceViewRulesTests
 {
     private static ResistanceGame NewGame(ResistancePhase phase, params bool?[] votes)
     {
@@ -32,7 +32,7 @@ public class ResistanceRolesViewRulesTests
     {
         var game = NewGame(phase, true, false, true);
 
-        Assert.Equal(expected, ResistanceRoles.VotesRevealed(game));
+        Assert.Equal(expected, ResistanceFlow.VotesRevealed(game));
     }
 
     [Theory]
@@ -43,20 +43,7 @@ public class ResistanceRolesViewRulesTests
     {
         var game = NewGame(phase, true, null, true);
 
-        Assert.False(ResistanceRoles.VotesRevealed(game));
-    }
-
-    // ---- IsConfirmationWindow ----
-
-    [Fact]
-    public void IsConfirmationWindow_IsTrueForExactlyTheThreeWindows()
-    {
-        var windows = new[] { ResistancePhase.LeaderWindow, ResistancePhase.ConfidenceWindow, ResistancePhase.PeekWindow };
-
-        foreach (var phase in Enum.GetValues<ResistancePhase>())
-        {
-            Assert.Equal(windows.Contains(phase), ResistanceRoles.IsConfirmationWindow(NewGame(phase)));
-        }
+        Assert.False(ResistanceFlow.VotesRevealed(game));
     }
 
     // ---- NeedsDealing ----
@@ -71,7 +58,7 @@ public class ResistanceRolesViewRulesTests
                 var expected = location == ResistancePlotCardLocation.Drawn
                                && type != ResistancePlotCardType.EstablishConfidence;
 
-                Assert.Equal(expected, ResistanceRoles.NeedsDealing(Card(type, location)));
+                Assert.Equal(expected, ResistancePlotCardQueries.NeedsDealing(Card(type, location)));
             }
         }
     }
@@ -88,7 +75,7 @@ public class ResistanceRolesViewRulesTests
             Card(ResistancePlotCardType.OpenUp, ResistancePlotCardLocation.Hand)
         ]);
 
-        Assert.Equal([toDeal], ResistanceRoles.CardsToDeal(game));
+        Assert.Equal([toDeal], ResistancePlotCardQueries.CardsToDeal(game));
     }
 
     // ---- OpinionMakerVotesRevealed ----
@@ -98,7 +85,7 @@ public class ResistanceRolesViewRulesTests
     {
         var game = NewGame(ResistancePhase.Voting, true, true, true);
 
-        Assert.False(ResistanceRoles.OpinionMakerVotesRevealed(game));
+        Assert.False(ResistancePlotCardQueries.OpinionMakerVotesRevealed(game));
     }
 
     [Fact]
@@ -108,7 +95,7 @@ public class ResistanceRolesViewRulesTests
         game.PlotCards.Add(Card(ResistancePlotCardType.OpinionMaker, ResistancePlotCardLocation.InPlay, game.Players[0].PlayerId));
         game.PlotCards.Add(Card(ResistancePlotCardType.OpinionMaker, ResistancePlotCardLocation.InPlay, game.Players[1].PlayerId));
 
-        Assert.False(ResistanceRoles.OpinionMakerVotesRevealed(game));
+        Assert.False(ResistancePlotCardQueries.OpinionMakerVotesRevealed(game));
     }
 
     [Fact]
@@ -118,7 +105,7 @@ public class ResistanceRolesViewRulesTests
         game.PlotCards.Add(Card(ResistancePlotCardType.OpinionMaker, ResistancePlotCardLocation.InPlay, game.Players[0].PlayerId));
         game.PlotCards.Add(Card(ResistancePlotCardType.OpinionMaker, ResistancePlotCardLocation.InPlay, game.Players[1].PlayerId));
 
-        Assert.True(ResistanceRoles.OpinionMakerVotesRevealed(game));
+        Assert.True(ResistancePlotCardQueries.OpinionMakerVotesRevealed(game));
     }
 
     [Fact]
@@ -127,6 +114,6 @@ public class ResistanceRolesViewRulesTests
         var game = NewGame(ResistancePhase.Voting, true, null);
         game.PlotCards.Add(Card(ResistancePlotCardType.OpinionMaker, ResistancePlotCardLocation.Hand, game.Players[1].PlayerId));
 
-        Assert.False(ResistanceRoles.OpinionMakerVotesRevealed(game));
+        Assert.False(ResistancePlotCardQueries.OpinionMakerVotesRevealed(game));
     }
 }

@@ -55,7 +55,7 @@ public partial class ResistanceGame
             player.MissionCard = null;
         }
 
-        Phase = ResistancePhase.Voting;
+        ResistanceFlow.StartVote(this);
         Raise(new ResistanceTeamSubmitted(SessionId, MissionNumber, LeaderPlayerId!.Value, playerIds.ToList()));
 
         return Succeeded();
@@ -84,7 +84,7 @@ public partial class ResistanceGame
             return ResistanceOutcome.Failed(ResistanceFailure.NotVoting, this);
         }
 
-        var opinionMakers = ResistanceRoles.OpinionMakerIds(this);
+        var opinionMakers = ResistancePlotCardQueries.OpinionMakerIds(this);
         if (opinionMakers.Contains(voter.PlayerId))
         {
             if (voter.Vote is not null)
@@ -101,7 +101,7 @@ public partial class ResistanceGame
         Raise(new ResistanceVoteCast(SessionId, voter.PlayerId));
         if (Players.All(x => x.Vote is not null))
         {
-            ResistanceRoles.ResolveVotes(this);
+            ResistanceFlow.ResolveVotes(this);
         }
 
         return Succeeded();
@@ -145,16 +145,16 @@ public partial class ResistanceGame
             return ResistanceOutcome.Failed(ResistanceFailure.MustSucceed, this);
         }
 
-        if (ReverserCardFailure(player, card) is { } reverserFailure)
+        if (ResistanceModules.MissionCardFailure(player, card) is { } cardFailure)
         {
-            return ResistanceOutcome.Failed(reverserFailure, this);
+            return ResistanceOutcome.Failed(cardFailure, this);
         }
 
         player.MissionCard = card;
         Raise(new ResistanceMissionCardPlayed(SessionId, player.PlayerId));
-        if (ResistanceRoles.AllCardsPlayed(this))
+        if (ResistanceFlow.AllCardsPlayed(this))
         {
-            ResistanceRoles.ResolveMission(this);
+            ResistanceFlow.ResolveMission(this);
         }
 
         return Succeeded();
@@ -182,7 +182,7 @@ public partial class ResistanceGame
             return ResistanceOutcome.Failed(ResistanceFailure.NothingToContinue, this);
         }
 
-        ResistanceRoles.PassLeadership(this);
+        ResistanceFlow.PassLeadership(this);
 
         return Succeeded();
     }

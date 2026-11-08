@@ -1,34 +1,17 @@
 namespace PartyKing.Domain.Entities.Games.Resistance;
 
-// The Defector module: see ResistanceRoles.Deal for the dealing, ResistanceRoles.BeginMission for the flips and
+// The Defector module: see ResistanceDealer.Deal for the dealing, DefectorModuleBehavior.OnMissionBegun for the flips and
 // ResistanceKnowledge.KnowsSpy for who knows whom.
 public partial class ResistanceGame
 {
-    /// <summary>The mission at whose start the first switch card is flipped (then one at each later mission).</summary>
-    public const int DefectorFirstFlipMission = 3;
+    /// <summary>Defector module: the secret switch deck. A column of the game, never null; only <see cref="DefectorFlips"/> leaves the Domain.</summary>
+    public ResistanceDefectorDeck DefectorDeck { get; internal set; } = new();
 
-    /// <summary>The cards in the switch deck: three No Change and two Change Allegiance.</summary>
-    internal const int DefectorDeckSize = 5;
-
-    /// <summary>
-    /// The shuffled switch deck as one character per card, top first: <c>N</c> for No Change, <c>C</c> for Change
-    /// Allegiance. Secret until a card is flipped, so only <see cref="DefectorFlips"/> leaves the Domain. Empty unless
-    /// the Defector module is played in a started game.
-    /// </summary>
-    public string DefectorDeck { get; internal set; } = string.Empty;
-
-    /// <summary>
-    /// The switch cards flipped so far, in order, true for Change Allegiance. Public: one card is flipped at the start
-    /// of each mission from <see cref="DefectorFirstFlipMission"/> on. The flips follow from the mission number, which
-    /// only advances together with the flip.
-    /// </summary>
-    public IReadOnlyList<bool> DefectorFlips => DefectorDeck
-        .Take(Math.Max(0, MissionNumber - DefectorFirstFlipMission + 1))
-        .Select(x => x == 'C')
-        .ToList();
+    /// <summary>The switch cards flipped so far, in order, true for Change Allegiance. Public.</summary>
+    public IReadOnlyList<bool> DefectorFlips => DefectorDeck.Flips(MissionNumber);
 
     /// <summary>Whether the Defectors are on the opposite side to the one they started on.</summary>
-    internal bool DefectorsSwitched => DefectorFlips.Count(x => x) % 2 == 1;
+    internal bool DefectorsSwitched => DefectorDeck.Switched(MissionNumber);
 
     /// <summary>
     /// Switches the Defector module on or off in the rules and, when <paramref name="defectorsKnowEachOther"/> is given,
@@ -37,19 +20,9 @@ public partial class ResistanceGame
     /// </summary>
     public ResistanceOutcome SetDefector(bool enabled, bool? defectorsKnowEachOther = null)
     {
-        if (IsStarted)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.DefectorLocked, this);
-        }
-
-        if (enabled && Rules.AssassinEnabled)
-        {
-            return ResistanceOutcome.Failed(ResistanceFailure.AssassinConflict, this);
-        }
-
-        // Rules is a JSON column compared by reference, so assign a copy to have the change detected.
-        Rules = Rules.Clone(defectorEnabled: enabled, defectorsKnowEachOther: defectorsKnowEachOther);
-
-        return Succeeded();
+        return SwitchModule(
+            ResistanceModule.Defector,
+            enabled,
+            x => x.DefectorsKnowEachOther = defectorsKnowEachOther ?? x.DefectorsKnowEachOther);
     }
 }

@@ -23,6 +23,11 @@
     </ItemGroup>
 
     <ItemGroup>
+        <!-- The snapshots of who knows whom (ResistanceKnowledgeMatrixTests) and of the phase flow of whole games (ResistanceFlowTraceTests) -->
+        <None Include="Golden\**" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
+    <ItemGroup>
         <!-- Only the Domain: these tests must not need Application, Infrastructure or a database -->
         <ProjectReference Include="..\PartyKing.Domain\PartyKing.Domain.csproj" />
     </ItemGroup>
