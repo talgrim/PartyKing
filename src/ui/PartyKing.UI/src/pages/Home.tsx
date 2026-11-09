@@ -6,6 +6,8 @@ import { AccountDialog } from '@/components/Account/AccountDialog';
 import { PageNavigation } from '@/components/common/PageNavigation';
 import { ROUTE_PATHS, sessionPath } from '@/router/constants';
 import { useAccount } from '@/service/endpoints/account/useAccount';
+import { accountApi } from '@/service/endpoints/account/accountApi';
+import { HTTP_STATUS_CODE } from '@/service/constants';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 
 /** Landing page: every session, with a search box that filters by code (or name). */
@@ -14,6 +16,16 @@ export const Home = (): ReactNode => {
   const [search, setSearch] = useState('');
   const { account, signedIn, signedOut } = useAccount();
   const [accountOpen, setAccountOpen] = useState(false);
+
+  // A failed request leaves the account shown, so it can be tried again; a lost login is the same as logged out
+  const logOut = async () => {
+    try {
+      await accountApi.logout();
+      signedOut();
+    } catch (error) {
+      if ((error as { status?: number })?.status === HTTP_STATUS_CODE.UNAUTHORIZED) signedOut();
+    }
+  };
 
   const { data: sessions, error } = useSWR('sessions', sessionsApi.getSessions, {
     refreshInterval: 10000,
@@ -31,7 +43,15 @@ export const Home = (): ReactNode => {
           className="px-2 pt-4"
           links={[
             ...(account?.role === 'Admin' ? [{ to: ROUTE_PATHS.ADMIN, label: t('home.adminPanel') }] : []),
-            { onClick: () => setAccountOpen(true), label: account ? account.username : t('account.logIn') },
+            account
+              ? {
+                  label: account.username,
+                  menu: [
+                    { label: t('account.settings'), onClick: () => setAccountOpen(true) },
+                    { label: t('account.logOut'), onClick: () => void logOut() },
+                  ],
+                }
+              : { onClick: () => setAccountOpen(true), label: t('account.logIn') },
           ]}
         />
         <AccountDialog

@@ -23,7 +23,10 @@ type Props = {
   signedOut: () => void;
 };
 
-/** Log in or sign up for a visitor; change password, log out (everywhere) and delete the account for a signed-in one. */
+/**
+ * Log in or sign up for a visitor; the settings of a signed-in account: change password, log out everywhere and delete
+ * the account. Logging out is in the menu of the username button.
+ */
 export const AccountDialog = ({ open, onClose, account, signedIn, signedOut }: Props): ReactNode => {
   const { t } = useTranslation();
 
@@ -42,7 +45,7 @@ export const AccountDialog = ({ open, onClose, account, signedIn, signedOut }: P
       // MUI's emotion styles are unlayered and beat Tailwind's layered utilities, hence the important modifier
       slotProps={{ paper: { className: 'bg-slate-800! text-slate-200! rounded-xl!' } }}
     >
-      <DialogTitle id="account-title" className="text-xl! font-semibold!">{account ? t('account.signedInAs', { name: account.username }) : t('account.title')}</DialogTitle>
+      <DialogTitle id="account-title" className="text-xl! font-semibold!">{account ? t('account.settings') : t('account.title')}</DialogTitle>
       <DialogContent>
         {account ? <SignedIn account={account} signedOut={signedOut} onClose={onClose} /> : <LogInOrSignUp onDone={done} />}
       </DialogContent>
@@ -118,12 +121,6 @@ const SignedIn = ({
     );
   };
 
-  const logOut = () =>
-    void run(accountApi.logout, () => {
-      signedOut();
-      onClose();
-    });
-
   const logOutEverywhere = () => {
     if (window.confirm(t('account.confirmLogOutEverywhere'))) {
       void run(accountApi.logoutEverywhere, () => {
@@ -146,6 +143,8 @@ const SignedIn = ({
 
   return (
     <div className="space-y-4 pt-1">
+      <p className="text-sm text-slate-400">{t('account.signedInAs', { name: account.username })}</p>
+
       <form className="space-y-2" onSubmit={changePassword}>
         <h3 className="text-sm font-semibold uppercase">{t('account.changePassword')}</h3>
         <input
@@ -185,9 +184,6 @@ const SignedIn = ({
       )}
 
       <div className="flex flex-wrap gap-2">
-        <button type="button" className={secondaryButton} disabled={busy} onClick={logOut}>
-          {t('account.logOut')}
-        </button>
         <button type="button" className={secondaryButton} disabled={busy} onClick={logOutEverywhere}>
           {t('account.logOutEverywhere')}
         </button>

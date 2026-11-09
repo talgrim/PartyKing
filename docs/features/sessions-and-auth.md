@@ -83,7 +83,7 @@ One `Accounts` table holds both. A **user** registers on the landing page (nothi
 
 ### UI
 
-- The landing page has a button (the username when signed in, else "Log in") that opens `AccountDialog`: log in / sign up tabs for a visitor; change password, log out, log out everywhere and (users only) delete account for a signed-in account.
+- The landing page has a button. For a visitor it reads "Log in" and opens `AccountDialog` (log in / sign up tabs). Signed in, it reads the username and drops a menu: "Account settings" opens the dialog (change password, log out everywhere and, users only, delete account) and "Log out" logs this browser out.
 - `useAccount` (`service/endpoints/account`) keeps who is signed in. A localStorage hint (`partyking.accountHint`) makes the landing page ask `GET /account/me` only for browsers that signed in before. The admin pages pass `alwaysCheck`, since they exist for signed-in accounts, and an account found sets the hint.
 - `/admin` shows the login form to a visitor, a "not an admin account" notice to a user, and the panel to an admin, who gets a link to `/admin/users`: a paged, searchable list (page size 20, search debounced 300 ms) with a reset-password dialog per user.
 
