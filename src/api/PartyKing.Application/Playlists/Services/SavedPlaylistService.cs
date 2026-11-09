@@ -2,7 +2,6 @@ using ErrorOr;
 using Microsoft.Extensions.Logging;
 using PartyKing.Application.Mappings;
 using PartyKing.Application.Playlists.Helpers;
-using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Application.System;
 using PartyKing.Contract.V1.Enums;
 using PartyKing.Contract.V1.Playlists;
@@ -32,7 +31,6 @@ internal class SavedPlaylistService : ISavedPlaylistService
 {
     private readonly ISavedPlaylistsRepository _savedPlaylistsRepository;
     private readonly IQueueRepository _queueRepository;
-    private readonly ISessionsRepository _sessionsRepository;
     private readonly IQueueSelection _queueSelection;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<SavedPlaylistService> _logger;
@@ -40,14 +38,12 @@ internal class SavedPlaylistService : ISavedPlaylistService
     public SavedPlaylistService(
         ISavedPlaylistsRepository savedPlaylistsRepository,
         IQueueRepository queueRepository,
-        ISessionsRepository sessionsRepository,
         IQueueSelection queueSelection,
         IDateTimeProvider dateTimeProvider,
         ILogger<SavedPlaylistService> logger)
     {
         _savedPlaylistsRepository = savedPlaylistsRepository;
         _queueRepository = queueRepository;
-        _sessionsRepository = sessionsRepository;
         _queueSelection = queueSelection;
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
@@ -60,14 +56,13 @@ internal class SavedPlaylistService : ISavedPlaylistService
         IReadOnlyCollection<PlaylistSection> sections,
         CancellationToken cancellationToken)
     {
-        if (await _sessionsRepository.GetAsync(sessionId, cancellationToken) is null)
-        {
-            return SessionErrors.NotFound();
-        }
+        var itemsTask = _queueRepository.GetAllAsync(sessionId, cancellationToken);
+        var ownerPlaylistCountTask = _savedPlaylistsRepository.CountByOwnerAsync(accountId, cancellationToken);
 
-        var items = await _queueRepository.GetAllAsync(sessionId, cancellationToken);
-        var songs = _queueSelection.Select(items, sections.Select(x => x.ToDomain()).ToList());
-        var ownerPlaylistCount = await _savedPlaylistsRepository.CountByOwnerAsync(accountId, cancellationToken);
+        await Task.WhenAll(itemsTask, ownerPlaylistCountTask);
+
+        var songs = _queueSelection.Select(itemsTask.Result, sections.Select(x => x.ToDomain()).ToList());
+        var ownerPlaylistCount = ownerPlaylistCountTask.Result;
 
         var creation = SavedPlaylist.Create(
             Guid.NewGuid(),
@@ -98,11 +93,6 @@ internal class SavedPlaylistService : ISavedPlaylistService
         Guid sessionId,
         CancellationToken cancellationToken)
     {
-        if (await _sessionsRepository.GetAsync(sessionId, cancellationToken) is null)
-        {
-            return SessionErrors.NotFound();
-        }
-
         var items = await _queueRepository.GetAllAsync(sessionId, cancellationToken);
 
         return new SavedPlaylistPreviewDto(_queueSelection.Count(items).Select(x => x.ToDto()).ToList());
