@@ -57,7 +57,7 @@ internal class SignedCookies : ISignedCookies
         // The lifetime is signed into the value, so a copied cookie can't be kept alive by editing its expiry
         context.Response.Cookies.Append(
             CookieNames.Account,
-            _accountProtector.Protect($"{identity.Id:N}:{identity.SecurityStamp:N}", lifetime),
+            _accountProtector.Protect($"{identity.Id:N}:{identity.SecurityStamp:N}:{identity.Role}", lifetime),
             GetOptions((int)lifetime.TotalSeconds, context));
     }
 
@@ -73,10 +73,11 @@ internal class SignedCookies : ISignedCookies
         return TryUnprotect(_userProtector, protectedValue, out profileId);
     }
 
-    public bool TryReadAccount(HttpRequest request, out Guid accountId, out Guid securityStamp)
+    public bool TryReadAccount(HttpRequest request, out Guid accountId, out Guid securityStamp, out AccountRole role)
     {
         accountId = Guid.Empty;
         securityStamp = Guid.Empty;
+        role = AccountRole.User;
 
         // An expired cookie fails to unprotect like a tampered one
         if (!request.Cookies.TryGetValue(CookieNames.Account, out var protectedValue)
@@ -85,9 +86,11 @@ internal class SignedCookies : ISignedCookies
             return false;
         }
 
-        return value.Split(':') is [var id, var stamp]
+        return value.Split(':') is [var id, var stamp, var roleName]
             && Guid.TryParseExact(id, "N", out accountId)
-            && Guid.TryParseExact(stamp, "N", out securityStamp);
+            && Guid.TryParseExact(stamp, "N", out securityStamp)
+            && Enum.TryParse(roleName, out role)
+            && Enum.IsDefined(role);
     }
 
     public void RevokeAccount(HttpContext context)

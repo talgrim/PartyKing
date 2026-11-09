@@ -41,7 +41,7 @@ public class AccountCookieAuthenticationHandler : AuthenticationHandler<CookieAu
 
     private async Task<AuthenticateResult> AuthenticateAsync()
     {
-        if (!_cookies.TryReadAccount(Request, out var accountId, out var securityStamp))
+        if (!_cookies.TryReadAccount(Request, out var accountId, out var securityStamp, out _))
         {
             return AuthenticateResult.Fail("Account cookie is missing or invalid");
         }
