@@ -21,17 +21,16 @@ public interface ISessionService
         CancellationToken cancellationToken);
 }
 
-internal class SessionService : ISessionService
+internal class SessionService : ManagerGuardedService, ISessionService
 {
     private readonly ISessionsRepository _sessionsRepository;
-    private readonly ISessionAuthorizer _authorizer;
 
     public SessionService(
         ISessionsRepository sessionsRepository,
         ISessionAuthorizer authorizer)
+        : base(authorizer)
     {
         _sessionsRepository = sessionsRepository;
-        _authorizer = authorizer;
     }
 
     public async Task<IReadOnlyList<SessionDto>> GetAllAsync(CancellationToken cancellationToken)
@@ -54,26 +53,23 @@ internal class SessionService : ISessionService
         SessionCaller caller,
         CancellationToken cancellationToken)
     {
-        return _authorizer.RunAsManagerAsync(
+        return RunAsManagerAsync(
             id,
             caller,
-            () => RenameCoreAsync(id, name, cancellationToken),
+            RenameAsyncCore,
             cancellationToken);
-    }
 
-    private async Task<ErrorOr<Success>> RenameCoreAsync(
-        Guid id,
-        string? name,
-        CancellationToken cancellationToken)
-    {
-        var result = await _sessionsRepository.RenameAsync(id, name, cancellationToken);
-
-        return result switch
+        async Task<ErrorOr<Success>> RenameAsyncCore()
         {
-            SessionRenameResult.Renamed => Result.Success,
-            SessionRenameResult.NameTooLong => SessionNamePolicy.ToError(SessionNameFailure.TooLong),
-            SessionRenameResult.NameEmpty => SessionNamePolicy.ToError(SessionNameFailure.Empty),
-            _ => SessionErrors.NotFound()
-        };
+            var result = await _sessionsRepository.RenameAsync(id, name, cancellationToken);
+
+            return result switch
+            {
+                SessionRenameResult.Renamed => Result.Success,
+                SessionRenameResult.NameTooLong => SessionNamePolicy.ToError(SessionNameFailure.TooLong),
+                SessionRenameResult.NameEmpty => SessionNamePolicy.ToError(SessionNameFailure.Empty),
+                _ => SessionErrors.NotFound()
+            };
+        }
     }
 }

@@ -1,4 +1,3 @@
-using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Application.Configuration;
 using ErrorOr;
 using Microsoft.Extensions.AI;
@@ -24,7 +23,7 @@ public interface INeverHaveIEverSuggestionService
         CancellationToken cancellationToken);
 }
 
-internal class NeverHaveIEverSuggestionService : INeverHaveIEverSuggestionService
+internal class NeverHaveIEverSuggestionService : ManagerGuardedService, INeverHaveIEverSuggestionService
 {
     internal const int Count = 5;
     internal const int MaxLength = 200;
@@ -65,7 +64,6 @@ internal class NeverHaveIEverSuggestionService : INeverHaveIEverSuggestionServic
             "Never have I ever woken up somewhere I didn't recognise.",
         ]);
 
-    private readonly ISessionAuthorizer _sessionAuthorizer;
     private readonly IChatClient _chatClient;
     private readonly LlmConfiguration _configuration;
     private readonly ILogger<NeverHaveIEverSuggestionService> _logger;
@@ -75,8 +73,8 @@ internal class NeverHaveIEverSuggestionService : INeverHaveIEverSuggestionServic
         IChatClient chatClient,
         IOptions<LlmConfiguration> configuration,
         ILogger<NeverHaveIEverSuggestionService> logger)
+        : base(sessionAuthorizer)
     {
-        _sessionAuthorizer = sessionAuthorizer;
         _chatClient = chatClient;
         _configuration = configuration.Value;
         _logger = logger;
@@ -88,24 +86,23 @@ internal class NeverHaveIEverSuggestionService : INeverHaveIEverSuggestionServic
         UiLanguage language,
         CancellationToken cancellationToken)
     {
-        return _sessionAuthorizer.RunAsManagerAsync(
+        return RunAsManagerAsync(
             sessionId,
             caller,
-            () => SuggestCoreAsync(sessionId, language, cancellationToken),
+            SuggestAsyncCore,
             cancellationToken);
-    }
 
-    private async Task<ErrorOr<GameSuggestionsDto>> SuggestCoreAsync(
-        Guid sessionId,
-        UiLanguage language,
-        CancellationToken cancellationToken)
-    {
-        var texts = language == UiLanguage.Pl ? Polish : English;
-        var suggestions = Parse(await AskAsync(texts, cancellationToken));
+        async Task<ErrorOr<GameSuggestionsDto>> SuggestAsyncCore()
+        {
+            var texts = language == UiLanguage.Pl ? Polish : English;
+            var suggestions = Parse(await AskAsync(texts, cancellationToken));
 
-        return suggestions.Count > 0
-            ? new GameSuggestionsDto(suggestions, FromFallback: false)
-            : new GameSuggestionsDto(texts.Fallback.OrderBy(_ => Random.Shared.Next()).Take(Count).ToList(), FromFallback: true);
+            return suggestions.Count > 0
+                ? new GameSuggestionsDto(suggestions, FromFallback: false)
+                : new GameSuggestionsDto(
+                    texts.Fallback.OrderBy(_ => Random.Shared.Next()).Take(Count).ToList(),
+                    FromFallback: true);
+        }
     }
 
     /// <summary>The model's raw answer; null when there is no key or the model could not be reached (quota, timeout, outage).</summary>

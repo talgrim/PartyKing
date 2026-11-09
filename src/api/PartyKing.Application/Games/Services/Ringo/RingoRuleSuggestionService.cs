@@ -1,4 +1,3 @@
-using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Application.Configuration;
 using ErrorOr;
 using Microsoft.Extensions.AI;
@@ -26,7 +25,7 @@ public interface IRingoRuleSuggestionService
         CancellationToken cancellationToken);
 }
 
-internal class RingoRuleSuggestionService : IRingoRuleSuggestionService
+internal class RingoRuleSuggestionService : ManagerGuardedService, IRingoRuleSuggestionService
 {
     internal const int Count = 5;
     internal const int MaxLength = 200;
@@ -72,7 +71,6 @@ internal class RingoRuleSuggestionService : IRingoRuleSuggestionService
             "Before every sip you must pay a compliment to the person on your right.",
         ]);
 
-    private readonly ISessionAuthorizer _sessionAuthorizer;
     private readonly IChatClient _chatClient;
     private readonly LlmConfiguration _configuration;
     private readonly ILogger<RingoRuleSuggestionService> _logger;
@@ -82,8 +80,8 @@ internal class RingoRuleSuggestionService : IRingoRuleSuggestionService
         IChatClient chatClient,
         IOptions<LlmConfiguration> configuration,
         ILogger<RingoRuleSuggestionService> logger)
+        : base(sessionAuthorizer)
     {
-        _sessionAuthorizer = sessionAuthorizer;
         _chatClient = chatClient;
         _configuration = configuration.Value;
         _logger = logger;
@@ -96,46 +94,48 @@ internal class RingoRuleSuggestionService : IRingoRuleSuggestionService
         UiLanguage language,
         CancellationToken cancellationToken)
     {
-        return _sessionAuthorizer.RunAsManagerAsync(
+        return RunAsManagerAsync(
             sessionId,
             caller,
-            () => SuggestCoreAsync(sessionId, previousRules, language, cancellationToken),
+            SuggestAsyncCore,
             cancellationToken);
-    }
 
-    private async Task<ErrorOr<GameSuggestionsDto>> SuggestCoreAsync(
-        Guid sessionId,
-        IReadOnlyList<string>? previousRules,
-        UiLanguage language,
-        CancellationToken cancellationToken)
-    {
-        // The list comes from the client and goes into the prompt, so it is bounded
-        previousRules ??= [];
-        if (previousRules.Count > MaxPreviousRules || previousRules.Any(rule => rule is null || rule.Length > MaxLength))
+        async Task<ErrorOr<GameSuggestionsDto>> SuggestAsyncCore()
         {
-            return Error.Validation(
-                "Ringo.InvalidPreviousRules",
-                $"At most {MaxPreviousRules} previous rules of up to {MaxLength} characters are accepted.");
+            // The list comes from the client and goes into the prompt, so it is bounded
+            previousRules ??= [];
+            if (previousRules.Count > MaxPreviousRules
+                || previousRules.Any(rule => rule is null || rule.Length > MaxLength))
+            {
+                return Error.Validation(
+                    "Ringo.InvalidPreviousRules",
+                    $"At most {MaxPreviousRules} previous rules of up to {MaxLength} characters are accepted.");
+            }
+
+            var previous = previousRules
+                .Select(rule => rule.Trim())
+                .Where(rule => rule.Length > 0)
+                .Distinct()
+                .ToList();
+            var isNew = (string rule) => !previous.Contains(rule, StringComparer.OrdinalIgnoreCase);
+
+            var texts = language == UiLanguage.Pl ? Polish : English;
+            var suggestions = SuggestionParser
+                .Parse(await AskAsync(texts, previous, cancellationToken), Count, MaxLength)
+                .Where(isNew)
+                .ToList();
+            if (suggestions.Count > 0)
+            {
+                return new GameSuggestionsDto(suggestions, FromFallback: false);
+            }
+
+            // Every built-in rule may already have been used; then the list is shown again rather than nothing
+            var fresh = texts.Fallback.Where(isNew).ToList();
+
+            return new GameSuggestionsDto(
+                (fresh.Count > 0 ? fresh : texts.Fallback).OrderBy(_ => Random.Shared.Next()).Take(Count).ToList(),
+                FromFallback: true);
         }
-
-        var previous = previousRules.Select(rule => rule.Trim()).Where(rule => rule.Length > 0).Distinct().ToList();
-        var isNew = (string rule) => !previous.Contains(rule, StringComparer.OrdinalIgnoreCase);
-
-        var texts = language == UiLanguage.Pl ? Polish : English;
-        var suggestions = SuggestionParser.Parse(await AskAsync(texts, previous, cancellationToken), Count, MaxLength)
-            .Where(isNew)
-            .ToList();
-        if (suggestions.Count > 0)
-        {
-            return new GameSuggestionsDto(suggestions, FromFallback: false);
-        }
-
-        // Every built-in rule may already have been used; then the list is shown again rather than nothing
-        var fresh = texts.Fallback.Where(isNew).ToList();
-
-        return new GameSuggestionsDto(
-            (fresh.Count > 0 ? fresh : texts.Fallback).OrderBy(_ => Random.Shared.Next()).Take(Count).ToList(),
-            FromFallback: true);
     }
 
     /// <summary>The model's raw answer; null when there is no key or the model could not be reached (quota, timeout, outage).</summary>
