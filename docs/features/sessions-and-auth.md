@@ -56,7 +56,7 @@
 
 ## Accounts (users and admins)
 
-One `Accounts` table holds both. A **user** registers on the landing page (nothing is attached to it yet: it identifies no host, guest or player); an **admin** is seeded from configuration. The role decides what the account may do.
+One `Accounts` table holds both. A **user** registers on the landing page (it identifies no host, guest or player; the only things attached to it are the playlists it saved from a session's queue, see `music.md`, which are deleted with the account); an **admin** is seeded from configuration. The role decides what the account may do.
 
 ### Domain and rules
 
