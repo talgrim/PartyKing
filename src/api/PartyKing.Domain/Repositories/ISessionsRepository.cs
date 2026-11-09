@@ -33,6 +33,28 @@ public interface ISessionsRepository
         int cursor,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Makes a saved playlist the fallback and rewinds it, replacing a Spotify one. The caller has checked that the
+    /// playlist exists and belongs to the account that chose it.
+    /// </summary>
+    Task<bool> SetFallbackSavedPlaylistAsync(
+        Guid id,
+        Guid savedPlaylistId,
+        string playlistName,
+        bool shuffle,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Like <see cref="SetFallbackCursorAsync"/> for a saved playlist: stores the cursor only while the session still
+    /// has <paramref name="savedPlaylistId"/> and is at <paramref name="expectedCursor"/>.
+    /// </summary>
+    Task<bool> SetFallbackSavedCursorAsync(
+        Guid id,
+        Guid savedPlaylistId,
+        int expectedCursor,
+        int cursor,
+        CancellationToken cancellationToken);
+
     /// <summary>Deletes the session together with its queue.</summary>
     Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken);
 

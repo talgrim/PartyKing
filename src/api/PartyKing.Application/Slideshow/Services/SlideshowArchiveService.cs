@@ -28,9 +28,8 @@ public interface ISlideshowArchiveService
         CancellationToken cancellationToken);
 }
 
-internal sealed class SlideshowArchiveService : ISlideshowArchiveService
+internal sealed class SlideshowArchiveService : ManagerGuardedService, ISlideshowArchiveService
 {
-    private readonly ISessionAuthorizer _authorizer;
     private readonly ISessionsRepository _sessionsRepository;
     private readonly ISlideshowImagesRepository _imagesRepository;
     private readonly SlideshowConfiguration _configuration;
@@ -40,8 +39,8 @@ internal sealed class SlideshowArchiveService : ISlideshowArchiveService
         ISessionsRepository sessionsRepository,
         ISlideshowImagesRepository imagesRepository,
         IOptions<SlideshowConfiguration> options)
+        : base(authorizer)
     {
-        _authorizer = authorizer;
         _sessionsRepository = sessionsRepository;
         _imagesRepository = imagesRepository;
         _configuration = options.Value;
@@ -52,7 +51,7 @@ internal sealed class SlideshowArchiveService : ISlideshowArchiveService
         SessionCaller caller,
         CancellationToken cancellationToken)
     {
-        return _authorizer.RunAsManagerAsync(
+        return RunAsManagerAsync(
             sessionId,
             caller,
             () => Task.FromResult<ErrorOr<SlideshowPhotoCountDto>>(new SlideshowPhotoCountDto
@@ -67,31 +66,31 @@ internal sealed class SlideshowArchiveService : ISlideshowArchiveService
         SessionCaller caller,
         CancellationToken cancellationToken)
     {
-        return _authorizer.RunAsManagerAsync(
+        return RunAsManagerAsync(
             sessionId,
             caller,
-            () => CreateArchiveCoreAsync(sessionId, cancellationToken),
+            CreateArchiveAsyncCore,
             cancellationToken);
-    }
 
-    private async Task<ErrorOr<SlideshowArchive>> CreateArchiveCoreAsync(
-        Guid sessionId,
-        CancellationToken cancellationToken)
-    {
-        var session = await _sessionsRepository.GetAsync(sessionId, cancellationToken);
-        if (session is null)
+        async Task<ErrorOr<SlideshowArchive>> CreateArchiveAsyncCore()
         {
-            return SessionErrors.NotFound();
-        }
+            var session = await _sessionsRepository.GetAsync(sessionId, cancellationToken);
+            if (session is null)
+            {
+                return SessionErrors.NotFound();
+            }
 
-        var path = await _imagesRepository.CreateSessionArchiveAsync(SessionDirectory(sessionId), cancellationToken);
-        if (path is null)
-        {
-            return Error.NotFound(description: "The session has no photos");
-        }
+            var path = await _imagesRepository.CreateSessionArchiveAsync(
+                SessionDirectory(sessionId),
+                cancellationToken);
+            if (path is null)
+            {
+                return Error.NotFound(description: "The session has no photos");
+            }
 
-        // The code is short and made of safe characters, unlike the name
-        return new SlideshowArchive(path, $"partyking-{session.Code}-photos.zip");
+            // The code is short and made of safe characters, unlike the name
+            return new SlideshowArchive(path, $"partyking-{session.Code}-photos.zip");
+        }
     }
 
     private string SessionDirectory(Guid sessionId) => $"{_configuration.UploadedPhotosDirectory}/{sessionId}";

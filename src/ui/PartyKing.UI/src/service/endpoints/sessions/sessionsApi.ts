@@ -65,6 +65,16 @@ export const sessionsApi = {
   setFallbackPlaylist: (sessionId: string, playlist: string | null, shuffle: boolean) =>
     unwrap<void>(axios.put(`/sessions/${sessionId}/fallback-playlist`, { playlist, shuffle }, { withCredentials: true })),
 
+  /**
+   * Host or admin who is signed in as the account that saved the playlist: makes it the playlist played when the
+   * queue is empty. Rejects with 401 without an account, 403 for anyone but the host or an admin and 404 for a
+   * playlist the account did not save.
+   */
+  setFallbackSavedPlaylist: (sessionId: string, playlistId: string, shuffle: boolean) =>
+    unwrap<void>(
+      axios.put(`/sessions/${sessionId}/fallback-saved-playlist`, { playlistId, shuffle }, { withCredentials: true }),
+    ),
+
   /** The playlists the logged-in host owns. Rejects with 403 for anyone but the host, 409 when the host must log in again. */
   getHostPlaylists: (sessionId: string) =>
     unwrap<PlaylistDto[]>(axios.get(`/sessions/${sessionId}/host-playlists`, { withCredentials: true })),

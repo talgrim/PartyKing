@@ -1,4 +1,3 @@
-using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Application.Ports;
 using PartyKing.Domain.Repositories;
 using ErrorOr;
@@ -30,13 +29,12 @@ public interface ILyricsService
         CancellationToken cancellationToken);
 }
 
-internal class LyricsService : ILyricsService
+internal class LyricsService : ManagerGuardedService, ILyricsService
 {
     private readonly IQueueRepository _queueRepository;
     private readonly ILrclibClient _lrclibClient;
     private readonly ILyricsCache _cache;
     private readonly ILyricsOffsetsRepository _offsetsRepository;
-    private readonly ISessionAuthorizer _sessionAuthorizer;
 
     public LyricsService(
         IQueueRepository queueRepository,
@@ -44,12 +42,12 @@ internal class LyricsService : ILyricsService
         ILyricsCache cache,
         ILyricsOffsetsRepository offsetsRepository,
         ISessionAuthorizer sessionAuthorizer)
+        : base(sessionAuthorizer)
     {
         _queueRepository = queueRepository;
         _lrclibClient = lrclibClient;
         _cache = cache;
         _offsetsRepository = offsetsRepository;
-        _sessionAuthorizer = sessionAuthorizer;
     }
 
     public async Task<ErrorOr<LyricsDto>> GetForPlayingSongAsync(Guid sessionId, CancellationToken cancellationToken)
@@ -91,35 +89,37 @@ internal class LyricsService : ILyricsService
         SessionCaller caller,
         CancellationToken cancellationToken)
     {
-        return _sessionAuthorizer.RunAsManagerAsync(
+        return RunAsManagerAsync(
             sessionId,
             caller,
-            () => SetOffsetCoreAsync(sessionId, offsetMs, cancellationToken),
+            SetOffsetAsyncCore,
             cancellationToken);
-    }
 
-    private async Task<ErrorOr<Success>> SetOffsetCoreAsync(
-        Guid sessionId,
-        int offsetMs,
-        CancellationToken cancellationToken)
-    {
-        // Refused before anything is looked up, like before; the rule is the aggregate's
-        var rangeFailure = LyricsOffset.Validate(offsetMs);
-        if (rangeFailure != LyricsOffsetFailure.None)
+        async Task<ErrorOr<Success>> SetOffsetAsyncCore()
         {
-            return ToError(rangeFailure);
+            // Refused before anything is looked up, like before; the rule is the aggregate's
+            var rangeFailure = LyricsOffset.Validate(offsetMs);
+            if (rangeFailure != LyricsOffsetFailure.None)
+            {
+                return ToError(rangeFailure);
+            }
+
+            var playing = await _queueRepository.GetPlayingAsync(sessionId, cancellationToken);
+            if (playing is null)
+            {
+                return Error.NotFound(description: "Nothing is playing");
+            }
+
+            // The push to the session's viewers is the handler of the LyricsOffsetChanged event
+            var failure = await _offsetsRepository.ChangeAsync(
+                playing.Url,
+                offsetMs,
+                sessionId,
+                playing.Id,
+                cancellationToken);
+
+            return failure == LyricsOffsetFailure.None ? Result.Success : ToError(failure);
         }
-
-        var playing = await _queueRepository.GetPlayingAsync(sessionId, cancellationToken);
-        if (playing is null)
-        {
-            return Error.NotFound(description: "Nothing is playing");
-        }
-
-        // The push to the session's viewers is the handler of the LyricsOffsetChanged event
-        var failure = await _offsetsRepository.ChangeAsync(playing.Url, offsetMs, sessionId, playing.Id, cancellationToken);
-
-        return failure == LyricsOffsetFailure.None ? Result.Success : ToError(failure);
     }
 
     private static Error ToError(LyricsOffsetFailure failure)

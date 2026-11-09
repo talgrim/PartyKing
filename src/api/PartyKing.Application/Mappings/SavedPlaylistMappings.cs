@@ -16,6 +16,8 @@ public static partial class SavedPlaylistMappings
 
     public static partial PlaylistSectionCountDto ToDto(this QueueSectionCount count);
 
+    public static partial SavedPlaylistDto ToDto(this SavedPlaylistSummary summary);
+
     [MapProperty(nameof(SavedPlaylist.Items) + "." + nameof(SavedPlaylist.Items.Count), nameof(SavedPlaylistDto.SongCount))]
     public static partial SavedPlaylistDto ToDto(this SavedPlaylist playlist);
 }

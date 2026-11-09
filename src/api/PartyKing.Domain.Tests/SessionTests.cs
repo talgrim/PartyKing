@@ -1,3 +1,5 @@
+using PartyKing.Domain.Entities.Playlists;
+using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Entities.Sessions;
 using PartyKing.Domain.Entities.Spotify;
 using PartyKing.Domain.Enums;
@@ -133,7 +135,7 @@ public class SessionTests
         session.SetFallbackPlaylist("second", "Second", shuffle: true);
 
         Assert.Equal(("second", "Second", true, 0), (session.FallbackPlaylistId, session.FallbackPlaylistName, session.FallbackShuffle, session.FallbackCursor));
-        Assert.Equal(new FallbackPlaylistChanged(session.Id, "first", "second"), Assert.Single(session.DrainEvents()));
+        Assert.Equal(new FallbackPlaylistChanged(session.Id, FallbackPlaylistKind.Spotify, "second", "first"), Assert.Single(session.DrainEvents()));
     }
 
     [Fact]
@@ -351,6 +353,209 @@ public class SessionTests
         var session = PlaylistSession(shuffle);
 
         Assert.Null(session.NextFallbackTrack([], null, new Random(1)));
+    }
+
+    private static readonly Guid SavedPlaylistId = Guid.NewGuid();
+
+    private static IReadOnlyList<SavedPlaylistItem> SavedSongs(params string[] urls)
+    {
+        var queue = urls
+            .Select((url, index) => new QueueItem(
+                Guid.NewGuid(),
+                index % 2 == 0 ? QueueItemSource.Youtube : QueueItemSource.Spotify,
+                url,
+                url,
+                null,
+                null,
+                null)
+            {
+                Id = index + 1
+            })
+            .ToList();
+
+        return SavedPlaylist.Create(Guid.NewGuid(), Guid.NewGuid(), "Mix", queue, 0, Now).Playlist!.Items;
+    }
+
+    private static Session SavedPlaylistSession(bool shuffle, int cursor = 0)
+    {
+        var session = NewSession();
+        session.SetFallbackSavedPlaylist(SavedPlaylistId, "Mix", shuffle);
+        session.FallbackCursor = cursor;
+        return session;
+    }
+
+    [Fact]
+    public void SetFallbackSavedPlaylist_RewindsItAndStoresItsIdWithTheSavedKind()
+    {
+        var session = NewSession();
+        session.SetFallbackSavedPlaylist(SavedPlaylistId, "First", shuffle: false);
+        session.FallbackCursor = 4;
+        session.DrainEvents();
+
+        session.SetFallbackSavedPlaylist(SavedPlaylistId, "Second", shuffle: true);
+
+        Assert.Equal(
+            (SavedPlaylistId.ToString(), FallbackPlaylistKind.Saved, SavedPlaylistId, "Second", true, 0),
+            (session.FallbackPlaylistId, session.FallbackPlaylistKind, session.FallbackSavedPlaylistId, session.FallbackPlaylistName, session.FallbackShuffle, session.FallbackCursor));
+        Assert.Equal(
+            new FallbackPlaylistChanged(session.Id, FallbackPlaylistKind.Saved, SavedPlaylistId.ToString(), null),
+            Assert.Single(session.DrainEvents()));
+    }
+
+    [Fact]
+    public void SetFallbackSavedPlaylist_ReplacesASpotifyPlaylist_AndNamesIt()
+    {
+        var session = NewSession();
+        session.SetFallbackPlaylist("spotify-1", "Spotify", shuffle: true);
+        session.DrainEvents();
+
+        session.SetFallbackSavedPlaylist(SavedPlaylistId, "Mine", shuffle: false);
+
+        Assert.Equal((SavedPlaylistId.ToString(), FallbackPlaylistKind.Saved), (session.FallbackPlaylistId, session.FallbackPlaylistKind));
+        Assert.Equal(SavedPlaylistId, session.FallbackSavedPlaylistId);
+        Assert.False(session.FallbackShuffle);
+        Assert.Equal(
+            new FallbackPlaylistChanged(session.Id, FallbackPlaylistKind.Saved, SavedPlaylistId.ToString(), "spotify-1"),
+            Assert.Single(session.DrainEvents()));
+    }
+
+    [Fact]
+    public void SetFallbackPlaylist_ReplacesASavedPlaylist()
+    {
+        var session = SavedPlaylistSession(shuffle: true, cursor: 3);
+        session.DrainEvents();
+
+        session.SetFallbackPlaylist("spotify-1", "Spotify", shuffle: false);
+
+        Assert.Null(session.FallbackSavedPlaylistId);
+        Assert.Equal(FallbackPlaylistKind.Spotify, session.FallbackPlaylistKind);
+        Assert.Equal(("spotify-1", "Spotify", false, 0), (session.FallbackPlaylistId, session.FallbackPlaylistName, session.FallbackShuffle, session.FallbackCursor));
+        Assert.Equal(new FallbackPlaylistChanged(session.Id, FallbackPlaylistKind.Spotify, "spotify-1", null), Assert.Single(session.DrainEvents()));
+    }
+
+    [Fact]
+    public void SetFallbackSavedPlaylist_WithoutAnIdOrAName_Throws()
+    {
+        var session = NewSession();
+
+        Assert.Throws<ArgumentException>(() => session.SetFallbackSavedPlaylist(Guid.Empty, "Mine", shuffle: false));
+        Assert.Throws<ArgumentException>(() => session.SetFallbackSavedPlaylist(SavedPlaylistId, " ", shuffle: false));
+        Assert.Null(session.FallbackSavedPlaylistId);
+        Assert.Empty(session.DrainEvents());
+    }
+
+    [Fact]
+    public void ClearFallbackPlaylist_OfASavedPlaylist_RaisesWithoutASpotifyId()
+    {
+        var session = SavedPlaylistSession(shuffle: true, cursor: 2);
+        session.DrainEvents();
+
+        session.ClearFallbackPlaylist();
+
+        Assert.Null(session.FallbackSavedPlaylistId);
+        Assert.Null(session.FallbackPlaylistId);
+        Assert.Null(session.FallbackPlaylistKind);
+        Assert.Null(session.FallbackPlaylistName);
+        Assert.False(session.FallbackShuffle);
+        Assert.Equal(0, session.FallbackCursor);
+        Assert.Equal(new FallbackPlaylistCleared(session.Id, null), Assert.Single(session.DrainEvents()));
+    }
+
+    [Fact]
+    public void Release_ClearsASavedPlaylistToo()
+    {
+        var session = SavedPlaylistSession(shuffle: false);
+        session.HostProfileId = "host-1";
+        session.DrainEvents();
+
+        session.Release();
+
+        Assert.Null(session.FallbackSavedPlaylistId);
+        Assert.Collection(
+            session.DrainEvents(),
+            first => Assert.Equal(new HostReleased(session.Id, "host-1"), first),
+            second => Assert.Equal(new FallbackPlaylistCleared(session.Id, null), second));
+    }
+
+    [Fact]
+    public void ASpotifyPlaylist_HasNoSavedPlaylistId_EvenWhenItsIdLooksLikeAGuid()
+    {
+        var session = NewSession();
+        session.SetFallbackPlaylist(SavedPlaylistId.ToString(), "Spotify", shuffle: false);
+
+        Assert.Equal(FallbackPlaylistKind.Spotify, session.FallbackPlaylistKind);
+        Assert.Null(session.FallbackSavedPlaylistId);
+    }
+
+    [Fact]
+    public void NextFallbackSavedSong_InOrder_TakesTheSongAtTheCursor_AndWrapsIt()
+    {
+        var songs = SavedSongs("a", "b", "c");
+
+        var middle = SavedPlaylistSession(shuffle: false, cursor: 1).NextFallbackSavedSong(songs, null, new Random(1));
+        var last = SavedPlaylistSession(shuffle: false, cursor: 2).NextFallbackSavedSong(songs, null, new Random(1));
+        var beyond = SavedPlaylistSession(shuffle: false, cursor: 7).NextFallbackSavedSong(songs, null, new Random(1));
+
+        Assert.Equal(("b", 2), (middle!.Song.Url, middle.NextCursor));
+        Assert.Equal(("c", 0), (last!.Song.Url, last.NextCursor));
+        Assert.Equal(("b", 2), (beyond!.Song.Url, beyond.NextCursor));
+    }
+
+    [Fact]
+    public void NextFallbackSavedSong_KeepsTheSourceOfTheSong()
+    {
+        var songs = SavedSongs("a", "b");
+
+        var first = SavedPlaylistSession(shuffle: false, cursor: 0).NextFallbackSavedSong(songs, null, new Random(1));
+        var second = SavedPlaylistSession(shuffle: false, cursor: 1).NextFallbackSavedSong(songs, null, new Random(1));
+
+        Assert.Equal(QueueItemSource.Youtube, first!.Song.Source);
+        Assert.Equal(QueueItemSource.Spotify, second!.Song.Source);
+    }
+
+    [Fact]
+    public void NextFallbackSavedSong_WhenShuffled_NeverPicksThePlayingSong_AndHasNoCursor()
+    {
+        var session = SavedPlaylistSession(shuffle: true);
+        var songs = SavedSongs("a", "b", "c");
+        var random = new Random(7);
+
+        var picked = Enumerable.Range(0, 100)
+            .Select(_ => session.NextFallbackSavedSong(songs, "a", random)!)
+            .ToList();
+
+        Assert.All(picked, x => Assert.Null(x.NextCursor));
+        Assert.Equal(["b", "c"], picked.Select(x => x.Song.Url).ToHashSet().Order());
+    }
+
+    [Fact]
+    public void NextFallbackSavedSong_WhenShuffledWithOnlyThePlayingSong_PicksItAnyway()
+    {
+        var session = SavedPlaylistSession(shuffle: true);
+
+        var pick = session.NextFallbackSavedSong(SavedSongs("a"), "a", new Random(1));
+
+        Assert.Equal("a", pick!.Song.Url);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void NextFallbackSavedSong_WithoutSongs_PicksNothing(bool shuffle)
+    {
+        var session = SavedPlaylistSession(shuffle);
+
+        Assert.Null(session.NextFallbackSavedSong([], null, new Random(1)));
+    }
+
+    [Fact]
+    public void NextFallbackSavedSong_DoesNotMoveTheCursorItself()
+    {
+        var session = SavedPlaylistSession(shuffle: false, cursor: 1);
+
+        session.NextFallbackSavedSong(SavedSongs("a", "b"), null, new Random(1));
+
+        Assert.Equal(1, session.FallbackCursor);
     }
 
     [Fact]

@@ -25,6 +25,30 @@ internal class SavedPlaylistsRepository : ISavedPlaylistsRepository
         return await dbContext.SavedPlaylists.CountAsync(x => x.OwnerAccountId == ownerAccountId, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<SavedPlaylistSummary>> ListByOwnerAsync(
+        Guid ownerAccountId,
+        CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _readerDbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        return await dbContext.SavedPlaylists
+            .Where(x => x.OwnerAccountId == ownerAccountId)
+            .OrderByDescending(x => x.CreatedAt)
+            .ThenBy(x => x.Name)
+            .Select(x => new SavedPlaylistSummary(x.Id, x.Name, x.CreatedAt, x.Items.Count))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<SavedPlaylist?> GetAsync(Guid id, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _readerDbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        return await dbContext.SavedPlaylists
+            .AsNoTracking()
+            .Include(x => x.Items.OrderBy(item => item.Position))
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+    }
+
     public async Task AddAsync(SavedPlaylist playlist, CancellationToken cancellationToken)
     {
         await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);

@@ -58,7 +58,7 @@ public class SavedPlaylistsRepositoryTests : IAsyncLifetime
         return account;
     }
 
-    private static SavedPlaylist NewPlaylist(Guid ownerId, string name = "Friday", int songs = 3)
+    private static SavedPlaylist NewPlaylist(Guid ownerId, string name = "Friday", int songs = 3, DateTime? createdAt = null)
     {
         var queue = Enumerable.Range(1, songs)
             .Select(x => new QueueItem(
@@ -74,7 +74,7 @@ public class SavedPlaylistsRepositoryTests : IAsyncLifetime
             })
             .ToList();
 
-        return SavedPlaylist.Create(Guid.NewGuid(), ownerId, name, queue, 0, Now).Playlist!;
+        return SavedPlaylist.Create(Guid.NewGuid(), ownerId, name, queue, 0, createdAt ?? Now).Playlist!;
     }
 
     private async Task<SavedPlaylist?> ReadAsync(Guid id)
@@ -125,6 +125,49 @@ public class SavedPlaylistsRepositoryTests : IAsyncLifetime
         Assert.Equal(2, await _repository.CountByOwnerAsync(_owner.Id, Ct));
         Assert.Equal(1, await _repository.CountByOwnerAsync(other.Id, Ct));
         Assert.Equal(0, await _repository.CountByOwnerAsync(Guid.NewGuid(), Ct));
+    }
+
+    [Fact]
+    public async Task ListByOwner_ReturnsOnlyThePlaylistsOfThatAccount_NewestFirst_WithTheirSongCount()
+    {
+        var other = await AddAccountAsync("bob");
+        await _repository.AddAsync(NewPlaylist(_owner.Id, "Old", songs: 1, createdAt: Now.AddDays(-2)), Ct);
+        await _repository.AddAsync(NewPlaylist(_owner.Id, "New", songs: 4, createdAt: Now), Ct);
+        await _repository.AddAsync(NewPlaylist(other.Id, "Theirs"), Ct);
+
+        var list = await _repository.ListByOwnerAsync(_owner.Id, Ct);
+
+        Assert.Equal([("New", 4), ("Old", 1)], list.Select(x => (x.Name, x.SongCount)));
+        Assert.Equal(Now, list[0].CreatedAt);
+    }
+
+    [Fact]
+    public async Task ListByOwner_OfAnAccountWithoutPlaylists_IsEmpty()
+    {
+        await _repository.AddAsync(NewPlaylist(_owner.Id), Ct);
+
+        Assert.Empty(await _repository.ListByOwnerAsync(Guid.NewGuid(), Ct));
+    }
+
+    [Fact]
+    public async Task Get_ReturnsThePlaylistWithItsSongsInTheSavedOrder()
+    {
+        var playlist = NewPlaylist(_owner.Id, songs: 5);
+        await _repository.AddAsync(playlist, Ct);
+
+        var read = await _repository.GetAsync(playlist.Id, Ct);
+
+        Assert.Equal(_owner.Id, read!.OwnerAccountId);
+        Assert.Equal(["url-1", "url-2", "url-3", "url-4", "url-5"], read.Items.Select(x => x.Url));
+        Assert.Equal(
+            [QueueItemSource.Spotify, QueueItemSource.Youtube, QueueItemSource.Spotify, QueueItemSource.Youtube, QueueItemSource.Spotify],
+            read.Items.Select(x => x.Source));
+    }
+
+    [Fact]
+    public async Task Get_OfAnUnknownPlaylist_IsNull()
+    {
+        Assert.Null(await _repository.GetAsync(Guid.NewGuid(), Ct));
     }
 
     [Fact]

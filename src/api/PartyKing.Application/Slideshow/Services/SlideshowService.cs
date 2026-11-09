@@ -8,7 +8,6 @@ using PartyKing.Application.Mappings;
 using PartyKing.Application.Realtime;
 using PartyKing.Application.Slideshow.Models;
 using PartyKing.Application.Sessions;
-using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.System;
 using PartyKing.Contract.V1.Slideshow;
@@ -64,12 +63,11 @@ public interface ISlideshowService
     Task RestartSlideAsync(Guid sessionId, CancellationToken cancellationToken);
 }
 
-internal class SlideshowService : ISlideshowService
+internal class SlideshowService : ManagerGuardedService, ISlideshowService
 {
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ISlideshowImagesRepository _imagesRepository;
     private readonly ISlideshowSettingsRepository _settingsRepository;
-    private readonly ISessionAuthorizer _sessionAuthorizer;
     private readonly SlideshowConfiguration _slideshowConfiguration;
     private readonly ISlideshowWatchers _watchers;
     private readonly ISlideshowScheduler _scheduler;
@@ -86,11 +84,11 @@ internal class SlideshowService : ISlideshowService
         ISlideshowWatchers watchers,
         ISlideshowScheduler scheduler,
         ISlideshowNotifier notifier)
+        : base(sessionAuthorizer)
     {
         _dateTimeProvider = dateTimeProvider;
         _imagesRepository = imagesRepository;
         _settingsRepository = settingsRepository;
-        _sessionAuthorizer = sessionAuthorizer;
         _slideshowConfiguration = slideshowSettingsOptions.Value;
         _watchers = watchers;
         _scheduler = scheduler;
@@ -110,7 +108,7 @@ internal class SlideshowService : ISlideshowService
         SessionCaller caller,
         CancellationToken cancellationToken)
     {
-        return _sessionAuthorizer.RunAsManagerAsync<SlideshowSettingsDto>(
+        return RunAsManagerAsync<SlideshowSettingsDto>(
             sessionId,
             caller,
             async () => (await LoadSettingsAsync(sessionId, cancellationToken)).ToDto(),
@@ -123,35 +121,32 @@ internal class SlideshowService : ISlideshowService
         SlideshowSettingsDto settings,
         CancellationToken cancellationToken)
     {
-        return _sessionAuthorizer.RunAsManagerAsync(
+        return RunAsManagerAsync(
             sessionId,
             caller,
-            () => ChangeSettingsAsync(sessionId, settings, cancellationToken),
+            UpdateSettingsAsyncCore,
             cancellationToken);
-    }
 
-    private async Task<ErrorOr<Success>> ChangeSettingsAsync(
-        Guid sessionId,
-        SlideshowSettingsDto settings,
-        CancellationToken cancellationToken)
-    {
-        // Refused before the row is read; the rule is the aggregate's
-        var rangeFailure = SlideshowSettings.ValidateSlideTime(settings.SlideTime);
-        if (rangeFailure != SlideshowSettingsFailure.None)
+        async Task<ErrorOr<Success>> UpdateSettingsAsyncCore()
         {
-            return ToError(rangeFailure);
+            // Refused before the row is read; the rule is the aggregate's
+            var rangeFailure = SlideshowSettings.ValidateSlideTime(settings.SlideTime);
+            if (rangeFailure != SlideshowSettingsFailure.None)
+            {
+                return ToError(rangeFailure);
+            }
+
+            // The slide on display is restarted by the handler of the SlideshowSettingsChanged event
+            var failure = await _settingsRepository.ChangeAsync(
+                sessionId,
+                settings.AutoRepeat,
+                settings.StartFromBeginning,
+                settings.SlideTime,
+                _slideshowConfiguration.SlideTime,
+                cancellationToken);
+
+            return failure == SlideshowSettingsFailure.None ? Result.Success : ToError(failure);
         }
-
-        // The slide on display is restarted by the handler of the SlideshowSettingsChanged event
-        var failure = await _settingsRepository.ChangeAsync(
-            sessionId,
-            settings.AutoRepeat,
-            settings.StartFromBeginning,
-            settings.SlideTime,
-            _slideshowConfiguration.SlideTime,
-            cancellationToken);
-
-        return failure == SlideshowSettingsFailure.None ? Result.Success : ToError(failure);
     }
 
     private static Error ToError(SlideshowSettingsFailure failure)
@@ -221,16 +216,18 @@ internal class SlideshowService : ISlideshowService
         string connectionId,
         CancellationToken cancellationToken)
     {
-        return _sessionAuthorizer.RunAsManagerAsync<Success>(
+        return RunAsManagerAsync(
             sessionId,
             caller,
-            async () =>
-            {
-                await StartWatchingAsync(sessionId, connectionId, cancellationToken);
-
-                return Result.Success;
-            },
+            WatchAsyncCore,
             cancellationToken);
+
+        async Task<ErrorOr<Success>> WatchAsyncCore()
+        {
+            await StartWatchingAsync(sessionId, connectionId, cancellationToken);
+
+            return Result.Success;
+        }
     }
 
     private async Task StartWatchingAsync(Guid sessionId, string connectionId, CancellationToken cancellationToken)

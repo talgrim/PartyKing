@@ -47,6 +47,34 @@ public class FallbackPlaylistController : CoreController
         return result.Match(_ => NoContent(), Problem);
     }
 
+    /// <summary>
+    /// Host or admin who is signed in as the account that saved the playlist: makes it the playlist played when the
+    /// queue is empty. 401 without an account, 403 for anyone but the host or an admin, 404 for a playlist the
+    /// account did not save.
+    /// </summary>
+    [HttpPut("sessions/{sessionId:guid}/fallback-saved-playlist")]
+    [RequireSessionAccess]
+    [AuthorizeAccount]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> SetFallbackSavedPlaylist(
+        Guid sessionId,
+        [FromBody] SetFallbackSavedPlaylistRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        // The host cookie is read from the request, so it doesn't matter that the account cookie authenticates here
+        var caller = await HttpContext.ReadSessionCallerAsync(_cookies);
+
+        var result = await _fallbackPlaylistService.SetSavedAsync(
+            sessionId,
+            request.PlaylistId,
+            request.Shuffle,
+            GetAccountId(),
+            caller,
+            cancellationToken);
+
+        return result.Match(_ => NoContent(), Problem);
+    }
+
     /// <summary>The playlists the logged-in host owns, to choose the fallback playlist from.</summary>
     [HttpGet("sessions/{sessionId:guid}/host-playlists")]
     [RequireSessionAccess]

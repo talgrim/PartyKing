@@ -17,6 +17,9 @@ export const playlistsApi = {
       axios.post(`/sessions/${sessionId}/saved-playlists`, { name, sections }, withCredentials),
     ),
 
+  /** Signed-in account only. The playlists the account saved, the newest first; rejects with 401 like `saveQueue`. */
+  list: () => unwrap<SavedPlaylistDto[]>(axios.get('/account/saved-playlists', withCredentials)),
+
   /** Signed-in account only. How many songs each part of the session's queue holds now; rejects with 401 like `saveQueue`. */
   getPreview: (sessionId: string) =>
     unwrap<SavedPlaylistPreviewDto>(axios.get(`/sessions/${sessionId}/saved-playlists/preview`, withCredentials)),

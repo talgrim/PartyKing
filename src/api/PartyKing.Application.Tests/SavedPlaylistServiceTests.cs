@@ -4,7 +4,6 @@ using PartyKing.Application.Playlists.Services;
 using PartyKing.Contract.V1.Enums;
 using PartyKing.Domain.Entities.Playlists;
 using PartyKing.Domain.Entities.Queue;
-using PartyKing.Domain.Entities.Sessions;
 using PartyKing.Domain.Enums;
 
 namespace PartyKing.Application.Tests;
@@ -22,29 +21,26 @@ public class SavedPlaylistServiceTests
         new FallbackSongsSpecification()
     ]);
 
-    private readonly FakeSessionsRepository _sessions = new();
     private readonly FakeQueueRepository _queue = new();
     private readonly FakeSavedPlaylistsRepository _playlists = new();
     private readonly FakeClock _clock = new();
     private readonly SavedPlaylistService _service;
-    private readonly Session _session;
+    private readonly Guid _sessionId = Guid.NewGuid();
 
     public SavedPlaylistServiceTests()
     {
         _service = new SavedPlaylistService(
             _playlists,
             _queue,
-            _sessions,
             Selection,
             _clock,
             NullLogger<SavedPlaylistService>.Instance);
-        _session = _sessions.AddSession();
     }
 
     private void AddSong(int id, QueueItemStatus status, bool isFallback = false)
     {
         _queue.AllSongs.Add(
-            new QueueItem(_session.Id, QueueItemSource.Spotify, $"spotify:track:{id}", $"Song {id}", "Artist", null, 1000, isFallback)
+            new QueueItem(_sessionId, QueueItemSource.Spotify, $"spotify:track:{id}", $"Song {id}", "Artist", null, 1000, isFallback)
             {
                 Id = id,
                 Status = status
@@ -66,7 +62,7 @@ public class SavedPlaylistServiceTests
 
         var result = await _service.SaveQueueAsync(
             AccountId,
-            _session.Id,
+            _sessionId,
             " Friday ",
             [PlaylistSection.Current, PlaylistSection.Queue],
             Ct);
@@ -83,11 +79,11 @@ public class SavedPlaylistServiceTests
     {
         AddSong(1, QueueItemStatus.Played);
         _queue.AllSongs.Add(
-            new QueueItem(_session.Id, QueueItemSource.Spotify, "spotify:track:1", "Again", null, null, null) { Id = 2 });
+            new QueueItem(_sessionId, QueueItemSource.Spotify, "spotify:track:1", "Again", null, null, null) { Id = 2 });
 
         var result = await _service.SaveQueueAsync(
             AccountId,
-            _session.Id,
+            _sessionId,
             "Friday",
             [PlaylistSection.History, PlaylistSection.Queue],
             Ct);
@@ -104,18 +100,9 @@ public class SavedPlaylistServiceTests
     {
         AddASession();
 
-        await _service.SaveQueueAsync(AccountId, _session.Id, "Friday", [PlaylistSection.Queue], Ct);
+        await _service.SaveQueueAsync(AccountId, _sessionId, "Friday", [PlaylistSection.Queue], Ct);
 
         Assert.Equal(_clock.UtcNow.UtcDateTime, Assert.Single(_playlists.Saved).CreatedAt);
-    }
-
-    [Fact]
-    public async Task Save_OfAnUnknownSession_IsNotFound()
-    {
-        var result = await _service.SaveQueueAsync(AccountId, Guid.NewGuid(), "Friday", [PlaylistSection.Queue], Ct);
-
-        Assert.Equal(ErrorType.NotFound, result.FirstError.Type);
-        Assert.Empty(_playlists.Saved);
     }
 
     [Fact]
@@ -123,7 +110,7 @@ public class SavedPlaylistServiceTests
     {
         AddASession();
 
-        var result = await _service.SaveQueueAsync(AccountId, _session.Id, "Friday", [], Ct);
+        var result = await _service.SaveQueueAsync(AccountId, _sessionId, "Friday", [], Ct);
 
         Assert.Equal(ErrorType.Validation, result.FirstError.Type);
         Assert.Empty(_playlists.Saved);
@@ -134,7 +121,7 @@ public class SavedPlaylistServiceTests
     {
         AddSong(1, QueueItemStatus.Queued);
 
-        var result = await _service.SaveQueueAsync(AccountId, _session.Id, "Friday", [PlaylistSection.History], Ct);
+        var result = await _service.SaveQueueAsync(AccountId, _sessionId, "Friday", [PlaylistSection.History], Ct);
 
         Assert.Equal(ErrorType.Validation, result.FirstError.Type);
         Assert.Empty(_playlists.Saved);
@@ -147,7 +134,7 @@ public class SavedPlaylistServiceTests
     {
         AddASession();
 
-        var result = await _service.SaveQueueAsync(AccountId, _session.Id, name, [PlaylistSection.Queue], Ct);
+        var result = await _service.SaveQueueAsync(AccountId, _sessionId, name, [PlaylistSection.Queue], Ct);
 
         Assert.Equal(ErrorType.Validation, result.FirstError.Type);
         Assert.Equal("The name must not be blank", result.FirstError.Description);
@@ -161,7 +148,7 @@ public class SavedPlaylistServiceTests
 
         var result = await _service.SaveQueueAsync(
             AccountId,
-            _session.Id,
+            _sessionId,
             new string('a', SavedPlaylist.MaxNameLength + 1),
             [PlaylistSection.Queue],
             Ct);
@@ -176,7 +163,7 @@ public class SavedPlaylistServiceTests
         AddASession();
         _playlists.OwnerPlaylistCount = SavedPlaylist.MaxPerAccount;
 
-        var result = await _service.SaveQueueAsync(AccountId, _session.Id, "Friday", [PlaylistSection.Queue], Ct);
+        var result = await _service.SaveQueueAsync(AccountId, _sessionId, "Friday", [PlaylistSection.Queue], Ct);
 
         Assert.Equal(ErrorType.Validation, result.FirstError.Type);
         Assert.Equal($"You can save at most {SavedPlaylist.MaxPerAccount} playlists", result.FirstError.Description);
@@ -188,7 +175,7 @@ public class SavedPlaylistServiceTests
     {
         AddASession();
 
-        var result = await _service.GetPreviewAsync(_session.Id, Ct);
+        var result = await _service.GetPreviewAsync(_sessionId, Ct);
 
         Assert.Equal(
             [
@@ -201,10 +188,35 @@ public class SavedPlaylistServiceTests
     }
 
     [Fact]
-    public async Task Preview_OfAnUnknownSession_IsNotFound()
+    public async Task Preview_OfAnEmptyQueue_CountsNothingInEverySection()
     {
-        var result = await _service.GetPreviewAsync(Guid.NewGuid(), Ct);
+        var result = await _service.GetPreviewAsync(_sessionId, Ct);
 
-        Assert.Equal(ErrorType.NotFound, result.FirstError.Type);
+        Assert.All(result.Value.Sections, x => Assert.Equal(0, x.Count));
+        Assert.Equal(4, result.Value.Sections.Count);
+    }
+
+    [Fact]
+    public async Task List_ReturnsOnlyThePlaylistsOfTheAccount_NewestFirst()
+    {
+        AddASession();
+        _clock.UtcNow = new DateTimeOffset(2026, 11, 9, 12, 0, 0, TimeSpan.Zero);
+        await _service.SaveQueueAsync(AccountId, _sessionId, "Old", [PlaylistSection.Queue], Ct);
+        _clock.UtcNow = _clock.UtcNow.AddDays(1);
+        await _service.SaveQueueAsync(AccountId, _sessionId, "New", [PlaylistSection.History, PlaylistSection.Queue], Ct);
+        await _service.SaveQueueAsync(Guid.NewGuid(), _sessionId, "Theirs", [PlaylistSection.Queue], Ct);
+
+        var result = await _service.ListAsync(AccountId, Ct);
+
+        Assert.Equal([("New", 2), ("Old", 1)], result.Value.Select(x => (x.Name, x.SongCount)));
+    }
+
+    [Fact]
+    public async Task List_OfAnAccountWithoutPlaylists_IsEmpty()
+    {
+        var result = await _service.ListAsync(AccountId, Ct);
+
+        Assert.False(result.IsError);
+        Assert.Empty(result.Value);
     }
 }

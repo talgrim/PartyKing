@@ -1,5 +1,6 @@
 using PartyKing.Contract.V1.Queue;
 using PartyKing.Contract.V1.Spotify;
+using PartyKing.Domain.Entities.Playlists;
 using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Entities.Spotify;
 using PartyKing.Domain.Enums;
@@ -21,6 +22,9 @@ public static partial class QueueMappings
     [MapProperty(nameof(Song.Name), nameof(QueueItem.Title))]
     [MapProperty(nameof(Song.ArtistsDisplay), nameof(QueueItem.Artists))]
     public static partial QueueItem ToQueueItem(this Song song, Guid sessionId, bool isFallback = false);
+
+    // A saved song keeps its source: it may be a YouTube link as well as a Spotify track
+    public static partial QueueItem ToQueueItem(this SavedPlaylistItem item, Guid sessionId, bool isFallback = false);
 
     [MapProperty(nameof(Song.ArtistsDisplay), nameof(SpotifyTrackDto.Artists))]
     public static partial SpotifyTrackDto ToDto(this Song song);

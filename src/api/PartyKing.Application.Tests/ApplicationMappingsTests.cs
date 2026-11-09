@@ -1,5 +1,6 @@
 using PartyKing.Application.Mappings;
 using PartyKing.Contract.V1.Enums;
+using PartyKing.Domain.Entities.Playlists;
 using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Entities.Sessions;
 using PartyKing.Domain.Entities.Slideshow;
@@ -35,6 +36,46 @@ public class ApplicationMappingsTests
         Assert.False(dto.HasHost);
         Assert.Null(dto.FallbackPlaylistName);
         Assert.False(dto.FallbackShuffle);
+    }
+
+    [Fact]
+    public void Session_ToDto_WithASavedPlaylistFallback_CarriesItsIdAndName()
+    {
+        var session = new Session(Guid.NewGuid(), "ABC123", "Party", "hash", DateTime.UtcNow);
+        var savedId = Guid.NewGuid();
+        session.SetFallbackSavedPlaylist(savedId, "Mine", shuffle: true);
+
+        var dto = session.ToDto();
+
+        Assert.Equal(savedId, dto.FallbackSavedPlaylistId);
+        Assert.Equal("Mine", dto.FallbackPlaylistName);
+        Assert.True(dto.FallbackShuffle);
+    }
+
+    [Fact]
+    public void SavedPlaylistSummary_ToDto_MapsEveryField()
+    {
+        var summary = new SavedPlaylistSummary(Guid.NewGuid(), "Friday", new DateTime(2026, 11, 9, 12, 0, 0, DateTimeKind.Utc), 7);
+
+        var dto = summary.ToDto();
+
+        Assert.Equal((summary.Id, "Friday", summary.CreatedAt, 7), (dto.Id, dto.Name, dto.CreatedAt, dto.SongCount));
+    }
+
+    [Theory]
+    [InlineData(QueueItemSource.Youtube, true)]
+    [InlineData(QueueItemSource.Spotify, false)]
+    public void SavedPlaylistItem_ToQueueItem_KeepsTheSongAndItsSource(QueueItemSource source, bool isFallback)
+    {
+        var sessionId = Guid.NewGuid();
+        var queue = new QueueItem(Guid.NewGuid(), source, "the-url", "Title", "Artists", "https://art", 4000) { Id = 1 };
+        var item = SavedPlaylist.Create(Guid.NewGuid(), Guid.NewGuid(), "Mix", [queue], 0, DateTime.UtcNow).Playlist!.Items.Single();
+
+        var mapped = item.ToQueueItem(sessionId, isFallback);
+
+        Assert.Equal((sessionId, source, "the-url", "Title", "Artists", "https://art", 4000), (mapped.SessionId, mapped.Source, mapped.Url, mapped.Title, mapped.Artists, mapped.AlbumArtUrl, mapped.DurationMs));
+        Assert.Equal(QueueItemStatus.Queued, mapped.Status);
+        Assert.Equal(isFallback, mapped.IsFallback);
     }
 
     [Fact]

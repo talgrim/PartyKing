@@ -19,6 +19,18 @@ internal sealed class MeteredSavedPlaylistsRepository : MeteredRepository, ISave
         return MeasureAsync(nameof(CountByOwnerAsync), () => _inner.CountByOwnerAsync(ownerAccountId, cancellationToken));
     }
 
+    public Task<IReadOnlyList<SavedPlaylistSummary>> ListByOwnerAsync(
+        Guid ownerAccountId,
+        CancellationToken cancellationToken)
+    {
+        return MeasureAsync(nameof(ListByOwnerAsync), () => _inner.ListByOwnerAsync(ownerAccountId, cancellationToken));
+    }
+
+    public Task<SavedPlaylist?> GetAsync(Guid id, CancellationToken cancellationToken)
+    {
+        return MeasureAsync(nameof(GetAsync), () => _inner.GetAsync(id, cancellationToken));
+    }
+
     public Task AddAsync(SavedPlaylist playlist, CancellationToken cancellationToken)
     {
         return MeasureAsync(nameof(AddAsync), () => _inner.AddAsync(playlist, cancellationToken));

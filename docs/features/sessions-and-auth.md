@@ -99,27 +99,27 @@ In Development and the e2e environment only (`IsDevelopmentOrE2e`), `DevPersonaM
 
 ### Aggregate
 
-- `Session` is an `AggregateRoot` with `internal set` properties. Actions: `Rename`, `ChangePassword`, `ClaimHost`, `Release`, `SetFallbackPlaylist`, `ClearFallbackPlaylist`; query `NextFallbackTrack`. Id and time are arguments (the services fill them from `Guid.NewGuid()` and `IDateTimeProvider`).
+- `Session` is an `AggregateRoot` with `internal set` properties. Actions: `Rename`, `ChangePassword`, `ClaimHost`, `Release`, `SetFallbackPlaylist`, `SetFallbackSavedPlaylist`, `ClearFallbackPlaylist`; queries `NextFallbackTrack` and `NextFallbackSavedSong`. Inside `Session` the `FallbackPlaylistKind` enum members are written `Enums.FallbackPlaylistKind.X`, because the property of the same name hides the type. Id and time are arguments (the services fill them from `Guid.NewGuid()` and `IDateTimeProvider`).
 - **Name rule**: `SessionNames` in Domain (trim, then at most 60 characters). `Session.Create(id, code, name, passwordHash, now)` falls back to "New session" for a blank name and refuses a long one with a `SessionCreation`. `Rename` returns a `SessionNameFailure` instead of throwing, and `ISessionsRepository.RenameAsync` a `SessionRenameResult`. `SessionNamePolicy` in Application only maps the failure to errors.
 - **Password rule**: the `SessionPassword` value object (4-100 characters; `Create` returns a `SessionPasswordCreation`; `CanMatch` is the pre-hash length guard of `JoinAsync`). `Session.AccessStamp` / `AccessStampOf(hash)` / `IsUnlockedBy(stamp)` hold the stamp rule.
 
 ### Events
 
-`SessionRenamed`, `SessionPasswordChanged` (no hash), `HostClaimed`, `HostReleased(PreviousHostProfileId)`, `SessionDeleted(HostProfileId, FallbackPlaylistId)`, `FallbackPlaylistChanged(PreviousPlaylistId, PlaylistId)` and `FallbackPlaylistCleared` (raised by `Release` too, and never when there was no playlist). In `Domain/Events/Sessions`.
+`SessionRenamed`, `SessionPasswordChanged` (no hash), `HostClaimed`, `HostReleased(PreviousHostProfileId)`, `SessionDeleted(HostProfileId, FallbackPlaylistId)` (a Spotify id only, a saved playlist has nothing to evict), `FallbackPlaylistChanged(Kind, PlaylistId, PreviousSpotifyPlaylistId)` (one event for both kinds; the previous id is there so the handler can evict the cached tracks of a Spotify playlist that was replaced, null when it was a saved one) and `FallbackPlaylistCleared(PreviousPlaylistId)` (raised by `Release` too, and never when there was no playlist; the id is null when a saved playlist was removed). In `Domain/Events/Sessions`.
 
 ### Repository
 
 - `SessionsRepository` takes `IDomainEventDispatcher`. Rename, password, fallback playlist and release load the session tracked, run the action, save and dispatch `DrainEvents()` with `CancellationToken.None`. There is no per-session lock; a session deleted under the save answers false.
 - `Session.HostProfileId` is a concurrency token: a save based on a stale host (a claim or release landed between the load and the save) matches no row, and `UpdateAsync` runs the action again on a fresh load, at most 3 attempts, then the `DbUpdateConcurrencyException` propagates (a 500). A release of a session that had no host still raises `HostReleased(null)`, which can drop the player state of a host who claimed right after (accepted).
 - Two writes stay plain SQL. `TryClaimAsync` loads the session untracked and lets `Session.ClaimHost(profileId)` decide (`HostClaimOutcome`: `Claimed`, `AlreadyHost` for the host logging in again, `HostedByAnother`; it raises `HostClaimed` only for a claim), then writes with a conditional `ExecuteUpdate` on `HostProfileId IS NULL`, which is what makes the first claim win (the unique index on the host still answers `ProfileHostsAnotherSession`); it dispatches the aggregate's events once that update matched a row. `DeleteAsync` raises `SessionDeleted` itself (reads host and playlist first, like `LobbyGamesRepository.DeleteAsync`).
-- `SetFallbackCursorAsync(id, playlistId, expectedCursor, cursor)` is bookkeeping and raises nothing. It is a compare-and-set on the playlist id and the cursor the pick was based on, so a playlist changed or rewound while the filler was reading Spotify keeps its new cursor.
+- `SetFallbackSavedPlaylistAsync` goes through `UpdateAsync` like the other fallback actions, so its event is dispatched. `SetFallbackCursorAsync(id, playlistId, expectedCursor, cursor)` and `SetFallbackSavedCursorAsync(id, savedPlaylistId, expectedCursor, cursor)` are bookkeeping and raise nothing. Each is a compare-and-set on the playlist id, the *kind* and the cursor the pick was based on, so a playlist changed or rewound while the filler was reading keeps its new cursor, and an id can never match across kinds.
 
 ### Handlers (`Application/Sessions/Handlers`)
 
 - `HostCleanupHandler` (`HostReleased`, `SessionDeleted` → `IHostSessionCleanup`).
 - `SlideshowCleanupHandler` (`SessionDeleted`).
 - `SessionDeletedPushHandler` (`SessionDeleted`, registered first). The cascade delete took the queue and the games, so clients still connected hear the existing pushes: `RingoChanged` / `ResistanceChanged` (each client fetches again and gets its 404), `ResistanceLobbyChanged`, and an empty `QueueAdvanced` that clears the song on display. The queue list follows with its next poll; a dedicated push is left for later.
-- `FallbackPlaylistHandler` (track cache, `FallbackStatusStore`, and `EnsureQueuedAsync` after a change; also on delete).
+- `FallbackPlaylistHandler` (track cache, which it evicts only for Spotify playlists, `FallbackStatusStore`, and `EnsureQueuedAsync` after a change; also on delete).
 - `SessionLogHandler`.
 - Because handler failures are only logged, a failed cleanup no longer fails the delete or release request. `SessionAdminService`, `SessionService` and `FallbackPlaylistService` do not clean up themselves.
 - Tests: `SessionTests`, `SessionsRepositoryEventsTests`, `SessionHandlersTests`; `FakeSessionsRepository` runs the real actions and dispatches to `Events` when set (`TestEvents.SessionDispatcher`).
