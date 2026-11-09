@@ -17,7 +17,7 @@ test('a visitor signs up, stays signed in after a reload, logs out and logs back
 
   await openAccountSettings(page, username);
   await expect(page.getByText(`Signed in as ${username}`)).toBeVisible();
-  await page.keyboard.press('Escape');
+  await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
   await expect(page.getByRole('dialog')).toBeHidden();
 
   await logOutFromTheMenu(page, username);
@@ -140,4 +140,18 @@ test('a user is not an admin: the admin panel turns them away', async ({ page })
 
   await expect(page.getByText(`You are signed in as ${username}, which is not an admin account.`)).toBeVisible();
   await expect(page.getByLabel('New session name')).toBeHidden();
+});
+
+test('the account button is on every page, not only the landing page', async ({ page }) => {
+  const username = uniqueUsername('everypage');
+  await signUpThroughTheDialog(page, username);
+
+  for (const path of ['/admin', '/admin/users', '/s/00000000-0000-0000-0000-000000000000']) {
+    await page.goto(path);
+    await expect(page.getByRole('button', { name: username })).toBeVisible();
+  }
+
+  // ...and what it opens works there too
+  await openAccountSettings(page, username);
+  await expect(page.getByText(`Signed in as ${username}`)).toBeVisible();
 });

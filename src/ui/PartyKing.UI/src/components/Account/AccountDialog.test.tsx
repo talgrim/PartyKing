@@ -30,6 +30,19 @@ describe('AccountDialog', () => {
     Object.values(mocks).forEach((mock) => mock.mockReset());
   });
 
+  it.each([
+    ['a visitor', null],
+    ['a signed-in account', user],
+  ])('has a close button for %s that closes the dialog without any other effect', async (_, account) => {
+    const props = setup(account);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+    expect(props.onClose).toHaveBeenCalledTimes(1);
+    expect(props.signedIn).not.toHaveBeenCalled();
+    expect(props.signedOut).not.toHaveBeenCalled();
+  });
+
   describe('for a visitor', () => {
     it('logs in with the typed credentials, then reports the login and closes', async () => {
       mocks.login.mockResolvedValue(undefined);
