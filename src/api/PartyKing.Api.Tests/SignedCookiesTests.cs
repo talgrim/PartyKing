@@ -154,9 +154,21 @@ public class SignedCookiesTests
 
         var request = GrantedAccount(cookies, identity, out _);
 
-        Assert.True(cookies.TryReadAccount(request, out var id, out var stamp));
+        Assert.True(cookies.TryReadAccount(request, out var id, out var stamp, out var role));
         Assert.Equal(identity.Id, id);
         Assert.Equal(identity.SecurityStamp, stamp);
+        Assert.Equal(AccountRole.User, role);
+    }
+
+    [Fact]
+    public void AnAdminsAccountCookie_CarriesTheAdminRole()
+    {
+        var cookies = Cookies();
+
+        var request = GrantedAccount(cookies, new AccountIdentity(Guid.NewGuid(), AccountRole.Admin, Guid.NewGuid()), out _);
+
+        Assert.True(cookies.TryReadAccount(request, out _, out _, out var role));
+        Assert.Equal(AccountRole.Admin, role);
     }
 
     [Fact]
@@ -187,13 +199,13 @@ public class SignedCookiesTests
         var request = new DefaultHttpContext().Request;
         request.Headers.Cookie = $"{CookieNames.Account}=made-up";
 
-        Assert.False(Cookies().TryReadAccount(request, out _, out _));
+        Assert.False(Cookies().TryReadAccount(request, out _, out _, out _));
     }
 
     [Fact]
     public void AMissingAccountCookie_IsNobody()
     {
-        Assert.False(Cookies().TryReadAccount(new DefaultHttpContext().Request, out _, out _));
+        Assert.False(Cookies().TryReadAccount(new DefaultHttpContext().Request, out _, out _, out _));
     }
 
     [Fact]
@@ -206,7 +218,7 @@ public class SignedCookiesTests
         var asAccount = new DefaultHttpContext().Request;
         asAccount.Headers.Cookie = $"{CookieNames.Account}={host.Cookies[CookieNames.User]}";
 
-        Assert.False(cookies.TryReadAccount(asAccount, out _, out _));
+        Assert.False(cookies.TryReadAccount(asAccount, out _, out _, out _));
     }
 
     [Fact]

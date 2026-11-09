@@ -125,6 +125,57 @@ public class AccountAuthenticationTests : IDisposable
         Assert.False(anonymous.IsAdmin);
     }
 
+    /// <summary>
+    /// The polled session endpoints (every game fetch) ask who the caller is, and every registered guest has an
+    /// account cookie: a user's cookie must cost no database read there.
+    /// </summary>
+    [Fact]
+    public async Task AUsersCookie_CostsNoLookup_WhenASessionAsksWhoTheCallerIs()
+    {
+        var user = SignedUp(AccountRole.User);
+
+        var caller = await RequestWith(user).ReadSessionCallerAsync(_cookies);
+
+        Assert.False(caller.IsAdmin);
+        Assert.Equal(0, _accounts.Validations);
+    }
+
+    [Fact]
+    public async Task NoCookie_CostsNoLookup_WhenASessionAsksWhoTheCallerIs()
+    {
+        await RequestWith(null).ReadSessionCallerAsync(_cookies);
+
+        Assert.Equal(0, _accounts.Validations);
+    }
+
+    [Fact]
+    public async Task AnAdminsCookie_IsStillCheckedAgainstTheDatabase_OncePerRequest()
+    {
+        var admin = SignedUp(AccountRole.Admin);
+        var http = RequestWith(admin);
+
+        var first = await http.ReadSessionCallerAsync(_cookies);
+        var second = await http.ReadSessionCallerAsync(_cookies);
+
+        Assert.True(first.IsAdmin);
+        Assert.True(second.IsAdmin);
+        Assert.Equal(1, _accounts.Validations);
+    }
+
+    [Fact]
+    public async Task AUsersCookie_IsNotAnAdmin_EvenWhenTheAccountIsAnAdminInTheDatabaseNow()
+    {
+        var user = SignedUp(AccountRole.User);
+        var http = RequestWith(user);
+        _accounts.Known.Remove(user);
+        _accounts.Known.Add(user with { Role = AccountRole.Admin });
+
+        var caller = await http.ReadSessionCallerAsync(_cookies);
+
+        // It takes a new login to carry the new role
+        Assert.False(caller.IsAdmin);
+    }
+
     [Fact]
     public async Task TheRoleIsTheOneTheAccountHasNow_NotTheOneInTheCookie()
     {
@@ -181,8 +232,15 @@ public class AccountAuthenticationTests : IDisposable
     {
         public List<AccountIdentity> Known { get; } = [];
 
-        public Task<AccountIdentity?> ValidateAsync(Guid accountId, Guid securityStamp, CancellationToken cancellationToken) =>
-            Task.FromResult(Known.FirstOrDefault(x => x.Id == accountId && x.SecurityStamp == securityStamp));
+        /// <summary>How many times the database would have been asked.</summary>
+        public int Validations { get; private set; }
+
+        public Task<AccountIdentity?> ValidateAsync(Guid accountId, Guid securityStamp, CancellationToken cancellationToken)
+        {
+            Validations++;
+
+            return Task.FromResult(Known.FirstOrDefault(x => x.Id == accountId && x.SecurityStamp == securityStamp));
+        }
 
         public Task<ErrorOr<AccountIdentity>> RegisterAsync(string? username, string? password, CancellationToken cancellationToken) =>
             throw new NotSupportedException();

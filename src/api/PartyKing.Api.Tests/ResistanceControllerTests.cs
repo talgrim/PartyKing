@@ -1,3 +1,4 @@
+using PartyKing.Domain.Entities.Auth;
 using PartyKing.Application.Accounts;
 using PartyKing.API.Cookies;
 using ErrorOr;
@@ -317,7 +318,14 @@ public class ResistanceControllerTests
         public void GrantHost(string profileId, HttpContext? httpContext) => throw new NotSupportedException();
         public void GrantSpotifyAccessToken(string spotifyAccessToken, int expiresIn, HttpContext? httpContext) => throw new NotSupportedException();
         public void GrantAccount(AccountIdentity identity, HttpContext? httpContext) => throw new NotSupportedException();
-        public bool TryReadAccount(HttpRequest request, out Guid accountId, out Guid securityStamp) => throw new NotSupportedException();
+        public bool TryReadAccount(HttpRequest request, out Guid accountId, out Guid securityStamp, out AccountRole role)
+        {
+            accountId = Guid.Empty;
+            securityStamp = Guid.Empty;
+            role = AccountRole.User;
+
+            return false;
+        }
         public void RevokeAccount(HttpContext? httpContext) => throw new NotSupportedException();
         public void GrantSessionAccess(Guid sessionId, string stamp, HttpContext? httpContext) => throw new NotSupportedException();
         public bool TryReadSessionAccess(HttpRequest request, Guid sessionId, out string stamp) => throw new NotSupportedException();
