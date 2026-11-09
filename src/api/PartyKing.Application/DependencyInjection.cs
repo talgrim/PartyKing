@@ -13,6 +13,7 @@ using PartyKing.Application.Games.Services.Resistance;
 using PartyKing.Application.Games.Services.Ringo;
 using PartyKing.Application.Lyrics.Handlers;
 using PartyKing.Application.Lyrics.Services;
+using PartyKing.Application.Playlists.Services;
 using PartyKing.Application.Player.Services;
 using PartyKing.Application.Queue.Handlers;
 using PartyKing.Application.Queue.Services;
@@ -23,6 +24,7 @@ using PartyKing.Application.Slideshow.Handlers;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Application.System;
+using PartyKing.Domain.Entities.Playlists;
 using PartyKing.Domain.Events;
 using PartyKing.Domain.Events.Games.Base;
 using PartyKing.Domain.Events.Games.Resistance;
@@ -220,6 +222,14 @@ public static class DependencyInjection
         services.AddScoped<IQueueService, QueueService>();
         services.AddScoped<IFallbackQueueFiller, FallbackQueueFiller>();
         services.AddScoped<IQueueAdvancer, QueueAdvancer>();
+        services.AddScoped<ISavedPlaylistService, SavedPlaylistService>();
+
+        // One specification per QueueSection; QueueSelection refuses to be built without exactly one for each
+        services.AddSingleton<IQueueSectionSpecification, PlayedSongsSpecification>();
+        services.AddSingleton<IQueueSectionSpecification, PlayingSongSpecification>();
+        services.AddSingleton<IQueueSectionSpecification, WaitingSongsSpecification>();
+        services.AddSingleton<IQueueSectionSpecification, FallbackSongsSpecification>();
+        services.AddSingleton<IQueueSelection, QueueSelection>();
 
         // Handlers run in registration order: the pushes first, then the refill whose own SongQueued push follows
         services.AddDomainEventHandler<SongQueued, QueuePushHandler>();
