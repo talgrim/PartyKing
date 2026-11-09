@@ -104,7 +104,7 @@ public class PartyKingDbContextBase : DbContext
     public DbSet<SpotifyProfile> SpotifyProfiles { get; set; } = null!;
     public DbSet<QueueItem> QueueItems { get; set; } = null!;
     public DbSet<Session> Sessions { get; set; } = null!;
-    public DbSet<AdminAccount> AdminAccounts { get; set; } = null!;
+    public DbSet<Account> Accounts { get; set; } = null!;
     public DbSet<OAuthState> OAuthStates { get; set; } = null!;
     public DbSet<LyricsOffset> LyricsOffsets { get; set; } = null!;
     public DbSet<RingoGame> RingoGames { get; set; } = null!;
