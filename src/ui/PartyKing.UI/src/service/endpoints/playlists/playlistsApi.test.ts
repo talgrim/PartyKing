@@ -18,6 +18,16 @@ describe('playlistsApi', () => {
     expect(saved.songCount).toBe(3);
   });
 
+  it('lists the playlists of the account, with the account cookie', async () => {
+    const playlists = [{ id: 'p1', name: 'Friday', createdAt: '', songCount: 3 }];
+    vi.mocked(axios.get).mockResolvedValue(playlists);
+
+    const listed = await playlistsApi.list();
+
+    expect(axios.get).toHaveBeenCalledWith('/account/saved-playlists', { withCredentials: true });
+    expect(listed).toEqual(playlists);
+  });
+
   it('asks how many songs each section holds, with the account cookie', async () => {
     vi.mocked(axios.get).mockResolvedValue({ sections: [{ section: 0, count: 4 }] });
 
