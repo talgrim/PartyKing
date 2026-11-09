@@ -1,8 +1,10 @@
 import { ReactNode, useState } from 'react';
 import { SessionDto } from '@/service/endpoints/sessions/types';
+import { useAccount } from '@/service/endpoints/account/useAccount';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 import { JoinQrCode } from './JoinQrCode';
 import { OpenGamesMenu } from './OpenGamesMenu';
+import { SaveQueueAsPlaylist } from './SaveQueueAsPlaylist';
 import { SessionSettings } from './SessionSettings';
 import { useTranslation } from 'react-i18next';
 
@@ -17,11 +19,12 @@ type Props = {
 };
 
 /**
- * Card with the session name (the open games menu for everyone, the QR code and settings icons for the host and admins), its code, and either who the host
- * is or the login that makes the visitor the host.
+ * Card with the session name (the open games menu for everyone, the save-as-playlist icon for signed-in accounts, the QR code and settings icons for
+ * the host and admins), its code, and either who the host is or the login that makes the visitor the host.
  */
 export const SessionHeader = ({ session, isHost, isAdmin = false, onSessionChanged }: Props): ReactNode => {
   const { t } = useTranslation();
+  const { account } = useAccount();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,6 +50,7 @@ export const SessionHeader = ({ session, isHost, isAdmin = false, onSessionChang
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <OpenGamesMenu sessionId={session.id} canManage={isHost || isAdmin} />
+          {account && <SaveQueueAsPlaylist sessionId={session.id} sessionName={session.name} />}
           {(isHost || isAdmin) && (
             <>
               <JoinQrCode sessionId={session.id} />
