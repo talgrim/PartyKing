@@ -7,25 +7,36 @@ namespace PartyKing.Application.Tests;
 
 public class MeteredRepositoryTests
 {
-    private sealed class FakeAdminAccountsRepository : IAdminAccountsRepository
+    private sealed class FakeAccountsRepository : IAccountsRepository
     {
         public Exception? Failure { get; init; }
 
-        public Task<bool> AnyAsync(CancellationToken cancellationToken) =>
+        public Task<bool> AnyAdminAsync(CancellationToken cancellationToken) =>
             Failure is null ? Task.FromResult(true) : throw Failure;
 
-        public Task<AdminAccount?> GetByUsernameAsync(string username, CancellationToken cancellationToken) =>
-            Task.FromResult<AdminAccount?>(null);
+        public Task<Account?> GetByUsernameAsync(string username, CancellationToken cancellationToken) =>
+            Task.FromResult<Account?>(null);
 
-        public Task<AdminAccount?> GetAsync(Guid id, CancellationToken cancellationToken) =>
-            Task.FromResult<AdminAccount?>(null);
+        public Task<Account?> GetAsync(Guid id, CancellationToken cancellationToken) =>
+            Task.FromResult<Account?>(null);
 
-        public Task AddAsync(AdminAccount account, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task<bool> TryAddAsync(Account account, CancellationToken cancellationToken) => Task.FromResult(true);
+
+        public Task<bool> ChangePasswordAsync(Guid id, string passwordHash, Guid newSecurityStamp, CancellationToken cancellationToken) =>
+            Task.FromResult(true);
+
+        public Task<bool> SignOutEverywhereAsync(Guid id, Guid newSecurityStamp, CancellationToken cancellationToken) =>
+            Task.FromResult(true);
+
+        public Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken) => Task.FromResult(true);
+
+        public Task<AccountPage> GetUsersPageAsync(string? search, int page, int pageSize, CancellationToken cancellationToken) =>
+            Task.FromResult(new AccountPage([], 0));
     }
 
     private static List<Dictionary<string, object?>> Capture(
-        IAdminAccountsRepository inner,
-        Func<IAdminAccountsRepository, Task> act)
+        IAccountsRepository inner,
+        Func<IAccountsRepository, Task> act)
     {
         var tagSets = new List<Dictionary<string, object?>>();
         using var metrics = new RepositoryMetrics();
@@ -43,7 +54,7 @@ public class MeteredRepositoryTests
 
         try
         {
-            act(new MeteredAdminAccountsRepository(inner, metrics)).GetAwaiter().GetResult();
+            act(new MeteredAccountsRepository(inner, metrics)).GetAwaiter().GetResult();
         }
         catch (InvalidOperationException)
         {
@@ -53,40 +64,40 @@ public class MeteredRepositoryTests
     }
 
     [Fact]
-    public void AnyAsync_OnSuccess_RecordsRepositoryOperationAndOutcome()
+    public void AnyAdminAsync_OnSuccess_RecordsRepositoryOperationAndOutcome()
     {
-        var tags = Assert.Single(Capture(new FakeAdminAccountsRepository(), r => r.AnyAsync(default)));
+        var tags = Assert.Single(Capture(new FakeAccountsRepository(), r => r.AnyAdminAsync(default)));
 
-        Assert.Equal("AdminAccountsRepository", tags["repository"]);
-        Assert.Equal("AnyAsync", tags["operation"]);
+        Assert.Equal("AccountsRepository", tags["repository"]);
+        Assert.Equal("AnyAdminAsync", tags["operation"]);
         Assert.Equal(RepositoryMetrics.SuccessOutcome, tags["outcome"]);
     }
 
     [Fact]
-    public void AddAsync_WithoutAResult_RecordsTheCall()
+    public void TryAddAsync_RecordsTheCall()
     {
-        var tags = Assert.Single(Capture(new FakeAdminAccountsRepository(), r => r.AddAsync(new AdminAccount(Guid.NewGuid(), "admin", "hash"), default)));
+        var tags = Assert.Single(Capture(new FakeAccountsRepository(), r => r.TryAddAsync(Account.Create(Guid.NewGuid(), "admin", "hash", AccountRole.Admin, Guid.NewGuid(), DateTime.UtcNow).Account!, default)));
 
-        Assert.Equal("AddAsync", tags["operation"]);
+        Assert.Equal("TryAddAsync", tags["operation"]);
         Assert.Equal(RepositoryMetrics.SuccessOutcome, tags["outcome"]);
     }
 
     [Fact]
-    public void AnyAsync_WhenTheInnerCallThrows_RecordsAnExceptionOutcome()
+    public void AnyAdminAsync_WhenTheInnerCallThrows_RecordsAnExceptionOutcome()
     {
-        var inner = new FakeAdminAccountsRepository { Failure = new InvalidOperationException("boom") };
+        var inner = new FakeAccountsRepository { Failure = new InvalidOperationException("boom") };
 
-        var tags = Assert.Single(Capture(inner, r => r.AnyAsync(default)));
+        var tags = Assert.Single(Capture(inner, r => r.AnyAdminAsync(default)));
 
         Assert.Equal(RepositoryMetrics.ExceptionOutcome, tags["outcome"]);
     }
 
     [Fact]
-    public async Task AnyAsync_ReturnsTheInnerResult()
+    public async Task AnyAdminAsync_ReturnsTheInnerResult()
     {
         using var metrics = new RepositoryMetrics();
-        var repository = new MeteredAdminAccountsRepository(new FakeAdminAccountsRepository(), metrics);
+        var repository = new MeteredAccountsRepository(new FakeAccountsRepository(), metrics);
 
-        Assert.True(await repository.AnyAsync(default));
+        Assert.True(await repository.AnyAdminAsync(default));
     }
 }

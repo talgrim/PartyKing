@@ -1,5 +1,5 @@
 using ErrorOr;
-using PartyKing.Application.Admin.Services;
+using PartyKing.Application.Accounts.Services;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Sessions;
 

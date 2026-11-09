@@ -2,7 +2,7 @@ using PartyKing.Application.Configuration;
 using PartyKing.Application.Ports;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using PartyKing.Application.Admin.Services;
+using PartyKing.Application.Accounts.Services;
 using PartyKing.Application.Games.Services.NeverHaveIEver;
 using PartyKing.Application.Localization;
 using PartyKing.Application.Sessions.Services;
