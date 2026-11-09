@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 
-namespace PartyKing.Application.Admin.Services;
+namespace PartyKing.Application.Accounts.Services;
 
 public interface IPasswordHasher
 {
@@ -25,6 +25,12 @@ public class PasswordHasher : IPasswordHasher
     /// password guards only a slideshow and a queue. The iteration count is stored in the hash, so old hashes still verify.
     /// </summary>
     public const int SessionIterations = 100_000;
+
+    /// <summary>
+    /// For user accounts: a login and a registration pay one hash each, and a party guest's account guards little, so
+    /// this sits between the session and the admin cost (about 19 ms against 56 ms on a desktop CPU).
+    /// </summary>
+    public const int UserIterations = 200_000;
 
     public string Hash(string password, int iterations = AdminIterations)
     {

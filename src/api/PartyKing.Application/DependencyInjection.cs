@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using PartyKing.Application.Admin.Services;
+using PartyKing.Application.Accounts.Services;
 using PartyKing.Application.Configuration;
 using PartyKing.Application.Events;
 using PartyKing.Application.Games.Handlers;
@@ -48,14 +48,14 @@ public static class DependencyInjection
         services.RegisterLyrics();
         services.RegisterGames(configuration);
         services.RegisterSessions();
-        services.RegisterAdmin(configuration);
+        services.RegisterAccounts(configuration);
     }
 
     /// <summary>Creates the first admin account from configuration when none exists.</summary>
     public static async Task SeedAdminAsync(this IServiceProvider services)
     {
         await using var scope = services.CreateAsyncScope();
-        await scope.ServiceProvider.GetRequiredService<IAdminService>().SeedAsync(CancellationToken.None);
+        await scope.ServiceProvider.GetRequiredService<IAdminSeeder>().SeedAsync(CancellationToken.None);
     }
 
     private static void RegisterSessions(this IServiceCollection services)
@@ -85,11 +85,13 @@ public static class DependencyInjection
         services.AddDomainEventHandler<SessionDeleted, SessionLogHandler>();
     }
 
-    private static void RegisterAdmin(this IServiceCollection services, IConfiguration configuration)
+    private static void RegisterAccounts(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
-        services.AddSingleton<AdminDummyHash>();
-        services.AddScoped<IAdminService, AdminService>();
+        services.AddSingleton<AccountDummyHash>();
+        services.AddScoped<IAccountService, AccountService>();
+        services.AddScoped<IAccountAdminService, AccountAdminService>();
+        services.AddScoped<IAdminSeeder, AdminSeeder>();
         services.Configure<AdminConfiguration>(configuration.GetSection(AdminConfiguration.SectionName));
     }
 
