@@ -23,6 +23,9 @@ public interface ISavedPlaylistService
         IReadOnlyCollection<PlaylistSection> sections,
         CancellationToken cancellationToken);
 
+    /// <summary>The playlists the account saved, the newest first. Only the account's own are ever listed.</summary>
+    Task<ErrorOr<IReadOnlyList<SavedPlaylistDto>>> ListAsync(Guid accountId, CancellationToken cancellationToken);
+
     /// <summary>How many songs every part of the session's queue holds now.</summary>
     Task<ErrorOr<SavedPlaylistPreviewDto>> GetPreviewAsync(Guid sessionId, CancellationToken cancellationToken);
 }
@@ -87,6 +90,15 @@ internal class SavedPlaylistService : ISavedPlaylistService
             creation.Playlist.Id);
 
         return creation.Playlist.ToDto();
+    }
+
+    public async Task<ErrorOr<IReadOnlyList<SavedPlaylistDto>>> ListAsync(
+        Guid accountId,
+        CancellationToken cancellationToken)
+    {
+        var playlists = await _savedPlaylistsRepository.ListByOwnerAsync(accountId, cancellationToken);
+
+        return playlists.Select(x => x.ToDto()).ToList();
     }
 
     public async Task<ErrorOr<SavedPlaylistPreviewDto>> GetPreviewAsync(

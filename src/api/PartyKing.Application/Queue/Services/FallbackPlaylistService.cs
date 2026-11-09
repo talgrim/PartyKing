@@ -23,6 +23,19 @@ public interface IFallbackPlaylistService
         SessionCaller caller,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Makes a saved playlist of the account the playlist played whenever the queue is empty. Only the host
+    /// (<paramref name="caller"/>) or an admin may, and the playlist must be one of the account's own: another
+    /// account's playlist is reported as not found.
+    /// </summary>
+    Task<ErrorOr<Success>> SetSavedAsync(
+        Guid sessionId,
+        Guid savedPlaylistId,
+        bool shuffle,
+        Guid accountId,
+        SessionCaller caller,
+        CancellationToken cancellationToken);
+
     /// <summary>The playlists the host owns, to choose from. Forbidden unless <paramref name="profileId"/> hosts the session.</summary>
     Task<ErrorOr<IReadOnlyList<PlaylistDto>>> GetHostPlaylistsAsync(
         Guid sessionId,
@@ -36,17 +49,20 @@ internal class FallbackPlaylistService : IFallbackPlaylistService
     private readonly ISessionsRepository _sessionsRepository;
     private readonly ISpotifyIntegrationClient _spotifyClient;
     private readonly IHostTokenProvider _hostTokenProvider;
+    private readonly ISavedPlaylistsRepository _savedPlaylistsRepository;
 
     public FallbackPlaylistService(
         ISessionAuthorizer sessionAuthorizer,
         ISessionsRepository sessionsRepository,
         ISpotifyIntegrationClient spotifyClient,
-        IHostTokenProvider hostTokenProvider)
+        IHostTokenProvider hostTokenProvider,
+        ISavedPlaylistsRepository savedPlaylistsRepository)
     {
         _sessionAuthorizer = sessionAuthorizer;
         _sessionsRepository = sessionsRepository;
         _spotifyClient = spotifyClient;
         _hostTokenProvider = hostTokenProvider;
+        _savedPlaylistsRepository = savedPlaylistsRepository;
     }
 
     public Task<ErrorOr<Success>> SetAsync(
@@ -112,6 +128,48 @@ internal class FallbackPlaylistService : IFallbackPlaylistService
         await _sessionsRepository.SetFallbackPlaylistAsync(sessionId, found.Id, found.Name, shuffle, cancellationToken);
 
         return Result.Success;
+    }
+
+    public Task<ErrorOr<Success>> SetSavedAsync(
+        Guid sessionId,
+        Guid savedPlaylistId,
+        bool shuffle,
+        Guid accountId,
+        SessionCaller caller,
+        CancellationToken cancellationToken)
+    {
+        return _sessionAuthorizer.RunAsManagerAsync(
+            sessionId,
+            caller,
+            () => SetSavedCoreAsync(sessionId, savedPlaylistId, shuffle, accountId, cancellationToken),
+            cancellationToken);
+    }
+
+    private async Task<ErrorOr<Success>> SetSavedCoreAsync(
+        Guid sessionId,
+        Guid savedPlaylistId,
+        bool shuffle,
+        Guid accountId,
+        CancellationToken cancellationToken)
+    {
+        // Looking among the account's own playlists is the ownership check: someone else's is just not found
+        var playlists = await _savedPlaylistsRepository.ListByOwnerAsync(accountId, cancellationToken);
+        var chosen = playlists.FirstOrDefault(x => x.Id == savedPlaylistId);
+        if (chosen is null)
+        {
+            return Error.NotFound(description: "The playlist was not found");
+        }
+
+        // The cached tracks of a Spotify playlist it replaces, the old error and the first song are the
+        // FallbackPlaylistChanged handler's job
+        var stored = await _sessionsRepository.SetFallbackSavedPlaylistAsync(
+            sessionId,
+            chosen.Id,
+            chosen.Name,
+            shuffle,
+            cancellationToken);
+
+        return stored ? Result.Success : SessionErrors.NotFound();
     }
 
     public async Task<ErrorOr<IReadOnlyList<PlaylistDto>>> GetHostPlaylistsAsync(
