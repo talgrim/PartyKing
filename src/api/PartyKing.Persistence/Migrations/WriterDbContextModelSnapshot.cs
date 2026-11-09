@@ -367,6 +367,69 @@ namespace PartyKing.Persistence.Migrations
                     b.ToTable("LyricsOffsets");
                 });
 
+            modelBuilder.Entity("PartyKing.Domain.Entities.Playlists.SavedPlaylist", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("OwnerAccountId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerAccountId");
+
+                    b.ToTable("SavedPlaylists", (string)null);
+                });
+
+            modelBuilder.Entity("PartyKing.Domain.Entities.Playlists.SavedPlaylistItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AlbumArtUrl")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Artists")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("DurationMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("PlaylistId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlaylistId", "Position");
+
+                    b.ToTable("SavedPlaylistItems", (string)null);
+                });
+
             modelBuilder.Entity("PartyKing.Domain.Entities.Queue.QueueItem", b =>
                 {
                     b.Property<int>("Id")
@@ -603,6 +666,24 @@ namespace PartyKing.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("PartyKing.Domain.Entities.Playlists.SavedPlaylist", b =>
+                {
+                    b.HasOne("PartyKing.Domain.Entities.Auth.Account", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerAccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PartyKing.Domain.Entities.Playlists.SavedPlaylistItem", b =>
+                {
+                    b.HasOne("PartyKing.Domain.Entities.Playlists.SavedPlaylist", null)
+                        .WithMany("Items")
+                        .HasForeignKey("PlaylistId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("PartyKing.Domain.Entities.Queue.QueueItem", b =>
                 {
                     b.HasOne("PartyKing.Domain.Entities.Sessions.Session", null)
@@ -652,6 +733,11 @@ namespace PartyKing.Persistence.Migrations
                     b.Navigation("Flips");
 
                     b.Navigation("Players");
+                });
+
+            modelBuilder.Entity("PartyKing.Domain.Entities.Playlists.SavedPlaylist", b =>
+                {
+                    b.Navigation("Items");
                 });
 #pragma warning restore 612, 618
         }

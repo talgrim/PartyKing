@@ -167,6 +167,25 @@
     "imTheHost": "I'm the host",
     "loginAsHost": "Log in as host with Spotify"
   },
+  "savePlaylist": {
+    "title": "Save as playlist",
+    "name": "Playlist name",
+    "songs": "Songs to save",
+    "sections": {
+      "history": "Played earlier",
+      "current": "Playing now",
+      "queue": "Up next",
+      "fallback": "From the fallback playlist"
+    },
+    "songCount_one": "{{count}} song",
+    "songCount_other": "{{count}} songs",
+    "duplicatesHint": "A song that appears more than once is saved once.",
+    "save": "Save playlist",
+    "saved_one": "Saved {{count}} song as “{{name}}”.",
+    "saved_other": "Saved {{count}} songs as “{{name}}”.",
+    "signInAgain": "You were signed out. Log in again to save the playlist.",
+    "countsFailed": "Could not count the songs"
+  },
   "nameForm": {
     "saved": "Name saved",
     "label": "Session name",

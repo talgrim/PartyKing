@@ -169,6 +169,29 @@
     "imTheHost": "Jestem gospodarzem",
     "loginAsHost": "Zaloguj się jako gospodarz przez Spotify"
   },
+  "savePlaylist": {
+    "title": "Zapisz jako playlistę",
+    "name": "Nazwa playlisty",
+    "songs": "Utwory do zapisania",
+    "sections": {
+      "history": "Odtworzone wcześniej",
+      "current": "Gra teraz",
+      "queue": "Następne w kolejce",
+      "fallback": "Z playlisty zapasowej"
+    },
+    "songCount_one": "{{count}} utwór",
+    "songCount_few": "{{count}} utwory",
+    "songCount_many": "{{count}} utworów",
+    "songCount_other": "{{count}} utworu",
+    "duplicatesHint": "Utwór, który występuje kilka razy, zostanie zapisany raz.",
+    "save": "Zapisz playlistę",
+    "saved_one": "Zapisano {{count}} utwór jako „{{name}}”.",
+    "saved_few": "Zapisano {{count}} utwory jako „{{name}}”.",
+    "saved_many": "Zapisano {{count}} utworów jako „{{name}}”.",
+    "saved_other": "Zapisano {{count}} utworu jako „{{name}}”.",
+    "signInAgain": "Wylogowano Cię. Zaloguj się ponownie, aby zapisać playlistę.",
+    "countsFailed": "Nie udało się policzyć utworów"
+  },
   "nameForm": {
     "saved": "Nazwa zapisana",
     "label": "Nazwa sesji",

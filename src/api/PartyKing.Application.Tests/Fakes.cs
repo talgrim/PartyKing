@@ -16,6 +16,7 @@ using PartyKing.Contract.V1.Lyrics;
 using PartyKing.Contract.V1.Player;
 using PartyKing.Contract.V1.Queue;
 using PartyKing.Contract.V1.Slideshow;
+using PartyKing.Domain.Entities.Playlists;
 using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Entities.Sessions;
 using PartyKing.Domain.Enums;
@@ -240,7 +241,30 @@ internal class FakeQueueRepository : IQueueRepository
     public Task<IReadOnlyList<QueueItem>> GetPendingAsync(Guid sessionId, CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<QueueItem>>(Pending.ToList());
 
+    /// <summary>What <see cref="GetAllAsync"/> returns: the whole session, whatever the state of its songs.</summary>
+    public List<QueueItem> AllSongs { get; } = [];
+
+    public Task<IReadOnlyList<QueueItem>> GetAllAsync(Guid sessionId, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<QueueItem>>(AllSongs.ToList());
+
     public Task<QueueItem> AddAsync(QueueItem item, CancellationToken cancellationToken) => throw new NotSupportedException();
+}
+
+internal class FakeSavedPlaylistsRepository : ISavedPlaylistsRepository
+{
+    public List<SavedPlaylist> Saved { get; } = [];
+
+    /// <summary>What <see cref="CountByOwnerAsync"/> answers; the saved playlists are not counted.</summary>
+    public int OwnerPlaylistCount { get; set; }
+
+    public Task<int> CountByOwnerAsync(Guid ownerAccountId, CancellationToken cancellationToken) =>
+        Task.FromResult(OwnerPlaylistCount);
+
+    public Task AddAsync(SavedPlaylist playlist, CancellationToken cancellationToken)
+    {
+        Saved.Add(playlist);
+        return Task.CompletedTask;
+    }
 }
 
 internal class FakeSlideshowService : ISlideshowService

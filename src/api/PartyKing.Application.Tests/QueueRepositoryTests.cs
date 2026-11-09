@@ -201,6 +201,43 @@ public class QueueRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task GetAll_ReturnsTheSongsOfTheSessionInQueueOrder_WhateverTheirState()
+    {
+        var first = await AddSongAsync("one");
+        await AddSongAsync("two");
+        await AddSongAsync("three");
+        await AdvanceAsync(null);
+        await AdvanceAsync(first);
+
+        var all = await _repository.GetAllAsync(_sessionId, CancellationToken.None);
+
+        Assert.Equal(["one", "two", "three"], all.Select(x => x.Title));
+        Assert.Equal(
+            [QueueItemStatus.Played, QueueItemStatus.Playing, QueueItemStatus.Queued],
+            all.Select(x => x.Status));
+    }
+
+    [Fact]
+    public async Task GetAll_LeavesOutTheSongsOfAnotherSession()
+    {
+        await AddSongAsync("one");
+        var other = new Session(Guid.NewGuid(), "XYZ789", "Other", "hash", DateTime.UtcNow);
+        await using (var dbContext = await _provider.GetRequiredService<IDbContextFactory<WriterDbContext>>().CreateDbContextAsync())
+        {
+            dbContext.Sessions.Add(other);
+            await dbContext.SaveChangesAsync();
+        }
+
+        await _repository.AddAsync(
+            new QueueItem(other.Id, QueueItemSource.Spotify, "spotify:track:x", "elsewhere", null, null, null),
+            CancellationToken.None);
+
+        var all = await _repository.GetAllAsync(_sessionId, CancellationToken.None);
+
+        Assert.Equal(["one"], all.Select(x => x.Title));
+    }
+
+    [Fact]
     public async Task GetPlaying_WhenNothingPlays_ReturnsNull()
     {
         await AddSongAsync("one");

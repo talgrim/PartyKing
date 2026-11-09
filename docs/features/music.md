@@ -4,6 +4,7 @@
 
 - Queue (endpoints and rules)
 - Queue aggregate and events
+- Saved playlists
 - Fallback playlist
 - Player state and remote control
 - Lyrics, position sync, shared offset
@@ -28,6 +29,17 @@
 - The repository collects the events inside each write (`WriteAsync`, under the session's advance lock) and dispatches them after the lock is released, with `CancellationToken.None`. `AddAsync` has no lock, loads nothing (an empty `SessionQueue`) and dispatches right after its save.
 - Handlers (`Application/Queue/Handlers`): `QueuePushHandler` (the three `IQueueNotifier` pushes) and `FallbackRefillHandler` (`EnsureQueuedAsync` after `QueueAdvanced` and `SongRemoved`). Push handlers are registered before the refill, so clients hear `QueueAdvanced` and then the refill's `SongAdded`.
 - Tests: `SessionQueueTests` (Domain), `QueueRepositoryEventsTests`, `QueueHandlersTests`, `QueueAdvancerTests`.
+
+## Saved playlists
+
+A signed-in account (a user or an admin, not the Spotify host identity) can save parts of a session's queue as a playlist of its own. Nothing can read, load or manage the playlists yet; they are only stored.
+
+- **Endpoints** (`SavedPlaylistsController`, both `[RequireSessionAccess]` and `[AuthorizeAccount]`; the account id comes from `CoreController.GetAccountId()`): `POST /sessions/{id}/saved-playlists` takes `{name, sections}` and answers `{id, name, createdAt, songCount}`; `GET /sessions/{id}/saved-playlists/preview` answers `{sections: [{section, count}]}` for every section, so the dialog can show the counts. The client never sends songs: `SavedPlaylistService` reads the session's queue itself (`IQueueRepository.GetAllAsync`: played, playing and waiting songs in queue order; played songs are never pruned, so the history is whole).
+- **Sections** (`QueueSection` in `Domain/Entities/Playlists`, `PlaylistSection` in the Contract; serialized as numbers): `History` (played), `Current` (playing), `Queue` (waiting), each without the fallback songs, and `Fallback` (every `IsFallback` song, whatever its state). They do not overlap, so the counts add up to the number of songs in the session. Each is an `IQueueSectionSpecification`, registered as a singleton in `RegisterQueue` and injected into the singleton `QueueSelection` (behind `IQueueSelection`, which `SavedPlaylistService` takes), whose constructor refuses a set that does not have exactly one specification per `QueueSection`. `Select` unites the chosen sections, orders the songs by `QueueItem.Id` and keeps a song (by `Url`) only the first time it was queued. A new section is one more specification class and registration (`QueueSelection` does not change), plus one `QueueSection` and `PlaylistSection` member and one entry in `playlistSections.ts` in the UI. The counts are taken before the de-duplication.
+- **Aggregate**: `SavedPlaylist` (`Id`, `OwnerAccountId`, `Name`, `CreatedAt`, `Items`) is made with `SavedPlaylist.Create(id, ownerAccountId, name, songs, ownerPlaylistCount, now)`, which returns a `SavedPlaylistCreation` (`SavedPlaylistFailure`: `NameEmpty`, `NameTooLong` (60), `NoSongs`, `TooManySongs` (500), `TooManyPlaylists` (50 per account); all of them are 400s). `SavedPlaylistItem` is a copy of the queue item (source, url, title, artists, album art, duration) with a `Position`, because the queue goes away with its session. Names are not unique.
+- **Persistence**: tables `SavedPlaylists` and `SavedPlaylistItems`; the owner's foreign key to `Accounts` and the items' to their playlist cascade on delete, so deleting an account deletes its playlists. `ISavedPlaylistsRepository` has `CountByOwnerAsync` and `AddAsync` only; the count and the add are not atomic, so two concurrent saves can overshoot the limit by one.
+- **UI**: `SaveQueueAsPlaylist` (an icon in `SessionHeader`, shown when `useAccount` has an account) opens a dialog with the name (starts as the session name) and a checkbox per section from `PLAYLIST_SECTIONS` (current and up next ticked), each with its count from `usePlaylistPreview` (fetched while the dialog is open); a section with no songs is disabled. A 401 signs the account out in the UI.
+- Tests: `QueueSelectionTests`, `SavedPlaylistTests` (Domain), `QueueSelectionRegistrationTests`, `SavedPlaylistServiceTests`, `SavedPlaylistsRepositoryTests`, `QueueRepositoryTests.GetAll...` (Application), `SavedPlaylistsControllerTests` (Api), `SaveQueueAsPlaylist.test.tsx`.
 
 ## Fallback playlist
 

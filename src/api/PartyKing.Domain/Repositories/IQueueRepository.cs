@@ -20,6 +20,9 @@ public interface IQueueRepository
     Task<IReadOnlyList<QueueItem>> GetPendingAsync(Guid sessionId, CancellationToken cancellationToken);
     Task<QueueItem?> GetPlayingAsync(Guid sessionId, CancellationToken cancellationToken);
 
+    /// <summary>Every song of the session in the order it was queued: played, playing and waiting.</summary>
+    Task<IReadOnlyList<QueueItem>> GetAllAsync(Guid sessionId, CancellationToken cancellationToken);
+
     /// <summary>
     /// Marks the current song as played and starts the next queued one, but only when the song playing now is
     /// <paramref name="currentItemId"/> (null: nothing is playing). A caller with an outdated view, such as a

@@ -22,8 +22,8 @@ export async function signUpThroughTheDialog(page: Page, username: string, passw
   await page.goto('/');
   await page.getByRole('button', { name: 'Log in' }).click();
   await page.getByRole('tab', { name: 'Sign up' }).click();
-  await page.getByLabel('Username').fill(username);
-  await page.getByLabel('Password').fill(password);
+  await page.getByRole('dialog').getByLabel('Username').fill(username);
+  await page.getByRole('dialog').getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign up' }).click();
   await expect(page.getByRole('dialog')).toBeHidden();
   await expect(page.getByRole('button', { name: username })).toBeVisible();
@@ -33,8 +33,8 @@ export async function signUpThroughTheDialog(page: Page, username: string, passw
 export async function logInThroughTheDialog(page: Page, username: string, password = USER_PASSWORD): Promise<void> {
   await page.goto('/');
   await page.getByRole('button', { name: 'Log in' }).click();
-  await page.getByLabel('Username').fill(username);
-  await page.getByLabel('Password').fill(password);
+  await page.getByRole('dialog').getByLabel('Username').fill(username);
+  await page.getByRole('dialog').getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Log in' }).click();
   await expect(page.getByRole('dialog')).toBeHidden();
   await expect(page.getByRole('button', { name: username })).toBeVisible();

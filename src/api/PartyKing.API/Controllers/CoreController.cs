@@ -40,6 +40,12 @@ public abstract class CoreController : ControllerBase
         return User.Claims.First(x => x.Type == ClaimTypes.NameIdentifier).Value;
     }
 
+    /// <summary>Id of the signed-in account (a user or an admin), taken from the account cookie.</summary>
+    protected Guid GetAccountId()
+    {
+        return Guid.Parse(User.Claims.First(x => x.Type == ClaimTypes.NameIdentifier).Value);
+    }
+
     /// <summary>The UI language from the <c>Accept-Language</c> header; English when it is missing or unsupported.</summary>
     protected UiLanguage GetLanguage()
     {

@@ -1,6 +1,6 @@
 # E2E tests (Playwright, Chromium)
 
-From `src/ui/PartyKing.UI`: `npm run e2e`, about 8 min, 67 tests. First time only: `npx playwright install chromium`. Typecheck the suite with `npx tsc -p e2e/tsconfig.json`; `vite.config.ts` keeps `e2e` and `playwright.config.*` out of vitest.
+From `src/ui/PartyKing.UI`: `npm run e2e`, about 8 min, 70 tests. First time only: `npx playwright install chromium`. Typecheck the suite with `npx tsc -p e2e/tsconfig.json`; `vite.config.ts` keeps `e2e` and `playwright.config.*` out of vitest.
 
 ## Setup
 
@@ -27,6 +27,7 @@ From `src/ui/PartyKing.UI`: `npm run e2e`, about 8 min, 67 tests. First time onl
 - `suggestions.spec.ts`: Never have I ever statements and Ringo ace rules come from the built-in lists with the "AI is unavailable" notice. The Ringo one flips cards as the admin until an ace shows, since the deck is random.
 - `session-settings.spec.ts`: rename shows on Home; a password change sends guests back to the password form but keeps the admin in.
 - `join-qr.spec.ts`: the token is read from the `join-token` response, because the dialog shows only a QR image; a guest opening `?join=<token>` gets in; a bad token shows the password form.
+- `saved-playlists.spec.ts`: a guest without an account has no save-as-playlist button and the API answers 401; a guest who signed up queues three YouTube links (one twice), opens the dialog (name starts as the session name, only "Up next" can be chosen, with its count), saves and is told two songs were saved; a session without songs has Save disabled. The songs are queued through the API with the guest's cookies (the oEmbed lookup falls back to the URL when YouTube is unreachable); the playlists cannot be read back yet, so nothing checks the stored rows (the repository tests do).
 - `guest-access.spec.ts`: a guest has no settings or QR button, and `/s/:id/games` redirects to the session.
 - `photos-admin.spec.ts`: an admin sees the empty slideshow and a disabled "Download as ZIP"; after an upload, the photo in the slideshow, the count in Session settings and a real zip download. The slideshow `img` has no alt text, so it is found by `.photos-slideshow img`.
 - `resistance-lobby.spec.ts`: an admin creates and opens the game, five guests join and the admin starts it; each player gets a role card, the admin none, a latecomer is told it started. A taken name is refused, and a kicked player is told.

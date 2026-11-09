@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using PartyKing.API.Authorization;
@@ -144,10 +143,5 @@ public class AccountController : CoreController
         _cookies.RevokeAccount(HttpContext);
 
         return NoContent();
-    }
-
-    private Guid GetAccountId()
-    {
-        return Guid.Parse(User.Claims.First(x => x.Type == ClaimTypes.NameIdentifier).Value);
     }
 }
