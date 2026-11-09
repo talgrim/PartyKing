@@ -260,6 +260,22 @@ internal class FakeSavedPlaylistsRepository : ISavedPlaylistsRepository
     public Task<int> CountByOwnerAsync(Guid ownerAccountId, CancellationToken cancellationToken) =>
         Task.FromResult(OwnerPlaylistCount);
 
+    public Task<IReadOnlyList<SavedPlaylistSummary>> ListByOwnerAsync(
+        Guid ownerAccountId,
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyList<SavedPlaylistSummary> summaries = Saved
+            .Where(x => x.OwnerAccountId == ownerAccountId)
+            .OrderByDescending(x => x.CreatedAt)
+            .Select(x => new SavedPlaylistSummary(x.Id, x.Name, x.CreatedAt, x.Items.Count))
+            .ToList();
+
+        return Task.FromResult(summaries);
+    }
+
+    public Task<SavedPlaylist?> GetAsync(Guid id, CancellationToken cancellationToken) =>
+        Task.FromResult(Saved.FirstOrDefault(x => x.Id == id));
+
     public Task AddAsync(SavedPlaylist playlist, CancellationToken cancellationToken)
     {
         Saved.Add(playlist);
