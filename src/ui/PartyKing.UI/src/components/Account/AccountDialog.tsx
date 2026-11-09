@@ -33,8 +33,16 @@ export const AccountDialog = ({ open, onClose, account, signedIn, signedOut }: P
   };
 
   return (
-    <Dialog open={open} onClose={onClose} aria-labelledby="account-title" fullWidth maxWidth="xs">
-      <DialogTitle id="account-title">{account ? t('account.signedInAs', { name: account.username }) : t('account.title')}</DialogTitle>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      aria-labelledby="account-title"
+      fullWidth
+      maxWidth="xs"
+      // MUI's emotion styles are unlayered and beat Tailwind's layered utilities, hence the important modifier
+      slotProps={{ paper: { className: 'bg-slate-800! text-slate-200! rounded-xl!' } }}
+    >
+      <DialogTitle id="account-title" className="text-xl! font-semibold!">{account ? t('account.signedInAs', { name: account.username }) : t('account.title')}</DialogTitle>
       <DialogContent>
         {account ? <SignedIn account={account} signedOut={signedOut} onClose={onClose} /> : <LogInOrSignUp onDone={done} />}
       </DialogContent>
@@ -49,9 +57,14 @@ const LogInOrSignUp = ({ onDone }: { onDone: () => void }): ReactNode => {
 
   return (
     <div className="space-y-3 pt-1">
-      <Tabs value={tab} onChange={(_, value) => setTab(value)} variant="fullWidth">
-        <Tab value="login" label={t('account.logIn')} />
-        <Tab value="register" label={t('account.signUp')} />
+      <Tabs
+        value={tab}
+        onChange={(_, value) => setTab(value)}
+        variant="fullWidth"
+        slotProps={{ indicator: { className: 'bg-amber-500!' } }}
+      >
+        <Tab value="login" label={t('account.logIn')} className="text-slate-400! [&.Mui-selected]:text-amber-500!" />
+        <Tab value="register" label={t('account.signUp')} className="text-slate-400! [&.Mui-selected]:text-amber-500!" />
       </Tabs>
       <CredentialsForm key={tab} mode={tab} onDone={onDone} />
     </div>
