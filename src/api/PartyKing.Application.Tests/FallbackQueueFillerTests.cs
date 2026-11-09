@@ -1,6 +1,7 @@
 using PartyKing.Application.Ports;
 using Microsoft.Extensions.Logging.Abstractions;
 using PartyKing.Application.Queue.Services;
+using PartyKing.Domain.Entities.Playlists;
 using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Entities.Sessions;
 using PartyKing.Domain.Entities.Spotify;
@@ -11,6 +12,7 @@ namespace PartyKing.Application.Tests;
 public class FallbackQueueFillerTests
 {
     private readonly FakeSessionsRepository _sessions = new();
+    private readonly FakeSavedPlaylistsRepository _savedPlaylists = new();
     private readonly FakeQueueRepository _queue = new();
     private readonly FakeHostTokenProvider _tokens = new();
     private readonly FakePlaylistSpotifyClient _spotify = new();
@@ -26,9 +28,43 @@ public class FallbackQueueFillerTests
             _spotify,
             _tokens,
             new PlaylistTrackCache(new FakeClock()),
-            _status);
+            _status,
+            _savedPlaylists);
         _session = _sessions.AddSession("host-1");
         _spotify.Tracks = [FakePlaylistSpotifyClient.Track("a"), FakePlaylistSpotifyClient.Track("b"), FakePlaylistSpotifyClient.Track("c")];
+    }
+
+    private SavedPlaylist SaveAPlaylist(params (QueueItemSource Source, string Url)[] songs)
+    {
+        var queue = songs
+            .Select((song, index) => new QueueItem(
+                Guid.NewGuid(),
+                song.Source,
+                song.Url,
+                $"Song {index}",
+                "Artist",
+                "https://art",
+                1000)
+            {
+                Id = index + 1
+            })
+            .ToList();
+        var playlist = SavedPlaylist.Create(Guid.NewGuid(), Guid.NewGuid(), "Mine", queue, 0, DateTime.UtcNow).Playlist!;
+        _savedPlaylists.Saved.Add(playlist);
+
+        return playlist;
+    }
+
+    private SavedPlaylist ChooseASavedPlaylist(bool shuffle = false, int cursor = 0)
+    {
+        var playlist = SaveAPlaylist(
+            (QueueItemSource.Youtube, "https://youtu.be/a"),
+            (QueueItemSource.Spotify, "spotify:track:b"),
+            (QueueItemSource.Youtube, "https://youtu.be/c"));
+        _session.SetFallbackSavedPlaylist(playlist.Id, playlist.Name, shuffle);
+        _session.FallbackCursor = cursor;
+
+        return playlist;
     }
 
     [Fact]
@@ -160,6 +196,134 @@ public class FallbackQueueFillerTests
         Assert.Single(_queue.Added);
         Assert.Equal(0, _session.FallbackCursor);
         Assert.Empty(_sessions.FallbackCursorSet);
+    }
+
+    [Fact]
+    public async Task Ensure_WithASavedPlaylist_QueuesTheNextSongAsFallback_KeepingItsSource()
+    {
+        ChooseASavedPlaylist(cursor: 1);
+
+        await _filler.EnsureQueuedAsync(_session.Id, CancellationToken.None);
+
+        var added = Assert.Single(_queue.Added);
+        Assert.Equal((QueueItemSource.Spotify, "spotify:track:b", "Song 1", "Artist", "https://art", 1000), (added.Source, added.Url, added.Title, added.Artists, added.AlbumArtUrl, added.DurationMs));
+        Assert.True(added.IsFallback);
+        Assert.Equal(2, _session.FallbackCursor);
+    }
+
+    [Fact]
+    public async Task Ensure_WithASavedPlaylist_QueuesAYoutubeSong()
+    {
+        ChooseASavedPlaylist(cursor: 0);
+
+        await _filler.EnsureQueuedAsync(_session.Id, CancellationToken.None);
+
+        var added = Assert.Single(_queue.Added);
+        Assert.Equal((QueueItemSource.Youtube, "https://youtu.be/a"), (added.Source, added.Url));
+    }
+
+    [Fact]
+    public async Task Ensure_WithASavedPlaylist_NeedsNeitherSpotifyNorTheHostLogin()
+    {
+        ChooseASavedPlaylist();
+        _tokens.SessionToken = ErrorOr.Error.Conflict(description: "The session has no host");
+
+        await _filler.EnsureQueuedAsync(_session.Id, CancellationToken.None);
+
+        Assert.Single(_queue.Added);
+        Assert.Equal(0, _spotify.TrackCalls);
+        Assert.Null(_status.GetError(_session.Id));
+    }
+
+    [Fact]
+    public async Task Ensure_AfterTheLastSavedSong_StartsOverFromTheFirst()
+    {
+        ChooseASavedPlaylist(cursor: 2);
+
+        await _filler.EnsureQueuedAsync(_session.Id, CancellationToken.None);
+
+        Assert.Equal("https://youtu.be/c", Assert.Single(_queue.Added).Url);
+        Assert.Equal(0, _session.FallbackCursor);
+    }
+
+    [Fact]
+    public async Task Ensure_WithAShuffledSavedPlaylist_QueuesASongButNotTheOneThatPlays()
+    {
+        ChooseASavedPlaylist(shuffle: true);
+        _queue.Playing = new QueueItem(_session.Id, QueueItemSource.Youtube, "https://youtu.be/a", "A", null, null, null)
+        {
+            Status = QueueItemStatus.Playing
+        };
+
+        for (var i = 0; i < 20; i++)
+        {
+            _queue.Pending.Clear();
+            await _filler.EnsureQueuedAsync(_session.Id, CancellationToken.None);
+        }
+
+        Assert.Equal(20, _queue.Added.Count);
+        Assert.DoesNotContain(_queue.Added, x => x.Url == "https://youtu.be/a");
+        Assert.Empty(_sessions.FallbackCursorSet);
+    }
+
+    [Fact]
+    public async Task Ensure_WhileASongWaits_DoesNotReadTheSavedPlaylist()
+    {
+        ChooseASavedPlaylist();
+        _queue.Pending.Add(new QueueItem(_session.Id, QueueItemSource.Youtube, "url", "Guest song", null, null, null));
+
+        await _filler.EnsureQueuedAsync(_session.Id, CancellationToken.None);
+
+        Assert.Empty(_queue.Added);
+    }
+
+    [Fact]
+    public async Task Ensure_WhenTheSavedPlaylistIsGone_RecordsTheErrorAndAddsNothing()
+    {
+        ChooseASavedPlaylist();
+        _savedPlaylists.Saved.Clear();
+
+        await _filler.EnsureQueuedAsync(_session.Id, CancellationToken.None);
+
+        Assert.Empty(_queue.Added);
+        Assert.Contains("no longer exists", _status.GetError(_session.Id));
+        Assert.NotNull(_session.FallbackSavedPlaylistId);
+    }
+
+    [Fact]
+    public async Task Ensure_WhenASavedSongIsQueued_ClearsAnEarlierError()
+    {
+        ChooseASavedPlaylist();
+        _status.SetError(_session.Id, "old error");
+
+        await _filler.EnsureQueuedAsync(_session.Id, CancellationToken.None);
+
+        Assert.Null(_status.GetError(_session.Id));
+    }
+
+    [Fact]
+    public async Task Ensure_WhenAnotherPlaylistWasChosenWhileTheSavedOneWasRead_KeepsTheNewCursor()
+    {
+        ChooseASavedPlaylist(cursor: 2);
+        _savedPlaylists.OnGet = () => _session.SetFallbackSavedPlaylist(Guid.NewGuid(), "Other", false);
+
+        await _filler.EnsureQueuedAsync(_session.Id, CancellationToken.None);
+
+        Assert.Single(_queue.Added);
+        Assert.Equal(0, _session.FallbackCursor);
+        Assert.Empty(_sessions.FallbackCursorSet);
+    }
+
+    [Fact]
+    public async Task Ensure_WithASavedPlaylist_ThenASpotifyOne_ReadsSpotify()
+    {
+        ChooseASavedPlaylist();
+        _session.SetFallbackPlaylist("playlist", "Mix", false);
+
+        await _filler.EnsureQueuedAsync(_session.Id, CancellationToken.None);
+
+        Assert.Equal("spotify:track:a", Assert.Single(_queue.Added).Url);
+        Assert.Equal(1, _spotify.TrackCalls);
     }
 
     [Fact]

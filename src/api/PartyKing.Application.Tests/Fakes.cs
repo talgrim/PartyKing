@@ -314,8 +314,16 @@ internal class FakeSavedPlaylistsRepository : ISavedPlaylistsRepository
         return Task.FromResult(summaries);
     }
 
-    public Task<SavedPlaylist?> GetAsync(Guid id, CancellationToken cancellationToken) =>
-        Task.FromResult(Saved.FirstOrDefault(x => x.Id == id));
+    /// <summary>Runs while a playlist is being read, to change the session as another request would meanwhile.</summary>
+    public Action? OnGet { get; set; }
+
+    public Task<SavedPlaylist?> GetAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var playlist = Saved.FirstOrDefault(x => x.Id == id);
+        OnGet?.Invoke();
+
+        return Task.FromResult(playlist);
+    }
 
     public Task AddAsync(SavedPlaylist playlist, CancellationToken cancellationToken)
     {

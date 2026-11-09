@@ -195,4 +195,28 @@ public class SavedPlaylistServiceTests
         Assert.All(result.Value.Sections, x => Assert.Equal(0, x.Count));
         Assert.Equal(4, result.Value.Sections.Count);
     }
+
+    [Fact]
+    public async Task List_ReturnsOnlyThePlaylistsOfTheAccount_NewestFirst()
+    {
+        AddASession();
+        _clock.UtcNow = new DateTimeOffset(2026, 11, 9, 12, 0, 0, TimeSpan.Zero);
+        await _service.SaveQueueAsync(AccountId, _sessionId, "Old", [PlaylistSection.Queue], Ct);
+        _clock.UtcNow = _clock.UtcNow.AddDays(1);
+        await _service.SaveQueueAsync(AccountId, _sessionId, "New", [PlaylistSection.History, PlaylistSection.Queue], Ct);
+        await _service.SaveQueueAsync(Guid.NewGuid(), _sessionId, "Theirs", [PlaylistSection.Queue], Ct);
+
+        var result = await _service.ListAsync(AccountId, Ct);
+
+        Assert.Equal([("New", 2), ("Old", 1)], result.Value.Select(x => (x.Name, x.SongCount)));
+    }
+
+    [Fact]
+    public async Task List_OfAnAccountWithoutPlaylists_IsEmpty()
+    {
+        var result = await _service.ListAsync(AccountId, Ct);
+
+        Assert.False(result.IsError);
+        Assert.Empty(result.Value);
+    }
 }
