@@ -236,8 +236,8 @@
     "saved": "Playlista zapasowa zapisana",
     "removed": "Playlista zapasowa usunięta",
     "playsWhenEmpty": "Gra, gdy kolejka jest pusta",
-    "hint": "Odtwarza piosenkę z jednej z playlist hosta, gdy kolejka jest pusta.",
-    "yourPlaylists": "Twoje playlisty",
+    "hint": "Odtwarza piosenkę z jednej z playlist hosta w Spotify lub z playlisty zapisanej na koncie, gdy kolejka jest pusta.",
+    "yourPlaylists": "Twoje playlisty Spotify",
     "tracks_one": "{{count}} utwór",
     "tracks_few": "{{count}} utwory",
     "tracks_many": "{{count}} utworów",
@@ -245,6 +245,14 @@
     "orPaste": "Lub wklej link do playlisty",
     "link": "Link do playlisty",
     "shuffle": "Losowa kolejność"
+  },
+  "myPlaylists": {
+    "signInHint": "Zaloguj się, aby korzystać z zapisanych playlist.",
+    "signInAgain": "Wylogowano Cię. Zaloguj się ponownie, aby korzystać ze swoich playlist.",
+    "loadFailed": "Nie udało się wczytać zapisanych playlist",
+    "empty": "Nie zapisano jeszcze żadnej playlisty. Użyj „Zapisz jako playlistę” w nagłówku sesji.",
+    "choose": "Zapisane playlisty",
+    "inUse": "używana"
   },
   "youtubeErrors": {
     "e2": "Link do filmu jest nieprawidłowy",

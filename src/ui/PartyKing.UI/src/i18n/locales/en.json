@@ -228,13 +228,21 @@
     "saved": "Fallback playlist saved",
     "removed": "Fallback playlist removed",
     "playsWhenEmpty": "Plays when the queue is empty",
-    "hint": "Plays a song from one of the host’s playlists whenever the queue is empty.",
-    "yourPlaylists": "Your playlists",
+    "hint": "Plays a song from one of the host’s Spotify playlists, or from a playlist saved by an account, whenever the queue is empty.",
+    "yourPlaylists": "Your Spotify playlists",
     "tracks_one": "{{count}} track",
     "tracks_other": "{{count}} tracks",
     "orPaste": "Or paste a playlist link",
     "link": "Playlist link",
     "shuffle": "Shuffle"
+  },
+  "myPlaylists": {
+    "signInHint": "Log in to use the playlists you saved.",
+    "signInAgain": "You were signed out. Log in again to use your playlists.",
+    "loadFailed": "Could not load your saved playlists",
+    "empty": "You have not saved any playlist yet. Use “Save as playlist” in the header of the session.",
+    "choose": "Saved playlists",
+    "inUse": "in use"
   },
   "youtubeErrors": {
     "e2": "The video link is invalid",
