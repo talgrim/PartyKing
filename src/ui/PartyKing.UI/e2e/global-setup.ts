@@ -6,7 +6,7 @@ import { ADMIN_PASSWORD, ADMIN_STATE_FILE, ADMIN_USERNAME, API_URL } from './con
 /** Logs in as the seeded admin once and saves the cookies, so tests do not log in again. */
 export default async function globalSetup(): Promise<void> {
   const api = await request.newContext({ baseURL: API_URL });
-  const response = await api.post('/admin/login', { data: { username: ADMIN_USERNAME, password: ADMIN_PASSWORD } });
+  const response = await api.post('/account/login', { data: { username: ADMIN_USERNAME, password: ADMIN_PASSWORD } });
   if (!response.ok()) {
     throw new Error(`Admin login failed with ${response.status()}`);
   }

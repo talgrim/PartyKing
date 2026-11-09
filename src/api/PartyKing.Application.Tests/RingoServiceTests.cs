@@ -1,7 +1,7 @@
 using PartyKing.Application.Events;
 using PartyKing.Domain.Events.Games.Base;
 using PartyKing.Domain.Repositories;
-using PartyKing.Application.Admin.Services;
+using PartyKing.Application.Accounts.Services;
 using PartyKing.Application.Games.Services.Base;
 using PartyKing.Application.Games.Services.Ringo;
 using PartyKing.Application.Sessions.Services;

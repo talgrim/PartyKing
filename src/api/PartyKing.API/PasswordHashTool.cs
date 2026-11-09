@@ -1,4 +1,4 @@
-using PartyKing.Application.Admin.Services;
+using PartyKing.Application.Accounts.Services;
 
 namespace PartyKing.API;
 

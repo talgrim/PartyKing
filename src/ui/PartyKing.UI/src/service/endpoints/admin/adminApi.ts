@@ -1,4 +1,5 @@
 import { axios } from '@/service/request';
+import { AccountDto, PagedDto } from '../account/types';
 import { SongDto } from '../queue/types';
 import { SessionDto } from '../sessions/types';
 
@@ -7,13 +8,18 @@ const unwrap = <T>(promise: Promise<unknown>) => promise as Promise<T>;
 const withCredentials = { withCredentials: true };
 
 export const adminApi = {
-  login: (username: string, password: string) =>
-    unwrap<void>(axios.post('/admin/login', { username, password }, withCredentials)),
+  /** One page of the registered users (never the admins), ordered by username. `page` is 1-based. */
+  listUsers: (params: { search?: string; page: number; pageSize: number }) =>
+    unwrap<PagedDto<AccountDto>>(
+      axios.get('/admin/users', {
+        ...withCredentials,
+        params: { search: params.search || undefined, page: params.page, pageSize: params.pageSize },
+      }),
+    ),
 
-  logout: () => unwrap<void>(axios.post('/admin/logout', null, withCredentials)),
-
-  /** Resolves when the admin cookie is valid; rejects with status 401 otherwise. */
-  me: () => unwrap<void>(axios.get('/admin/me', withCredentials)),
+  /** Sets a new password for a user, who is signed out everywhere. Rejects with 403 for an admin, 404 for an unknown user. */
+  resetPassword: (accountId: string, newPassword: string) =>
+    unwrap<void>(axios.put(`/admin/users/${accountId}/password`, { newPassword }, withCredentials)),
 
   createSession: (name: string | undefined, password: string) =>
     unwrap<SessionDto>(axios.post('/admin/sessions', { name: name || null, password }, withCredentials)),

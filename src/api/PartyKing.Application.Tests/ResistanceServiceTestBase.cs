@@ -1,4 +1,4 @@
-using PartyKing.Application.Admin.Services;
+using PartyKing.Application.Accounts.Services;
 using PartyKing.Application.Games.Services.Base;
 using PartyKing.Application.Games.Services.Resistance;
 using PartyKing.Application.Sessions.Services;

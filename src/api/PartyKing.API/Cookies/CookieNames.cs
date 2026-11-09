@@ -5,7 +5,7 @@ public static class CookieNames
 {
     public const string User = "cookie.partyKing.user";
     public const string Auth = "cookie.partyKing.auth";
-    public const string Admin = "cookie.partyKing.admin";
+    public const string Account = "cookie.partyKing.account";
     public const string SessionAccess = "cookie.partyKing.sessions";
     public const string RingoPlayer = "cookie.partyKing.ringo";
     public const string ResistancePlayer = "cookie.partyKing.resistance";

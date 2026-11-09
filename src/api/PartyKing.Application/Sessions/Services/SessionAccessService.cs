@@ -1,7 +1,7 @@
 using PartyKing.Domain.Repositories;
 using ErrorOr;
 using Microsoft.Extensions.Logging;
-using PartyKing.Application.Admin.Services;
+using PartyKing.Application.Accounts.Services;
 using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Domain.Entities.Sessions;
 

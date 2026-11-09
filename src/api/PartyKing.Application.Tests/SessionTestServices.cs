@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
-using PartyKing.Application.Admin.Services;
+using PartyKing.Application.Accounts.Services;
 using PartyKing.Application.Player.Services;
 using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Services;

@@ -7,6 +7,6 @@ public class AuthorizeAdminAttribute : AuthorizeAttribute
 {
     public AuthorizeAdminAttribute() : base(Policies.Admin)
     {
-        AuthenticationSchemes = SchemeNames.Admin;
+        AuthenticationSchemes = SchemeNames.Account;
     }
 }

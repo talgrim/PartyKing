@@ -1,104 +1,67 @@
-import { FormEvent, ReactNode, useEffect, useState } from 'react';
+import { FormEvent, ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import useSWR from 'swr';
+import { errorMessage, inputClass, primaryButton, secondaryButton } from '@/components/Account/accountForm';
+import { CredentialsForm } from '@/components/Account/CredentialsForm';
 import { PageNavigation } from '@/components/common/PageNavigation';
 import { ROUTE_PATHS, sessionGamesPath, sessionPath } from '@/router/constants';
 import { HTTP_STATUS_CODE } from '@/service/constants';
+import { accountApi } from '@/service/endpoints/account/accountApi';
+import { useAccount } from '@/service/endpoints/account/useAccount';
 import { adminApi } from '@/service/endpoints/admin/adminApi';
-import { ADMIN_HINT_KEY } from '@/service/endpoints/admin/useIsAdmin';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 import { SessionDto } from '@/service/endpoints/sessions/types';
-import { usePersistedFlag } from '@/utils/usePersistedFlag';
-
-const errorMessage = (error: unknown, fallback: string) => (error as { message?: string })?.message || fallback;
 
 const MIN_PASSWORD_LENGTH = 4;
 
-const inputClass = 'w-full px-2 py-2 border-1 border-gray-700 rounded-sm focus:outline-none';
-const primaryButton = 'px-3 py-2 bg-amber-600 text-slate-200 rounded-md cursor-pointer disabled:opacity-50';
-const secondaryButton = 'px-2 py-1 bg-slate-900 rounded-md cursor-pointer disabled:opacity-50';
-
 export const Admin = (): ReactNode => {
   const { t } = useTranslation();
-  // Resolves when the admin cookie is valid, rejects with 401 when the admin has to log in
-  const { data: loggedIn, error, mutate: recheck, isLoading } = useSWR('admin-me', () => adminApi.me().then(() => true), {
-    shouldRetryOnError: false,
-    revalidateOnFocus: false,
-  });
-
-  const unauthorized = (error as { status?: number } | undefined)?.status === HTTP_STATUS_CODE.UNAUTHORIZED;
-
-  // Lets Home show the Admin button without asking the API on every visit
-  const [, setAdminHint] = usePersistedFlag(ADMIN_HINT_KEY, false);
-  useEffect(() => {
-    if (loggedIn) {
-      setAdminHint(true);
-    } else if (unauthorized) {
-      setAdminHint(false);
-    }
-  }, [loggedIn, unauthorized, setAdminHint]);
+  const { account, isLoading, error, signedIn, signedOut } = useAccount({ alwaysCheck: true });
+  const isAdmin = account?.role === 'Admin';
 
   return (
     <div className="w-full min-h-full bg-slate-800 text-slate-400">
       <div className="max-w-xl mx-auto pt-6">
-        <PageNavigation className="px-2 pt-4" links={[{ to: ROUTE_PATHS.HOME, label: t('admin.allSessions') }]} />
+        <PageNavigation
+          className="px-2 pt-4"
+          links={[
+            { to: ROUTE_PATHS.HOME, label: t('admin.allSessions') },
+            ...(isAdmin ? [{ to: ROUTE_PATHS.ADMIN_USERS, label: t('admin.registeredUsers') }] : []),
+          ]}
+        />
         <h1 className="px-2 pt-4 text-2xl text-slate-200">{t('admin.title')}</h1>
 
         {isLoading && <p className="px-2">{t('admin.checkingLogin')}</p>}
-        {error && !unauthorized && <p className="px-2 text-amber-500">{t('admin.apiUnreachable')}</p>}
-        {unauthorized && <LoginForm onLoggedIn={() => recheck(true, { revalidate: false })} />}
-        {loggedIn && <Sessions onLoggedOut={() => recheck(undefined, { revalidate: true })} />}
+        {error && <p className="px-2 text-amber-500">{t('admin.apiUnreachable')}</p>}
+        {!isLoading && !error && !account && (
+          <div className="px-2 pt-4">
+            <CredentialsForm mode="login" onDone={signedIn} />
+          </div>
+        )}
+        {account && !isAdmin && <NotAnAdmin username={account.username} onLoggedOut={signedOut} />}
+        {isAdmin && <Sessions onLoggedOut={signedOut} />}
       </div>
     </div>
   );
 };
 
-const LoginForm = ({ onLoggedIn }: { onLoggedIn: () => void }): ReactNode => {
+/** Signed in, but with a user account: the admin panel needs an admin one. */
+const NotAnAdmin = ({ username, onLoggedOut }: { username: string; onLoggedOut: () => void }): ReactNode => {
   const { t } = useTranslation();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
-    try {
-      await adminApi.login(username, password);
-      setPassword('');
-      onLoggedIn();
-    } catch (error) {
-      setMessage(errorMessage(error, t('common.somethingWentWrong')));
-    } finally {
-      setBusy(false);
-    }
+  const logout = async () => {
+    await accountApi.logout().catch(() => undefined);
+    onLoggedOut();
   };
 
   return (
-    <form className="px-2 pt-4 space-y-2" onSubmit={submit}>
-      <input
-        className={inputClass}
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-        placeholder={t('admin.username')}
-        autoComplete="username"
-        aria-label={t('admin.username')}
-      />
-      <input
-        className={inputClass}
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        placeholder={t('admin.password')}
-        autoComplete="current-password"
-        aria-label={t('admin.password')}
-      />
-      <button type="submit" disabled={busy || !username || !password} className={primaryButton}>
-        {t('admin.logIn')}
+    <div className="px-2 pt-4 space-y-2">
+      <p>{t('admin.notAnAdmin', { name: username })}</p>
+      <button className={secondaryButton} onClick={logout}>
+        {t('admin.logOut')}
       </button>
-      {message && <p className="text-sm text-amber-500">{message}</p>}
-    </form>
+    </div>
   );
 };
 
@@ -149,7 +112,7 @@ const Sessions = ({ onLoggedOut }: { onLoggedOut: () => void }): ReactNode => {
   };
 
   const logout = async () => {
-    await adminApi.logout().catch(() => undefined);
+    await accountApi.logout().catch(() => undefined);
     onLoggedOut();
   };
 

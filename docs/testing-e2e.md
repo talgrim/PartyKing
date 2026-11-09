@@ -1,13 +1,13 @@
 # E2E tests (Playwright, Chromium)
 
-From `src/ui/PartyKing.UI`: `npm run e2e`, about 8 min, 52 tests. First time only: `npx playwright install chromium`. Typecheck the suite with `npx tsc -p e2e/tsconfig.json`; `vite.config.ts` keeps `e2e` and `playwright.config.*` out of vitest.
+From `src/ui/PartyKing.UI`: `npm run e2e`, about 8 min, 67 tests. First time only: `npx playwright install chromium`. Typecheck the suite with `npx tsc -p e2e/tsconfig.json`; `vite.config.ts` keeps `e2e` and `playwright.config.*` out of vitest.
 
 ## Setup
 
 - `playwright.config.ts` starts both servers itself and never reuses running ones, so stop your dev API and Vite first (ports 4200 and 2137).
 - `e2e/start-api.mjs` runs the API in the `e2e` environment (`ASPNETCORE_ENVIRONMENT=e2e`) on a throw-away database. The web root and the *content root* are in the git-ignored `e2e/.work` (wiped on each start), so your `appsettings.Local.json` (which would override env vars) is not read. The committed `appsettings.json` and `appsettings.e2e.json` are copied there (`appsettings.Development.json` is not loaded in this environment). `PartyKing.API/appsettings.e2e.json` holds only what the e2e run changes: today it raises the log level of the auth handlers to Warning, because every anonymous request logged "was not authenticated" and CI prints the whole log (about 5,800 lines of it). The development helpers (CORS for Vite, Swagger, `DevPersonaMiddleware`, the two switches below) are tied to `IsDevelopmentOrE2e()` (`PartyKing.API/Development`), so the e2e environment has them and Production never does. Admin: `e2e-admin` / `e2e-admin-password`. `RateLimiting__Disabled=true` — honoured in Development and e2e only (`Program.cs` skips `UseRateLimiter`), because the suite logs in and unlocks sessions far more often than the 10/min limits allow. `Resistance__Seed=931902` — also Development and e2e only (`SeededRandomProvider`): every Resistance action that needs randomness (the deal of roles and first leader, the plot deck shuffle, the card taken by Take Responsibility) gets a `Random` from this seed, so the same number of players joining in the same order always get the same deal (a different player count deals differently). Then `npm start` runs Vite.
 - The e2e API runs without `LlmSettings:ApiKey` on purpose, so the specs also guard that Ringo works without one.
-- `global-setup.ts` logs the admin in once and saves the cookies to `e2e/.auth` (git-ignored).
+- `global-setup.ts` logs the admin in once (`POST /account/login`) and saves the cookies to `e2e/.auth` (git-ignored). A spec that needs the admin as well as anonymous or user API contexts must not use `test.use({ storageState })`: Playwright also applies it to every `request.newContext()`, so an "anonymous" context would carry the admin cookie (see `admin-users.spec.ts`).
 - One worker; tests share one API and database.
 - The base URL must be `http://127.0.0.1:2137`, not `localhost` (the login cookies don't reach the API).
 - Selectors are roles and labels with the English texts.
@@ -20,6 +20,8 @@ From `src/ui/PartyKing.UI`: `npm run e2e`, about 8 min, 52 tests. First time onl
 
 ## Specs
 
+- `accounts.spec.ts`: a visitor signs up through the dialog, stays signed in after a reload, logs out and back in; a taken username (any case) and a wrong password are refused; changing the password (old one stops working, a wrong current one changes nothing); "log out everywhere" ends another browser's login; deleting the account; a user is turned away from `/admin`. `e2e/fixtures/accounts.ts` has `registerUser` (API) and the dialog helpers.
+- `admin-users.spec.ts`: an admin pages (22 users, two pages) and searches the users; resets a password (the user's old cookie dies, only the new password logs in); a password under 8 characters is not accepted; a user gets 403 and a visitor 401 from `/admin/users`; an admin's own password cannot be reset.
 - Home smoke; admin login and session creation; wrong-password and right-password unlock; the language switch.
 - Photo upload (and a refused fake image).
 - `suggestions.spec.ts`: Never have I ever statements and Ringo ace rules come from the built-in lists with the "AI is unavailable" notice. The Ringo one flips cards as the admin until an ace shows, since the deck is random.

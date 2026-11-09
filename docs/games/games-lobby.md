@@ -64,7 +64,7 @@ Ringo and Resistance share one lobby.
 
 ### Game and endpoints
 
-- At most one game per session: `RingoGame` (key `SessionId`, cascade delete; `Seed`, `PendingCardId`) and its `RingoFlip` rows (key `SessionId` + `Order`; `CardId` 0-51, `FlippedAt`, `FlippedBy`). `FlippedBy` is a placeholder for now: "admin" when the admin cookie authenticates, else "guest"; with players, the flip history records the player's display name.
+- At most one game per session: `RingoGame` (key `SessionId`, cascade delete; `Seed`, `PendingCardId`) and its `RingoFlip` rows (key `SessionId` + `Order`; `CardId` 0-51, `FlippedAt`, `FlippedBy`). `FlippedBy` is a placeholder for now: "admin" when the caller is a signed-in admin account, else "guest"; with players, the flip history records the player's display name.
 - `RingoService` (all actions host or admin through `AuthorizeManagerAsync`) behind `RingoController`:
   - `GET games/ringo`: 404 without a game. Open to managers and joined players (403 for others, which the UI turns into the join page); returns `isOpen`, `players`, `currentPlayerId`, `yourPlayerId`.
   - `POST games/ringo`: starts one with a random seed; 409 when one exists, so an existing game can only be resumed.

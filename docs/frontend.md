@@ -15,7 +15,9 @@ React 19, react-router, MUI + Tailwind v4, axios + SWR. Axios is configured in `
 - `/` Home lists sessions with a code search (no slideshow links).
 - `/s/:sessionId` `MusicQueue`, the one page of a session.
 - `/callback` is the Spotify redirect.
-- `/admin` is the admin login and session panel (create, copy link, release host, delete). Rename, password and slideshow settings live on the session page.
+- `/admin` is the admin login and session panel (create, copy link, release host, delete). Rename, password and slideshow settings live on the session page. It shows the login form to a visitor and a notice to a signed-in user who is not an admin.
+- `/admin/users` (`AdminUsers`) lists the registered users, a page of 20 at a time, with a debounced username search and a reset-password dialog per user. Admin only.
+- Accounts: the landing page has a button that opens `AccountDialog` (log in / sign up; change password, log out, log out everywhere and delete account when signed in). `useAccount` (`service/endpoints/account`) says who is signed in; see `features/sessions-and-auth.md`.
 - `/dev/s/:sessionId/resistance` (dev builds only) shows 5 to 10 Resistance players side by side in one tab, see "Dev personas" in `features/sessions-and-auth.md`.
 - `/s/:sessionId/games/...` see `games/`. The old `/s/:sessionId/upload` redirects to the upload dialog.
 

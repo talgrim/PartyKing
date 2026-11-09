@@ -65,7 +65,7 @@ Path-scoped rules in `.claude/rules/` remind you to read the matching file when 
 | Projects, Application services, mappings, DI | `docs/architecture/layers.md` |
 | DbContexts, SQLite, write locks, metrics, errors | `docs/architecture/persistence-and-concurrency.md` |
 | Domain events, dispatch, SignalR topics and notifiers | `docs/architecture/domain-events-and-realtime.md` |
-| Sessions, password, QR join, host login, cookies, admin, dev personas | `docs/features/sessions-and-auth.md` |
+| Sessions, password, QR join, host login, cookies, accounts (users, admins), dev personas | `docs/features/sessions-and-auth.md` |
 | Queue, player, fallback playlist, lyrics | `docs/features/music.md` |
 | Slideshow, photo upload, archive | `docs/features/slideshow.md` |
 | Games hub, lobby layer, Ringo, Never have I ever, LLM | `docs/games/games-lobby.md` |
