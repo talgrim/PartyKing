@@ -179,7 +179,6 @@ export const MusicQueue = (): ReactNode => {
         <PageNavigation
           className="px-2 pt-4"
           links={[
-            { to: ROUTE_PATHS.HOME, label: t('admin.allSessions') },
             // Photos can be added only once the session is unlocked
             ...(session && !locked ? [{ onClick: uploadDialog.show, label: t('photoUpload.title') }] : []),
             ...(isAdmin ? [{ to: ROUTE_PATHS.ADMIN, label: t('home.adminPanel') }] : []),

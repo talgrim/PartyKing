@@ -7,13 +7,18 @@ import { accountApi } from '@/service/endpoints/account/accountApi';
 import { useAccount } from '@/service/endpoints/account/useAccount';
 import { AccountDialog } from './AccountDialog';
 
-const buttonClass = 'flex max-w-[45vw] items-center gap-1 px-2 py-1 font-semibold text-slate-300 hover:bg-slate-700 cursor-pointer';
+/** Every item of the header has the same height, whatever it holds. */
+export const headerItemClass =
+  'flex h-7 items-center gap-1.5 px-2 rounded-md font-semibold text-slate-300 hover:bg-slate-700 cursor-pointer';
+
+/** Icons of the header items share one size. */
+export const headerIconClass = 'text-base!';
+
+const buttonClass = `${headerItemClass} max-w-[45vw]`;
 
 /**
- * The account button in the upper-right corner of every page: "Log in" for a visitor (it opens the dialog), the
- * username for a signed-in account (it drops "Account settings" and "Log out"). Fixed and below the full-screen
- * overlays (z-40, like the language switcher in the opposite corner), so those cover it instead of colliding with
- * their own buttons.
+ * The account button of the header: "Log in" for a visitor (it opens the dialog), the username for a signed-in
+ * account (it drops "Account settings" and "Log out").
  */
 export const AccountMenu = (): ReactNode => {
   const { t } = useTranslation();
@@ -31,11 +36,11 @@ export const AccountMenu = (): ReactNode => {
   };
 
   return (
-    <div className="fixed top-1 right-1 z-40 overflow-hidden rounded-md bg-slate-900/80 text-xs">
+    <>
       {account ? (
         <MenuButton
           label={account.username}
-          icon={<AccountCircleIcon fontSize="inherit" className="shrink-0" />}
+          icon={<AccountCircleIcon fontSize="inherit" className={`${headerIconClass} shrink-0`} />}
           className={buttonClass}
           entries={[
             { label: t('account.settings'), onClick: () => setDialogOpen(true) },
@@ -54,6 +59,6 @@ export const AccountMenu = (): ReactNode => {
         signedIn={signedIn}
         signedOut={signedOut}
       />
-    </div>
+    </>
   );
 };
