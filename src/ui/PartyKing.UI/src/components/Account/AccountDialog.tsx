@@ -1,5 +1,6 @@
 import { FormEvent, ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import CloseIcon from '@mui/icons-material/Close';
 import { Dialog, DialogContent, DialogTitle, Tab, Tabs } from '@mui/material';
 import { HTTP_STATUS_CODE } from '@/service/constants';
 import { accountApi } from '@/service/endpoints/account/accountApi';
@@ -45,7 +46,18 @@ export const AccountDialog = ({ open, onClose, account, signedIn, signedOut }: P
       // MUI's emotion styles are unlayered and beat Tailwind's layered utilities, hence the important modifier
       slotProps={{ paper: { className: 'bg-slate-800! text-slate-200! rounded-xl!' } }}
     >
-      <DialogTitle id="account-title" className="text-xl! font-semibold!">{account ? t('account.settings') : t('account.title')}</DialogTitle>
+      <DialogTitle id="account-title" className="flex! items-center justify-between text-xl! font-semibold!">
+        {account ? t('account.settings') : t('account.title')}
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={t('common.close')}
+          title={t('common.close')}
+          className="p-1 text-slate-400 hover:text-slate-200 cursor-pointer"
+        >
+          <CloseIcon />
+        </button>
+      </DialogTitle>
       <DialogContent>
         {account ? <SignedIn account={account} signedOut={signedOut} onClose={onClose} /> : <LogInOrSignUp onDone={done} />}
       </DialogContent>
