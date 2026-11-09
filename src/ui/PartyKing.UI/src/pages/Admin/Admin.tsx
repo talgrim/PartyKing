@@ -26,7 +26,6 @@ export const Admin = (): ReactNode => {
         <PageNavigation
           className="px-2 pt-4"
           links={[
-            { to: ROUTE_PATHS.HOME, label: t('admin.allSessions') },
             ...(isAdmin ? [{ to: ROUTE_PATHS.ADMIN_USERS, label: t('admin.registeredUsers') }] : []),
           ]}
         />

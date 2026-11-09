@@ -210,8 +210,16 @@ const ResetPasswordDialog = ({
   };
 
   return (
-    <Dialog open={user !== null} onClose={close} aria-labelledby="reset-password-title" fullWidth maxWidth="xs">
-      <DialogTitle id="reset-password-title">{t('admin.users.resetTitle', { name: user?.username ?? '' })}</DialogTitle>
+    <Dialog
+      open={user !== null}
+      onClose={close}
+      aria-labelledby="reset-password-title"
+      fullWidth
+      maxWidth="xs"
+      // MUI's emotion styles are unlayered and beat Tailwind's layered utilities, hence the important modifier
+      slotProps={{ paper: { className: 'bg-slate-800! text-slate-200! rounded-xl!' } }}
+    >
+      <DialogTitle id="reset-password-title" className="text-xl! font-semibold!">{t('admin.users.resetTitle', { name: user?.username ?? '' })}</DialogTitle>
       <DialogContent>
         <form className="space-y-2 pt-1" onSubmit={submit}>
           <input

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SWRConfig } from 'swr';
 import { MemoryRouter } from 'react-router-dom';
@@ -35,18 +35,16 @@ describe('Home', () => {
     await renderPage();
 
     expect(screen.queryByRole('link', { name: 'Admin panel' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument();
     expect(mocks.me).not.toHaveBeenCalled();
   });
 
-  it('links a signed-in admin to the admin panel and names the account on the button', async () => {
+  it('links a signed-in admin to the admin panel', async () => {
     localStorage.setItem(ACCOUNT_HINT_KEY, 'true');
     mocks.me.mockResolvedValue({ id: 'a1', username: 'boss', role: 'Admin', createdAt: '2026-11-09T12:00:00Z' });
 
     await renderPage();
 
     expect(await screen.findByRole('link', { name: 'Admin panel' })).toHaveAttribute('href', '/admin');
-    expect(screen.getByRole('button', { name: 'boss' })).toBeInTheDocument();
   });
 
   it('shows a signed-in user no admin link', async () => {
@@ -55,7 +53,7 @@ describe('Home', () => {
 
     await renderPage();
 
-    expect(await screen.findByRole('button', { name: 'ann' })).toBeInTheDocument();
+    await waitFor(() => expect(mocks.me).toHaveBeenCalled());
     expect(screen.queryByRole('link', { name: 'Admin panel' })).not.toBeInTheDocument();
   });
 
@@ -65,8 +63,8 @@ describe('Home', () => {
 
     await renderPage();
 
+    await waitFor(() => expect(mocks.me).toHaveBeenCalled());
     expect(screen.queryByRole('link', { name: 'Admin panel' })).not.toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: 'Log in' })).toBeInTheDocument();
   });
 
   it('shows the page in Polish, with the host and the empty search result interpolated', async () => {

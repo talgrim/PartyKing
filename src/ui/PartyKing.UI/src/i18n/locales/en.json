@@ -32,6 +32,7 @@
   },
   "account": {
     "title": "Account",
+    "settings": "Account settings",
     "username": "Username",
     "password": "Password",
     "logIn": "Log in",

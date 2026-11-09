@@ -1,5 +1,6 @@
 import { FormEvent, ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import CloseIcon from '@mui/icons-material/Close';
 import { Dialog, DialogContent, DialogTitle, Tab, Tabs } from '@mui/material';
 import { HTTP_STATUS_CODE } from '@/service/constants';
 import { accountApi } from '@/service/endpoints/account/accountApi';
@@ -23,7 +24,10 @@ type Props = {
   signedOut: () => void;
 };
 
-/** Log in or sign up for a visitor; change password, log out (everywhere) and delete the account for a signed-in one. */
+/**
+ * Log in or sign up for a visitor; the settings of a signed-in account: change password, log out everywhere and delete
+ * the account. Logging out is in the menu of the username button.
+ */
 export const AccountDialog = ({ open, onClose, account, signedIn, signedOut }: Props): ReactNode => {
   const { t } = useTranslation();
 
@@ -33,8 +37,27 @@ export const AccountDialog = ({ open, onClose, account, signedIn, signedOut }: P
   };
 
   return (
-    <Dialog open={open} onClose={onClose} aria-labelledby="account-title" fullWidth maxWidth="xs">
-      <DialogTitle id="account-title">{account ? t('account.signedInAs', { name: account.username }) : t('account.title')}</DialogTitle>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      aria-labelledby="account-title"
+      fullWidth
+      maxWidth="xs"
+      // MUI's emotion styles are unlayered and beat Tailwind's layered utilities, hence the important modifier
+      slotProps={{ paper: { className: 'bg-slate-800! text-slate-200! rounded-xl!' } }}
+    >
+      <DialogTitle id="account-title" className="flex! items-center justify-between text-xl! font-semibold!">
+        {account ? t('account.settings') : t('account.title')}
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={t('common.close')}
+          title={t('common.close')}
+          className="p-1 text-slate-400 hover:text-slate-200 cursor-pointer"
+        >
+          <CloseIcon />
+        </button>
+      </DialogTitle>
       <DialogContent>
         {account ? <SignedIn account={account} signedOut={signedOut} onClose={onClose} /> : <LogInOrSignUp onDone={done} />}
       </DialogContent>
@@ -49,9 +72,14 @@ const LogInOrSignUp = ({ onDone }: { onDone: () => void }): ReactNode => {
 
   return (
     <div className="space-y-3 pt-1">
-      <Tabs value={tab} onChange={(_, value) => setTab(value)} variant="fullWidth">
-        <Tab value="login" label={t('account.logIn')} />
-        <Tab value="register" label={t('account.signUp')} />
+      <Tabs
+        value={tab}
+        onChange={(_, value) => setTab(value)}
+        variant="fullWidth"
+        slotProps={{ indicator: { className: 'bg-amber-500!' } }}
+      >
+        <Tab value="login" label={t('account.logIn')} className="text-slate-400! [&.Mui-selected]:text-amber-500!" />
+        <Tab value="register" label={t('account.signUp')} className="text-slate-400! [&.Mui-selected]:text-amber-500!" />
       </Tabs>
       <CredentialsForm key={tab} mode={tab} onDone={onDone} />
     </div>
@@ -105,12 +133,6 @@ const SignedIn = ({
     );
   };
 
-  const logOut = () =>
-    void run(accountApi.logout, () => {
-      signedOut();
-      onClose();
-    });
-
   const logOutEverywhere = () => {
     if (window.confirm(t('account.confirmLogOutEverywhere'))) {
       void run(accountApi.logoutEverywhere, () => {
@@ -133,6 +155,8 @@ const SignedIn = ({
 
   return (
     <div className="space-y-4 pt-1">
+      <p className="text-sm text-slate-400">{t('account.signedInAs', { name: account.username })}</p>
+
       <form className="space-y-2" onSubmit={changePassword}>
         <h3 className="text-sm font-semibold uppercase">{t('account.changePassword')}</h3>
         <input
@@ -172,9 +196,6 @@ const SignedIn = ({
       )}
 
       <div className="flex flex-wrap gap-2">
-        <button type="button" className={secondaryButton} disabled={busy} onClick={logOut}>
-          {t('account.logOut')}
-        </button>
         <button type="button" className={secondaryButton} disabled={busy} onClick={logOutEverywhere}>
           {t('account.logOutEverywhere')}
         </button>
