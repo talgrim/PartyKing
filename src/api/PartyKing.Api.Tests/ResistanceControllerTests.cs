@@ -1,3 +1,4 @@
+using PartyKing.Application.Accounts;
 using PartyKing.API.Cookies;
 using ErrorOr;
 using Microsoft.AspNetCore.Authentication;
@@ -315,9 +316,9 @@ public class ResistanceControllerTests
 
         public void GrantHost(string profileId, HttpContext? httpContext) => throw new NotSupportedException();
         public void GrantSpotifyAccessToken(string spotifyAccessToken, int expiresIn, HttpContext? httpContext) => throw new NotSupportedException();
-        public void GrantAdmin(Guid adminId, HttpContext? httpContext) => throw new NotSupportedException();
-        public bool TryReadAdminId(HttpRequest request, out Guid adminId) => throw new NotSupportedException();
-        public void RevokeAdmin(HttpContext? httpContext) => throw new NotSupportedException();
+        public void GrantAccount(AccountIdentity identity, HttpContext? httpContext) => throw new NotSupportedException();
+        public bool TryReadAccount(HttpRequest request, out Guid accountId, out Guid securityStamp) => throw new NotSupportedException();
+        public void RevokeAccount(HttpContext? httpContext) => throw new NotSupportedException();
         public void GrantSessionAccess(Guid sessionId, string stamp, HttpContext? httpContext) => throw new NotSupportedException();
         public bool TryReadSessionAccess(HttpRequest request, Guid sessionId, out string stamp) => throw new NotSupportedException();
         public void GrantGamePlayer(GameKind game, Guid sessionId, GameSeat seat, HttpContext? httpContext) => throw new NotSupportedException();

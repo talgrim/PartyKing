@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using PartyKing.API.Cookies;
+using PartyKing.Application.Accounts;
 using PartyKing.Application.Games.Services.Base;
+using PartyKing.Domain.Entities.Auth;
 using PartyKing.Domain.Entities.Games.Base;
 
 namespace PartyKing.Api.Tests;
@@ -133,5 +135,88 @@ public class SignedCookiesTests
         asRingo.Headers.Cookie = $"{CookieNames.RingoPlayer}={request.Cookies[CookieNames.ResistancePlayer]}";
 
         Assert.False(cookies.TryReadGamePlayer(GameKind.Ringo, asRingo, _session, out _));
+    }
+
+    private static HttpRequest GrantedAccount(SignedCookies cookies, AccountIdentity identity, out string setCookie)
+    {
+        var context = new DefaultHttpContext();
+        cookies.GrantAccount(identity, context);
+        setCookie = context.Response.Headers.SetCookie.ToString();
+
+        return Echo(context, CookieNames.Account);
+    }
+
+    [Fact]
+    public void AnAccountCookie_RoundTripsTheIdAndTheStamp()
+    {
+        var cookies = Cookies();
+        var identity = new AccountIdentity(Guid.NewGuid(), AccountRole.User, Guid.NewGuid());
+
+        var request = GrantedAccount(cookies, identity, out _);
+
+        Assert.True(cookies.TryReadAccount(request, out var id, out var stamp));
+        Assert.Equal(identity.Id, id);
+        Assert.Equal(identity.SecurityStamp, stamp);
+    }
+
+    [Fact]
+    public void AnAccountCookie_IsHttpOnly_AndLastsLongerForAUserThanForAnAdmin()
+    {
+        var cookies = Cookies();
+
+        GrantedAccount(cookies, new AccountIdentity(Guid.NewGuid(), AccountRole.User, Guid.NewGuid()), out var user);
+        GrantedAccount(cookies, new AccountIdentity(Guid.NewGuid(), AccountRole.Admin, Guid.NewGuid()), out var admin);
+
+        Assert.Contains("httponly", user, StringComparison.OrdinalIgnoreCase);
+        Assert.InRange(ExpiresIn(user), TimeSpan.FromDays(29), TimeSpan.FromDays(31));
+        Assert.InRange(ExpiresIn(admin), TimeSpan.FromHours(11), TimeSpan.FromHours(13));
+    }
+
+    private static TimeSpan ExpiresIn(string setCookie)
+    {
+        var expires = setCookie.Split(';')
+            .Select(x => x.Trim())
+            .Single(x => x.StartsWith("expires=", StringComparison.OrdinalIgnoreCase))["expires=".Length..];
+
+        return DateTimeOffset.Parse(expires) - DateTimeOffset.UtcNow;
+    }
+
+    [Fact]
+    public void ATamperedAccountCookie_IsNobody()
+    {
+        var request = new DefaultHttpContext().Request;
+        request.Headers.Cookie = $"{CookieNames.Account}=made-up";
+
+        Assert.False(Cookies().TryReadAccount(request, out _, out _));
+    }
+
+    [Fact]
+    public void AMissingAccountCookie_IsNobody()
+    {
+        Assert.False(Cookies().TryReadAccount(new DefaultHttpContext().Request, out _, out _));
+    }
+
+    [Fact]
+    public void TheHostCookie_IsNotReadAsAnAccountCookie()
+    {
+        var cookies = Cookies();
+        var context = new DefaultHttpContext();
+        cookies.GrantHost("spotify-profile", context);
+        var host = Echo(context, CookieNames.User);
+        var asAccount = new DefaultHttpContext().Request;
+        asAccount.Headers.Cookie = $"{CookieNames.Account}={host.Cookies[CookieNames.User]}";
+
+        Assert.False(cookies.TryReadAccount(asAccount, out _, out _));
+    }
+
+    [Fact]
+    public void RevokingTheAccountCookie_ExpiresIt()
+    {
+        var context = new DefaultHttpContext();
+
+        Cookies().RevokeAccount(context);
+
+        var setCookie = context.Response.Headers.SetCookie.ToString();
+        Assert.StartsWith($"{CookieNames.Account}=;", setCookie);
     }
 }
