@@ -54,8 +54,8 @@ public static class DependencyInjection
             (inner, metrics) => new MeteredSessionsRepository(inner, metrics));
         services.AddMetered<IOAuthStatesRepository, OAuthStatesRepository>(
             (inner, metrics) => new MeteredOAuthStatesRepository(inner, metrics));
-        services.AddMetered<IAdminAccountsRepository, AdminAccountsRepository>(
-            (inner, metrics) => new MeteredAdminAccountsRepository(inner, metrics));
+        services.AddMetered<IAccountsRepository, AccountsRepository>(
+            (inner, metrics) => new MeteredAccountsRepository(inner, metrics));
         services.AddMetered<ILyricsOffsetsRepository, LyricsOffsetsRepository>(
             (inner, metrics) => new MeteredLyricsOffsetsRepository(inner, metrics));
         services.AddMetered<IRingoGamesRepository, RingoGamesRepository>(
