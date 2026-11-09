@@ -151,7 +151,44 @@ internal class SessionsRepository : ISessionsRepository
         // The caller picked from a snapshot, so the write holds only while the playlist and cursor are still those
         // of the snapshot: a playlist changed or rewound meanwhile keeps its new cursor.
         var updated = await dbContext.Sessions
-            .Where(x => x.Id == id && x.FallbackPlaylistId == playlistId && x.FallbackCursor == expectedCursor)
+            .Where(x => x.Id == id
+                && x.FallbackPlaylistKind == FallbackPlaylistKind.Spotify
+                && x.FallbackPlaylistId == playlistId
+                && x.FallbackCursor == expectedCursor)
+            .ExecuteUpdateAsync(x => x.SetProperty(s => s.FallbackCursor, cursor), cancellationToken);
+
+        return updated > 0;
+    }
+
+    public Task<bool> SetFallbackSavedPlaylistAsync(
+        Guid id,
+        Guid savedPlaylistId,
+        string playlistName,
+        bool shuffle,
+        CancellationToken cancellationToken)
+    {
+        return UpdateAsync(
+            id,
+            session => session.SetFallbackSavedPlaylist(savedPlaylistId, playlistName, shuffle),
+            cancellationToken);
+    }
+
+    public async Task<bool> SetFallbackSavedCursorAsync(
+        Guid id,
+        Guid savedPlaylistId,
+        int expectedCursor,
+        int cursor,
+        CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        // Bookkeeping of the refill like SetFallbackCursorAsync: guarded by the snapshot the pick was made from
+        var playlistId = savedPlaylistId.ToString();
+        var updated = await dbContext.Sessions
+            .Where(x => x.Id == id
+                && x.FallbackPlaylistKind == FallbackPlaylistKind.Saved
+                && x.FallbackPlaylistId == playlistId
+                && x.FallbackCursor == expectedCursor)
             .ExecuteUpdateAsync(x => x.SetProperty(s => s.FallbackCursor, cursor), cancellationToken);
 
         return updated > 0;
@@ -165,7 +202,12 @@ internal class SessionsRepository : ISessionsRepository
         var session = await dbContext.Sessions
             .AsNoTracking()
             .Where(x => x.Id == id)
-            .Select(x => new { x.HostProfileId, x.FallbackPlaylistId })
+            .Select(x => new
+            {
+                x.HostProfileId,
+                // Only a Spotify playlist has cached tracks to drop
+                FallbackSpotifyPlaylistId = x.FallbackPlaylistKind == FallbackPlaylistKind.Spotify ? x.FallbackPlaylistId : null
+            })
             .FirstOrDefaultAsync(cancellationToken);
 
         // Queue items and pending OAuth states are removed by the cascade delete
@@ -180,7 +222,7 @@ internal class SessionsRepository : ISessionsRepository
 
         // Nothing is loaded for an ExecuteDelete, so the repository raises the event, like LobbyGamesRepository.DeleteAsync
         await _dispatcher.DispatchAsync(
-            [new SessionDeleted(id, session?.HostProfileId, session?.FallbackPlaylistId)],
+            [new SessionDeleted(id, session?.HostProfileId, session?.FallbackSpotifyPlaylistId)],
             CancellationToken.None);
 
         return true;
