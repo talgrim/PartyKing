@@ -492,6 +492,9 @@ namespace PartyKing.Persistence.Migrations
                     b.Property<string>("FallbackPlaylistId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("FallbackPlaylistKind")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("FallbackPlaylistName")
                         .HasColumnType("TEXT");
 

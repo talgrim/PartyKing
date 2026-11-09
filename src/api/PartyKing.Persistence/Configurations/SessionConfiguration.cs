@@ -22,6 +22,10 @@ public class SessionConfiguration : IEntityTypeConfiguration<Session>
         // Claim and release both change the host: a save based on a stale host must not overwrite the newer one.
         builder.Property(x => x.HostProfileId).IsConcurrencyToken();
         builder.Ignore(x => x.HostDisplayName);
+
+        // The kind tells what FallbackPlaylistId names, and is null with it; the saved playlist's Guid view of it is not a column
+        builder.Property(x => x.FallbackPlaylistKind).HasConversion<string>();
+        builder.Ignore(x => x.FallbackSavedPlaylistId);
         builder
             .HasOne<SpotifyProfile>()
             .WithMany()
