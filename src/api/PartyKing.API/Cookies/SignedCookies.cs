@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.DataProtection;
+using PartyKing.Application.Accounts;
 using PartyKing.Application.Games.Services.Base;
+using PartyKing.Domain.Entities.Auth;
 using PartyKing.Domain.Entities.Games.Base;
 
 namespace PartyKing.API.Cookies;
@@ -7,21 +9,22 @@ namespace PartyKing.API.Cookies;
 internal class SignedCookies : ISignedCookies
 {
     private static readonly int UserExpirationTime = (int)TimeSpan.FromDays(30).TotalSeconds;
-    private static readonly int AdminExpirationTime = (int)TimeSpan.FromHours(12).TotalSeconds;
+    private static readonly TimeSpan AdminAccountLifetime = TimeSpan.FromHours(12);
+    private static readonly TimeSpan UserAccountLifetime = TimeSpan.FromDays(30);
     private static readonly int SessionAccessExpirationTime = (int)TimeSpan.FromDays(30).TotalSeconds;
 
     // Keeps the cookie small; when exceeded the oldest unlocks are forgotten and the password is asked again
     private const int MaxUnlockedSessions = 20;
 
     private readonly IDataProtector _userProtector;
-    private readonly IDataProtector _adminProtector;
+    private readonly ITimeLimitedDataProtector _accountProtector;
     private readonly IDataProtector _sessionAccessProtector;
     private readonly Dictionary<GameKind, (string CookieName, IDataProtector Protector)> _gamePlayerCookies;
 
     public SignedCookies(IDataProtectionProvider dataProtectionProvider)
     {
         _userProtector = dataProtectionProvider.CreateProtector("PartyKing.UserCookie");
-        _adminProtector = dataProtectionProvider.CreateProtector("PartyKing.AdminCookie");
+        _accountProtector = dataProtectionProvider.CreateProtector("PartyKing.AccountCookie").ToTimeLimitedDataProtector();
         _sessionAccessProtector = dataProtectionProvider.CreateProtector("PartyKing.SessionAccessCookie");
         _gamePlayerCookies = new()
         {
@@ -47,12 +50,15 @@ internal class SignedCookies : ISignedCookies
         context.Response.Cookies.Append(CookieNames.Auth, spotifyAccessToken, GetOptions(expiresIn, context));
     }
 
-    public void GrantAdmin(Guid adminId, HttpContext context)
+    public void GrantAccount(AccountIdentity identity, HttpContext context)
     {
+        var lifetime = identity.Role == AccountRole.Admin ? AdminAccountLifetime : UserAccountLifetime;
+
+        // The lifetime is signed into the value, so a copied cookie can't be kept alive by editing its expiry
         context.Response.Cookies.Append(
-            CookieNames.Admin,
-            _adminProtector.Protect(adminId.ToString()),
-            GetOptions(AdminExpirationTime, context));
+            CookieNames.Account,
+            _accountProtector.Protect($"{identity.Id:N}:{identity.SecurityStamp:N}", lifetime),
+            GetOptions((int)lifetime.TotalSeconds, context));
     }
 
     public bool TryReadProfileId(HttpRequest request, out string profileId)
@@ -67,21 +73,26 @@ internal class SignedCookies : ISignedCookies
         return TryUnprotect(_userProtector, protectedValue, out profileId);
     }
 
-    public bool TryReadAdminId(HttpRequest request, out Guid adminId)
+    public bool TryReadAccount(HttpRequest request, out Guid accountId, out Guid securityStamp)
     {
-        adminId = Guid.Empty;
+        accountId = Guid.Empty;
+        securityStamp = Guid.Empty;
 
-        if (!request.Cookies.TryGetValue(CookieNames.Admin, out var protectedValue))
+        // An expired cookie fails to unprotect like a tampered one
+        if (!request.Cookies.TryGetValue(CookieNames.Account, out var protectedValue)
+            || !TryUnprotect(_accountProtector, protectedValue, out var value))
         {
             return false;
         }
 
-        return TryUnprotect(_adminProtector, protectedValue, out var value) && Guid.TryParse(value, out adminId);
+        return value.Split(':') is [var id, var stamp]
+            && Guid.TryParseExact(id, "N", out accountId)
+            && Guid.TryParseExact(stamp, "N", out securityStamp);
     }
 
-    public void RevokeAdmin(HttpContext context)
+    public void RevokeAccount(HttpContext context)
     {
-        context.Response.Cookies.Delete(CookieNames.Admin, new CookieOptions { Path = "/" });
+        context.Response.Cookies.Delete(CookieNames.Account, new CookieOptions { Path = "/" });
     }
 
     public void GrantSessionAccess(Guid sessionId, string stamp, HttpContext context)

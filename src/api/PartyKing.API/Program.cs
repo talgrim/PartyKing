@@ -48,7 +48,18 @@ if (builder.Environment.IsDevelopmentOrE2e())
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    options.AddPolicy(AdminController.LoginRateLimitPolicy, context =>
+    // Several guests can share one Wi-Fi (one IP), so signing in is more generous than the session password.
+    // Changing and deleting an account check a password too, so they share this limit
+    options.AddPolicy(AccountController.LoginRateLimitPolicy, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 20,
+                Window = TimeSpan.FromMinutes(1)
+            }));
+    // Every registration costs a PBKDF2 run and a row
+    options.AddPolicy(AccountController.RegisterRateLimitPolicy, context =>
         RateLimitPartition.GetFixedWindowLimiter(
             context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             _ => new FixedWindowRateLimiterOptions

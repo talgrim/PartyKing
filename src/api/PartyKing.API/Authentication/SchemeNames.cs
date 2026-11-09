@@ -6,5 +6,6 @@ public static class SchemeNames
     /// <summary>The host's Spotify login cookie.</summary>
     public const string Host = "CustomCookie";
 
-    public const string Admin = "AdminCookie";
+    /// <summary>The account cookie of a user or an admin.</summary>
+    public const string Account = "AccountCookie";
 }

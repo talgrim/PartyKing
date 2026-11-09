@@ -11,6 +11,7 @@ using PartyKing.Infrastructure;
 using PartyKing.Infrastructure.Llm;
 using PartyKing.Infrastructure.Lyrics;
 using PartyKing.Infrastructure.Spotify;
+using PartyKing.Domain.Entities.Auth;
 using PartyKing.Infrastructure.Youtube;
 
 namespace PartyKing.API;
@@ -67,14 +68,14 @@ public static class DependencyInjection
         configuration.AddJsonFile("appsettings.Local.json", optional: true);
     }
 
-    private static void AddAuthorization(this IServiceCollection services)
+    internal static void AddAuthorization(this IServiceCollection services)
     {
         services.AddSingleton<ISignedCookies, SignedCookies>();
 
         services
             .AddAuthentication()
             .AddScheme<CookieAuthenticationOptions, CookieAuthenticationHandler>(SchemeNames.Host, null)
-            .AddScheme<CookieAuthenticationOptions, AdminCookieAuthenticationHandler>(SchemeNames.Admin, null);
+            .AddScheme<CookieAuthenticationOptions, AccountCookieAuthenticationHandler>(SchemeNames.Account, null);
 
         services
             .AddAuthorizationBuilder()
@@ -82,10 +83,16 @@ public static class DependencyInjection
             {
                 policy.RequireAuthenticatedUser();
             })
+            .AddPolicy(Policies.Account, policy =>
+            {
+                policy.AddAuthenticationSchemes(SchemeNames.Account);
+                policy.RequireAuthenticatedUser();
+            })
             .AddPolicy(Policies.Admin, policy =>
             {
-                policy.AddAuthenticationSchemes(SchemeNames.Admin);
+                policy.AddAuthenticationSchemes(SchemeNames.Account);
                 policy.RequireAuthenticatedUser();
+                policy.RequireRole(nameof(AccountRole.Admin));
             });
     }
 
