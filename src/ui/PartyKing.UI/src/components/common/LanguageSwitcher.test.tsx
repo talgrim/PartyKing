@@ -1,3 +1,4 @@
+import { MemoryRouter } from 'react-router-dom';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Layout } from '@/components/Layout';
@@ -37,12 +38,15 @@ describe('LanguageSwitcher', () => {
 
   it('is part of every page through the layout', () => {
     render(
-      <Layout>
-        <p>page</p>
-      </Layout>,
+      <MemoryRouter initialEntries={['/admin']}>
+        <Layout>
+          <p>page</p>
+        </Layout>
+      </MemoryRouter>,
     );
 
     expect(screen.getByRole('group', { name: 'Language' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'All sessions' })).toBeInTheDocument();
     expect(screen.getByText('page')).toBeInTheDocument();
   });
 });

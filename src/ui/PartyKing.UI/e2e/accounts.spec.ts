@@ -151,7 +151,14 @@ test('the account button is on every page, not only the landing page', async ({ 
     await expect(page.getByRole('button', { name: username })).toBeVisible();
   }
 
+  // The header also leads back to the list of sessions, except on the landing page itself
+  await page.goto('/admin');
+  await page.getByRole('link', { name: 'All sessions' }).click();
+  await expect(page).toHaveURL('/');
+  await expect(page.getByRole('link', { name: 'All sessions' })).toBeHidden();
+
   // ...and what it opens works there too
+  await page.goto('/admin');
   await openAccountSettings(page, username);
   await expect(page.getByText(`Signed in as ${username}`)).toBeVisible();
 });
