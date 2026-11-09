@@ -43,7 +43,7 @@ public class FallbackQueueFillerTests
     [Fact]
     public async Task Ensure_WhileASongWaits_AddsNothing()
     {
-        _session.FallbackPlaylistId = "playlist";
+        _session.SetFallbackPlaylist("playlist", "Mix", shuffle: false);
         _queue.Pending.Add(new QueueItem(_session.Id, QueueItemSource.Youtube, "url", "Guest song", null, null, null));
 
         await _filler.EnsureQueuedAsync(_session.Id, CancellationToken.None);
@@ -55,7 +55,7 @@ public class FallbackQueueFillerTests
     [Fact]
     public async Task Ensure_WithAnEmptyQueue_QueuesTheNextPlaylistTrackAsFallback()
     {
-        _session.FallbackPlaylistId = "playlist";
+        _session.SetFallbackPlaylist("playlist", "Mix", shuffle: false);
         _session.FallbackCursor = 1;
 
         await _filler.EnsureQueuedAsync(_session.Id, CancellationToken.None);
@@ -70,7 +70,7 @@ public class FallbackQueueFillerTests
     [Fact]
     public async Task Ensure_AfterTheLastTrack_StartsOverFromTheFirst()
     {
-        _session.FallbackPlaylistId = "playlist";
+        _session.SetFallbackPlaylist("playlist", "Mix", shuffle: false);
         _session.FallbackCursor = 2;
 
         await _filler.EnsureQueuedAsync(_session.Id, CancellationToken.None);
@@ -82,7 +82,7 @@ public class FallbackQueueFillerTests
     [Fact]
     public async Task Ensure_WhenShuffled_QueuesATrackButNotTheOneThatPlays()
     {
-        _session.FallbackPlaylistId = "playlist";
+        _session.SetFallbackPlaylist("playlist", "Mix", shuffle: false);
         _session.FallbackShuffle = true;
         _queue.Playing = new QueueItem(_session.Id, QueueItemSource.Spotify, "spotify:track:a", "A", null, null, null)
         {
@@ -103,7 +103,7 @@ public class FallbackQueueFillerTests
     [Fact]
     public async Task Ensure_ReadsThePlaylistOnlyOnceWhileItIsCached()
     {
-        _session.FallbackPlaylistId = "playlist";
+        _session.SetFallbackPlaylist("playlist", "Mix", shuffle: false);
 
         await _filler.EnsureQueuedAsync(_session.Id, CancellationToken.None);
         _queue.Pending.Clear();
@@ -116,7 +116,7 @@ public class FallbackQueueFillerTests
     [Fact]
     public async Task Ensure_WhenTheHostTokenIsUnavailable_RecordsTheErrorAndAddsNothing()
     {
-        _session.FallbackPlaylistId = "playlist";
+        _session.SetFallbackPlaylist("playlist", "Mix", shuffle: false);
         _tokens.SessionToken = ErrorOr.Error.Conflict(description: "The session has no host");
 
         await _filler.EnsureQueuedAsync(_session.Id, CancellationToken.None);
@@ -128,7 +128,7 @@ public class FallbackQueueFillerTests
     [Fact]
     public async Task Ensure_WithAnEmptyPlaylist_RecordsTheError()
     {
-        _session.FallbackPlaylistId = "playlist";
+        _session.SetFallbackPlaylist("playlist", "Mix", shuffle: false);
         _spotify.Tracks = [];
 
         await _filler.EnsureQueuedAsync(_session.Id, CancellationToken.None);
@@ -140,7 +140,7 @@ public class FallbackQueueFillerTests
     [Fact]
     public async Task Ensure_WhenTheSongIsQueuedAfterwards_ClearsAnEarlierError()
     {
-        _session.FallbackPlaylistId = "playlist";
+        _session.SetFallbackPlaylist("playlist", "Mix", shuffle: false);
         _status.SetError(_session.Id, "old error");
 
         await _filler.EnsureQueuedAsync(_session.Id, CancellationToken.None);
@@ -151,7 +151,7 @@ public class FallbackQueueFillerTests
     [Fact]
     public async Task Ensure_WhenThePlaylistWasRewoundWhileSpotifyWasRead_KeepsTheRewind()
     {
-        _session.FallbackPlaylistId = "playlist";
+        _session.SetFallbackPlaylist("playlist", "Mix", shuffle: false);
         _session.FallbackCursor = 2;
         _spotify.OnReadTracks = () => _session.SetFallbackPlaylist("playlist", "Mix", false);
 
@@ -165,7 +165,7 @@ public class FallbackQueueFillerTests
     [Fact]
     public async Task Ensure_WhenAGuestQueuedASongMeanwhile_KeepsTheCursor()
     {
-        _session.FallbackPlaylistId = "playlist";
+        _session.SetFallbackPlaylist("playlist", "Mix", shuffle: false);
         _spotify.OnReadTracks = () => _queue.Pending.Add(
             new QueueItem(_session.Id, QueueItemSource.Youtube, "url", "Guest song", null, null, null));
 

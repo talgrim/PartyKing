@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Contract.V1.Queue;
 using PartyKing.Application.Sessions.Handlers;
+using PartyKing.Domain.Enums;
 using PartyKing.Domain.Events.Sessions;
 
 namespace PartyKing.Application.Tests;
@@ -65,12 +66,53 @@ public class SessionHandlersTests
         _cache.Set("new", []);
         _status.SetError(SessionId, "old error");
 
-        await FallbackHandler().HandleAsync(new FallbackPlaylistChanged(SessionId, "old", "new"), Ct);
+        await FallbackHandler().HandleAsync(new FallbackPlaylistChanged(SessionId, FallbackPlaylistKind.Spotify, "new", "old"), Ct);
 
         Assert.False(_cache.TryGet("old", out _));
         Assert.False(_cache.TryGet("new", out _));
         Assert.Null(_status.GetError(SessionId));
         Assert.Equal(SessionId, Assert.Single(_filler.Ensured));
+    }
+
+    [Fact]
+    public async Task ASavedPlaylist_DropsTheCachedTracksOfTheSpotifyOneItReplaced_TheOldErrorAndFillsTheQueue()
+    {
+        var savedId = Guid.NewGuid().ToString();
+        _cache.Set("old", []);
+        _cache.Set(savedId, []);
+        _status.SetError(SessionId, "old error");
+
+        await FallbackHandler().HandleAsync(new FallbackPlaylistChanged(SessionId, FallbackPlaylistKind.Saved, savedId, "old"), Ct);
+
+        Assert.False(_cache.TryGet("old", out _));
+        // A saved playlist's id is never a key of the Spotify cache, so nothing is evicted for it
+        Assert.True(_cache.TryGet(savedId, out _));
+        Assert.Null(_status.GetError(SessionId));
+        Assert.Equal(SessionId, Assert.Single(_filler.Ensured));
+    }
+
+    [Fact]
+    public async Task ASavedPlaylistThatReplacedNothing_StillFillsTheQueue_AndKeepsOtherCachedTracks()
+    {
+        _cache.Set("other", []);
+
+        await FallbackHandler().HandleAsync(new FallbackPlaylistChanged(SessionId, FallbackPlaylistKind.Saved, Guid.NewGuid().ToString(), null), Ct);
+
+        Assert.True(_cache.TryGet("other", out _));
+        Assert.Equal(SessionId, Assert.Single(_filler.Ensured));
+    }
+
+    [Fact]
+    public async Task ClearingASavedPlaylist_DropsTheErrorOnly_WithoutFillingTheQueue()
+    {
+        _cache.Set("other", []);
+        _status.SetError(SessionId, "old error");
+
+        await FallbackHandler().HandleAsync(new FallbackPlaylistCleared(SessionId, null), Ct);
+
+        Assert.True(_cache.TryGet("other", out _));
+        Assert.Null(_status.GetError(SessionId));
+        Assert.Empty(_filler.Ensured);
     }
 
     [Fact]
