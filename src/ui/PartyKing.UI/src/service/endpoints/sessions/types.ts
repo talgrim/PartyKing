@@ -10,6 +10,8 @@ export type SessionDto = {
   /** Name of the playlist played when the queue is empty; null when there is none. */
   fallbackPlaylistName?: string | null;
   fallbackShuffle?: boolean;
+  /** Id of the saved playlist played when the queue is empty; null when the fallback is a Spotify playlist or none. */
+  fallbackSavedPlaylistId?: string | null;
 };
 
 // Mirrors PartyKing.Contract.V1.Spotify.PlaylistDto
