@@ -113,10 +113,18 @@ describe('AccountDialog', () => {
   });
 
   describe('for a signed-in account', () => {
-    it('names the account', () => {
+    it('is the account settings and names the account', () => {
       setup(user);
 
-      expect(screen.getByRole('dialog', { name: 'Signed in as ann' })).toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: 'Account settings' })).toBeInTheDocument();
+      expect(screen.getByText('Signed in as ann')).toBeInTheDocument();
+    });
+
+    it('leaves logging out to the menu of the username button', () => {
+      setup(user);
+
+      expect(screen.queryByRole('button', { name: 'Log out' })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Log out everywhere' })).toBeInTheDocument();
     });
 
     it('changes the password and clears the fields', async () => {
@@ -141,17 +149,6 @@ describe('AccountDialog', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Change password' }));
 
       expect(await screen.findByRole('alert')).toHaveTextContent('The current password is incorrect');
-    });
-
-    it('logs out and closes', async () => {
-      mocks.logout.mockResolvedValue(undefined);
-      const props = setup(user);
-
-      await userEvent.click(screen.getByRole('button', { name: 'Log out' }));
-
-      expect(mocks.logout).toHaveBeenCalledTimes(1);
-      expect(props.signedOut).toHaveBeenCalledTimes(1);
-      expect(props.onClose).toHaveBeenCalledTimes(1);
     });
 
     it('logs out everywhere only after the confirmation', async () => {

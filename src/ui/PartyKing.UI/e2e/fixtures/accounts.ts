@@ -39,3 +39,17 @@ export async function logInThroughTheDialog(page: Page, username: string, passwo
   await expect(page.getByRole('dialog')).toBeHidden();
   await expect(page.getByRole('button', { name: username })).toBeVisible();
 }
+
+/** The username button drops a menu: "Account settings" opens the dialog with the account's options. */
+export async function openAccountSettings(page: Page, username: string): Promise<void> {
+  await page.getByRole('button', { name: username }).click();
+  await page.getByRole('menuitem', { name: 'Account settings' }).click();
+  await expect(page.getByRole('dialog', { name: 'Account settings' })).toBeVisible();
+}
+
+/** Logs out through the menu of the username button; resolves once the page offers to log in again. */
+export async function logOutFromTheMenu(page: Page, username: string): Promise<void> {
+  await page.getByRole('button', { name: username }).click();
+  await page.getByRole('menuitem', { name: 'Log out' }).click();
+  await expect(page.getByRole('button', { name: 'Log in' })).toBeVisible();
+}
