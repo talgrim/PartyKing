@@ -1,4 +1,3 @@
-using PartyKing.Application.Sessions.Helpers;
 using ErrorOr;
 using PartyKing.Application.Localization;
 using PartyKing.Application.Sessions.Services;
@@ -20,7 +19,7 @@ public interface IGameService
         CancellationToken cancellationToken);
 }
 
-internal class GameService : IGameService
+internal class GameService : ManagerGuardedService, IGameService
 {
     // Placeholder lists until games are stored and started per session. Ringo and Resistance keep their names.
     private static readonly IReadOnlyList<GameDto> EnglishGames =
@@ -37,11 +36,9 @@ internal class GameService : IGameService
         new("never-have-i-ever", "Nigdy w życiu", "Goście wyznają, czego nigdy nie zrobili."),
     ];
 
-    private readonly ISessionAuthorizer _sessionAuthorizer;
-
     public GameService(ISessionAuthorizer sessionAuthorizer)
+        : base(sessionAuthorizer)
     {
-        _sessionAuthorizer = sessionAuthorizer;
     }
 
     public Task<ErrorOr<IReadOnlyList<GameDto>>> ListAsync(
@@ -50,15 +47,10 @@ internal class GameService : IGameService
         UiLanguage language,
         CancellationToken cancellationToken)
     {
-        return _sessionAuthorizer.RunAsManagerAsync(
+        return RunAsManagerAsync(
             sessionId,
             caller,
-            () => ListCoreAsync(language),
+            () => Task.FromResult(ErrorOrFactory.From(language == UiLanguage.Pl ? PolishGames : EnglishGames)),
             cancellationToken);
-    }
-
-    private static Task<ErrorOr<IReadOnlyList<GameDto>>> ListCoreAsync(UiLanguage language)
-    {
-        return Task.FromResult(ErrorOrFactory.From(language == UiLanguage.Pl ? PolishGames : EnglishGames));
     }
 }

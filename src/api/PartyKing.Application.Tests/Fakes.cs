@@ -16,6 +16,7 @@ using PartyKing.Contract.V1.Lyrics;
 using PartyKing.Contract.V1.Player;
 using PartyKing.Contract.V1.Queue;
 using PartyKing.Contract.V1.Slideshow;
+using PartyKing.Domain.Entities.Playlists;
 using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Entities.Sessions;
 using PartyKing.Domain.Enums;
@@ -103,6 +104,7 @@ internal class FakeSessionsRepository : ISessionsRepository
     }
     public List<(Guid Id, string? PlaylistId, string? Name, bool Shuffle)> FallbackPlaylistSet { get; } = [];
     public List<(Guid Id, int Cursor)> FallbackCursorSet { get; } = [];
+    public List<(Guid Id, Guid SavedPlaylistId, string Name, bool Shuffle)> FallbackSavedPlaylistSet { get; } = [];
 
     public async Task<bool> SetFallbackPlaylistAsync(
         Guid id,
@@ -130,6 +132,44 @@ internal class FakeSessionsRepository : ISessionsRepository
         return session is not null;
     }
 
+    public async Task<bool> SetFallbackSavedPlaylistAsync(
+        Guid id,
+        Guid savedPlaylistId,
+        string playlistName,
+        bool shuffle,
+        CancellationToken cancellationToken)
+    {
+        var session = _sessions.FirstOrDefault(x => x.Id == id);
+        if (session is not null)
+        {
+            session.SetFallbackSavedPlaylist(savedPlaylistId, playlistName, shuffle);
+            FallbackSavedPlaylistSet.Add((id, savedPlaylistId, playlistName, shuffle));
+            await DispatchAsync(session.DrainEvents());
+        }
+
+        return session is not null;
+    }
+
+    public Task<bool> SetFallbackSavedCursorAsync(
+        Guid id,
+        Guid savedPlaylistId,
+        int expectedCursor,
+        int cursor,
+        CancellationToken cancellationToken)
+    {
+        var session = _sessions.FirstOrDefault(x => x.Id == id);
+        var matches = session is not null
+            && session.FallbackSavedPlaylistId == savedPlaylistId
+            && session.FallbackCursor == expectedCursor;
+        if (matches)
+        {
+            session!.FallbackCursor = cursor;
+            FallbackCursorSet.Add((id, cursor));
+        }
+
+        return Task.FromResult(matches);
+    }
+
     public Task<bool> SetFallbackCursorAsync(
         Guid id,
         string playlistId,
@@ -138,7 +178,9 @@ internal class FakeSessionsRepository : ISessionsRepository
         CancellationToken cancellationToken)
     {
         var session = _sessions.FirstOrDefault(x => x.Id == id);
-        var matches = session is not null && session.FallbackPlaylistId == playlistId && session.FallbackCursor == expectedCursor;
+        var matches = session is not null && session.FallbackPlaylistKind == FallbackPlaylistKind.Spotify
+            && session.FallbackPlaylistId == playlistId
+            && session.FallbackCursor == expectedCursor;
         if (matches)
         {
             session!.FallbackCursor = cursor;
@@ -157,7 +199,7 @@ internal class FakeSessionsRepository : ISessionsRepository
         }
 
         _sessions.Remove(session);
-        await DispatchAsync([new SessionDeleted(id, session.HostProfileId, session.FallbackPlaylistId)]);
+        await DispatchAsync([new SessionDeleted(id, session.HostProfileId, session.FallbackPlaylistKind == FallbackPlaylistKind.Spotify ? session.FallbackPlaylistId : null)]);
 
         return true;
     }
@@ -240,7 +282,54 @@ internal class FakeQueueRepository : IQueueRepository
     public Task<IReadOnlyList<QueueItem>> GetPendingAsync(Guid sessionId, CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<QueueItem>>(Pending.ToList());
 
+    /// <summary>What <see cref="GetAllAsync"/> returns: the whole session, whatever the state of its songs.</summary>
+    public List<QueueItem> AllSongs { get; } = [];
+
+    public Task<IReadOnlyList<QueueItem>> GetAllAsync(Guid sessionId, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<QueueItem>>(AllSongs.ToList());
+
     public Task<QueueItem> AddAsync(QueueItem item, CancellationToken cancellationToken) => throw new NotSupportedException();
+}
+
+internal class FakeSavedPlaylistsRepository : ISavedPlaylistsRepository
+{
+    public List<SavedPlaylist> Saved { get; } = [];
+
+    /// <summary>What <see cref="CountByOwnerAsync"/> answers; the saved playlists are not counted.</summary>
+    public int OwnerPlaylistCount { get; set; }
+
+    public Task<int> CountByOwnerAsync(Guid ownerAccountId, CancellationToken cancellationToken) =>
+        Task.FromResult(OwnerPlaylistCount);
+
+    public Task<IReadOnlyList<SavedPlaylistSummary>> ListByOwnerAsync(
+        Guid ownerAccountId,
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyList<SavedPlaylistSummary> summaries = Saved
+            .Where(x => x.OwnerAccountId == ownerAccountId)
+            .OrderByDescending(x => x.CreatedAt)
+            .Select(x => new SavedPlaylistSummary(x.Id, x.Name, x.CreatedAt, x.Items.Count))
+            .ToList();
+
+        return Task.FromResult(summaries);
+    }
+
+    /// <summary>Runs while a playlist is being read, to change the session as another request would meanwhile.</summary>
+    public Action? OnGet { get; set; }
+
+    public Task<SavedPlaylist?> GetAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var playlist = Saved.FirstOrDefault(x => x.Id == id);
+        OnGet?.Invoke();
+
+        return Task.FromResult(playlist);
+    }
+
+    public Task AddAsync(SavedPlaylist playlist, CancellationToken cancellationToken)
+    {
+        Saved.Add(playlist);
+        return Task.CompletedTask;
+    }
 }
 
 internal class FakeSlideshowService : ISlideshowService

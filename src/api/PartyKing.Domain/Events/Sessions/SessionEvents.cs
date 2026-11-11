@@ -1,3 +1,5 @@
+using PartyKing.Domain.Enums;
+
 namespace PartyKing.Domain.Events.Sessions;
 
 /// <summary>The session got a new name (already trimmed).</summary>
@@ -21,8 +23,20 @@ public sealed record HostReleased(Guid SessionId, string? PreviousHostProfileId)
 /// </summary>
 public sealed record SessionDeleted(Guid SessionId, string? HostProfileId, string? FallbackPlaylistId) : IDomainEvent;
 
-/// <summary>A fallback playlist was set (or saved again, e.g. to change the shuffle flag) and rewound to its start.</summary>
-public sealed record FallbackPlaylistChanged(Guid SessionId, string? PreviousPlaylistId, string PlaylistId) : IDomainEvent;
+/// <summary>
+/// A fallback playlist was set (or saved again, e.g. to change the shuffle flag) and rewound to its start.
+/// <paramref name="PlaylistId"/> is what <paramref name="Kind"/> says: a Spotify playlist id or the id of an account's
+/// saved playlist. <paramref name="PreviousSpotifyPlaylistId"/> is the Spotify playlist it replaced, if any, so its
+/// cached tracks can be dropped; a saved playlist has nothing cached.
+/// </summary>
+public sealed record FallbackPlaylistChanged(
+    Guid SessionId,
+    FallbackPlaylistKind Kind,
+    string PlaylistId,
+    string? PreviousSpotifyPlaylistId) : IDomainEvent;
 
-/// <summary>The fallback playlist was removed. Never raised when the session had none.</summary>
-public sealed record FallbackPlaylistCleared(Guid SessionId, string PreviousPlaylistId) : IDomainEvent;
+/// <summary>
+/// The fallback playlist was removed. Never raised when the session had none.
+/// <paramref name="PreviousPlaylistId"/> is the Spotify playlist that was removed, null when it was a saved one.
+/// </summary>
+public sealed record FallbackPlaylistCleared(Guid SessionId, string? PreviousPlaylistId) : IDomainEvent;

@@ -3,7 +3,7 @@ paths:
   - "src/api/PartyKing.Domain/Entities/Sessions/**"
   - "src/api/PartyKing.Domain/Entities/Auth/**"
   - "src/api/PartyKing.Application/Sessions/**"
-  - "src/api/PartyKing.Application/Admin/**"
+  - "src/api/PartyKing.Application/Accounts/**"
   - "src/api/PartyKing.Application/Spotify/**"
   - "src/api/PartyKing.API/Cookies/**"
   - "src/api/PartyKing.API/Authentication/**"
@@ -11,6 +11,7 @@ paths:
   - "src/api/PartyKing.API/Development/**"
   - "src/api/PartyKing.API/Controllers/SessionsController.cs"
   - "src/api/PartyKing.API/Controllers/AdminController.cs"
+  - "src/api/PartyKing.API/Controllers/AccountController.cs"
   - "src/api/PartyKing.API/Controllers/SpotifyController.cs"
 ---
 

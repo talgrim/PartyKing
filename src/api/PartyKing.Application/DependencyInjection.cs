@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using PartyKing.Application.Admin.Services;
+using PartyKing.Application.Accounts.Services;
 using PartyKing.Application.Configuration;
 using PartyKing.Application.Events;
 using PartyKing.Application.Games.Handlers;
@@ -13,6 +13,7 @@ using PartyKing.Application.Games.Services.Resistance;
 using PartyKing.Application.Games.Services.Ringo;
 using PartyKing.Application.Lyrics.Handlers;
 using PartyKing.Application.Lyrics.Services;
+using PartyKing.Application.Playlists.Services;
 using PartyKing.Application.Player.Services;
 using PartyKing.Application.Queue.Handlers;
 using PartyKing.Application.Queue.Services;
@@ -23,6 +24,7 @@ using PartyKing.Application.Slideshow.Handlers;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Application.System;
+using PartyKing.Domain.Entities.Playlists;
 using PartyKing.Domain.Events;
 using PartyKing.Domain.Events.Games.Base;
 using PartyKing.Domain.Events.Games.Resistance;
@@ -48,14 +50,14 @@ public static class DependencyInjection
         services.RegisterLyrics();
         services.RegisterGames(configuration);
         services.RegisterSessions();
-        services.RegisterAdmin(configuration);
+        services.RegisterAccounts(configuration);
     }
 
     /// <summary>Creates the first admin account from configuration when none exists.</summary>
     public static async Task SeedAdminAsync(this IServiceProvider services)
     {
         await using var scope = services.CreateAsyncScope();
-        await scope.ServiceProvider.GetRequiredService<IAdminService>().SeedAsync(CancellationToken.None);
+        await scope.ServiceProvider.GetRequiredService<IAdminSeeder>().SeedAsync(CancellationToken.None);
     }
 
     private static void RegisterSessions(this IServiceCollection services)
@@ -85,11 +87,13 @@ public static class DependencyInjection
         services.AddDomainEventHandler<SessionDeleted, SessionLogHandler>();
     }
 
-    private static void RegisterAdmin(this IServiceCollection services, IConfiguration configuration)
+    private static void RegisterAccounts(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
-        services.AddSingleton<AdminDummyHash>();
-        services.AddScoped<IAdminService, AdminService>();
+        services.AddSingleton<AccountDummyHash>();
+        services.AddScoped<IAccountService, AccountService>();
+        services.AddScoped<IAccountAdminService, AccountAdminService>();
+        services.AddScoped<IAdminSeeder, AdminSeeder>();
         services.Configure<AdminConfiguration>(configuration.GetSection(AdminConfiguration.SectionName));
     }
 
@@ -218,6 +222,14 @@ public static class DependencyInjection
         services.AddScoped<IQueueService, QueueService>();
         services.AddScoped<IFallbackQueueFiller, FallbackQueueFiller>();
         services.AddScoped<IQueueAdvancer, QueueAdvancer>();
+        services.AddScoped<ISavedPlaylistService, SavedPlaylistService>();
+
+        // One specification per QueueSection; QueueSelection refuses to be built without exactly one for each
+        services.AddSingleton<IQueueSectionSpecification, PlayedSongsSpecification>();
+        services.AddSingleton<IQueueSectionSpecification, PlayingSongSpecification>();
+        services.AddSingleton<IQueueSectionSpecification, WaitingSongsSpecification>();
+        services.AddSingleton<IQueueSectionSpecification, FallbackSongsSpecification>();
+        services.AddSingleton<IQueueSelection, QueueSelection>();
 
         // Handlers run in registration order: the pushes first, then the refill whose own SongQueued push follows
         services.AddDomainEventHandler<SongQueued, QueuePushHandler>();

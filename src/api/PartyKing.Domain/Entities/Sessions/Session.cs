@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using PartyKing.Domain.Entities.Base;
+using PartyKing.Domain.Entities.Playlists;
 using PartyKing.Domain.Entities.Spotify;
 using PartyKing.Domain.Enums;
 using PartyKing.Domain.Events.Sessions;
@@ -15,6 +16,9 @@ public readonly record struct SessionCreation(SessionNameFailure Failure, Sessio
 /// null when the playlist is shuffled (the cursor is not used then).
 /// </summary>
 public sealed record FallbackPick(Song Track, int? NextCursor);
+
+/// <summary>The same for a saved playlist: the song the fallback wants next and the cursor to store after queueing it.</summary>
+public sealed record SavedFallbackPick(SavedPlaylistItem Song, int? NextCursor);
 
 public class Session : AggregateRoot
 {
@@ -74,8 +78,25 @@ public class Session : AggregateRoot
     /// </summary>
     public string? HostDisplayName { get; internal set; }
 
-    /// <summary>Spotify id of the host's playlist played whenever the queue runs empty; null when there is none.</summary>
+    /// <summary>
+    /// Id of the playlist played whenever the queue runs empty; null when there is none. What it names is told by
+    /// <see cref="FallbackPlaylistKind"/>: a Spotify playlist id, or the id of an account's saved playlist. Not a
+    /// foreign key: a saved playlist may go away with its account, and the refill treats a missing one as a failure.
+    /// </summary>
     public string? FallbackPlaylistId { get; internal set; }
+
+    /// <summary>What <see cref="FallbackPlaylistId"/> names; null exactly when there is no fallback playlist.</summary>
+    public FallbackPlaylistKind? FallbackPlaylistKind { get; internal set; }
+
+    /// <summary>The id of the saved playlist when that is the fallback, null for a Spotify playlist or none. Not stored.</summary>
+    public Guid? FallbackSavedPlaylistId =>
+        FallbackPlaylistKind == Enums.FallbackPlaylistKind.Saved && Guid.TryParse(FallbackPlaylistId, out var id) ? id : null;
+
+    /// <summary>The Spotify id of the fallback when that is a Spotify playlist, null for a saved one or none. Not stored.</summary>
+    private string? FallbackSpotifyPlaylistId =>
+        FallbackPlaylistKind == Enums.FallbackPlaylistKind.Spotify ? FallbackPlaylistId : null;
+
+    /// <summary>The name of whichever fallback playlist is set, for display.</summary>
     public string? FallbackPlaylistName { get; internal set; }
 
     /// <summary>Whether the fallback playlist is shuffled instead of played in order.</summary>
@@ -182,18 +203,49 @@ public class Session : AggregateRoot
         ClearFallbackPlaylist();
     }
 
-    /// <summary>Sets the fallback playlist and rewinds it. Saving the same playlist again changes the shuffle flag.</summary>
+    /// <summary>
+    /// Sets the fallback playlist and rewinds it. Saving the same playlist again changes the shuffle flag. A saved
+    /// playlist that was the fallback is replaced, since there is one fallback.
+    /// </summary>
     public void SetFallbackPlaylist(string playlistId, string? playlistName, bool shuffle)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(playlistId);
 
-        var previous = FallbackPlaylistId;
+        var previous = FallbackSpotifyPlaylistId;
 
         FallbackPlaylistId = playlistId;
+        FallbackPlaylistKind = Enums.FallbackPlaylistKind.Spotify;
         FallbackPlaylistName = playlistName;
         FallbackShuffle = shuffle;
         FallbackCursor = 0;
-        Raise(new FallbackPlaylistChanged(Id, previous, playlistId));
+        Raise(new FallbackPlaylistChanged(Id, Enums.FallbackPlaylistKind.Spotify, playlistId, previous));
+    }
+
+    /// <summary>
+    /// Makes a saved playlist the fallback and rewinds it. Saving the same playlist again changes the shuffle flag. A
+    /// Spotify playlist that was the fallback is replaced, and the event names it so its cached tracks can be dropped.
+    /// </summary>
+    public void SetFallbackSavedPlaylist(Guid savedPlaylistId, string playlistName, bool shuffle)
+    {
+        if (savedPlaylistId == Guid.Empty)
+        {
+            throw new ArgumentException("The saved playlist needs an id", nameof(savedPlaylistId));
+        }
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(playlistName);
+
+        var previousSpotifyPlaylistId = FallbackSpotifyPlaylistId;
+
+        FallbackPlaylistId = savedPlaylistId.ToString();
+        FallbackPlaylistKind = Enums.FallbackPlaylistKind.Saved;
+        FallbackPlaylistName = playlistName;
+        FallbackShuffle = shuffle;
+        FallbackCursor = 0;
+        Raise(new FallbackPlaylistChanged(
+            Id,
+            Enums.FallbackPlaylistKind.Saved,
+            savedPlaylistId.ToString(),
+            previousSpotifyPlaylistId));
     }
 
     /// <summary>
@@ -204,6 +256,32 @@ public class Session : AggregateRoot
     /// </summary>
     public FallbackPick? NextFallbackTrack(IReadOnlyList<Song> tracks, string? playingUrl, Random random)
     {
+        var pick = PickFallback(tracks, x => x.Uri, playingUrl, random);
+
+        return pick is null ? null : new FallbackPick(pick.Value.Track, pick.Value.NextCursor);
+    }
+
+    /// <summary>
+    /// Picks the next song of the fallback when it is a saved playlist, by the same rules as
+    /// <see cref="NextFallbackTrack"/>: the songs must be in their saved order, and the url of a song is what tells
+    /// the playing one apart.
+    /// </summary>
+    public SavedFallbackPick? NextFallbackSavedSong(
+        IReadOnlyList<SavedPlaylistItem> songs,
+        string? playingUrl,
+        Random random)
+    {
+        var pick = PickFallback(songs, x => x.Url, playingUrl, random);
+
+        return pick is null ? null : new SavedFallbackPick(pick.Value.Track, pick.Value.NextCursor);
+    }
+
+    private (T Track, int? NextCursor)? PickFallback<T>(
+        IReadOnlyList<T> tracks,
+        Func<T, string> urlOf,
+        string? playingUrl,
+        Random random)
+    {
         if (tracks.Count == 0)
         {
             return null;
@@ -212,29 +290,31 @@ public class Session : AggregateRoot
         if (!FallbackShuffle)
         {
             var index = FallbackCursor % tracks.Count;
-            return new FallbackPick(tracks[index], (index + 1) % tracks.Count);
+            return (tracks[index], (index + 1) % tracks.Count);
         }
 
-        var candidates = tracks.Where(x => x.Uri != playingUrl).ToList();
+        var candidates = tracks.Where(x => urlOf(x) != playingUrl).ToList();
         if (candidates.Count == 0)
         {
             candidates = tracks.ToList();
         }
 
-        return new FallbackPick(candidates[random.Next(candidates.Count)], null);
+        return (candidates[random.Next(candidates.Count)], null);
     }
 
-    /// <summary>Removes the fallback playlist; raises nothing when there is none.</summary>
+    /// <summary>Removes the fallback playlist, Spotify or saved; raises nothing when there is none.</summary>
     public void ClearFallbackPlaylist()
     {
-        var previous = FallbackPlaylistId;
+        var previous = FallbackSpotifyPlaylistId;
+        var hadPlaylist = FallbackPlaylistId is not null;
 
         FallbackPlaylistId = null;
+        FallbackPlaylistKind = null;
         FallbackPlaylistName = null;
         FallbackShuffle = false;
         FallbackCursor = 0;
 
-        if (previous is not null)
+        if (hadPlaylist)
         {
             Raise(new FallbackPlaylistCleared(Id, previous));
         }

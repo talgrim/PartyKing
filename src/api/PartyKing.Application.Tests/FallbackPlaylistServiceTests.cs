@@ -3,7 +3,10 @@ using ErrorOr;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Sessions;
+using PartyKing.Domain.Entities.Playlists;
+using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Entities.Spotify;
+using PartyKing.Domain.Enums;
 
 namespace PartyKing.Application.Tests;
 
@@ -15,6 +18,7 @@ public class FallbackPlaylistServiceTests
     private readonly FakeSessionsRepository _sessions = new();
     private readonly FakePlaylistSpotifyClient _spotify = new();
     private readonly FakeHostTokenProvider _tokens = new();
+    private readonly FakeSavedPlaylistsRepository _savedPlaylists = new();
     private readonly FakeFallbackQueueFiller _filler = new();
     private readonly FallbackStatusStore _status = new(new FakePlayerNotifier(), NullLogger<FallbackStatusStore>.Instance);
     private readonly FallbackPlaylistService _service;
@@ -28,7 +32,8 @@ public class FallbackPlaylistServiceTests
             sessionAuthorizer,
             _sessions,
             _spotify,
-            _tokens);
+            _tokens,
+            _savedPlaylists);
         _sessions.Events = TestEvents.SessionDispatcher(
             filler: _filler,
             trackCache: new PlaylistTrackCache(clock),
@@ -157,5 +162,115 @@ public class FallbackPlaylistServiceTests
         var result = await _service.GetHostPlaylistsAsync(_id, "someone", CancellationToken.None);
 
         Assert.Equal(ErrorType.Forbidden, result.FirstError.Type);
+    }
+
+    private static readonly Guid AccountId = Guid.NewGuid();
+
+    private SavedPlaylist SaveAPlaylist(Guid ownerAccountId, string name = "Friday")
+    {
+        var songs = new List<QueueItem>
+        {
+            new(Guid.NewGuid(), QueueItemSource.Youtube, "https://youtu.be/a", "Song", null, null, null) { Id = 1 }
+        };
+        var playlist = SavedPlaylist.Create(Guid.NewGuid(), ownerAccountId, name, songs, 0, DateTime.UtcNow).Playlist!;
+        _savedPlaylists.Saved.Add(playlist);
+
+        return playlist;
+    }
+
+    [Fact]
+    public async Task SetSaved_AsTheHost_StoresThePlaylistAndFillsTheQueue()
+    {
+        var playlist = SaveAPlaylist(AccountId);
+
+        var result = await _service.SetSavedAsync(_id, playlist.Id, true, AccountId, new SessionCaller(HostId, false), CancellationToken.None);
+
+        Assert.False(result.IsError);
+        Assert.Equal((_id, playlist.Id, "Friday", true), Assert.Single(_sessions.FallbackSavedPlaylistSet));
+        Assert.Equal(_id, Assert.Single(_filler.Ensured));
+    }
+
+    [Fact]
+    public async Task SetSaved_AsAnAdmin_Works()
+    {
+        var playlist = SaveAPlaylist(AccountId);
+
+        var result = await _service.SetSavedAsync(_id, playlist.Id, false, AccountId, new SessionCaller(null, true), CancellationToken.None);
+
+        Assert.False(result.IsError);
+        Assert.Single(_sessions.FallbackSavedPlaylistSet);
+    }
+
+    [Fact]
+    public async Task SetSaved_AsAnyoneElse_IsForbidden()
+    {
+        var playlist = SaveAPlaylist(AccountId);
+
+        var result = await _service.SetSavedAsync(_id, playlist.Id, false, AccountId, new SessionCaller("someone", false), CancellationToken.None);
+
+        Assert.Equal(ErrorType.Forbidden, result.FirstError.Type);
+        Assert.Empty(_sessions.FallbackSavedPlaylistSet);
+    }
+
+    [Fact]
+    public async Task SetSaved_WithAPlaylistOfAnotherAccount_IsNotFound()
+    {
+        var playlist = SaveAPlaylist(Guid.NewGuid());
+
+        var result = await _service.SetSavedAsync(_id, playlist.Id, false, AccountId, new SessionCaller(HostId, false), CancellationToken.None);
+
+        Assert.Equal(ErrorType.NotFound, result.FirstError.Type);
+        Assert.Empty(_sessions.FallbackSavedPlaylistSet);
+    }
+
+    [Fact]
+    public async Task SetSaved_WithAnUnknownPlaylist_IsNotFound()
+    {
+        var result = await _service.SetSavedAsync(_id, Guid.NewGuid(), false, AccountId, new SessionCaller(HostId, false), CancellationToken.None);
+
+        Assert.Equal(ErrorType.NotFound, result.FirstError.Type);
+        Assert.Empty(_sessions.FallbackSavedPlaylistSet);
+    }
+
+    [Fact]
+    public async Task SetSaved_ForAnUnknownSession_IsNotFound()
+    {
+        var playlist = SaveAPlaylist(AccountId);
+
+        var result = await _service.SetSavedAsync(Guid.NewGuid(), playlist.Id, false, AccountId, new SessionCaller(null, true), CancellationToken.None);
+
+        Assert.Equal(ErrorType.NotFound, result.FirstError.Type);
+        Assert.Empty(_sessions.FallbackSavedPlaylistSet);
+    }
+
+    [Fact]
+    public async Task SetSaved_ReplacesASpotifyPlaylist_AndDropsItsCachedTracks()
+    {
+        var clock = new FakeClock();
+        var cache = new PlaylistTrackCache(clock);
+        _sessions.Events = TestEvents.SessionDispatcher(filler: _filler, trackCache: cache, statusStore: _status);
+        await _service.SetAsync(_id, PlaylistLink, false, new SessionCaller(HostId, false), CancellationToken.None);
+        // Cached after the Spotify playlist was set, which dropped what was cached before
+        cache.Set("37i9dQZF1DXcBWIGoYBM5M", []);
+        var playlist = SaveAPlaylist(AccountId);
+
+        await _service.SetSavedAsync(_id, playlist.Id, false, AccountId, new SessionCaller(HostId, false), CancellationToken.None);
+
+        Assert.False(cache.TryGet("37i9dQZF1DXcBWIGoYBM5M", out _));
+        var session = (await _sessions.GetAsync(_id, CancellationToken.None))!;
+        Assert.Equal((FallbackPlaylistKind.Saved, playlist.Id.ToString()), (session.FallbackPlaylistKind, session.FallbackPlaylistId));
+        Assert.Equal(playlist.Id, session.FallbackSavedPlaylistId);
+    }
+
+    [Fact]
+    public async Task Set_WithoutAPlaylist_ClearsASavedPlaylistToo()
+    {
+        var playlist = SaveAPlaylist(AccountId);
+        await _service.SetSavedAsync(_id, playlist.Id, false, AccountId, new SessionCaller(HostId, false), CancellationToken.None);
+
+        var result = await _service.SetAsync(_id, null, false, new SessionCaller(HostId, false), CancellationToken.None);
+
+        Assert.False(result.IsError);
+        Assert.Null((await _sessions.GetAsync(_id, CancellationToken.None))!.FallbackSavedPlaylistId);
     }
 }

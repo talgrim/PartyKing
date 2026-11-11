@@ -1,7 +1,7 @@
 using PartyKing.Domain.Repositories;
 using ErrorOr;
 using Microsoft.Extensions.Logging;
-using PartyKing.Application.Admin.Services;
+using PartyKing.Application.Accounts.Services;
 using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Domain.Entities.Sessions;
 
@@ -30,11 +30,10 @@ public interface ISessionAccessService
     Task<bool> HasAccessAsync(Guid id, string? accessStamp, CancellationToken cancellationToken);
 }
 
-internal class SessionAccessService : ISessionAccessService
+internal class SessionAccessService : ManagerGuardedService, ISessionAccessService
 {
     private readonly ISessionsRepository _sessionsRepository;
     private readonly IPasswordHasher _passwordHasher;
-    private readonly ISessionAuthorizer _authorizer;
     private readonly ILogger<SessionAccessService> _logger;
 
     private readonly SessionDummyHash _dummyHash;
@@ -45,10 +44,10 @@ internal class SessionAccessService : ISessionAccessService
         ISessionAuthorizer authorizer,
         SessionDummyHash dummyHash,
         ILogger<SessionAccessService> logger)
+        : base(authorizer)
     {
         _sessionsRepository = sessionsRepository;
         _passwordHasher = passwordHasher;
-        _authorizer = authorizer;
         _dummyHash = dummyHash;
         _logger = logger;
     }
@@ -78,28 +77,25 @@ internal class SessionAccessService : ISessionAccessService
         SessionCaller caller,
         CancellationToken cancellationToken)
     {
-        return _authorizer.RunAsManagerAsync(
+        return RunAsManagerAsync(
             id,
             caller,
-            () => ChangePasswordCoreAsync(id, password, cancellationToken),
+            ChangePasswordAsyncCore,
             cancellationToken);
-    }
 
-    private async Task<ErrorOr<string>> ChangePasswordCoreAsync(
-        Guid id,
-        string? password,
-        CancellationToken cancellationToken)
-    {
-        var typed = SessionPassword.Create(password);
-        if (typed.Password is null)
+        async Task<ErrorOr<string>> ChangePasswordAsyncCore()
         {
-            return SessionPasswordErrors.From(typed.Failure);
+            var typed = SessionPassword.Create(password);
+            if (typed.Password is null)
+            {
+                return SessionPasswordErrors.From(typed.Failure);
+            }
+
+            var passwordHash = _passwordHasher.Hash(typed.Password.Value, PasswordHasher.SessionIterations);
+            var updated = await _sessionsRepository.UpdatePasswordHashAsync(id, passwordHash, cancellationToken);
+
+            return updated ? Session.AccessStampOf(passwordHash) : SessionErrors.NotFound();
         }
-
-        var passwordHash = _passwordHasher.Hash(typed.Password.Value, PasswordHasher.SessionIterations);
-        var updated = await _sessionsRepository.UpdatePasswordHashAsync(id, passwordHash, cancellationToken);
-
-        return updated ? Session.AccessStampOf(passwordHash) : SessionErrors.NotFound();
     }
 
     public async Task<bool> HasAccessAsync(Guid id, string? accessStamp, CancellationToken cancellationToken)

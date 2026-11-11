@@ -34,6 +34,11 @@ internal sealed class MeteredQueueRepository : MeteredRepository, IQueueReposito
         return MeasureAsync(nameof(GetPlayingAsync), () => _inner.GetPlayingAsync(sessionId, cancellationToken));
     }
 
+    public Task<IReadOnlyList<QueueItem>> GetAllAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        return MeasureAsync(nameof(GetAllAsync), () => _inner.GetAllAsync(sessionId, cancellationToken));
+    }
+
     public Task<QueueAdvanceResult> AdvanceAsync(Guid sessionId, int? currentItemId, CancellationToken cancellationToken)
     {
         return MeasureAsync(nameof(AdvanceAsync), () => _inner.AdvanceAsync(sessionId, currentItemId, cancellationToken));

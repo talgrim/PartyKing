@@ -96,6 +96,17 @@ internal class QueueRepository : IQueueRepository
             .FirstOrDefaultAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<QueueItem>> GetAllAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _readerDbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        return await dbContext.QueueItems
+            .AsNoTracking()
+            .Where(x => x.SessionId == sessionId)
+            .OrderBy(x => x.Id)
+            .ToListAsync(cancellationToken);
+    }
+
     public Task<QueueAdvanceResult> AdvanceAsync(
         Guid sessionId,
         int? currentItemId,

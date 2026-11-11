@@ -4,14 +4,14 @@ import { Link } from 'react-router-dom';
 import useSWR from 'swr';
 import { PageNavigation } from '@/components/common/PageNavigation';
 import { ROUTE_PATHS, sessionPath } from '@/router/constants';
-import { useIsAdmin } from '@/service/endpoints/admin/useIsAdmin';
+import { useAccount } from '@/service/endpoints/account/useAccount';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 
 /** Landing page: every session, with a search box that filters by code (or name). */
 export const Home = (): ReactNode => {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
-  const isAdmin = useIsAdmin();
+  const { account } = useAccount();
 
   const { data: sessions, error } = useSWR('sessions', sessionsApi.getSessions, {
     refreshInterval: 10000,
@@ -25,7 +25,10 @@ export const Home = (): ReactNode => {
   return (
     <div className="w-full min-h-full bg-slate-800 text-slate-400">
       <div className="w-full max-w-xl mx-auto pt-6">
-        {isAdmin && <PageNavigation className="px-2 pt-4" links={[{ to: ROUTE_PATHS.ADMIN, label: t('home.adminPanel') }]} />}
+        <PageNavigation
+          className="px-2 pt-4"
+          links={account?.role === 'Admin' ? [{ to: ROUTE_PATHS.ADMIN, label: t('home.adminPanel') }] : []}
+        />
 
         <div className="mx-2 mt-4 p-4 bg-slate-900 rounded-lg">
           <h1 className="text-2xl font-semibold text-slate-100">{t('home.title')}</h1>

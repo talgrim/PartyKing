@@ -1,67 +1,55 @@
-using PartyKing.API.Cookies;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 using PartyKing.API.Authorization;
-using PartyKing.Application.Admin.Services;
+using PartyKing.Application.Accounts.Services;
 using PartyKing.Application.Sessions.Services;
-using PartyKing.Contract.V1.Admin;
+using PartyKing.Contract.V1.Accounts;
+using PartyKing.Contract.V1.Common;
 using PartyKing.Contract.V1.Sessions;
 
 namespace PartyKing.API.Controllers;
 
 public class AdminController : CoreController
 {
-    public const string LoginRateLimitPolicy = "admin-login";
-
-    private readonly IAdminService _adminService;
+    private readonly IAccountAdminService _accountAdminService;
     private readonly ISessionAdminService _sessionAdminService;
-    private readonly ISignedCookies _cookies;
 
     public AdminController(
         IHttpContextAccessor httpContextAccessor,
-        IAdminService adminService,
-        ISessionAdminService sessionAdminService,
-        ISignedCookies cookies)
+        IAccountAdminService accountAdminService,
+        ISessionAdminService sessionAdminService)
         : base(httpContextAccessor)
     {
-        _adminService = adminService;
+        _accountAdminService = accountAdminService;
         _sessionAdminService = sessionAdminService;
-        _cookies = cookies;
     }
 
-    [HttpPost("admin/login")]
-    [EnableRateLimiting(LoginRateLimitPolicy)]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> Login([FromBody] AdminLoginRequestDto request, CancellationToken cancellationToken)
+    /// <summary>One page of the registered users (never the admins), ordered by username.</summary>
+    [HttpGet("admin/users")]
+    [AuthorizeAdmin]
+    [ProducesResponseType<PagedDto<AccountDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ListUsers(
+        [FromQuery] string? search,
+        [FromQuery] int? page,
+        [FromQuery] int? pageSize,
+        CancellationToken cancellationToken)
     {
-        var result = await _adminService.LoginAsync(request.Username, request.Password, cancellationToken);
+        var result = await _accountAdminService.ListUsersAsync(search, page, pageSize, cancellationToken);
 
-        if (result.IsError)
-        {
-            return Problem(result.Errors);
-        }
-
-        _cookies.GrantAdmin(result.Value, HttpContext);
-
-        return NoContent();
+        return Ok(result);
     }
 
-    [HttpPost("admin/logout")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public IActionResult Logout()
-    {
-        _cookies.RevokeAdmin(HttpContext);
-
-        return NoContent();
-    }
-
-    /// <summary>Lets the admin panel check whether the admin cookie is still valid.</summary>
-    [HttpGet("admin/me")]
+    /// <summary>Sets a new password for a user, who is signed out everywhere. Admin passwords are not reset here.</summary>
+    [HttpPut("admin/users/{accountId:guid}/password")]
     [AuthorizeAdmin]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public IActionResult GetMe()
+    public async Task<IActionResult> ResetPassword(
+        Guid accountId,
+        [FromBody] ResetPasswordRequestDto request,
+        CancellationToken cancellationToken)
     {
-        return NoContent();
+        var result = await _accountAdminService.ResetPasswordAsync(accountId, request.NewPassword, cancellationToken);
+
+        return result.Match(_ => NoContent(), Problem);
     }
 
     [HttpPost("admin/sessions")]

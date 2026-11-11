@@ -1,5 +1,6 @@
 using PartyKing.Application.Events;
 using PartyKing.Application.Queue.Services;
+using PartyKing.Domain.Enums;
 using PartyKing.Domain.Events.Sessions;
 
 namespace PartyKing.Application.Sessions.Handlers;
@@ -29,12 +30,16 @@ internal sealed class FallbackPlaylistHandler :
 
     public async Task HandleAsync(FallbackPlaylistChanged domainEvent, CancellationToken cancellationToken)
     {
-        // Saving the same playlist again (e.g. to change the shuffle flag) must read it fresh too
-        _trackCache.Remove(domainEvent.PlaylistId);
-
-        if (domainEvent.PreviousPlaylistId is not null)
+        // Saving the same playlist again (e.g. to change the shuffle flag) must read it fresh too. A saved playlist
+        // is read from the database and has nothing cached.
+        if (domainEvent.Kind == FallbackPlaylistKind.Spotify)
         {
-            _trackCache.Remove(domainEvent.PreviousPlaylistId);
+            _trackCache.Remove(domainEvent.PlaylistId);
+        }
+
+        if (domainEvent.PreviousSpotifyPlaylistId is not null)
+        {
+            _trackCache.Remove(domainEvent.PreviousSpotifyPlaylistId);
         }
 
         _statusStore.Clear(domainEvent.SessionId);
@@ -44,7 +49,11 @@ internal sealed class FallbackPlaylistHandler :
 
     public Task HandleAsync(FallbackPlaylistCleared domainEvent, CancellationToken cancellationToken)
     {
-        _trackCache.Remove(domainEvent.PreviousPlaylistId);
+        if (domainEvent.PreviousPlaylistId is not null)
+        {
+            _trackCache.Remove(domainEvent.PreviousPlaylistId);
+        }
+
         _statusStore.Clear(domainEvent.SessionId);
 
         return Task.CompletedTask;

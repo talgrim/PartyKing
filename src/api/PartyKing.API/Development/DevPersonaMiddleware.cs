@@ -21,7 +21,7 @@ public sealed partial class DevPersonaMiddleware
     [
         CookieNames.User,
         CookieNames.Auth,
-        CookieNames.Admin,
+        CookieNames.Account,
     ];
 
     private static readonly string[] PerPersonaCookies =

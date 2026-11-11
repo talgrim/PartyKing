@@ -5,6 +5,7 @@ using PartyKing.Domain.Entities.Auth;
 using PartyKing.Domain.Entities.Games.Resistance;
 using PartyKing.Domain.Entities.Games.Ringo;
 using PartyKing.Domain.Entities.Lyrics;
+using PartyKing.Domain.Entities.Playlists;
 using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Entities.Sessions;
 using PartyKing.Domain.Entities.Slideshow;
@@ -104,7 +105,8 @@ public class PartyKingDbContextBase : DbContext
     public DbSet<SpotifyProfile> SpotifyProfiles { get; set; } = null!;
     public DbSet<QueueItem> QueueItems { get; set; } = null!;
     public DbSet<Session> Sessions { get; set; } = null!;
-    public DbSet<AdminAccount> AdminAccounts { get; set; } = null!;
+    public DbSet<Account> Accounts { get; set; } = null!;
+    public DbSet<SavedPlaylist> SavedPlaylists { get; set; } = null!;
     public DbSet<OAuthState> OAuthStates { get; set; } = null!;
     public DbSet<LyricsOffset> LyricsOffsets { get; set; } = null!;
     public DbSet<RingoGame> RingoGames { get; set; } = null!;

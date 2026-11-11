@@ -30,14 +30,32 @@
     "sessions": "Sessions",
     "passwordProtected": "Password protected"
   },
+  "account": {
+    "title": "Account",
+    "settings": "Account settings",
+    "username": "Username",
+    "password": "Password",
+    "logIn": "Log in",
+    "signUp": "Sign up",
+    "passwordHint": "At least 8 characters",
+    "signedInAs": "Signed in as {{name}}",
+    "changePassword": "Change password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "passwordChanged": "Password changed",
+    "logOut": "Log out",
+    "logOutEverywhere": "Log out everywhere",
+    "confirmLogOutEverywhere": "Log out on every device, including this one?",
+    "deleteAccount": "Delete account",
+    "deleteWarning": "This deletes your account for good. Enter your password to confirm.",
+    "passwordToDelete": "Password to confirm",
+    "confirmDelete": "Delete my account"
+  },
   "admin": {
     "allSessions": "All sessions",
     "title": "Admin",
     "checkingLogin": "Checking the login…",
     "apiUnreachable": "Could not reach the API",
-    "username": "Username",
-    "password": "Password",
-    "logIn": "Log in",
     "logOut": "Log out",
     "newSessionNamePlaceholder": "New session name (optional)",
     "newSessionNameLabel": "New session name",
@@ -53,7 +71,30 @@
     "copyLink": "Copy link",
     "games": "Games",
     "removeHost": "Remove host",
-    "delete": "Delete"
+    "delete": "Delete",
+    "registeredUsers": "Registered users",
+    "notAnAdmin": "You are signed in as {{name}}, which is not an admin account.",
+    "users": {
+      "title": "Registered users",
+      "adminOnly": "Only an admin can see the users.",
+      "toAdminPage": "Go to the admin page",
+      "searchLabel": "Search users by username",
+      "searchPlaceholder": "Search by username",
+      "loading": "Loading users…",
+      "loadError": "Could not load the users",
+      "none": "Nobody has registered yet.",
+      "noMatch": "No user matches “{{search}}”.",
+      "registered": "Registered {{date}}",
+      "resetPassword": "Reset password",
+      "resetTitle": "Reset the password of {{name}}",
+      "newPassword": "New password",
+      "passwordReset": "The password of {{name}} was reset. They are logged out everywhere.",
+      "pagination": "Users pages",
+      "previous": "Previous",
+      "next": "Next",
+      "pageOf": "Page {{page}} of {{pages}}",
+      "total": "Users: {{count}}"
+    }
   },
   "imagePreview": {
     "name": "Name:",
@@ -126,6 +167,25 @@
     "imTheHost": "I'm the host",
     "loginAsHost": "Log in as host with Spotify"
   },
+  "savePlaylist": {
+    "title": "Save as playlist",
+    "name": "Playlist name",
+    "songs": "Songs to save",
+    "sections": {
+      "history": "Played earlier",
+      "current": "Playing now",
+      "queue": "Up next",
+      "fallback": "From the fallback playlist"
+    },
+    "songCount_one": "{{count}} song",
+    "songCount_other": "{{count}} songs",
+    "duplicatesHint": "A song that appears more than once is saved once.",
+    "save": "Save playlist",
+    "saved_one": "Saved {{count}} song as “{{name}}”.",
+    "saved_other": "Saved {{count}} songs as “{{name}}”.",
+    "signInAgain": "You were signed out. Log in again to save the playlist.",
+    "countsFailed": "Could not count the songs"
+  },
   "nameForm": {
     "saved": "Name saved",
     "label": "Session name",
@@ -168,13 +228,21 @@
     "saved": "Fallback playlist saved",
     "removed": "Fallback playlist removed",
     "playsWhenEmpty": "Plays when the queue is empty",
-    "hint": "Plays a song from one of the host’s playlists whenever the queue is empty.",
-    "yourPlaylists": "Your playlists",
+    "hint": "Plays a song from one of the host’s Spotify playlists, or from a playlist saved by an account, whenever the queue is empty.",
+    "yourPlaylists": "Your Spotify playlists",
     "tracks_one": "{{count}} track",
     "tracks_other": "{{count}} tracks",
     "orPaste": "Or paste a playlist link",
     "link": "Playlist link",
     "shuffle": "Shuffle"
+  },
+  "myPlaylists": {
+    "signInHint": "Log in to use the playlists you saved.",
+    "signInAgain": "You were signed out. Log in again to use your playlists.",
+    "loadFailed": "Could not load your saved playlists",
+    "empty": "You have not saved any playlist yet. Use “Save as playlist” in the header of the session.",
+    "choose": "Saved playlists",
+    "inUse": "in use"
   },
   "youtubeErrors": {
     "e2": "The video link is invalid",

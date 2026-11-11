@@ -30,14 +30,32 @@
     "sessions": "Sesje",
     "passwordProtected": "Chroniona hasłem"
   },
+  "account": {
+    "title": "Konto",
+    "settings": "Ustawienia konta",
+    "username": "Nazwa użytkownika",
+    "password": "Hasło",
+    "logIn": "Zaloguj się",
+    "signUp": "Zarejestruj się",
+    "passwordHint": "Co najmniej 8 znaków",
+    "signedInAs": "Zalogowano jako {{name}}",
+    "changePassword": "Zmień hasło",
+    "currentPassword": "Obecne hasło",
+    "newPassword": "Nowe hasło",
+    "passwordChanged": "Hasło zmienione",
+    "logOut": "Wyloguj się",
+    "logOutEverywhere": "Wyloguj wszędzie",
+    "confirmLogOutEverywhere": "Wylogować na wszystkich urządzeniach, także na tym?",
+    "deleteAccount": "Usuń konto",
+    "deleteWarning": "To trwale usunie Twoje konto. Podaj hasło, aby potwierdzić.",
+    "passwordToDelete": "Hasło do potwierdzenia",
+    "confirmDelete": "Usuń moje konto"
+  },
   "admin": {
     "allSessions": "Wszystkie sesje",
     "title": "Administrator",
     "checkingLogin": "Sprawdzanie logowania…",
     "apiUnreachable": "Nie można połączyć się z API",
-    "username": "Nazwa użytkownika",
-    "password": "Hasło",
-    "logIn": "Zaloguj się",
     "logOut": "Wyloguj się",
     "newSessionNamePlaceholder": "Nazwa nowej sesji (opcjonalnie)",
     "newSessionNameLabel": "Nazwa nowej sesji",
@@ -53,7 +71,30 @@
     "copyLink": "Kopiuj link",
     "games": "Gry",
     "removeHost": "Usuń gospodarza",
-    "delete": "Usuń"
+    "delete": "Usuń",
+    "registeredUsers": "Zarejestrowani użytkownicy",
+    "notAnAdmin": "Jesteś zalogowany jako {{name}}, a to nie jest konto administratora.",
+    "users": {
+      "title": "Zarejestrowani użytkownicy",
+      "adminOnly": "Użytkowników widzi tylko administrator.",
+      "toAdminPage": "Przejdź do strony administratora",
+      "searchLabel": "Szukaj użytkowników po nazwie",
+      "searchPlaceholder": "Szukaj po nazwie użytkownika",
+      "loading": "Wczytywanie użytkowników…",
+      "loadError": "Nie udało się wczytać użytkowników",
+      "none": "Nikt jeszcze się nie zarejestrował.",
+      "noMatch": "Żaden użytkownik nie pasuje do „{{search}}”.",
+      "registered": "Zarejestrowano {{date}}",
+      "resetPassword": "Resetuj hasło",
+      "resetTitle": "Resetuj hasło użytkownika {{name}}",
+      "newPassword": "Nowe hasło",
+      "passwordReset": "Hasło użytkownika {{name}} zostało zresetowane. Został wylogowany wszędzie.",
+      "pagination": "Strony użytkowników",
+      "previous": "Poprzednia",
+      "next": "Następna",
+      "pageOf": "Strona {{page}} z {{pages}}",
+      "total": "Użytkownicy: {{count}}"
+    }
   },
   "imagePreview": {
     "name": "Nazwa:",
@@ -128,6 +169,29 @@
     "imTheHost": "Jestem gospodarzem",
     "loginAsHost": "Zaloguj się jako gospodarz przez Spotify"
   },
+  "savePlaylist": {
+    "title": "Zapisz jako playlistę",
+    "name": "Nazwa playlisty",
+    "songs": "Utwory do zapisania",
+    "sections": {
+      "history": "Odtworzone wcześniej",
+      "current": "Gra teraz",
+      "queue": "Następne w kolejce",
+      "fallback": "Z playlisty zapasowej"
+    },
+    "songCount_one": "{{count}} utwór",
+    "songCount_few": "{{count}} utwory",
+    "songCount_many": "{{count}} utworów",
+    "songCount_other": "{{count}} utworu",
+    "duplicatesHint": "Utwór, który występuje kilka razy, zostanie zapisany raz.",
+    "save": "Zapisz playlistę",
+    "saved_one": "Zapisano {{count}} utwór jako „{{name}}”.",
+    "saved_few": "Zapisano {{count}} utwory jako „{{name}}”.",
+    "saved_many": "Zapisano {{count}} utworów jako „{{name}}”.",
+    "saved_other": "Zapisano {{count}} utworu jako „{{name}}”.",
+    "signInAgain": "Wylogowano Cię. Zaloguj się ponownie, aby zapisać playlistę.",
+    "countsFailed": "Nie udało się policzyć utworów"
+  },
   "nameForm": {
     "saved": "Nazwa zapisana",
     "label": "Nazwa sesji",
@@ -172,8 +236,8 @@
     "saved": "Playlista zapasowa zapisana",
     "removed": "Playlista zapasowa usunięta",
     "playsWhenEmpty": "Gra, gdy kolejka jest pusta",
-    "hint": "Odtwarza piosenkę z jednej z playlist hosta, gdy kolejka jest pusta.",
-    "yourPlaylists": "Twoje playlisty",
+    "hint": "Odtwarza piosenkę z jednej z playlist hosta w Spotify lub z playlisty zapisanej na koncie, gdy kolejka jest pusta.",
+    "yourPlaylists": "Twoje playlisty Spotify",
     "tracks_one": "{{count}} utwór",
     "tracks_few": "{{count}} utwory",
     "tracks_many": "{{count}} utworów",
@@ -181,6 +245,14 @@
     "orPaste": "Lub wklej link do playlisty",
     "link": "Link do playlisty",
     "shuffle": "Losowa kolejność"
+  },
+  "myPlaylists": {
+    "signInHint": "Zaloguj się, aby korzystać z zapisanych playlist.",
+    "signInAgain": "Wylogowano Cię. Zaloguj się ponownie, aby korzystać ze swoich playlist.",
+    "loadFailed": "Nie udało się wczytać zapisanych playlist",
+    "empty": "Nie zapisano jeszcze żadnej playlisty. Użyj „Zapisz jako playlistę” w nagłówku sesji.",
+    "choose": "Zapisane playlisty",
+    "inUse": "używana"
   },
   "youtubeErrors": {
     "e2": "Link do filmu jest nieprawidłowy",

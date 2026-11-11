@@ -138,7 +138,7 @@ public class SessionsRepositoryEventsTests : IAsyncLifetime
 
         Assert.Collection(
             _dispatcher.Events,
-            first => Assert.Equal(new FallbackPlaylistChanged(_sessionId, null, "playlist"), first),
+            first => Assert.Equal(new FallbackPlaylistChanged(_sessionId, FallbackPlaylistKind.Spotify, "playlist", null), first),
             second => Assert.Equal(new FallbackPlaylistCleared(_sessionId, "playlist"), second));
         Assert.Null((await ReadAsync()).FallbackPlaylistId);
     }
@@ -188,6 +188,110 @@ public class SessionsRepositoryEventsTests : IAsyncLifetime
         var stored = await _repository.SetFallbackCursorAsync(_sessionId, "playlist", 5, 6, Ct);
 
         Assert.False(stored);
+        Assert.Equal(0, (await ReadAsync()).FallbackCursor);
+    }
+
+    [Fact]
+    public async Task SetFallbackSavedPlaylist_StoresItAndDispatchesChanged_ThenClearDispatchesCleared()
+    {
+        var savedId = Guid.NewGuid();
+
+        await _repository.SetFallbackSavedPlaylistAsync(_sessionId, savedId, "Mine", true, Ct);
+        await _repository.SetFallbackPlaylistAsync(_sessionId, null, null, false, Ct);
+
+        Assert.Collection(
+            _dispatcher.Events,
+            first => Assert.Equal(new FallbackPlaylistChanged(_sessionId, FallbackPlaylistKind.Saved, savedId.ToString(), null), first),
+            second => Assert.Equal(new FallbackPlaylistCleared(_sessionId, null), second));
+        Assert.Null((await ReadAsync()).FallbackSavedPlaylistId);
+    }
+
+    [Fact]
+    public async Task SetFallbackSavedPlaylist_ReplacesASpotifyPlaylist_AndTheOtherWayRound()
+    {
+        var savedId = Guid.NewGuid();
+        await _repository.SetFallbackPlaylistAsync(_sessionId, "playlist", "Mix", false, Ct);
+
+        await _repository.SetFallbackSavedPlaylistAsync(_sessionId, savedId, "Mine", true, Ct);
+
+        var saved = await ReadAsync();
+        Assert.Equal(
+            (savedId.ToString(), FallbackPlaylistKind.Saved, savedId, "Mine", true),
+            (saved.FallbackPlaylistId, saved.FallbackPlaylistKind, saved.FallbackSavedPlaylistId, saved.FallbackPlaylistName, saved.FallbackShuffle));
+        Assert.Equal(new FallbackPlaylistChanged(_sessionId, FallbackPlaylistKind.Saved, savedId.ToString(), "playlist"), _dispatcher.Events.Last());
+
+        await _repository.SetFallbackPlaylistAsync(_sessionId, "playlist", "Mix", false, Ct);
+
+        var spotify = await ReadAsync();
+        Assert.Equal((null, "playlist", FallbackPlaylistKind.Spotify), (spotify.FallbackSavedPlaylistId, spotify.FallbackPlaylistId, spotify.FallbackPlaylistKind));
+    }
+
+    [Fact]
+    public async Task SetFallbackSavedPlaylist_OfAnUnknownSession_AnswersFalse()
+    {
+        Assert.False(await _repository.SetFallbackSavedPlaylistAsync(Guid.NewGuid(), Guid.NewGuid(), "Mine", false, Ct));
+        Assert.Empty(_dispatcher.Events);
+    }
+
+    [Fact]
+    public async Task SetFallbackSavedCursor_SavesItAndRaisesNothing()
+    {
+        var savedId = Guid.NewGuid();
+        await _repository.SetFallbackSavedPlaylistAsync(_sessionId, savedId, "Mine", false, Ct);
+        _dispatcher.Events.Clear();
+
+        var stored = await _repository.SetFallbackSavedCursorAsync(_sessionId, savedId, 0, 3, Ct);
+
+        Assert.True(stored);
+        Assert.Equal(3, (await ReadAsync()).FallbackCursor);
+        Assert.Empty(_dispatcher.Events);
+    }
+
+    [Fact]
+    public async Task SetFallbackSavedCursor_AfterAnotherPlaylistWasChosen_KeepsTheNewCursor()
+    {
+        var oldId = Guid.NewGuid();
+        await _repository.SetFallbackSavedPlaylistAsync(_sessionId, oldId, "Old", false, Ct);
+        await _repository.SetFallbackSavedPlaylistAsync(_sessionId, Guid.NewGuid(), "New", false, Ct);
+
+        var stored = await _repository.SetFallbackSavedCursorAsync(_sessionId, oldId, 0, 3, Ct);
+
+        Assert.False(stored);
+        Assert.Equal(0, (await ReadAsync()).FallbackCursor);
+    }
+
+    [Fact]
+    public async Task SetFallbackSavedCursor_AfterTheSamePlaylistWasRewound_KeepsTheRewind()
+    {
+        var savedId = Guid.NewGuid();
+        await _repository.SetFallbackSavedPlaylistAsync(_sessionId, savedId, "Mine", false, Ct);
+        await _repository.SetFallbackSavedCursorAsync(_sessionId, savedId, 0, 5, Ct);
+        await _repository.SetFallbackSavedPlaylistAsync(_sessionId, savedId, "Mine", false, Ct);
+
+        var stored = await _repository.SetFallbackSavedCursorAsync(_sessionId, savedId, 5, 6, Ct);
+
+        Assert.False(stored);
+        Assert.Equal(0, (await ReadAsync()).FallbackCursor);
+    }
+
+    [Fact]
+    public async Task SetFallbackCursor_OfASavedPlaylist_IsRefusedEvenWithItsId()
+    {
+        var savedId = Guid.NewGuid();
+        await _repository.SetFallbackSavedPlaylistAsync(_sessionId, savedId, "Mine", false, Ct);
+
+        // The id alone matches the column, but the playlist is not a Spotify one
+        Assert.False(await _repository.SetFallbackCursorAsync(_sessionId, savedId.ToString(), 0, 3, Ct));
+        Assert.Equal(0, (await ReadAsync()).FallbackCursor);
+    }
+
+    [Fact]
+    public async Task SetFallbackSavedCursor_OfASpotifyPlaylist_IsRefusedEvenWithAMatchingId()
+    {
+        var lookalike = Guid.NewGuid();
+        await _repository.SetFallbackPlaylistAsync(_sessionId, lookalike.ToString(), "Mix", false, Ct);
+
+        Assert.False(await _repository.SetFallbackSavedCursorAsync(_sessionId, lookalike, 0, 3, Ct));
         Assert.Equal(0, (await ReadAsync()).FallbackCursor);
     }
 
@@ -261,6 +365,18 @@ public class SessionsRepositoryEventsTests : IAsyncLifetime
         Assert.True(deleted);
         Assert.Null(seenByHandlers);
         Assert.Equal(new SessionDeleted(_sessionId, "host-1", "playlist"), Assert.Single(_dispatcher.Events));
+    }
+
+    [Fact]
+    public async Task Delete_OfASessionWithASavedPlaylist_NamesNoSpotifyPlaylistToForget()
+    {
+        await _repository.TryClaimAsync(_sessionId, "host-1", Ct);
+        await _repository.SetFallbackSavedPlaylistAsync(_sessionId, Guid.NewGuid(), "Mine", false, Ct);
+        _dispatcher.Events.Clear();
+
+        await _repository.DeleteAsync(_sessionId, Ct);
+
+        Assert.Equal(new SessionDeleted(_sessionId, "host-1", null), Assert.Single(_dispatcher.Events));
     }
 
     [Fact]
