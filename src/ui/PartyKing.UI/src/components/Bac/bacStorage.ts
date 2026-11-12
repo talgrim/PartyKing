@@ -48,13 +48,6 @@ export const DEFAULT_BAC_STATE: BacState = {
 
 export const newDrinkId = (): string => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
-export const newDrink = (kind: DrinkKind, startedAt: number): StoredDrink => ({
-  id: newDrinkId(),
-  kind,
-  startedAt,
-  ...DRINK_PRESETS[kind],
-});
-
 export const inRange = (value: unknown, { min, max }: { min: number; max: number }): value is number =>
   typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max;
 
