@@ -1,6 +1,6 @@
 # E2E tests (Playwright, Chromium)
 
-From `src/ui/PartyKing.UI`: `npm run e2e`, about 8 min, 75 tests. First time only: `npx playwright install chromium`. Typecheck the suite with `npx tsc -p e2e/tsconfig.json`; `vite.config.ts` keeps `e2e` and `playwright.config.*` out of vitest.
+From `src/ui/PartyKing.UI`: `npm run e2e`, about 8 min, 76 tests. First time only: `npx playwright install chromium`. Typecheck the suite with `npx tsc -p e2e/tsconfig.json`; `vite.config.ts` keeps `e2e` and `playwright.config.*` out of vitest.
 
 ## Setup
 
@@ -21,7 +21,7 @@ From `src/ui/PartyKing.UI`: `npm run e2e`, about 8 min, 75 tests. First time onl
 ## Specs
 
 - `accounts.spec.ts`: a visitor signs up through the dialog, stays signed in after a reload, logs out and back in; a taken username (any case) and a wrong password are refused; changing the password (old one stops working, a wrong current one changes nothing); "log out everywhere" ends another browser's login; deleting the account; a user is turned away from `/admin`. `e2e/fixtures/accounts.ts` has `registerUser` (API) and the dialog helpers.
-- `bac-calculator.spec.ts`: a visitor opens the header calculator, enters a weight and a beer from an hour ago and gets an estimate above zero, with the US limit; the weight and the drink are still there after a reload. In Polish (opened from `/admin`, so it is on every page) the result is in promille with the Polish limits.
+- `bac-calculator.spec.ts`: a visitor opens the header calculator, reads the warning behind the "i" icon, sees "Drinks" locked until a weight is entered, adds a beer from an hour ago and gets an estimate above zero, with the US limit; after a reload "About you" is shut and the drink is still on the open list. Another test scrolls the mouse wheel over the focused weight field (it changes, and the number only moves while it is focused), then edits, repeats and deletes an entry with its icons. In Polish (opened from `/admin`, so it is on every page) the result is in promille with the Polish limits.
 - `admin-users.spec.ts`: an admin pages (22 users, two pages) and searches the users; resets a password (the user's old cookie dies, only the new password logs in); a password under 8 characters is not accepted; a user gets 403 and a visitor 401 from `/admin/users`; an admin's own password cannot be reset.
 - Home smoke; admin login and session creation; wrong-password and right-password unlock; the language switch.
 - Photo upload (and a refused fake image).
