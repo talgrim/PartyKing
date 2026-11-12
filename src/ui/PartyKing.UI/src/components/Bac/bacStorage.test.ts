@@ -1,7 +1,9 @@
-import { DEFAULT_BAC_STATE, BacState, parseBacState, serializeBacState, newDrink } from './bacStorage';
+import { DEFAULT_BAC_STATE, BacState, StoredDrink, parseBacState, serializeBacState } from './bacStorage';
 
 const NOW = Date.UTC(2025, 0, 1, 22, 0);
 const HOUR = 3_600_000;
+
+const drink = (id: string, startedAt: number): StoredDrink => ({ id, kind: 'beer', volumeMl: 500, abvPercent: 5, startedAt });
 
 describe('parseBacState', () => {
   it('is the default when nothing is saved', () => {
@@ -19,7 +21,7 @@ describe('parseBacState', () => {
       heightCm: 170,
       age: 28,
       exactTime: true,
-      drinks: [{ ...newDrink('wine', NOW - HOUR), id: 'a' }],
+      drinks: [{ ...drink('a', NOW - HOUR), kind: 'wine', volumeMl: 150, abvPercent: 12 }],
     };
 
     expect(parseBacState(serializeBacState(state), NOW)).toEqual(state);
@@ -32,8 +34,8 @@ describe('parseBacState', () => {
   });
 
   it('forgets the drinks older than a day and the broken ones', () => {
-    const fresh = { ...newDrink('beer', NOW - HOUR), id: 'fresh' };
-    const old = { ...newDrink('beer', NOW - 25 * HOUR), id: 'old' };
+    const fresh = drink('fresh', NOW - HOUR);
+    const old = drink('old', NOW - 25 * HOUR);
     const broken = { id: 'broken', kind: 'beer', volumeMl: -3, abvPercent: 5, startedAt: NOW };
     const raw = JSON.stringify({ version: 1, drinks: [fresh, old, broken, 'x', null] });
 

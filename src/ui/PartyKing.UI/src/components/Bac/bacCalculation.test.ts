@@ -6,6 +6,7 @@ import {
   distributionFactor,
   estimateBac,
   gramsOfAlcohol,
+  totalGramsOfAlcohol,
   totalBodyWaterLitres,
   usesTotalBodyWater,
 } from './bacCalculation';
@@ -23,6 +24,16 @@ describe('gramsOfAlcohol', () => {
   it('weighs the ethanol of a drink', () => {
     expect(gramsOfAlcohol({ volumeMl: 500, abvPercent: 5 })).toBeCloseTo(19.725);
     expect(gramsOfAlcohol({ volumeMl: 40, abvPercent: 40 })).toBeCloseTo(12.624);
+  });
+});
+
+describe('totalGramsOfAlcohol', () => {
+  it('adds up the ethanol of all the drinks', () => {
+    expect(totalGramsOfAlcohol([{ volumeMl: 500, abvPercent: 5 }, { volumeMl: 40, abvPercent: 40 }])).toBeCloseTo(32.349);
+  });
+
+  it('is zero without drinks', () => {
+    expect(totalGramsOfAlcohol([])).toBe(0);
   });
 });
 
