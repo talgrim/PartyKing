@@ -70,6 +70,10 @@ export const usesTotalBodyWater = ({ heightCm, age }: Pick<BacProfile, 'heightCm
 export const gramsOfAlcohol = ({ volumeMl, abvPercent }: Pick<BacDrink, 'volumeMl' | 'abvPercent'>): number =>
   volumeMl * (abvPercent / 100) * ETHANOL_DENSITY;
 
+/** The pure alcohol of all the drinks together, in grams. */
+export const totalGramsOfAlcohol = (drinks: readonly Pick<BacDrink, 'volumeMl' | 'abvPercent'>[]): number =>
+  drinks.reduce((sum, drink) => sum + gramsOfAlcohol(drink), 0);
+
 const absorbedFraction = (drink: BacDrink, at: number): number =>
   Math.min(1, Math.max(0, (at - drink.startedAt) / (ABSORPTION_MINUTES * MS_PER_MINUTE)));
 

@@ -6,9 +6,9 @@ import { useNow } from '@/utils/useNow';
 import { BacDrink, BacProfile, estimateBac, usesTotalBodyWater } from './bacCalculation';
 import { WEIGHT_RANGE, inRange, AGE_RANGE, HEIGHT_RANGE, VOLUME_RANGE, ABV_RANGE } from './bacStorage';
 import { bacUnitFor } from './bacUnits';
-import { BacDrinkList } from './BacDrinkList';
-import { BacProfileForm } from './BacProfileForm';
+import { BacInfoButton } from './BacInfoButton';
 import { BacResult } from './BacResult';
+import { BacSections } from './BacSections';
 import { useBacState } from './useBacState';
 
 type Props = {
@@ -21,7 +21,8 @@ const TICK_MS = 30_000;
 
 /**
  * The blood alcohol calculator, open to everybody, a visitor included. It estimates from the profile and the drinks the
- * browser remembers; nothing is sent anywhere. Full screen on a phone.
+ * browser remembers; nothing is sent anywhere. The warning about how far the estimate can be trusted is behind the "i" in
+ * the title. Full screen on a phone.
  */
 export const BacCalculatorDialog = ({ open, onClose }: Props): ReactNode => {
   const { t, i18n } = useTranslation();
@@ -60,20 +61,21 @@ export const BacCalculatorDialog = ({ open, onClose }: Props): ReactNode => {
     >
       <DialogTitle id="bac-title" className="flex! items-center justify-between text-xl! font-semibold!">
         {t('bac.title')}
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label={t('common.close')}
-          title={t('common.close')}
-          className="p-1 text-slate-400 hover:text-slate-200 cursor-pointer"
-        >
-          <CloseIcon />
-        </button>
+        <div className="flex items-center gap-1">
+          <BacInfoButton />
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t('common.close')}
+            title={t('common.close')}
+            className="p-1 text-slate-400 hover:text-slate-200 cursor-pointer"
+          >
+            <CloseIcon />
+          </button>
+        </div>
       </DialogTitle>
       <DialogContent className="space-y-5">
-        <p className="text-sm text-amber-500">{t('bac.disclaimer')}</p>
-        <BacProfileForm state={state} update={update} />
-        <BacDrinkList state={state} update={update} now={now} />
+        <BacSections state={state} update={update} now={now} />
         {profile && estimate ? (
           <BacResult
             estimate={estimate}
