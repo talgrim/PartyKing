@@ -2,6 +2,7 @@ name: Deploy to Fly.io
 on:
   push:
     branches: [master]
+  workflow_dispatch:
 
 # One deploy at a time: the app runs on a single machine with a SQLite volume
 concurrency: deploy-group
@@ -12,6 +13,8 @@ jobs:
 
   deploy:
     needs: test
+    # Manual runs from other branches only run the tests, never deploy
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

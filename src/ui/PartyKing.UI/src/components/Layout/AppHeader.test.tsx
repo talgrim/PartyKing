@@ -14,6 +14,8 @@ const renderAt = (path: string) =>
     </SWRConfig>,
   );
 
+const position = (first: HTMLElement, second: HTMLElement) => first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING;
+
 describe('AppHeader', () => {
   beforeEach(() => localStorage.clear());
 
@@ -48,5 +50,23 @@ describe('AppHeader', () => {
     const button = screen.getByRole('button', { name: 'Log in' });
 
     expect(link.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it.each(['/', '/admin', '/s/abc'])('has the BAC calculator on %s, for a visitor', (path) => {
+    renderAt(path);
+
+    expect(screen.getByRole('button', { name: 'BAC calculator' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument();
+  });
+
+  it('puts the calculator between the link to all the sessions and the account button', () => {
+    renderAt('/admin');
+
+    const link = screen.getByRole('link', { name: 'All sessions' });
+    const calculator = screen.getByRole('button', { name: 'BAC calculator' });
+    const account = screen.getByRole('button', { name: 'Log in' });
+
+    expect(position(link, calculator)).toBeTruthy();
+    expect(position(calculator, account)).toBeTruthy();
   });
 });
