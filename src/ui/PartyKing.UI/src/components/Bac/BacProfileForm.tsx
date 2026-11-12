@@ -1,9 +1,9 @@
 import { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { WheelNumberInput } from '@/components/common/WheelNumberInput';
 import { settingsInputClass, settingsLabelClass } from '@/components/Music/settingsStyles';
 import { Sex } from './bacCalculation';
 import { AGE_RANGE, BacState, HEIGHT_RANGE, WEIGHT_RANGE } from './bacStorage';
-import { numberOrNull } from './numberInput';
 
 type Props = {
   state: BacState;
@@ -12,26 +12,22 @@ type Props = {
 
 const SEXES: readonly Sex[] = ['male', 'female'];
 
-/** Who is drinking: the weight and the sex are required, the height and the age make the estimate more accurate. */
+/** Who is drinking (the content of the "About you" section): the weight and the sex are required, the height and the age make the estimate more accurate. */
 export const BacProfileForm = ({ state, update }: Props): ReactNode => {
   const { t } = useTranslation();
 
   return (
-    <section className="space-y-3" aria-labelledby="bac-profile">
-      <h3 id="bac-profile" className="font-semibold text-slate-100">
-        {t('bac.profile')}
-      </h3>
+    <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
         <label className="text-sm text-slate-300">
           <span className={settingsLabelClass}>{t('bac.weight')}</span>
-          <input
+          <WheelNumberInput
             className={settingsInputClass}
-            type="number"
             inputMode="decimal"
             min={WEIGHT_RANGE.min}
             max={WEIGHT_RANGE.max}
-            value={state.weightKg ?? ''}
-            onChange={(e) => update({ weightKg: numberOrNull(e.target.value) })}
+            value={state.weightKg}
+            onChange={(weightKg) => update({ weightKg })}
           />
         </label>
         <fieldset>
@@ -56,29 +52,27 @@ export const BacProfileForm = ({ state, update }: Props): ReactNode => {
       <div className="grid grid-cols-2 gap-3">
         <label className="text-sm text-slate-300">
           <span className={settingsLabelClass}>{t('bac.height')}</span>
-          <input
+          <WheelNumberInput
             className={settingsInputClass}
-            type="number"
             inputMode="decimal"
             min={HEIGHT_RANGE.min}
             max={HEIGHT_RANGE.max}
-            value={state.heightCm ?? ''}
-            onChange={(e) => update({ heightCm: numberOrNull(e.target.value) })}
+            value={state.heightCm}
+            onChange={(heightCm) => update({ heightCm })}
           />
         </label>
         <label className="text-sm text-slate-300">
           <span className={settingsLabelClass}>{t('bac.age')}</span>
-          <input
+          <WheelNumberInput
             className={settingsInputClass}
-            type="number"
             inputMode="numeric"
             min={AGE_RANGE.min}
             max={AGE_RANGE.max}
-            value={state.age ?? ''}
-            onChange={(e) => update({ age: numberOrNull(e.target.value) })}
+            value={state.age}
+            onChange={(age) => update({ age })}
           />
         </label>
       </div>
-    </section>
+    </div>
   );
 };

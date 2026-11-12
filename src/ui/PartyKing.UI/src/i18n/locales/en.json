@@ -1114,6 +1114,18 @@
       "driving": "Driving limit (US)"
     },
     "modelWidmark": "Widmark formula with the average factor for your sex.",
-    "modelWatson": "Widmark formula with your total body water (Watson)."
+    "modelWatson": "Widmark formula with your total body water (Watson).",
+    "addDrinkButton": "Add drink",
+    "editDrink": "Edit {{drink}}",
+    "saveDrink": "Save {{drink}}",
+    "cancelEdit": "Cancel editing {{drink}}",
+    "addAgain": "Add another {{drink}} now",
+    "drinkSummary": "{{volume}} ml · {{abv}}% · {{grams}} g",
+    "justNow": "just now",
+    "agoMinutes": "{{minutes}} min ago",
+    "agoHours": "{{hours}} h {{minutes}} min ago",
+    "about": "About the estimate",
+    "drinksLocked": "Enter your weight first",
+    "alcoholGrams": "{{grams}} g of alcohol"
   }
 }

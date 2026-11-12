@@ -1130,6 +1130,18 @@
       "driving": "Limit dla kierowcy (USA)"
     },
     "modelWidmark": "Wzór Widmarka ze średnim współczynnikiem dla Twojej płci.",
-    "modelWatson": "Wzór Widmarka z Twoją całkowitą wodą w organizmie (Watson)."
+    "modelWatson": "Wzór Widmarka z Twoją całkowitą wodą w organizmie (Watson).",
+    "addDrinkButton": "Dodaj drinka",
+    "editDrink": "Edytuj: {{drink}}",
+    "saveDrink": "Zapisz: {{drink}}",
+    "cancelEdit": "Anuluj edycję: {{drink}}",
+    "addAgain": "Dodaj kolejny: {{drink}} teraz",
+    "drinkSummary": "{{volume}} ml · {{abv}}% · {{grams}} g",
+    "justNow": "przed chwilą",
+    "agoMinutes": "{{minutes}} min temu",
+    "agoHours": "{{hours}} godz. {{minutes}} min temu",
+    "about": "O oszacowaniu",
+    "drinksLocked": "Najpierw podaj wagę",
+    "alcoholGrams": "{{grams}} g alkoholu"
   }
 }
