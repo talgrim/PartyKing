@@ -1073,5 +1073,47 @@
       "pick": "Pick a player",
       "confirm": "Name the Commander"
     }
+  },
+  "bac": {
+    "title": "BAC calculator",
+    "disclaimer": "Only a rough estimate from a simple model, which can be off by 25% or more. It ignores food, medication, health and tolerance. Never use it to decide whether you can drive.",
+    "profile": "About you",
+    "weight": "Weight (kg)",
+    "sex": "Sex",
+    "male": "Male",
+    "female": "Female",
+    "moreAccurate": "Add your height and age for a more accurate estimate (optional).",
+    "height": "Height (cm)",
+    "age": "Age (years)",
+    "drinks": "Drinks",
+    "addDrink": "Add a drink",
+    "kinds": {
+      "beer": "Beer",
+      "wine": "Wine",
+      "shot": "Shot",
+      "custom": "Other drink"
+    },
+    "exactTime": "Pick the exact time",
+    "noDrinks": "No drinks yet. Add what you drank.",
+    "volumeMl": "Volume (ml)",
+    "abv": "Alcohol (%)",
+    "minutesAgo": "Minutes ago",
+    "startedAt": "Started at",
+    "removeDrink": "Remove {{drink}}",
+    "clearDrinks": "Clear all drinks",
+    "needWeight": "Enter your weight to see the estimate.",
+    "result": "Estimate",
+    "peak": "Peak",
+    "sober": "Sober",
+    "alreadySober": "No alcohol left in the blood",
+    "soberAt": "at {{time}} (in {{hours}} h {{minutes}} min)",
+    "exceeded": "exceeded",
+    "limits": {
+      "afterAlcohol": "After alcohol (driving)",
+      "drunk": "Drunkenness",
+      "driving": "Driving limit (US)"
+    },
+    "modelWidmark": "Widmark formula with the average factor for your sex.",
+    "modelWatson": "Widmark formula with your total body water (Watson)."
   }
 }

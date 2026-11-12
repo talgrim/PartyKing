@@ -1089,5 +1089,47 @@
       "pick": "Wybierz gracza",
       "confirm": "Wskaż Dowódcę"
     }
+  },
+  "bac": {
+    "title": "Kalkulator promili",
+    "disclaimer": "To tylko przybliżone oszacowanie z prostego modelu, które może się mylić o 25% lub więcej. Nie uwzględnia jedzenia, leków, zdrowia ani tolerancji. Nigdy nie decyduj na jego podstawie, czy możesz prowadzić.",
+    "profile": "O Tobie",
+    "weight": "Waga (kg)",
+    "sex": "Płeć",
+    "male": "Mężczyzna",
+    "female": "Kobieta",
+    "moreAccurate": "Podaj wzrost i wiek, a oszacowanie będzie dokładniejsze (opcjonalnie).",
+    "height": "Wzrost (cm)",
+    "age": "Wiek (lata)",
+    "drinks": "Drinki",
+    "addDrink": "Dodaj drinka",
+    "kinds": {
+      "beer": "Piwo",
+      "wine": "Wino",
+      "shot": "Shot",
+      "custom": "Inny drink"
+    },
+    "exactTime": "Wybierz dokładną godzinę",
+    "noDrinks": "Jeszcze nic nie wypito. Dodaj, co wypiłeś.",
+    "volumeMl": "Objętość (ml)",
+    "abv": "Alkohol (%)",
+    "minutesAgo": "Minut temu",
+    "startedAt": "Zaczęty o",
+    "removeDrink": "Usuń: {{drink}}",
+    "clearDrinks": "Wyczyść wszystkie drinki",
+    "needWeight": "Podaj wagę, aby zobaczyć oszacowanie.",
+    "result": "Oszacowanie",
+    "peak": "Szczyt",
+    "sober": "Trzeźwość",
+    "alreadySober": "We krwi nie ma już alkoholu",
+    "soberAt": "o {{time}} (za {{hours}} godz. {{minutes}} min)",
+    "exceeded": "przekroczony",
+    "limits": {
+      "afterAlcohol": "Stan po użyciu alkoholu (kierowca)",
+      "drunk": "Stan nietrzeźwości",
+      "driving": "Limit dla kierowcy (USA)"
+    },
+    "modelWidmark": "Wzór Widmarka ze średnim współczynnikiem dla Twojej płci.",
+    "modelWatson": "Wzór Widmarka z Twoją całkowitą wodą w organizmie (Watson)."
   }
 }
