@@ -7,6 +7,7 @@ React 19, react-router, MUI + Tailwind v4, axios + SWR. Axios is configured in `
 - Routes and pages
 - Session page (music, slideshow, settings)
 - API base URL and polling
+- BAC calculator
 - Language (i18n)
 
 ## Routes and pages
@@ -17,7 +18,7 @@ React 19, react-router, MUI + Tailwind v4, axios + SWR. Axios is configured in `
 - `/callback` is the Spotify redirect.
 - `/admin` is the admin login and session panel (create, copy link, release host, delete). Rename, password and slideshow settings live on the session page. It shows the login form to a visitor and a notice to a signed-in user who is not an admin.
 - `/admin/users` (`AdminUsers`) lists the registered users, a page of 20 at a time, with a debounced username search and a reset-password dialog per user. Admin only.
-- Accounts: `AppHeader` (in `Layout`, so on every page, fixed in the upper-right corner at z-40 like the language switcher in the other one, hidden in a dev-embedded panel) holds a home icon that links to all the sessions (not on the landing page) and `AccountMenu`, which is "Log in" for a visitor, which opens `AccountDialog` (log in / sign up). Signed in, it is the username with a person icon and drops a `MenuButton` with "Account settings" (the same dialog: change password, log out everywhere, delete account) and "Log out". Every `useAccount` caller shares the login hint (`usePersistedFlag` syncs all components using a key), so a login made in the admin page's own form shows in the corner at once. `useAccount` (`service/endpoints/account`) says who is signed in; see `features/sessions-and-auth.md`.
+- Accounts: `AppHeader` (in `Layout`, so on every page, fixed in the upper-right corner at z-40 like the language switcher in the other one, hidden in a dev-embedded panel) holds a home icon that links to all the sessions (not on the landing page), `BacCalculatorButton` (see "BAC calculator" below) and `AccountMenu`, which is "Log in" for a visitor, which opens `AccountDialog` (log in / sign up). Signed in, it is the username with a person icon and drops a `MenuButton` with "Account settings" (the same dialog: change password, log out everywhere, delete account) and "Log out". Every `useAccount` caller shares the login hint (`usePersistedFlag` syncs all components using a key), so a login made in the admin page's own form shows in the corner at once. `useAccount` (`service/endpoints/account`) says who is signed in; see `features/sessions-and-auth.md`.
 - `/dev/s/:sessionId/resistance` (dev builds only) shows 5 to 10 Resistance players side by side in one tab, see "Dev personas" in `features/sessions-and-auth.md`.
 - `/s/:sessionId/games/...` see `games/`. The old `/s/:sessionId/upload` redirects to the upload dialog.
 
@@ -35,6 +36,14 @@ React 19, react-router, MUI + Tailwind v4, axios + SWR. Axios is configured in `
 
 - The API base URL comes from `src/envVariables.ts`: `VITE_API_URL` if set, else `http://127.0.0.1:4200` in dev (must match the API launch profile) and `/api` in production builds. To test from phones on the LAN, change both `envVariables.ts` (or set `VITE_API_URL`) and `src/api/PartyKing.API/Properties/launchSettings.json` to the machine's LAN IP, but don't commit that change.
 - SWR `refreshInterval`s: slide 60 s with the hub connected and 5 s without (`SlideChanged` is pushed), queue 5 s, now-playing 4 s, session 30 s, session lists 10 s. The host player reports state every 10 s (and on every change) with an 8 s timeout.
+
+## BAC calculator (`components/Bac`)
+
+- A cocktail icon in `AppHeader`, for everybody (a visitor too, on every page, the landing page included), opens `BacCalculatorDialog` (MUI `Dialog`, full screen on a phone, so no route and the host's player on the session page keeps playing). Everything is computed in the browser; the API is not involved.
+- `bacCalculation.ts` is the pure core: Widmark's formula run minute by minute over the drinks, so a gap between drinks (the blood reaching zero) is handled and the result is now, the peak and when the blood is clear. A drink is absorbed evenly over 30 minutes (`ABSORPTION_MINUTES`) and the body clears 0.15‰ an hour (`ELIMINATION_PER_HOUR`; NIST's average is 0.18). The factor is the average of the sex (0.68 / 0.55) or, once both the height and the age are given, Watson's total body water over 0.8 of the weight. The age term of Watson's male equation is 0.09516 (some sites print 0.09156).
+- The estimate is in promille (g/kg). `bacUnits.ts` picks the unit by the UI language: Polish shows ‰ with the Polish limits (0.2‰ after alcohol, 0.5‰ drunkenness), anything else % (g/dL, so ÷10) with the US 0.08%. The dialog carries a disclaimer: it is not a tool to decide whether to drive.
+- Metric units only. A drink's time is entered as minutes ago, or on a clock (`datetime-local`) with the "Pick the exact time" switch. `bacTime.ts` converts both.
+- Persistence: `useBacState` keeps the profile, the drinks and the switch as one versioned JSON in `localStorage` (`partyking.bacCalculator`, `bacStorage.ts`). A field out of its range is dropped alone, drinks older than 24 hours are forgotten, and broken JSON or blocked storage gives the empty form. Drinks keep their start time, so an old list decays on its own.
 
 ## Language (i18n)
 
