@@ -30,7 +30,8 @@ admin. The demo therefore gives each visitor a synthetic host.
 
 1. Does a fake host work with the cookie handler? **Yes**: `CookieAuthenticationHandler` only calls Spotify when the
    `cookie.partyKing.auth` cookie is missing; with it present the claims come straight from the cookies. The demo
-   endpoint must set the `user` and `auth` cookies.
+   endpoint must set the `user` and `auth` cookies. (Later changed: the endpoint sets only `user`; the demo's
+   `ISpotifyService` hands the handler a placeholder token when `auth` is missing, see `features/demo.md`.)
 2. Does the `DataProtection` startup rule need a certificate on the demo app? **No**: the certificate is required only
    when `DataProtection:KeysDirectory` is set. Without it the keys are not persisted, so a restart invalidates the
    cookies, which is acceptable for throw-away sessions. Persisting them (directory plus certificate) is optional.
