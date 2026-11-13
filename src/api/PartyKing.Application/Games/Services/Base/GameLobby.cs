@@ -11,7 +11,7 @@ namespace PartyKing.Application.Games.Services.Base;
 internal record GameLobbyOptions(string Name, int MaxPlayers = int.MaxValue);
 
 /// <summary>
-/// The rules every game with a lobby shares: who may manage it, an admin opening it, joining by name (the host under
+/// The rules every game with a lobby shares: who may manage it, the host or an admin opening it, joining by name (the host under
 /// their profile name, an admin under a chosen name or "admin"), kicking and ordering the players.
 /// </summary>
 internal class GameLobby<TGame, TPlayer>
@@ -25,22 +25,19 @@ internal class GameLobby<TGame, TPlayer>
     private readonly ILobbyGamesRepository<TGame, TPlayer> _games;
     private readonly IDateTimeProvider _clock;
     private readonly LobbyErrors _errors;
-    private readonly bool _hostMayOpen;
 
     public GameLobby(
         ISessionAuthorizer sessionAuthorizer,
         ISessionsRepository sessions,
         ILobbyGamesRepository<TGame, TPlayer> games,
         IDateTimeProvider clock,
-        GameLobbyOptions options,
-        bool hostMayOpen = false)
+        GameLobbyOptions options)
     {
         _sessionAuthorizer = sessionAuthorizer;
         _sessions = sessions;
         _games = games;
         _clock = clock;
         _errors = new LobbyErrors(options);
-        _hostMayOpen = hostMayOpen;
     }
 
     public Error NoGame => _errors.NoGame;
@@ -93,23 +90,14 @@ internal class GameLobby<TGame, TPlayer>
     }
 
     /// <summary>
-    /// Admin only, or the host as well when <c>hostMayOpen</c> is set (the demo has no admin): opens the game to guests
-    /// (idempotent). NotFound without a game, Forbidden for the host otherwise.
+    /// Host or admin: opens the game to guests (idempotent). NotFound without a game, Forbidden for a guest.
     /// </summary>
     public async Task<ErrorOr<TGame>> OpenAsync(Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
     {
-        if (!caller.IsAdmin)
+        var authorization = await AuthorizeAsync(sessionId, caller, cancellationToken);
+        if (authorization.IsError)
         {
-            if (!_hostMayOpen)
-            {
-                return _errors.AdminOnly;
-            }
-
-            var authorization = await AuthorizeAsync(sessionId, caller, cancellationToken);
-            if (authorization.IsError)
-            {
-                return authorization.Errors;
-            }
+            return authorization.Errors;
         }
 
         var existing = await _games.GetAsync(sessionId, cancellationToken);
