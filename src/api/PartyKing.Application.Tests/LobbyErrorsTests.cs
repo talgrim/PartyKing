@@ -93,9 +93,6 @@ public class LobbyErrorsTests
             (ErrorType.NotFound, "Resistance.SessionNotFound", "The session was not found."),
             (Resistance.SessionNotFound.Type, Resistance.SessionNotFound.Code, Resistance.SessionNotFound.Description));
         Assert.Equal(
-            (ErrorType.Forbidden, "Resistance.AdminOnly", "Only an admin can open the game to guests."),
-            (Resistance.AdminOnly.Type, Resistance.AdminOnly.Code, Resistance.AdminOnly.Description));
-        Assert.Equal(
             (ErrorType.Validation, "Resistance.InvalidOrder", "The player ids are required."),
             (Resistance.InvalidOrder.Type, Resistance.InvalidOrder.Code, Resistance.InvalidOrder.Description));
     }

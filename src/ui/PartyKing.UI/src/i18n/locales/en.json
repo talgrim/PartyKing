@@ -126,7 +126,11 @@
     "slideshow": "Slideshow"
   },
   "openGames": {
-    "label": "Open games"
+    "label": "Open games",
+    "waiting": "Waiting for the host to open a game",
+    "lobby": "Lobby",
+    "open": "Open",
+    "neverHaveIEver": "Never have I ever"
   },
   "photoUpload": {
     "title": "Upload photos"

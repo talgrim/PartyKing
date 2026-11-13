@@ -20,9 +20,6 @@ internal class LobbyErrors
 
     public Error SessionNotFound => Error.NotFound($"{_options.Name}.SessionNotFound", "The session was not found.");
 
-    public Error AdminOnly =>
-        Error.Forbidden($"{_options.Name}.AdminOnly", "Only an admin can open the game to guests.");
-
     public Error InvalidOrder => Error.Validation($"{_options.Name}.InvalidOrder", "The player ids are required.");
 
     /// <summary>The error of a lobby action's status, or null when the action was done.</summary>

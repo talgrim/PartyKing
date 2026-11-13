@@ -38,7 +38,6 @@ import { gamesApi } from '@/service/endpoints/games/gamesApi';
 import { useResistanceGame } from '@/service/endpoints/games/useResistanceGame';
 import { useResistancePresence } from '@/service/endpoints/games/useResistancePresence';
 import { ResistanceMissionCardKind } from '@/service/endpoints/games/types';
-import { useIsDemo } from '@/service/endpoints/demo/useDemoConfig';
 import { useViewerRole } from '@/service/endpoints/sessions/useViewerRole';
 import {
   RESISTANCE_HUB_TOPICS,
@@ -86,9 +85,8 @@ export const Resistance = (): ReactNode => {
   const navigate = useNavigate();
   const { data: game, error, mutate } = useResistanceGame(sessionId);
   const { isHost, isAdmin } = useViewerRole(sessionId);
-  // An admin opens the game to guests; a demo has none, so its host does
-  const isDemo = useIsDemo();
-  const canOpen = isAdmin || (isDemo && isHost);
+  // The host and admins open the game to guests
+  const canOpen = isAdmin || isHost;
   const [searchParams] = useSearchParams();
   // A frame of the multi-player dev page (development only) shows nothing but the player's own view, however wide it is
   const embedded = isDevEmbedded;

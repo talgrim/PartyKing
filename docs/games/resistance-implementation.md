@@ -27,7 +27,7 @@ The game rules (Polish) are in `resistance-rules.md` next to this file; card tex
 - Lobby endpoints:
   - `GET` — host, admin and joined players; guests who unlocked the session observe once the game is open (404 before).
   - `GET lobby` → `{createdAt, isOpen, isStarted, joined}`. `IResistanceGamesRepository.GetLobbyAsync(sessionId, playerId, playerStamp)` projects those fields with one `AsNoTracking` query into a `ResistanceLobbyState` (null without a game) and does not use the shared read, because every tab asks for the lobby on its pushes (it shows as `operation="GetLobbyAsync"` in the repository histogram). `joined` follows `GameLobby.IsPlayer`: the host and admins are not players by role.
-  - `POST` create (host or admin, 409 when one exists), `POST open` (admin only, idempotent), `POST join` (`session-join` rate limit), `DELETE players/{id}`, `PUT players/order`, `DELETE` (end).
+  - `POST` create (host or admin, 409 when one exists), `POST open` (host or admin, idempotent), `POST join` (`session-join` rate limit), `DELETE players/{id}`, `PUT players/order`, `DELETE` (end).
 - Pushes: `ResistanceChanged` (every action) and `ResistanceOpened`; the UI revalidates `resistanceKey` / `resistanceLobbyKey`.
 
 ## Services

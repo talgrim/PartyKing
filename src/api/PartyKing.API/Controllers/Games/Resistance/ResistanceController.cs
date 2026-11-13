@@ -139,7 +139,7 @@ public class ResistanceController : ResistanceControllerBase
         return result.Match(Ok, Problem);
     }
 
-    /// <summary>Admin only: opens the Resistance game to guests (idempotent), 403 for the host.</summary>
+    /// <summary>Host or admin: opens the Resistance game to guests (idempotent), 403 for a guest.</summary>
     [HttpPost("open")]
     [RequireSessionAccess]
     [ProducesResponseType<ResistanceGameDto>(StatusCodes.Status200OK)]
