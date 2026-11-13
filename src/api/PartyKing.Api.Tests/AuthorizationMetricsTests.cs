@@ -5,7 +5,11 @@ namespace PartyKing.Api.Tests;
 
 public class AuthorizationMetricsTests
 {
-    private static List<Dictionary<string, object?>> Capture(Action<AuthorizationMetrics> act)
+    /// <summary>
+    /// The meter is process-wide, so tests of other classes running in parallel record into the same instrument;
+    /// only what carries <paramref name="component"/>, which each test makes up for itself, is the test's own.
+    /// </summary>
+    private static List<Dictionary<string, object?>> Capture(string component, Action<AuthorizationMetrics> act)
     {
         var tagSets = new List<Dictionary<string, object?>>();
         using var metrics = new AuthorizationMetrics();
@@ -18,7 +22,16 @@ public class AuthorizationMetricsTests
             }
         };
         listener.SetMeasurementEventCallback<double>((_, _, tags, _) =>
-            tagSets.Add(tags.ToArray().ToDictionary(t => t.Key, t => t.Value)));
+        {
+            var tagSet = tags.ToArray().ToDictionary(t => t.Key, t => t.Value);
+            if (Equals(tagSet["component"], component))
+            {
+                lock (tagSets)
+                {
+                    tagSets.Add(tagSet);
+                }
+            }
+        });
         listener.Start();
 
         act(metrics);
@@ -29,18 +42,22 @@ public class AuthorizationMetricsTests
     [Fact]
     public void RecordDuration_WhenGranted_RecordsAGrantedOutcomeWithTheComponent()
     {
-        var tags = Assert.Single(Capture(m => m.RecordDuration("RequireSessionAccess", 0, true)));
+        const string component = "AuthorizationMetricsTests.Granted";
 
-        Assert.Equal("RequireSessionAccess", tags["component"]);
+        var tags = Assert.Single(Capture(component, m => m.RecordDuration(component, 0, true)));
+
+        Assert.Equal(component, tags["component"]);
         Assert.Equal(AuthorizationMetrics.GrantedOutcome, tags["outcome"]);
     }
 
     [Fact]
     public void RecordDuration_WhenDenied_RecordsADeniedOutcome()
     {
-        var tags = Assert.Single(Capture(m => m.RecordDuration("CustomCookie", 0, false)));
+        const string component = "AuthorizationMetricsTests.Denied";
 
-        Assert.Equal("CustomCookie", tags["component"]);
+        var tags = Assert.Single(Capture(component, m => m.RecordDuration(component, 0, false)));
+
+        Assert.Equal(component, tags["component"]);
         Assert.Equal(AuthorizationMetrics.DeniedOutcome, tags["outcome"]);
     }
 }

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using PartyKing.API.Authorization;
 using PartyKing.API.Cookies;
+using PartyKing.Application.Demo.Models;
 using PartyKing.Application.Demo.Services;
 using PartyKing.Contract.V1.Demo;
 
@@ -11,15 +12,21 @@ public class DemoController : CoreController
 {
     public const string StartRateLimitPolicy = "demo-start";
 
+    private readonly IDemoMode _demoMode;
+    private readonly IDemoSessionStartService _startService;
     private readonly IDemoSessionService _demoSessionService;
     private readonly ISignedCookies _cookies;
 
     public DemoController(
         IHttpContextAccessor httpContextAccessor,
+        IDemoMode demoMode,
+        IDemoSessionStartService startService,
         IDemoSessionService demoSessionService,
         ISignedCookies cookies)
         : base(httpContextAccessor)
     {
+        _demoMode = demoMode;
+        _startService = startService;
         _demoSessionService = demoSessionService;
         _cookies = cookies;
     }
@@ -29,7 +36,7 @@ public class DemoController : CoreController
     [ProducesResponseType<DemoConfigDto>(StatusCodes.Status200OK)]
     public IActionResult GetConfig()
     {
-        return Ok(_demoSessionService.GetConfig());
+        return Ok(_demoMode.GetConfig());
     }
 
     /// <summary>
@@ -41,7 +48,7 @@ public class DemoController : CoreController
     [ProducesResponseType<DemoStartedDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Start(CancellationToken cancellationToken)
     {
-        var result = await _demoSessionService.StartAsync(cancellationToken);
+        var result = await _startService.StartAsync(cancellationToken);
 
         if (result.IsError)
         {
@@ -49,8 +56,7 @@ public class DemoController : CoreController
         }
 
         var start = result.Value;
-        _cookies.GrantHost(start.ProfileId, HttpContext);
-        _cookies.GrantSessionAccess(start.SessionId, start.AccessStamp, HttpContext);
+        MakeHost(start);
         _cookies.GrantDemoSession(start.SessionId, start.ProfileId, HttpContext);
 
         return Ok(new DemoStartedDto(start.SessionId, start.ExpiresAt));
@@ -90,8 +96,7 @@ public class DemoController : CoreController
         }
 
         var start = result.Value;
-        _cookies.GrantHost(start.ProfileId, HttpContext);
-        _cookies.GrantSessionAccess(start.SessionId, start.AccessStamp, HttpContext);
+        MakeHost(start);
 
         return Ok(new DemoStartedDto(start.SessionId, start.ExpiresAt));
     }
@@ -105,5 +110,12 @@ public class DemoController : CoreController
         var result = await _demoSessionService.GetAsync(sessionId, cancellationToken);
 
         return result.Match(Ok, Problem);
+    }
+
+    /// <summary>The host cookie and the unlock that a session password would have set.</summary>
+    private void MakeHost(DemoStart start)
+    {
+        _cookies.GrantHost(start.ProfileId, HttpContext);
+        _cookies.GrantSessionAccess(start.SessionId, start.AccessStamp, HttpContext);
     }
 }

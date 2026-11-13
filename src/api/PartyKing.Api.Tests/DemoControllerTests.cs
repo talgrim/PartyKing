@@ -32,6 +32,8 @@ public class DemoControllerTests
         _controller = new DemoController(
             new HttpContextAccessor { HttpContext = _httpContext },
             _service,
+            _service,
+            _service,
             _cookies)
         {
             ControllerContext = new ControllerContext { HttpContext = _httpContext }
@@ -259,7 +261,7 @@ public class DemoControllerTests
         }
     }
 
-    private sealed class FakeDemoSessionService : IDemoSessionService
+    private sealed class FakeDemoSessionService : IDemoSessionService, IDemoSessionStartService, IDemoMode
     {
         public ErrorOr<DemoStart> StartResult { get; set; }
         public DemoConfigDto Config { get; set; } = new(false, Now);
@@ -283,6 +285,8 @@ public class DemoControllerTests
             LastResumed = started;
             return Task.FromResult(ResumeResult);
         }
+
+        public bool IsEnabled => Config.Enabled;
 
         public DemoConfigDto GetConfig() => Config;
 

@@ -46,8 +46,7 @@ if (builder.Environment.IsDevelopmentOrE2e())
     }));
 }
 
-var demoSettings = builder.Configuration.GetSection(DemoConfiguration.SectionName).Get<DemoConfiguration>()
-    ?? new DemoConfiguration();
+var demoSettings = builder.Configuration.GetDemoConfiguration();
 
 builder.Services.AddRateLimiter(options =>
 {
