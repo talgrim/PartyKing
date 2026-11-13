@@ -24,27 +24,6 @@ public class ResistanceLobbyServiceTests : ResistanceServiceTestBase
     }
 
     [Fact]
-    public async Task InTheDemo_TheHostOpensTheGameToo_ButAGuestStillCannot()
-    {
-        var ct = CancellationToken.None;
-        var clock = new FakeClock();
-        var lobby = new ResistanceGameLobby(
-            new SessionAuthorizer(_sessions),
-            _sessions,
-            _games,
-            clock,
-            Options.Create(new DemoConfiguration { Enabled = true }));
-        var service = new ResistanceLobbyService(lobby, new ResistanceActionGate(lobby), _games, clock, _rules);
-        await service.CreateAsync(_id, Host, ct);
-
-        var byGuest = await service.OpenAsync(_id, new GameCaller("guest", false), ct);
-        var byHost = await service.OpenAsync(_id, Host, ct);
-
-        Assert.Equal(ErrorOr.ErrorType.Forbidden, byGuest.FirstError.Type);
-        Assert.True(byHost.Value.IsOpen);
-    }
-
-    [Fact]
     public async Task Creating_SnapshotsTheConfiguredRules()
     {
         _rules.Rules.PlayerCounts[5] = new ResistanceCountRules(1, [2, 2, 2, 2, 2], [1, 1, 1, 1, 2]);
@@ -148,15 +127,15 @@ public class ResistanceLobbyServiceTests : ResistanceServiceTestBase
     }
 
     [Fact]
-    public async Task Opening_IsForAdminsOnlyAndPushedOnce()
+    public async Task Opening_IsForTheHostOrAnAdminAndPushedOnce()
     {
         await _lobbyService.CreateAsync(_id, Host, CancellationToken.None);
 
-        var byHost = await _lobbyService.OpenAsync(_id, Host, CancellationToken.None);
-        var first = await _lobbyService.OpenAsync(_id, Admin, CancellationToken.None);
+        var byGuest = await _lobbyService.OpenAsync(_id, new GameCaller("guest", false), CancellationToken.None);
+        var first = await _lobbyService.OpenAsync(_id, Host, CancellationToken.None);
         var second = await _lobbyService.OpenAsync(_id, Admin, CancellationToken.None);
 
-        Assert.Equal(ErrorOr.ErrorType.Forbidden, byHost.FirstError.Type);
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, byGuest.FirstError.Type);
         Assert.True(first.Value.IsOpen);
         Assert.True(second.Value.IsOpen);
         Assert.Equal([_id], _notifier.Opens);
