@@ -14,6 +14,7 @@ A server that is a demo needs no Spotify: each visitor starts a throw-away sessi
 ## Turning it on
 
 - `DemoSettings` (`DemoConfiguration`, `Application/Configuration`; env vars `DemoSettings__Enabled` and so on). Everything is off unless `Enabled` is true. `LifetimeMinutes` (180), `MaxSessions` (50), `StartsPerHourPerIp` (5), `MaxPhotosPerSession` (10), `MaxPhotoBytes` (5 MB).
+- Deployed as its own Fly app from the same image (`fly.demo.toml`; see "Demo app" in `docs/deployment.md`). Its Data Protection keys must never be production's: the demo keeps them in memory.
 - The flag is read at registration time: `RegisterDemo` (Application) swaps `ISpotifyService` and `IHostTokenProvider` for the refusing `DemoSpotifyService` and `DemoHostTokenProvider`, and `RegisterDemoWorker` (API) adds the cleanup worker. The services the endpoints use are registered either way, so a server that is not a demo answers `GET /demo/config` with `enabled: false` and everything else with 404.
 - `GET /sessions` answers an empty list in a demo (`SessionService`), so visitors do not see each other's sessions, and `POST /account/register` is refused (`AccountService`): accounts are permanent rows.
 

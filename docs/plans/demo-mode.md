@@ -1,7 +1,7 @@
 # Demo mode implementation plan
 
 A preview of PartyKing that can be linked from the owner's website without Spotify access (the Spotify app is stuck in
-development mode). Status: **planned**; Steps 0 and 1 are the first to be done.
+development mode). Status: **implemented** (Steps 0 to 5); what remains is the one-time Fly setup in `docs/deployment.md` and the link from the website.
 
 ## Decisions
 
@@ -107,7 +107,9 @@ A Playwright variant that starts the API with `Demo__Enabled=true` and a short `
 Spec 1: start the demo, the banner appears, a sample track queues, a second context joins by QR and starts a game.
 Spec 2: the session expires, "Demo ended" appears, and a new demo can start. Run once at the end (about 8 min).
 
-## Step 5: Deployment and docs
+## Step 5: Deployment and docs (done, uncommitted; see `docs/deployment.md`, "Demo app")
+
+Differences: the Data Protection keys are in memory (the image's `/data/keys` default is emptied in `fly.demo.toml`, since persisting needs a certificate secret); the deploy job uses its own token secret `FLY_API_TOKEN_DEMO`. The app, volume, certificate, DNS record and token are created by hand and nothing was run against Fly from here.
 
 - `fly.demo.toml`: app `partyking-demo`, region `fra`, its own `/data` volume, `auto_stop_machines = 'stop'` with
   `min_machines_running = 0`, `Demo__Enabled=true`. No Spotify, admin or LLM secrets. Its own Data Protection keys.
