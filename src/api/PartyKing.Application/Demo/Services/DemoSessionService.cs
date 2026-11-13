@@ -10,6 +10,7 @@ using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.System;
 using PartyKing.Contract.V1.Demo;
 using PartyKing.Domain.Entities.Demo;
+using PartyKing.Domain.Entities.Sessions;
 using PartyKing.Domain.Enums;
 using PartyKing.Domain.Repositories;
 using PartyKing.Domain.Results;
@@ -25,6 +26,20 @@ public interface IDemoSessionService
     /// Not found when the server is not a demo, a conflict while <see cref="DemoConfiguration.MaxSessions"/> exist.
     /// </summary>
     Task<ErrorOr<DemoStart>> StartAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The sessions among <paramref name="started"/> that were really started by that host profile and have not ended,
+    /// the one that ends last first. Not found when the server is not a demo.
+    /// </summary>
+    Task<ErrorOr<MyDemoSessionsDto>> ListStartedAsync(
+        IReadOnlyCollection<StartedDemoSession> started,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// What it takes to host a session again that the caller started and that has not ended (the same as at its
+    /// start, with the time that is left). Not found for a session that is not theirs, is over or is no demo one.
+    /// </summary>
+    Task<ErrorOr<DemoStart>> ResumeAsync(StartedDemoSession started, CancellationToken cancellationToken);
 
     /// <summary>When the demo session ends; not found for a session that is not a demo one.</summary>
     Task<ErrorOr<DemoSessionDto>> GetAsync(Guid sessionId, CancellationToken cancellationToken);
@@ -88,7 +103,7 @@ internal class DemoSessionService : IDemoSessionService
             new AuthenticationResult(
                 profileId,
                 HostName,
-                AccessToken: "demo",
+                AccessToken: DemoSpotifyService.PlaceholderAccessToken,
                 RefreshToken: $"demo-refresh-{Guid.NewGuid():N}",
                 ExpiresIn: (int)lifetime.TotalSeconds),
             cancellationToken);
@@ -123,8 +138,6 @@ internal class DemoSessionService : IDemoSessionService
             return new DemoStart(
                 session.Id,
                 profileId,
-                AccessToken: "demo",
-                AccessTokenExpiresIn: (int)lifetime.TotalSeconds,
                 session.AccessStamp,
                 ToUtc(demoSession.ExpiresAt));
         }
@@ -133,6 +146,48 @@ internal class DemoSessionService : IDemoSessionService
             await AbandonAsync(sessionId, profileId);
             throw;
         }
+    }
+
+    public async Task<ErrorOr<MyDemoSessionsDto>> ListStartedAsync(
+        IReadOnlyCollection<StartedDemoSession> started,
+        CancellationToken cancellationToken)
+    {
+        if (!_configuration.Enabled)
+        {
+            return DemoErrors.NotEnabled();
+        }
+
+        var sessions = new List<MyDemoSessionDto>();
+        foreach (var entry in started.DistinctBy(x => x.SessionId))
+        {
+            if (await FindLiveAsync(entry, cancellationToken) is { } live)
+            {
+                sessions.Add(new MyDemoSessionDto(entry.SessionId, live.Session.Name, ToUtc(live.Demo.ExpiresAt)));
+            }
+        }
+
+        return new MyDemoSessionsDto([.. sessions.OrderByDescending(x => x.ExpiresAt)], _clock.UtcNow);
+    }
+
+    public async Task<ErrorOr<DemoStart>> ResumeAsync(
+        StartedDemoSession started,
+        CancellationToken cancellationToken)
+    {
+        if (!_configuration.Enabled)
+        {
+            return DemoErrors.NotEnabled();
+        }
+
+        if (await FindLiveAsync(started, cancellationToken) is not { } live)
+        {
+            return DemoErrors.SessionGone();
+        }
+
+        return new DemoStart(
+            live.Session.Id,
+            started.ProfileId,
+            live.Session.AccessStamp,
+            ToUtc(live.Demo.ExpiresAt));
     }
 
     public async Task<ErrorOr<DemoSessionDto>> GetAsync(Guid sessionId, CancellationToken cancellationToken)
@@ -147,6 +202,25 @@ internal class DemoSessionService : IDemoSessionService
         return demoSession is null
             ? DemoErrors.NotEnabled()
             : new DemoSessionDto(ToUtc(demoSession.ExpiresAt), _clock.UtcNow);
+    }
+
+    /// <summary>
+    /// The session and its demo row when the host profile is the one that started it and it has not ended; the sweep
+    /// deletes a session up to a minute late, so the clock decides, not the row.
+    /// </summary>
+    private async Task<(Session Session, DemoSession Demo)?> FindLiveAsync(
+        StartedDemoSession started,
+        CancellationToken cancellationToken)
+    {
+        var demo = await _demoSessionsRepository.GetAsync(started.SessionId, cancellationToken);
+        if (demo is null || demo.HostProfileId != started.ProfileId || demo.ExpiresAt <= _clock.UtcNow.UtcDateTime)
+        {
+            return null;
+        }
+
+        var session = await _sessionsRepository.GetAsync(started.SessionId, cancellationToken);
+
+        return session is null ? null : (session, demo);
     }
 
     // Nobody types it: the visitor is let in with the cookie, guests with a QR code

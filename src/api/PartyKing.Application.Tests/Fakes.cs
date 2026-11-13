@@ -84,7 +84,8 @@ internal class FakeSessionsRepository : ISessionsRepository
         return session is not null;
     }
 
-    public Task<IReadOnlyList<Session>> GetAllAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
+    public Task<IReadOnlyList<Session>> GetAllAsync(CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<Session>>(_sessions.ToList());
     public List<(Guid Id, string Name)> Renamed { get; } = [];
 
     public async Task<SessionRenameResult> RenameAsync(Guid id, string? name, CancellationToken cancellationToken)

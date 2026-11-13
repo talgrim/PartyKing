@@ -12,7 +12,8 @@ namespace PartyKing.Application.Sessions.Services;
 
 public interface ISessionService
 {
-    Task<IReadOnlyList<SessionDto>> GetAllAsync(CancellationToken cancellationToken);
+    /// <summary>The public list: whether each session has a host, not who it is. Empty in the demo.</summary>
+    Task<IReadOnlyList<SessionListItemDto>> GetAllAsync(CancellationToken cancellationToken);
     Task<ErrorOr<SessionDto>> GetAsync(Guid id, CancellationToken cancellationToken);
 
     /// <summary>Renames the session. Only the host (<paramref name="caller"/>) or an admin may; anyone else gets Forbidden.</summary>
@@ -38,7 +39,7 @@ internal class SessionService : ManagerGuardedService, ISessionService
         _demoConfiguration = demoOptions.Value;
     }
 
-    public async Task<IReadOnlyList<SessionDto>> GetAllAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<SessionListItemDto>> GetAllAsync(CancellationToken cancellationToken)
     {
         // The sessions of the other visitors are none of a visitor's business
         if (_demoConfiguration.Enabled)
@@ -48,7 +49,7 @@ internal class SessionService : ManagerGuardedService, ISessionService
 
         var sessions = await _sessionsRepository.GetAllAsync(cancellationToken);
 
-        return sessions.Select(session => session.ToDto()).ToList();
+        return sessions.Select(session => session.ToListItemDto()).ToList();
     }
 
     public async Task<ErrorOr<SessionDto>> GetAsync(Guid id, CancellationToken cancellationToken)

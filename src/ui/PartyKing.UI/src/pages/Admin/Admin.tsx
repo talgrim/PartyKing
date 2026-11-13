@@ -10,7 +10,6 @@ import { HTTP_STATUS_CODE } from '@/service/constants';
 import { accountApi } from '@/service/endpoints/account/accountApi';
 import { useAccount } from '@/service/endpoints/account/useAccount';
 import { adminApi } from '@/service/endpoints/admin/adminApi';
-import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 import { SessionDto } from '@/service/endpoints/sessions/types';
 
 const MIN_PASSWORD_LENGTH = 4;
@@ -71,7 +70,7 @@ const Sessions = ({ onLoggedOut }: { onLoggedOut: () => void }): ReactNode => {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  const { data: sessions, mutate } = useSWR('sessions', sessionsApi.getSessions, { refreshInterval: 10000 });
+  const { data: sessions, mutate } = useSWR('admin-sessions', adminApi.listSessions, { refreshInterval: 10000 });
 
   // Runs an admin action, then refreshes the list; a lost login sends the admin back to the login form
   const run = async (action: () => Promise<unknown>, success?: string) => {

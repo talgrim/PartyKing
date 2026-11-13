@@ -1,4 +1,5 @@
 using PartyKing.Application.Accounts;
+using PartyKing.Application.Demo.Models;
 using PartyKing.Application.Games.Services.Base;
 using PartyKing.Domain.Entities.Auth;
 using PartyKing.Domain.Entities.Games.Base;
@@ -32,6 +33,15 @@ public interface ISignedCookies
 
     /// <summary>Reads the stamp stored for the session; false when there is none or the cookie was tampered with.</summary>
     bool TryReadSessionAccess(HttpRequest request, Guid sessionId, out string stamp);
+
+    /// <summary>
+    /// Remembers that this browser started the demo session as the host with the synthetic profile
+    /// <paramref name="profileId"/>, so it can host it again after another start replaced the host cookie.
+    /// </summary>
+    void GrantDemoSession(Guid sessionId, string profileId, HttpContext context);
+
+    /// <summary>The demo sessions this browser started, the oldest first; nothing is checked against the database.</summary>
+    IReadOnlyList<StartedDemoSession> ReadDemoSessions(HttpRequest request);
 
     /// <summary>Remembers the seat (player and stamp) this browser joined the session's game as.</summary>
     void GrantGamePlayer(GameKind game, Guid sessionId, GameSeat seat, HttpContext context);

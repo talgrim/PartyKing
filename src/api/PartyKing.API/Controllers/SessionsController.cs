@@ -34,8 +34,9 @@ public class SessionsController : CoreController
         _cookies = cookies;
     }
 
+    /// <summary>The public list of sessions: whether each has a host, never the host's name.</summary>
     [HttpGet("sessions")]
-    [ProducesResponseType<IReadOnlyList<SessionDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<IReadOnlyList<SessionListItemDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetSessions(CancellationToken cancellationToken)
     {
         return Ok(await _sessionService.GetAllAsync(cancellationToken));

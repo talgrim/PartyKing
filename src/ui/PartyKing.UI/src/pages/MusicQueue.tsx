@@ -15,7 +15,6 @@ import { SlideshowControls } from '@/components/Music/SlideshowControls';
 import { useAutoLyrics } from '@/components/Music/useAutoLyrics';
 import { useUploadDialog } from '@/components/Music/useUploadDialog';
 import { SessionPasswordForm } from '@/components/Music/SessionPasswordForm';
-import { PageNavigation } from '@/components/common/PageNavigation';
 import { ResistanceInvite } from '@/pages/Games/ResistanceInvite';
 import { RingoInvite } from '@/pages/Games/RingoInvite';
 import { SlideshowView } from '@/pages/Slideshow/SlideshowView';
@@ -194,15 +193,6 @@ export const MusicQueue = (): ReactNode => {
         />
       )}
       <div className="w-full max-w-xl mx-auto pt-6">
-        <PageNavigation
-          className="px-2 pt-4"
-          links={[
-            // Photos can be added only once the session is unlocked
-            ...(session && !locked ? [{ onClick: uploadDialog.show, label: t('photoUpload.title') }] : []),
-            ...(isAdmin ? [{ to: ROUTE_PATHS.ADMIN, label: t('home.adminPanel') }] : []),
-          ]}
-        />
-
         {locked && joinFailed && (
           <p className="px-2 pt-4 text-amber-500">{t('sessionPage.qrExpired')}</p>
         )}
@@ -228,6 +218,7 @@ export const MusicQueue = (): ReactNode => {
               session={session}
               isHost={isHost}
               isAdmin={isAdmin}
+              onUploadPhotos={uploadDialog.show}
               onSessionChanged={() => void refreshSession()}
             />
             <NowPlayingCard nowPlaying={nowPlaying} />

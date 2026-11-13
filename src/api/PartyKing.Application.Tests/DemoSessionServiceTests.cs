@@ -2,6 +2,7 @@ using ErrorOr;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using PartyKing.Application.Configuration;
+using PartyKing.Application.Demo.Models;
 using PartyKing.Application.Demo.Services;
 using PartyKing.Domain.Enums;
 
@@ -66,7 +67,6 @@ public class DemoSessionServiceTests
         Assert.Equal(start.ProfileId, demoSession.HostProfileId);
         Assert.Equal(_clock.UtcNow.UtcDateTime.AddMinutes(90), demoSession.ExpiresAt);
         Assert.Equal(_clock.UtcNow.AddMinutes(90), start.ExpiresAt);
-        Assert.Equal(90 * 60, start.AccessTokenExpiresIn);
     }
 
     [Fact]
@@ -141,6 +141,103 @@ public class DemoSessionServiceTests
 
         Assert.Equal(start.ExpiresAt, result.Value.ExpiresAt);
         Assert.Equal(_clock.UtcNow, result.Value.ServerTime);
+    }
+
+    [Fact]
+    public async Task ListStarted_ListsTheVisitorsOwnSessionsWithTheirEnd_TheLastEndingFirst()
+    {
+        var service = CreateService();
+        var first = (await service.StartAsync(Ct)).Value;
+        _clock.Advance(TimeSpan.FromMinutes(10));
+        var second = (await service.StartAsync(Ct)).Value;
+
+        var result = await service.ListStartedAsync(
+            [new StartedDemoSession(first.SessionId, first.ProfileId), new StartedDemoSession(second.SessionId, second.ProfileId)],
+            Ct);
+
+        Assert.Equal([second.SessionId, first.SessionId], result.Value.Sessions.Select(x => x.SessionId));
+        Assert.Equal(first.ExpiresAt, result.Value.Sessions[1].ExpiresAt);
+        Assert.Equal("Demo party", result.Value.Sessions[0].Name);
+        Assert.Equal(_clock.UtcNow, result.Value.ServerTime);
+    }
+
+    [Fact]
+    public async Task ListStarted_SkipsWhatTheVisitorDidNotStartEndedOrUnknownSessions()
+    {
+        var service = CreateService();
+        var mine = (await service.StartAsync(Ct)).Value;
+        var theirs = (await service.StartAsync(Ct)).Value;
+        var ordinary = _sessions.AddSession();
+
+        var result = await service.ListStartedAsync(
+            [
+                new StartedDemoSession(mine.SessionId, mine.ProfileId),
+                new StartedDemoSession(theirs.SessionId, mine.ProfileId),
+                new StartedDemoSession(ordinary.Id, mine.ProfileId),
+                new StartedDemoSession(Guid.NewGuid(), mine.ProfileId),
+            ],
+            Ct);
+
+        Assert.Equal([mine.SessionId], result.Value.Sessions.Select(x => x.SessionId));
+    }
+
+    [Fact]
+    public async Task ListStarted_DropsASessionThatEndedEvenBeforeTheSweepDeletedIt()
+    {
+        var service = CreateService(new DemoConfiguration { Enabled = true, LifetimeMinutes = 30 });
+        var start = (await service.StartAsync(Ct)).Value;
+        _clock.Advance(TimeSpan.FromMinutes(30));
+
+        var result = await service.ListStartedAsync([new StartedDemoSession(start.SessionId, start.ProfileId)], Ct);
+
+        Assert.Empty(result.Value.Sessions);
+    }
+
+    [Fact]
+    public async Task ListStarted_WhenTheServerIsNotADemo_IsNotFound()
+    {
+        var result = await CreateService(new DemoConfiguration { Enabled = false }).ListStartedAsync([], Ct);
+
+        Assert.Equal(ErrorType.NotFound, result.FirstError.Type);
+    }
+
+    [Fact]
+    public async Task Resume_HandsOverWhatAStartDoes_WithTheSameEnd()
+    {
+        var service = CreateService(new DemoConfiguration { Enabled = true, LifetimeMinutes = 60 });
+        var start = (await service.StartAsync(Ct)).Value;
+        _clock.Advance(TimeSpan.FromMinutes(20));
+
+        var resumed = (await service.ResumeAsync(new StartedDemoSession(start.SessionId, start.ProfileId), Ct)).Value;
+
+        Assert.Equal(start.SessionId, resumed.SessionId);
+        Assert.Equal(start.ProfileId, resumed.ProfileId);
+        Assert.Equal(start.AccessStamp, resumed.AccessStamp);
+        Assert.Equal(start.ExpiresAt, resumed.ExpiresAt);
+    }
+
+    [Fact]
+    public async Task Resume_ForAnotherHostsSession_IsNotFound()
+    {
+        var service = CreateService();
+        var mine = (await service.StartAsync(Ct)).Value;
+        var theirs = (await service.StartAsync(Ct)).Value;
+
+        var result = await service.ResumeAsync(new StartedDemoSession(theirs.SessionId, mine.ProfileId), Ct);
+
+        Assert.Equal(ErrorType.NotFound, result.FirstError.Type);
+    }
+
+    [Fact]
+    public async Task Resume_OfASessionThatEnded_IsNotFound()
+    {
+        var service = CreateService(new DemoConfiguration { Enabled = true, LifetimeMinutes = 30 });
+        var start = (await service.StartAsync(Ct)).Value;
+        _clock.Advance(TimeSpan.FromMinutes(31));
+
+        var result = await service.ResumeAsync(new StartedDemoSession(start.SessionId, start.ProfileId), Ct);
+
+        Assert.Equal(ErrorType.NotFound, result.FirstError.Type);
     }
 
     [Fact]

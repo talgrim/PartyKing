@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.DataProtection;
 using PartyKing.Application.Accounts;
+using PartyKing.Application.Demo.Models;
 using PartyKing.Application.Games.Services.Base;
 using PartyKing.Domain.Entities.Auth;
 using PartyKing.Domain.Entities.Games.Base;
@@ -19,6 +20,7 @@ internal class SignedCookies : ISignedCookies
     private readonly IDataProtector _userProtector;
     private readonly ITimeLimitedDataProtector _accountProtector;
     private readonly IDataProtector _sessionAccessProtector;
+    private readonly IDataProtector _demoSessionsProtector;
     private readonly Dictionary<GameKind, (string CookieName, IDataProtector Protector)> _gamePlayerCookies;
 
     public SignedCookies(IDataProtectionProvider dataProtectionProvider)
@@ -26,6 +28,7 @@ internal class SignedCookies : ISignedCookies
         _userProtector = dataProtectionProvider.CreateProtector("PartyKing.UserCookie");
         _accountProtector = dataProtectionProvider.CreateProtector("PartyKing.AccountCookie").ToTimeLimitedDataProtector();
         _sessionAccessProtector = dataProtectionProvider.CreateProtector("PartyKing.SessionAccessCookie");
+        _demoSessionsProtector = dataProtectionProvider.CreateProtector("PartyKing.DemoSessionsCookie");
         _gamePlayerCookies = new()
         {
             [GameKind.Ringo] = (
@@ -116,6 +119,37 @@ internal class SignedCookies : ISignedCookies
         stamp = ReadSessionAccess(request).LastOrDefault(x => x.SessionId == sessionId).Stamp ?? string.Empty;
 
         return stamp.Length > 0;
+    }
+
+    public void GrantDemoSession(Guid sessionId, string profileId, HttpContext context)
+    {
+        var started = ReadDemoSessions(context.Request)
+            .Where(x => x.SessionId != sessionId)
+            .Append(new StartedDemoSession(sessionId, profileId))
+            .TakeLast(MaxUnlockedSessions);
+
+        context.Response.Cookies.Append(
+            CookieNames.DemoSessions,
+            _demoSessionsProtector.Protect(string.Join(';', started.Select(x => $"{x.SessionId:N}:{x.ProfileId}"))),
+            GetOptions(SessionAccessExpirationTime, context));
+    }
+
+    public IReadOnlyList<StartedDemoSession> ReadDemoSessions(HttpRequest request)
+    {
+        if (!request.Cookies.TryGetValue(CookieNames.DemoSessions, out var protectedValue)
+            || !TryUnprotect(_demoSessionsProtector, protectedValue, out var value))
+        {
+            return [];
+        }
+
+        // A synthetic profile id ("demo-" and hex) holds no ':' or ';', so the entries split cleanly
+        return
+        [
+            .. value.Split(';', StringSplitOptions.RemoveEmptyEntries)
+                .Select(entry => entry.Split(':'))
+                .Where(parts => parts is [var id, { Length: > 0 }] && Guid.TryParseExact(id, "N", out _))
+                .Select(parts => new StartedDemoSession(Guid.ParseExact(parts[0], "N"), parts[1]))
+        ];
     }
 
     public void GrantGamePlayer(GameKind game, Guid sessionId, GameSeat seat, HttpContext context)
