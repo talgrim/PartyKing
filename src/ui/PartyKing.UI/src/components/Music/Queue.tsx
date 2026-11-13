@@ -1,8 +1,10 @@
 import CloseIcon from '@mui/icons-material/Close';
 import { ChangeEvent, FormEvent, ReactNode, useEffect, useRef, useState } from 'react';
 import { i18n } from '@/i18n';
+import { DEMO_TRACKS } from '@/components/Demo/demoTracks';
 import { CoverImage } from '@/components/Music/CoverImage';
 import { QueueList } from '@/components/Music/QueueList';
+import { useIsDemo } from '@/service/endpoints/demo/useDemoConfig';
 import { looksLikeSongLink, queueApi } from '@/service/endpoints/queue/queueApi';
 import { useQueueSongs } from '@/service/endpoints/queue/useQueueSongs';
 import { SpotifyTrackDto } from '@/service/endpoints/queue/types';
@@ -31,6 +33,8 @@ export const Queue = ({ sessionId, canRemove = false }: Props): ReactNode => {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { data: queue, mutate } = useQueueSongs(sessionId);
+  // Spotify is not available in the demo: only links are added, and samples stand in for the search
+  const isDemo = useIsDemo();
 
   // The server leaves the song that is playing out of the queue
   const upNext = queue ?? [];
@@ -108,6 +112,11 @@ export const Queue = ({ sessionId, canRemove = false }: Props): ReactNode => {
       return;
     }
 
+    if (isDemo) {
+      setMessage(t('demo.queue.linkOnly'));
+      return;
+    }
+
     setBusy(true);
     try {
       const tracks = await queueApi.searchSpotify(sessionId, value);
@@ -138,7 +147,7 @@ export const Queue = ({ sessionId, canRemove = false }: Props): ReactNode => {
               onFocus={() => setOpen(results.length > 0)}
               onClick={() => setOpen(results.length > 0)}
               className="w-full pl-3 pr-10 py-2 bg-slate-800 border border-slate-700 rounded-l-md placeholder:text-slate-500 focus:outline-none focus:border-amber-600"
-              placeholder={t('queue.placeholder')}
+              placeholder={isDemo ? t('demo.queue.placeholder') : t('queue.placeholder')}
             />
             {input && (
               <button
@@ -156,9 +165,26 @@ export const Queue = ({ sessionId, canRemove = false }: Props): ReactNode => {
             disabled={busy}
             className="w-20 font-semibold text-slate-100 bg-amber-600 rounded-r-md cursor-pointer hover:bg-amber-500 disabled:opacity-50"
           >
-            {looksLikeSongLink(input) ? t('queue.add') : t('queue.search')}
+            {isDemo || looksLikeSongLink(input) ? t('queue.add') : t('queue.search')}
           </button>
         </form>
+
+        {isDemo && (
+          <ul aria-label={t('demo.queue.samples')} className="flex flex-wrap gap-2 pt-3">
+            {DEMO_TRACKS.map((track) => (
+              <li key={track.url}>
+                <button
+                  type="button"
+                  disabled={busy || queuedUrls.has(track.url)}
+                  onClick={() => void enqueue(track.url)}
+                  className="px-2 py-1 text-xs text-slate-200 bg-slate-800 border border-slate-700 rounded-full cursor-pointer hover:bg-slate-700 disabled:cursor-default disabled:text-slate-500 disabled:hover:bg-slate-800"
+                >
+                  + {track.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
 
         {message && <p className="pt-2 text-sm text-amber-500">{message}</p>}
 

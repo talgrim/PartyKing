@@ -2,13 +2,26 @@ import { ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import useSWR from 'swr';
+import { DemoLanding } from '@/components/Demo/DemoLanding';
 import { PageNavigation } from '@/components/common/PageNavigation';
 import { ROUTE_PATHS, sessionPath } from '@/router/constants';
 import { useAccount } from '@/service/endpoints/account/useAccount';
+import { useDemoConfig } from '@/service/endpoints/demo/useDemoConfig';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 
-/** Landing page: every session, with a search box that filters by code (or name). */
+/**
+ * Landing page: every session, with a search box that filters by code (or name). On a demo server it is a button
+ * that starts a session instead, since the visitor has none and must not see anyone else's.
+ */
 export const Home = (): ReactNode => {
+  const { enabled, settled } = useDemoConfig();
+
+  if (!settled) return null;
+
+  return enabled ? <DemoLanding /> : <SessionList />;
+};
+
+const SessionList = (): ReactNode => {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const { account } = useAccount();

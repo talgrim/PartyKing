@@ -1128,5 +1128,36 @@
     "about": "About the estimate",
     "drinksLocked": "Enter your weight first",
     "alcoholGrams": "{{grams}} g of alcohol"
+  },
+  "demo": {
+    "landing": {
+      "title": "Try PartyKing",
+      "intro": "Start a party of your own in one tap: you are its host, so you can queue music, show photos on the slideshow and play the games. Invite a friend with the QR code to see it from the guest side.",
+      "noSpotify": "This demo plays YouTube links only; Spotify is not available in it.",
+      "start": "Start the demo",
+      "starting": "Starting...",
+      "hint": "Your demo party is deleted after a few hours, with everything in it."
+    },
+    "banner": {
+      "label": "Demo",
+      "endsIn": "Ends in {{time}}",
+      "about": "Spotify is not available here, add YouTube links or the sample tracks. Everything is deleted when the time is up.",
+      "soon": "The demo ends soon, and the party with all its photos is deleted then."
+    },
+    "ended": {
+      "title": "The demo has ended",
+      "text": "Your demo party and everything in it was deleted. Thanks for trying PartyKing!",
+      "restart": "Start a new demo"
+    },
+    "errors": {
+      "tooMany": "Too many demos started from your network. Try again in an hour.",
+      "full": "The demo is full right now. Try again in a few minutes.",
+      "failed": "Could not start the demo. Try again."
+    },
+    "queue": {
+      "placeholder": "Paste a YouTube link",
+      "linkOnly": "The demo adds YouTube links only. Paste a link or pick one of the samples below.",
+      "samples": "Sample tracks"
+    }
   }
 }
