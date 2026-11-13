@@ -99,7 +99,9 @@ Differences: the ended screen is driven by the banner's countdown, or by a 401 f
 - **i18n:** every new string in both `en.json` and `pl.json`.
 - **Tests:** vitest for the countdown (fake timers, offset, thresholds), the landing, the banner and the hidden elements.
 
-## Step 4: E2E
+## Step 4: E2E (done, uncommitted; see `docs/testing-e2e.md`, "Demo suite")
+
+Differences: a second Playwright config (`playwright.demo.config.ts`) with its own ports instead of an env override of the ordinary one; the expiry is reached by moving the browser clock, not by a one-minute lifetime. The run found two gaps that are fixed: a demo host could not open a game to guests (opening was admin-only), and `MusicQueue` kept the end screen when "Start a new demo" opened another session. It was also the first live run of the demo API.
 
 A Playwright variant that starts the API with `Demo__Enabled=true` and a short `Demo__LifetimeMinutes` override.
 Spec 1: start the demo, the banner appears, a sample track queues, a second context joins by QR and starts a game.
