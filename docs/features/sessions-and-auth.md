@@ -14,7 +14,7 @@
 
 - A `Session` has a GUID id, a unique short `Code` (from `SessionCodeGenerator`), a name defaulting to "New session" and a nullable `HostProfileId`. It owns one `QueueItem` queue (`QueueItem.SessionId`, cascade delete) and its own slideshow.
 - `HostDisplayName` is not stored with the session: `SessionsRepository.GetAsync` / `GetAllAsync` read only the host's display name from the profile (never the profile with its refresh token) and hand it over with `WithHostDisplayName`.
-- Only an admin creates, deletes or releases sessions (`/admin/sessions...`). The host or an admin renames a session and changes its password. `GET /sessions` (id, code, name, host) and `GET /sessions/{id}` are public.
+- Only an admin creates, deletes or releases sessions (`/admin/sessions...`). The host or an admin renames a session and changes its password. `GET /sessions` (id, code, name and only whether there is a host, `SessionListItemDto`: never who it is) and `GET /sessions/{id}` (with the host's name) are public. The admin panel lists the sessions with their hosts' names through `GET /admin/sessions` (admin only).
 
 ## Session password and QR join
 
@@ -50,8 +50,8 @@
 
 ## Cookies
 
-- `cookie.partyKing.user` (the host's profile id) and `cookie.partyKing.account` (the account id, its security stamp and its role, of a user or an admin) are signed with ASP.NET Data Protection in `SignedCookies`, so clients can't forge identities. Mind the names: `user` is the Spotify **host**, `account` is a login. `cookie.partyKing.auth` holds the host's Spotify access token; `cookie.partyKing.sessions` the unlocks; `cookie.partyKing.ringo` / `.resistance` the game players (see `../games/`).
-- Cookies are HTTP, so `ISignedCookies`, `SignedCookies` and the cookie names (`CookieNames`) live in `PartyKing.API/Cookies`, and the scheme names (`SchemeNames`) and the two scheme handlers (`Authentication/Schemes`) in `PartyKing.API/Authentication`. Controllers, the hub and the authentication handlers call it (`GrantHost`, `GrantSpotifyAccessToken`, `GrantAccount` / `RevokeAccount`, `GrantSessionAccess`, `GrantGamePlayer`, `TryRead...`), never the services.
+- `cookie.partyKing.user` (the host's profile id) and `cookie.partyKing.account` (the account id, its security stamp and its role, of a user or an admin) are signed with ASP.NET Data Protection in `SignedCookies`, so clients can't forge identities. Mind the names: `user` is the Spotify **host**, `account` is a login. `cookie.partyKing.auth` holds the host's Spotify access token; `cookie.partyKing.sessions` the unlocks; `cookie.partyKing.demo` (signed, demo servers only) the demo sessions this browser started with their synthetic host profile ids, so a demo host can be restored after a newer start replaced `cookie.partyKing.user` (see `demo.md`); `cookie.partyKing.ringo` / `.resistance` the game players (see `../games/`).
+- Cookies are HTTP, so `ISignedCookies`, `SignedCookies` and the cookie names (`CookieNames`) live in `PartyKing.API/Cookies`, and the scheme names (`SchemeNames`) and the two scheme handlers (`Authentication/Schemes`) in `PartyKing.API/Authentication`. Controllers, the hub and the authentication handlers call it (`GrantHost`, `GrantSpotifyAccessToken`, `GrantAccount` / `RevokeAccount`, `GrantSessionAccess`, `GrantDemoSession` / `ReadDemoSessions`, `GrantGamePlayer`, `TryRead...`), never the services.
 - The `CustomCookie` scheme adds `NameIdentifier` (profile id) and `Authentication` (access token) claims; the `AccountCookie` scheme backs `[AuthorizeAccount]` (any signed-in account) and `[AuthorizeAdmin]` (the `Admin` role on top).
 
 ## Accounts (users and admins)

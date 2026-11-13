@@ -1,6 +1,6 @@
 # E2E tests (Playwright, Chromium)
 
-From `src/ui/PartyKing.UI`: `npm run e2e`, about 8 min, 76 tests, then the demo suite (5 tests, about 30 s; `npm run e2e:demo` runs only that). First time only: `npx playwright install chromium`. Typecheck the suite with `npx tsc -p e2e/tsconfig.json`; `vite.config.ts` keeps `e2e` and `playwright.config.*` out of vitest.
+From `src/ui/PartyKing.UI`: `npm run e2e`, about 8 min, 76 tests, then the demo suite (6 tests, about 30 s; `npm run e2e:demo` runs only that). First time only: `npx playwright install chromium`. Typecheck the suite with `npx tsc -p e2e/tsconfig.json`; `vite.config.ts` keeps `e2e` and `playwright.config.*` out of vitest.
 
 ## Setup
 
@@ -47,7 +47,7 @@ From `src/ui/PartyKing.UI`: `npm run e2e`, about 8 min, 76 tests, then the demo 
 - `resistance-blind-spies.spec.ts`: five players with the Blind Spies variant (`startResistanceGame(..., {blindSpies: true})`). A spy's `fellowSpies` is an empty list and the card shows the "Blind Spies" note instead of the list, a resistance member still gets `null` and no note, and nobody sees a "Fellow spies" list.
 - `resistance-two-fails.spec.ts`: seven players, fourth mission (two Fail cards needed). One Fail card among the four team members does not fail it (the fifth mission, which needs one, then does), two Fail cards do. The outcomes of the first three missions are chosen so that nobody has won by then.
 - `resistance-seat-takeover.spec.ts`: the host releases the seat of a player whose context was closed (needs the presence grace of 10 s, so the test waits up to 30 s for the button to enable); a new context claims it from the "Back in the game" picker; an unreleased seat is not offered.
-- `e2e/demo/demo.spec.ts` (the demo variant, see "Demo suite"): the landing page and its header, a visitor hosting a demo (banner, no Spotify buttons, empty `GET /sessions`, a sample track queues once, Spotify search answers 403, a guest joins by QR and a Ringo game opened by the host), the photo cap, refused sign-up, and the end screen after the browser clock is moved three hours, then a new demo.
+- `e2e/demo/demo.spec.ts` (the demo variant, see "Demo suite"): the landing page and its header, a returning visitor who sees the demos they started and hosts an older one again (and a stranger who has none and gets 404 on resume), a visitor hosting a demo (banner, no Spotify buttons, empty `GET /sessions`, a sample track queues once, Spotify search answers 403, a guest joins by QR and a Ringo game opened by the host), the photo cap, refused sign-up, and the end screen after the browser clock is moved three hours, then a new demo.
 - Not covered: anything needing Spotify or YouTube (host login, the player, search), reordering the seats, and the Polish texts of a game.
 
 ## Demo suite

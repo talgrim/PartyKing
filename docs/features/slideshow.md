@@ -43,7 +43,7 @@
 - 100 MB per request via `[RequestSizeLimit]` (Kestrel's default applies elsewhere). The stored extension and content type are those of the *detected* format, never the client's.
 - The upload endpoint is rate limited (60/min per IP). Static files are served only for those image types, with `nosniff`. nginx adds a sandbox CSP on `/api/Images/` and raises the body limit to 100 MB for `/api/sessions/<guid>/photos/` (see `../deployment.md`).
 - The static image files themselves carry no auth: their URLs hold the session GUID and a GUIDv7 file name.
-- UI: the "Upload photos" button in `PageNavigation` opens `PhotoUploadDialog` (with `PhotoUploader`) on the session page; full screen below 640 px, can't be closed while an upload runs. Its open state is the `?upload=1` query parameter (`useUploadDialog`), so Back closes it and a reload reopens it. A 401 during the upload closes it and the page asks for the password again. The old `/s/:sessionId/upload` route redirects there through `UploadRedirect`.
+- UI: the "Upload photos" icon (`AddPhotoAlternate`) in the icon row of `SessionHeader`, next to the games menu, opens `PhotoUploadDialog` (with `PhotoUploader`) on the session page; full screen below 640 px, can't be closed while an upload runs. Its open state is the `?upload=1` query parameter (`useUploadDialog`), so Back closes it and a reload reopens it. A 401 during the upload closes it and the page asks for the password again. The old `/s/:sessionId/upload` route redirects there through `UploadRedirect`.
 
 ## Photo archive (zip)
 
