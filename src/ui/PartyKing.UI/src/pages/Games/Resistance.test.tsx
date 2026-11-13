@@ -8,6 +8,7 @@ import { resistanceKey } from '@/service/realtime/sessionMusicEvents';
 import { ApiError } from '@/service/ApiError';
 
 const mocks = vi.hoisted(() => ({
+  demo: false,
   embedded: false,
   role: { isHost: false, isAdmin: true },
   getResistance: vi.fn(),
@@ -41,6 +42,7 @@ vi.mock('@/service/devPersona', () => ({
   },
 }));
 vi.mock('@/service/endpoints/sessions/useViewerRole', () => ({ useViewerRole: () => mocks.role }));
+vi.mock('@/service/endpoints/demo/useDemoConfig', () => ({ useIsDemo: () => mocks.demo }));
 vi.mock('@/service/realtime/useSessionMusicHub', () => ({ useSessionMusicHub: vi.fn() }));
 vi.mock('@/pages/Games/resistance/ResistanceQueuePanel', () => ({
   ResistanceQueuePanel: () => <section aria-label="Music queue panel">queue panel</section>,
@@ -163,6 +165,7 @@ const renderPage = (path = '/s/session-1/games/resistance') =>
 describe('Resistance', () => {
   beforeEach(() => {
     mocks.embedded = false;
+    mocks.demo = false;
     mocks.role = { isHost: false, isAdmin: true };
     mocks.getResistance.mockReset();
     mocks.getResistancePresence.mockReset();
@@ -237,6 +240,17 @@ describe('Resistance', () => {
 
     expect(mocks.openResistance).toHaveBeenCalledWith('session-1');
     expect(await screen.findByRole('button', { name: 'Open the game' })).toBeDisabled();
+  });
+
+  it('lets the host of a demo open the game, as there is no admin', async () => {
+    mocks.demo = true;
+    mocks.role = { isHost: true, isAdmin: false };
+    mocks.openResistance.mockResolvedValue(lobby([], true));
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Open the game' }));
+
+    expect(mocks.openResistance).toHaveBeenCalledWith('session-1');
   });
 
   it('refreshes the rules while the lobby is closed, for the host too', async () => {

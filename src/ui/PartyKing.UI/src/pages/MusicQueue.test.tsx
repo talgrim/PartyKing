@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SWRConfig } from 'swr';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { MusicQueue } from './MusicQueue';
 import { SongSource } from '@/service/endpoints/queue/types';
 
@@ -351,6 +351,36 @@ describe('MusicQueue', () => {
       expect(await screen.findByRole('heading', { name: 'The demo has ended' })).toBeVisible();
       expect(screen.getByRole('button', { name: 'Start a new demo' })).toBeVisible();
       expect(screen.queryByText('queue')).not.toBeInTheDocument();
+    });
+
+    it('shows the next demo, not the end screen of the last one, when a new one is started', async () => {
+      mocks.getDemoSession.mockImplementation(async (id: string) =>
+        id === 'session-1' ? demoSession(-1000) : demoSession(3600 * 1000),
+      );
+      mocks.getSession.mockImplementation(async (id: string) => ({
+        id,
+        code: 'ABC123',
+        name: id === 'session-1' ? 'Party' : 'Second party',
+        hostName: 'H',
+        hasHost: true,
+      }));
+
+      render(
+        <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
+          <MemoryRouter initialEntries={['/s/session-1']}>
+            <Link to="/s/session-2">next demo</Link>
+            <Routes>
+              <Route path="/s/:sessionId" element={<MusicQueue />} />
+            </Routes>
+          </MemoryRouter>
+        </SWRConfig>,
+      );
+      expect(await screen.findByRole('heading', { name: 'The demo has ended' })).toBeVisible();
+
+      await userEvent.click(screen.getByRole('link', { name: 'next demo' }));
+
+      expect(await screen.findByRole('heading', { name: 'Second party' })).toBeVisible();
+      expect(screen.queryByRole('heading', { name: 'The demo has ended' })).not.toBeInTheDocument();
     });
 
     it('still asks for the password of a locked session instead of saying that it ended', async () => {
