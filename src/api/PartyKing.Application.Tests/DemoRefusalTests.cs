@@ -1,5 +1,7 @@
 using ErrorOr;
 using PartyKing.Application.Demo.Services;
+using PartyKing.Application.Spotify.Models;
+using PartyKing.Domain.Results;
 
 namespace PartyKing.Application.Tests;
 
@@ -7,6 +9,10 @@ namespace PartyKing.Application.Tests;
 public class DemoRefusalTests
 {
     private static readonly CancellationToken Ct = CancellationToken.None;
+
+    private readonly FakeSpotifyProfilesRepository _profiles = new();
+
+    private DemoSpotifyService CreateSpotify() => new(_profiles);
 
     private static void AssertRefused(IReadOnlyList<Error> errors, string what)
     {
@@ -40,17 +46,35 @@ public class DemoRefusalTests
     [Fact]
     public async Task TheSpotifyLogin_IsRefused()
     {
-        var service = new DemoSpotifyService();
+        var service = CreateSpotify();
 
         AssertRefused((await service.GetHostLoginUrlAsync(Guid.NewGuid(), Ct)).Errors, "The Spotify login");
         AssertRefused((await service.AuthenticateByCodeAsync("code", "state", Ct)).Errors, "The Spotify login");
-        AssertRefused((await service.AuthenticateByProfileIdAsync("demo-host", Ct)).Errors, "The Spotify login");
+    }
+
+    [Fact]
+    public async Task ADemoHostWithoutASpotifyToken_GetsThePlaceholderOne_ForAnHour()
+    {
+        await _profiles.CreateProfileAsync(new AuthenticationResult("demo-host", "Demo host", "demo", "refresh", 3600), Ct);
+
+        var result = await CreateSpotify().AuthenticateByProfileIdAsync("demo-host", Ct);
+
+        Assert.Equal(new SpotifyAccessGrant("demo", 3600), result.Value);
+    }
+
+    [Fact]
+    public async Task ASweptDemoHost_GetsNoToken()
+    {
+        var result = await CreateSpotify().AuthenticateByProfileIdAsync("demo-gone", Ct);
+
+        var error = Assert.Single(result.Errors);
+        Assert.Equal(ErrorType.NotFound, error.Type);
     }
 
     [Fact]
     public async Task TheSpotifySearch_IsRefused()
     {
-        var result = await new DemoSpotifyService().SearchTracksAsync(Guid.NewGuid(), "abba", Ct);
+        var result = await CreateSpotify().SearchTracksAsync(Guid.NewGuid(), "abba", Ct);
 
         AssertRefused(result.Errors, "Spotify search");
     }

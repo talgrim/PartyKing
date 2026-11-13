@@ -55,9 +55,7 @@ public class DemoControllerTests
     private static DemoStart AStart() => new(
         Guid.NewGuid(),
         "demo-host-1",
-        "demo-token",
-        AccessTokenExpiresIn: 10800,
-        AccessStamp: "stamp-1",
+        "stamp-1",
         Now.AddHours(3));
 
     /// <summary>What the browser sends back: the name and value of every cookie the server set.</summary>
@@ -71,7 +69,7 @@ public class DemoControllerTests
     }
 
     [Fact]
-    public async Task Start_SetsTheCookiesOfTheHost_ThatAnAuthenticatedHostRequestReads()
+    public async Task Start_SetsTheCookiesOfTheHost_ThatAnAuthenticatedHostRequestReads_WithoutASpotifyToken()
     {
         var start = AStart();
         _service.StartResult = start;
@@ -84,7 +82,7 @@ public class DemoControllerTests
         var request = Echo();
         Assert.True(_cookies.TryReadProfileId(request, out var profileId));
         Assert.Equal(start.ProfileId, profileId);
-        Assert.Equal("demo-token", request.Cookies[CookieNames.Auth]);
+        Assert.Null(request.Cookies[CookieNames.Auth]);
     }
 
     [Fact]
@@ -153,7 +151,7 @@ public class DemoControllerTests
         _service.StartResult = newer;
         await _controller.Start(CancellationToken.None);
         Roundtrip();
-        _service.ResumeResult = older with { AccessTokenExpiresIn = 600 };
+        _service.ResumeResult = older;
 
         var result = await _controller.Resume(older.SessionId, CancellationToken.None);
 
@@ -180,18 +178,6 @@ public class DemoControllerTests
 
         Assert.Equal(StatusCodes.Status404NotFound, Assert.IsType<ObjectResult>(result).StatusCode);
         Assert.Equal(0, _httpContext.Response.Headers.SetCookie.Count);
-    }
-
-    [Fact]
-    public async Task Start_LetsTheAccessTokenCookieLiveAsLongAsTheSession()
-    {
-        _service.StartResult = AStart();
-
-        await _controller.Start(CancellationToken.None);
-
-        var authCookie = _httpContext.Response.Headers.SetCookie.Single(x => x!.StartsWith($"{CookieNames.Auth}="))!;
-        var expires = DateTimeOffset.Parse(authCookie.Split("expires=")[1].Split(';')[0]);
-        Assert.InRange((expires - DateTimeOffset.UtcNow).TotalMinutes, 179, 181);
     }
 
     [Theory]

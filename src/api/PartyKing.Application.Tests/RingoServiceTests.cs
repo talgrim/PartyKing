@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Options;
-using PartyKing.Application.Configuration;
 using PartyKing.Application.Events;
 using PartyKing.Domain.Events.Games.Base;
 using PartyKing.Domain.Repositories;

@@ -65,6 +65,26 @@ test('a returning visitor sees the demos they started and hosts an older one aga
   await stranger.close();
 });
 
+test('a host whose access token cookie is gone is still the host, the server hands out the placeholder again', async ({
+  page,
+}) => {
+  const sessionId = await startDemo(page);
+  const cookieNames = async () => (await page.context().cookies()).map((x) => x.name);
+  // A start sets no access token cookie: the host handler does when the first host request needs it
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Session settings' })).toBeVisible();
+
+  await page.context().clearCookies({ name: 'cookie.partyKing.auth' });
+  expect(await cookieNames()).not.toContain('cookie.partyKing.auth');
+
+  const token = await page.request.get(`${DEMO_API_URL}/spotify/token`);
+  expect(token.status()).toBe(200);
+  expect(await cookieNames()).toContain('cookie.partyKing.auth');
+
+  await page.goto(`/s/${sessionId}`);
+  await expect(page.getByRole('button', { name: 'Session settings' })).toBeVisible();
+});
+
 test('a visitor hosts a demo: banner, a sample track, no Spotify, and a guest joins by QR and plays', async ({
   browser,
   page,

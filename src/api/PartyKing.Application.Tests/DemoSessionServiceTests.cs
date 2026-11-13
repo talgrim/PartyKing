@@ -67,7 +67,6 @@ public class DemoSessionServiceTests
         Assert.Equal(start.ProfileId, demoSession.HostProfileId);
         Assert.Equal(_clock.UtcNow.UtcDateTime.AddMinutes(90), demoSession.ExpiresAt);
         Assert.Equal(_clock.UtcNow.AddMinutes(90), start.ExpiresAt);
-        Assert.Equal(90 * 60, start.AccessTokenExpiresIn);
     }
 
     [Fact]
@@ -203,7 +202,7 @@ public class DemoSessionServiceTests
     }
 
     [Fact]
-    public async Task Resume_HandsOverWhatAStartDoes_WithTheTimeThatIsLeft()
+    public async Task Resume_HandsOverWhatAStartDoes_WithTheSameEnd()
     {
         var service = CreateService(new DemoConfiguration { Enabled = true, LifetimeMinutes = 60 });
         var start = (await service.StartAsync(Ct)).Value;
@@ -215,7 +214,6 @@ public class DemoSessionServiceTests
         Assert.Equal(start.ProfileId, resumed.ProfileId);
         Assert.Equal(start.AccessStamp, resumed.AccessStamp);
         Assert.Equal(start.ExpiresAt, resumed.ExpiresAt);
-        Assert.Equal(40 * 60, resumed.AccessTokenExpiresIn);
     }
 
     [Fact]

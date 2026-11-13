@@ -1,8 +1,4 @@
-using Microsoft.Extensions.Options;
-using PartyKing.Application.Configuration;
 using PartyKing.Application.Games.Services.Base;
-using PartyKing.Application.Games.Services.Resistance;
-using PartyKing.Application.Sessions.Services;
 using PartyKing.Contract.V1.Games.Resistance;
 using PartyKing.Domain.Entities.Games.Resistance;
 
