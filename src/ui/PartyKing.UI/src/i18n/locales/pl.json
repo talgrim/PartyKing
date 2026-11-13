@@ -127,7 +127,11 @@
     "slideshow": "Pokaz slajdów"
   },
   "openGames": {
-    "label": "Otwarte gry"
+    "label": "Otwarte gry",
+    "waiting": "Czekamy, aż gospodarz otworzy grę",
+    "lobby": "Lobby",
+    "open": "Otwarta",
+    "neverHaveIEver": "Nigdy w życiu"
   },
   "photoUpload": {
     "title": "Prześlij zdjęcia"

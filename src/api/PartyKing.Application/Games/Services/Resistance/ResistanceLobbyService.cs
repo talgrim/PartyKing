@@ -25,7 +25,7 @@ public interface IResistanceLobbyService
     Task<ErrorOr<ResistanceGameDto>> CreateAsync(
         Guid sessionId, GameCaller caller, CancellationToken cancellationToken);
 
-    /// <summary>Admin only: opens the game to guests (idempotent). NotFound without a game, Forbidden for the host.</summary>
+    /// <summary>Host or admin: opens the game to guests (idempotent). NotFound without a game, Forbidden for a guest.</summary>
     Task<ErrorOr<ResistanceGameDto>> OpenAsync(Guid sessionId, GameCaller caller, CancellationToken cancellationToken);
 
     /// <summary>

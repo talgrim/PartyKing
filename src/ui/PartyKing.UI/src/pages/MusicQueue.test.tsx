@@ -93,7 +93,7 @@ describe('MusicQueue', () => {
   });
 
   it.each([
-    ['the host', { isHost: true, isAdmin: false }, true],
+    ['the host', { isHost: true, isAdmin: false }, false],
     ['a guest', { isHost: false, isAdmin: false }, true],
     ['an admin', { isHost: false, isAdmin: true }, false],
   ])('invites %s to an open game: %s', async (_, role, invited) => {

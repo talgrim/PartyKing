@@ -19,7 +19,7 @@ public interface IRingoService
     /// <summary>Starts a game with a random layout. Conflict when the session already has one.</summary>
     Task<ErrorOr<RingoGameDto>> StartAsync(Guid sessionId, GameCaller caller, CancellationToken cancellationToken);
 
-    /// <summary>Admin only: opens the game to guests (idempotent). NotFound without a game, Forbidden for the host.</summary>
+    /// <summary>Host or admin: opens the game to guests (idempotent). NotFound without a game, Forbidden for a guest.</summary>
     Task<ErrorOr<RingoGameDto>> OpenAsync(Guid sessionId, GameCaller caller, CancellationToken cancellationToken);
 
     /// <summary>

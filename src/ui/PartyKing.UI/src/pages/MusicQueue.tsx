@@ -137,8 +137,8 @@ export const MusicQueue = (): ReactNode => {
   const hostPlayerPush = useRef<HostPlayerPushHandlers>({});
   const hub = useSessionMusicHub(sessionId, Boolean(session && !locked), hostPlayerPush, MUSIC_QUEUE_HUB_TOPICS);
   const unlocked = Boolean(session && !locked);
-  // The admin opens the games, so everyone else (the host included) is invited to join
-  const invitable = unlocked && !isAdmin;
+  // The host and admins open the games, so everyone else is invited to join
+  const invitable = unlocked && !isHost && !isAdmin;
 
   // A demo session is deleted when its time is up: the page shows that instead of a password form for a session that
   // no longer exists. The server answers 401 for a deleted session, so only a session that was open can have ended.

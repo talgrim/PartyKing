@@ -24,7 +24,7 @@ export const gamesApi = {
   getRingoLobby: (sessionId: string) =>
     axios.get(`/sessions/${sessionId}/games/ringo/lobby`, { withCredentials: true }) as unknown as Promise<RingoLobbyDto>,
 
-  /** Admin only: opens the Ringo game to guests. */
+  /** Host or admin: opens the Ringo game to guests. */
   openRingo: (sessionId: string) =>
     axios.post(`/sessions/${sessionId}/games/ringo/open`, null, {
       withCredentials: true,
@@ -125,7 +125,7 @@ export const gamesApi = {
       withCredentials: true,
     }) as unknown as Promise<ResistanceGameDto>,
 
-  /** Admin only: opens the Resistance game to guests. */
+  /** Host or admin: opens the Resistance game to guests. */
   openResistance: (sessionId: string) =>
     axios.post(`/sessions/${sessionId}/games/resistance/open`, null, {
       withCredentials: true,
