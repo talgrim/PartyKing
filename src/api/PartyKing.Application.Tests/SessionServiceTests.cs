@@ -1,9 +1,11 @@
 using ErrorOr;
 using Microsoft.Extensions.Options;
 using PartyKing.Application.Configuration;
+using PartyKing.Application.Demo.Services;
 using PartyKing.Application.Accounts.Services;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Sessions;
+using PartyKing.Contract.V1.Sessions;
 
 namespace PartyKing.Application.Tests;
 
@@ -15,24 +17,38 @@ public class SessionServiceTests
     private readonly SessionService _service;
     private readonly Guid _id;
 
+    private static DemoMode Demo(DemoConfiguration configuration) => new(Options.Create(configuration), new FakeClock());
+
     public SessionServiceTests()
     {
-        _service = new SessionService(_sessions, new SessionAuthorizer(_sessions), Options.Create(new DemoConfiguration()));
+        _service = new SessionService(_sessions, new SessionAuthorizer(_sessions), Demo(new DemoConfiguration()));
         _id = _sessions.AddSession(HostId, new PasswordHasher().Hash("secret")).Id;
     }
 
     [Fact]
     public async Task TheList_InTheDemo_IsEmpty_SoVisitorsDoNotSeeEachOthersSessions()
     {
-        // The fake cannot list sessions, so this also shows the list is not even read
         var service = new SessionService(
             _sessions,
             new SessionAuthorizer(_sessions),
-            Options.Create(new DemoConfiguration { Enabled = true }));
+            Demo(new DemoConfiguration { Enabled = true }));
 
         var sessions = await service.GetAllAsync(CancellationToken.None);
 
         Assert.Empty(sessions);
+    }
+
+    [Fact]
+    public async Task TheList_SaysWhetherASessionHasAHost_ButNotWho()
+    {
+        var withoutHost = _sessions.AddSession(null, new PasswordHasher().Hash("secret"));
+
+        var sessions = await _service.GetAllAsync(CancellationToken.None);
+
+        Assert.Equal(2, sessions.Count);
+        Assert.True(sessions.Single(x => x.Id == _id).HasHost);
+        Assert.False(sessions.Single(x => x.Id == withoutHost.Id).HasHost);
+        Assert.DoesNotContain("HostName", typeof(SessionListItemDto).GetProperties().Select(x => x.Name));
     }
 
     [Fact]

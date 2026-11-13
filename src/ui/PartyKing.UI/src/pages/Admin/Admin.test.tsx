@@ -6,10 +6,10 @@ import { Admin } from './Admin';
 import { setLanguage } from '@/i18n';
 import { ACCOUNT_HINT_KEY } from '@/service/endpoints/account/useAccount';
 
-const mocks = vi.hoisted(() => ({ me: vi.fn(), getSessions: vi.fn() }));
+const mocks = vi.hoisted(() => ({ me: vi.fn(), listSessions: vi.fn() }));
 
 vi.mock('@/service/endpoints/account/accountApi', () => ({ accountApi: { me: mocks.me } }));
-vi.mock('@/service/endpoints/sessions/sessionsApi', () => ({ sessionsApi: { getSessions: mocks.getSessions } }));
+vi.mock('@/service/endpoints/admin/adminApi', () => ({ adminApi: { listSessions: mocks.listSessions } }));
 
 const admin = { id: 'a1', username: 'boss', role: 'Admin', createdAt: '2026-11-09T12:00:00Z' };
 const user = { id: 'u1', username: 'ann', role: 'User', createdAt: '2026-11-09T12:00:00Z' };
@@ -28,7 +28,7 @@ describe('Admin', () => {
     localStorage.clear();
     localStorage.setItem(ACCOUNT_HINT_KEY, 'true');
     mocks.me.mockReset();
-    mocks.getSessions.mockResolvedValue([
+    mocks.listSessions.mockResolvedValue([
       { id: 'session-1', code: 'ABC123', name: 'Party', hostName: null, hasHost: false },
       { id: 'session-2', code: 'XYZ789', name: 'Wedding', hostName: 'H', hasHost: true },
     ]);

@@ -1,8 +1,12 @@
 import { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { MyDemoSessions } from './MyDemoSessions';
 import { StartDemoButton } from './StartDemoButton';
 
-/** The landing page of a demo server: no list of sessions, but a button that starts one for the visitor. */
+/**
+ * The landing page of a demo server: no list of everybody's sessions, but the visitor's own ones that are still
+ * running, and a button that starts a new one.
+ */
 export const DemoLanding = (): ReactNode => {
   const { t } = useTranslation();
 
@@ -18,6 +22,7 @@ export const DemoLanding = (): ReactNode => {
           </div>
           <p className="mt-3 text-sm text-slate-500">{t('demo.landing.hint')}</p>
         </div>
+        <MyDemoSessions />
       </div>
     </div>
   );

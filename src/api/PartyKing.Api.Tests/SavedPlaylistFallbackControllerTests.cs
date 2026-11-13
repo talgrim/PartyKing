@@ -1,3 +1,4 @@
+using PartyKing.Application.Demo.Models;
 using System.Reflection;
 using System.Security.Claims;
 using ErrorOr;
@@ -241,6 +242,8 @@ public class SavedPlaylistFallbackControllerTests
         public void GrantSessionAccess(Guid sessionId, string stamp, HttpContext? httpContext) => throw new NotSupportedException();
         public bool TryReadSessionAccess(HttpRequest request, Guid sessionId, out string stamp) => throw new NotSupportedException();
         public void GrantGamePlayer(GameKind game, Guid sessionId, GameSeat seat, HttpContext? httpContext) => throw new NotSupportedException();
+        public void GrantDemoSession(Guid sessionId, string profileId, HttpContext? httpContext) => throw new NotSupportedException();
+        public IReadOnlyList<StartedDemoSession> ReadDemoSessions(HttpRequest request) => throw new NotSupportedException();
         public bool TryReadGamePlayer(GameKind game, HttpRequest request, Guid sessionId, out GameSeat seat) => throw new NotSupportedException();
     }
 

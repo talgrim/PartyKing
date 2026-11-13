@@ -1,5 +1,4 @@
 using PartyKing.Domain.Entities.Games.Resistance;
-using PartyKing.Domain.Entities.Games.Resistance.Modules;
 
 namespace PartyKing.Domain.Tests;
 

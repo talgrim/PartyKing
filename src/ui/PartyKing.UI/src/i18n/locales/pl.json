@@ -6,6 +6,7 @@
     "somethingWentWrong": "Coś poszło nie tak",
     "noSessionsYet": "Nie ma jeszcze żadnych sesji.",
     "hostName": "Gospodarz: {{name}}",
+    "hasHost": "Jest gospodarz",
     "noHost": "Brak gospodarza",
     "errorOccurred": "Wystąpił błąd: {{message}}",
     "close": "Zamknij",
@@ -126,7 +127,11 @@
     "slideshow": "Pokaz slajdów"
   },
   "openGames": {
-    "label": "Otwarte gry"
+    "label": "Otwarte gry",
+    "waiting": "Czekamy, aż gospodarz otworzy grę",
+    "lobby": "Lobby",
+    "open": "Otwarta",
+    "neverHaveIEver": "Nigdy w życiu"
   },
   "photoUpload": {
     "title": "Prześlij zdjęcia"
@@ -1153,6 +1158,12 @@
       "start": "Rozpocznij demo",
       "starting": "Uruchamianie...",
       "hint": "Twoja impreza demo jest usuwana po kilku godzinach razem z całą zawartością."
+    },
+    "mine": {
+      "title": "Twoje imprezy demo",
+      "open": "Wróć do imprezy",
+      "gone": "Ta impreza już się zakończyła.",
+      "failed": "Nie udało się otworzyć imprezy. Spróbuj ponownie."
     },
     "banner": {
       "label": "Demo",

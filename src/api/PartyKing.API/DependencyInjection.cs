@@ -102,7 +102,7 @@ public static class DependencyInjection
     /// <summary>The sweep of expired demo sessions runs only on a server that is a demo.</summary>
     private static void RegisterDemoWorker(this IServiceCollection services, IConfiguration configuration)
     {
-        if (configuration.GetValue<bool>($"{DemoConfiguration.SectionName}:{nameof(DemoConfiguration.Enabled)}"))
+        if (configuration.GetDemoConfiguration().Enabled)
         {
             services.AddHostedService<DemoSessionCleanupWorker>();
         }

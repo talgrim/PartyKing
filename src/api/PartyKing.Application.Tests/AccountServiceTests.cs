@@ -1,6 +1,7 @@
 using ErrorOr;
 using Microsoft.Extensions.Options;
 using PartyKing.Application.Configuration;
+using PartyKing.Application.Demo.Services;
 using PartyKing.Application.Accounts;
 using PartyKing.Application.Accounts.Services;
 using PartyKing.Domain.Entities.Auth;
@@ -23,7 +24,7 @@ public class AccountServiceTests
             _hasher,
             dummyHash ?? new AccountDummyHash(_hasher),
             _clock,
-            Options.Create(demo ?? new DemoConfiguration()));
+            new DemoMode(Options.Create(demo ?? new DemoConfiguration()), _clock));
     }
 
     private Account AddAccount(string username, string password, AccountRole role = AccountRole.User)

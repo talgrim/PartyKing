@@ -1,5 +1,6 @@
 using PartyKing.Application.Mappings;
 using PartyKing.Contract.V1.Enums;
+using PartyKing.Contract.V1.Sessions;
 using PartyKing.Domain.Entities.Playlists;
 using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Entities.Sessions;
@@ -95,6 +96,20 @@ public class ApplicationMappingsTests
         Assert.True(dto.HasHost);
         Assert.Equal("Playlist", dto.FallbackPlaylistName);
         Assert.True(dto.FallbackShuffle);
+    }
+
+    [Fact]
+    public void Session_ToListItemDto_SaysWhetherThereIsAHost_AndNothingMore()
+    {
+        var hosted = new Session(Guid.NewGuid(), "ABC123", "Party", "hash", DateTime.UtcNow)
+        {
+            HostProfileId = "profile-id",
+            HostDisplayName = "Display Name"
+        };
+        var free = new Session(Guid.NewGuid(), "DEF456", "Other", "hash", DateTime.UtcNow);
+
+        Assert.Equal(new SessionListItemDto(hosted.Id, "ABC123", "Party", true), hosted.ToListItemDto());
+        Assert.Equal(new SessionListItemDto(free.Id, "DEF456", "Other", false), free.ToListItemDto());
     }
 
     [Fact]

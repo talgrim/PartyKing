@@ -29,6 +29,62 @@ test('the landing page offers to start a demo, with no list of sessions and no a
   expect((await config.json()).enabled).toBe(true);
 });
 
+test('a returning visitor sees the demos they started and hosts an older one again', async ({ page }) => {
+  const first = await startDemo(page);
+  // Another start replaces the host cookie, so only the second session is hosted by it
+  const second = await startDemo(page);
+  expect(second).not.toBe(first);
+
+  await page.goto('/');
+
+  await expect(page.getByRole('heading', { name: 'Your demo parties' })).toBeVisible();
+  const open = page.getByRole('button', { name: 'Back to the party' });
+  await expect(open).toHaveCount(2);
+  await expect(page.getByText(/Ends in (3:00:00|2:59:\d\d)/).first()).toBeVisible();
+
+  // The list is the visitor's own: the server reads it from the browser's cookie
+  const mine = await page.request.get(`${DEMO_API_URL}/demo/sessions/mine`);
+  expect((await mine.json()).sessions).toHaveLength(2);
+
+  // The older session is the one that ends first, so it is the last row
+  await open.last().click();
+  await expect(page).toHaveURL(new RegExp(`/s/${first}$`));
+  await expect(page.getByRole('heading', { name: 'Demo party' })).toBeVisible();
+  await expect(page.getByText('Current Host: Demo host')).toBeVisible();
+  // Host-only controls are back
+  await expect(page.getByRole('button', { name: 'Session settings' })).toBeVisible();
+
+  // A visitor who never started a demo has no list and cannot resume anyone else's
+  const stranger = await page.context().browser()!.newContext();
+  const strangerPage = await stranger.newPage();
+  await strangerPage.goto('/');
+  await expect(strangerPage.getByRole('button', { name: 'Start the demo' })).toBeVisible();
+  await expect(strangerPage.getByRole('heading', { name: 'Your demo parties' })).toHaveCount(0);
+  const resume = await strangerPage.request.post(`${DEMO_API_URL}/demo/sessions/${first}/resume`);
+  expect(resume.status()).toBe(404);
+  await stranger.close();
+});
+
+test('a host whose access token cookie is gone is still the host, the server hands out the placeholder again', async ({
+  page,
+}) => {
+  const sessionId = await startDemo(page);
+  const cookieNames = async () => (await page.context().cookies()).map((x) => x.name);
+  // A start sets no access token cookie: the host handler does when the first host request needs it
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Session settings' })).toBeVisible();
+
+  await page.context().clearCookies({ name: 'cookie.partyKing.auth' });
+  expect(await cookieNames()).not.toContain('cookie.partyKing.auth');
+
+  const token = await page.request.get(`${DEMO_API_URL}/spotify/token`);
+  expect(token.status()).toBe(200);
+  expect(await cookieNames()).toContain('cookie.partyKing.auth');
+
+  await page.goto(`/s/${sessionId}`);
+  await expect(page.getByRole('button', { name: 'Session settings' })).toBeVisible();
+});
+
 test('a visitor hosts a demo: banner, a sample track, no Spotify, and a guest joins by QR and plays', async ({
   browser,
   page,

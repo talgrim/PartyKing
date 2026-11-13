@@ -1,7 +1,6 @@
 using PartyKing.Domain.Repositories;
 using ErrorOr;
-using Microsoft.Extensions.Options;
-using PartyKing.Application.Configuration;
+using PartyKing.Application.Demo.Services;
 using PartyKing.Application.Mappings;
 using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Contract.V1.Sessions;
@@ -12,7 +11,8 @@ namespace PartyKing.Application.Sessions.Services;
 
 public interface ISessionService
 {
-    Task<IReadOnlyList<SessionDto>> GetAllAsync(CancellationToken cancellationToken);
+    /// <summary>The public list: whether each session has a host, not who it is. Empty in the demo.</summary>
+    Task<IReadOnlyList<SessionListItemDto>> GetAllAsync(CancellationToken cancellationToken);
     Task<ErrorOr<SessionDto>> GetAsync(Guid id, CancellationToken cancellationToken);
 
     /// <summary>Renames the session. Only the host (<paramref name="caller"/>) or an admin may; anyone else gets Forbidden.</summary>
@@ -26,29 +26,29 @@ public interface ISessionService
 internal class SessionService : ManagerGuardedService, ISessionService
 {
     private readonly ISessionsRepository _sessionsRepository;
-    private readonly DemoConfiguration _demoConfiguration;
+    private readonly IDemoMode _demoMode;
 
     public SessionService(
         ISessionsRepository sessionsRepository,
         ISessionAuthorizer authorizer,
-        IOptions<DemoConfiguration> demoOptions)
+        IDemoMode demoMode)
         : base(authorizer)
     {
         _sessionsRepository = sessionsRepository;
-        _demoConfiguration = demoOptions.Value;
+        _demoMode = demoMode;
     }
 
-    public async Task<IReadOnlyList<SessionDto>> GetAllAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<SessionListItemDto>> GetAllAsync(CancellationToken cancellationToken)
     {
         // The sessions of the other visitors are none of a visitor's business
-        if (_demoConfiguration.Enabled)
+        if (_demoMode.IsEnabled)
         {
             return [];
         }
 
         var sessions = await _sessionsRepository.GetAllAsync(cancellationToken);
 
-        return sessions.Select(session => session.ToDto()).ToList();
+        return sessions.Select(session => session.ToListItemDto()).ToList();
     }
 
     public async Task<ErrorOr<SessionDto>> GetAsync(Guid id, CancellationToken cancellationToken)

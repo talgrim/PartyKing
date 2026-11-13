@@ -1,6 +1,7 @@
 using ErrorOr;
 using Microsoft.Extensions.Options;
 using PartyKing.Application.Configuration;
+using PartyKing.Application.Demo.Services;
 using PartyKing.Application.Events;
 using PartyKing.Application.Sessions;
 using PartyKing.Application.Sessions.Services;
@@ -49,7 +50,9 @@ public class SlideshowServiceTests
             new SlideshowWatchers(),
             _scheduler,
             _notifier,
-            Options.Create(demo));
+            demo.Enabled
+                ? new DemoPhotoQuotaPolicy(Options.Create(demo), _repository)
+                : new UnlimitedPhotoQuotaPolicy());
     }
 
     private static SessionCaller Admin => new(null, true);

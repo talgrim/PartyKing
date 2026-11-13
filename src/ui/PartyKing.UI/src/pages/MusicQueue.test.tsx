@@ -93,7 +93,7 @@ describe('MusicQueue', () => {
   });
 
   it.each([
-    ['the host', { isHost: true, isAdmin: false }, true],
+    ['the host', { isHost: true, isAdmin: false }, false],
     ['a guest', { isHost: false, isAdmin: false }, true],
     ['an admin', { isHost: false, isAdmin: true }, false],
   ])('invites %s to an open game: %s', async (_, role, invited) => {
@@ -106,18 +106,6 @@ describe('MusicQueue', () => {
     const invite = screen.queryByText('A new Resistance game has started. Do you want to join?');
     if (invited) expect(await screen.findByText(/A new Resistance game/)).toBeInTheDocument();
     else expect(invite).not.toBeInTheDocument();
-  });
-
-  it('links an admin to the admin panel, and nobody else', async () => {
-    mocks.getViewerRole.mockResolvedValue({ isHost: false, isAdmin: true });
-    await renderPage();
-    expect(await screen.findByRole('link', { name: 'Admin panel' })).toHaveAttribute('href', '/admin');
-  });
-
-  it('shows a guest no link to the admin panel', async () => {
-    mocks.getViewerRole.mockResolvedValue({ isHost: false, isAdmin: false });
-    await renderPage();
-    expect(screen.queryByRole('link', { name: 'Admin panel' })).not.toBeInTheDocument();
   });
 
   it('opens the photo upload dialog from the Upload photos button', async () => {

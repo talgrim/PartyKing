@@ -61,7 +61,7 @@ public class RingoController : LobbyGameControllerBase
         return result.Match(Ok, Problem);
     }
 
-    /// <summary>Admin only: opens the Ringo game to guests (idempotent), 403 for the host.</summary>
+    /// <summary>Host or admin: opens the Ringo game to guests (idempotent), 403 for a guest.</summary>
     [HttpPost("open")]
     [RequireSessionAccess]
     [ProducesResponseType<RingoGameDto>(StatusCodes.Status200OK)]

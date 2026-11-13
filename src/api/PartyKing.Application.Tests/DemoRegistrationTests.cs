@@ -1,11 +1,12 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PartyKing.Application.Demo.Services;
+using PartyKing.Application.Slideshow.Services;
 using PartyKing.Application.Spotify.Services;
 
 namespace PartyKing.Application.Tests;
 
-/// <summary>The demo swaps the services that reach Spotify, and only on a server that is a demo.</summary>
+/// <summary>The demo swaps the services that reach Spotify and the photo quota, and only on a server that is a demo.</summary>
 public class DemoRegistrationTests
 {
     private static ServiceCollection Register(bool? enabled)
@@ -33,6 +34,7 @@ public class DemoRegistrationTests
 
         Assert.Equal(typeof(DemoSpotifyService), ImplementationOf<ISpotifyService>(services));
         Assert.Equal(typeof(DemoHostTokenProvider), ImplementationOf<IHostTokenProvider>(services));
+        Assert.Equal(typeof(DemoPhotoQuotaPolicy), ImplementationOf<IPhotoQuotaPolicy>(services));
     }
 
     [Theory]
@@ -44,6 +46,7 @@ public class DemoRegistrationTests
 
         Assert.Equal(typeof(SpotifyService), ImplementationOf<ISpotifyService>(services));
         Assert.Equal(typeof(HostTokenProvider), ImplementationOf<IHostTokenProvider>(services));
+        Assert.Equal(typeof(UnlimitedPhotoQuotaPolicy), ImplementationOf<IPhotoQuotaPolicy>(services));
     }
 
     [Fact]
@@ -51,6 +54,8 @@ public class DemoRegistrationTests
     {
         var services = Register(enabled: false);
 
+        Assert.Single(services, x => x.ServiceType == typeof(IDemoMode));
+        Assert.Single(services, x => x.ServiceType == typeof(IDemoSessionStartService));
         Assert.Single(services, x => x.ServiceType == typeof(IDemoSessionService));
         Assert.Single(services, x => x.ServiceType == typeof(IDemoSessionCleanup));
     }

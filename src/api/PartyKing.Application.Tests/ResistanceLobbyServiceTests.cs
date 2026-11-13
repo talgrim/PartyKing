@@ -1,8 +1,4 @@
-using Microsoft.Extensions.Options;
-using PartyKing.Application.Configuration;
 using PartyKing.Application.Games.Services.Base;
-using PartyKing.Application.Games.Services.Resistance;
-using PartyKing.Application.Sessions.Services;
 using PartyKing.Contract.V1.Games.Resistance;
 using PartyKing.Domain.Entities.Games.Resistance;
 
@@ -21,27 +17,6 @@ public class ResistanceLobbyServiceTests : ResistanceServiceTestBase
         Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _lobbyService.KickAsync(_id, Guid.NewGuid(), guest, ct)).FirstError.Type);
         Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _lobbyService.ReorderAsync(_id, [], guest, ct)).FirstError.Type);
         Assert.Equal(ErrorOr.ErrorType.Forbidden, (await _lobbyService.EndAsync(_id, guest, ct)).FirstError.Type);
-    }
-
-    [Fact]
-    public async Task InTheDemo_TheHostOpensTheGameToo_ButAGuestStillCannot()
-    {
-        var ct = CancellationToken.None;
-        var clock = new FakeClock();
-        var lobby = new ResistanceGameLobby(
-            new SessionAuthorizer(_sessions),
-            _sessions,
-            _games,
-            clock,
-            Options.Create(new DemoConfiguration { Enabled = true }));
-        var service = new ResistanceLobbyService(lobby, new ResistanceActionGate(lobby), _games, clock, _rules);
-        await service.CreateAsync(_id, Host, ct);
-
-        var byGuest = await service.OpenAsync(_id, new GameCaller("guest", false), ct);
-        var byHost = await service.OpenAsync(_id, Host, ct);
-
-        Assert.Equal(ErrorOr.ErrorType.Forbidden, byGuest.FirstError.Type);
-        Assert.True(byHost.Value.IsOpen);
     }
 
     [Fact]
@@ -148,15 +123,15 @@ public class ResistanceLobbyServiceTests : ResistanceServiceTestBase
     }
 
     [Fact]
-    public async Task Opening_IsForAdminsOnlyAndPushedOnce()
+    public async Task Opening_IsForTheHostOrAnAdminAndPushedOnce()
     {
         await _lobbyService.CreateAsync(_id, Host, CancellationToken.None);
 
-        var byHost = await _lobbyService.OpenAsync(_id, Host, CancellationToken.None);
-        var first = await _lobbyService.OpenAsync(_id, Admin, CancellationToken.None);
+        var byGuest = await _lobbyService.OpenAsync(_id, new GameCaller("guest", false), CancellationToken.None);
+        var first = await _lobbyService.OpenAsync(_id, Host, CancellationToken.None);
         var second = await _lobbyService.OpenAsync(_id, Admin, CancellationToken.None);
 
-        Assert.Equal(ErrorOr.ErrorType.Forbidden, byHost.FirstError.Type);
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, byGuest.FirstError.Type);
         Assert.True(first.Value.IsOpen);
         Assert.True(second.Value.IsOpen);
         Assert.Equal([_id], _notifier.Opens);

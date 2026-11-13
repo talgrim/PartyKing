@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { SWRConfig } from 'swr';
 import { SessionHeader } from './SessionHeader';
 import { ACCOUNT_HINT_KEY } from '@/service/endpoints/account/useAccount';
@@ -43,6 +44,21 @@ describe('SessionHeader', () => {
         expect(screen.queryByRole('button', { name: 'Log in as host with Spotify' })).not.toBeInTheDocument(),
       );
     });
+  });
+
+  it('offers the photo upload icon to everybody once the page can open the dialog', async () => {
+    const onUploadPhotos = vi.fn();
+    render(<SessionHeader session={session} isHost={false} onUploadPhotos={onUploadPhotos} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Upload photos' }));
+
+    expect(onUploadPhotos).toHaveBeenCalledTimes(1);
+  });
+
+  it('has no photo upload icon without a handler', () => {
+    render(<SessionHeader session={session} isHost={false} />);
+
+    expect(screen.queryByRole('button', { name: 'Upload photos' })).not.toBeInTheDocument();
   });
 
   it('lets a visitor of a hosted session log in again as the host', () => {

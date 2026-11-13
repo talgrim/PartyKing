@@ -92,17 +92,21 @@ public static class DependencyInjection
     private static void RegisterDemo(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<DemoConfiguration>(configuration.GetSection(DemoConfiguration.SectionName));
+        services.AddSingleton<IDemoMode, DemoMode>();
+        services.AddScoped<IDemoSessionStartService, DemoSessionStartService>();
         services.AddScoped<IDemoSessionService, DemoSessionService>();
         services.AddScoped<IDemoSessionCleanup, DemoSessionCleanup>();
 
-        if (!configuration.GetValue<bool>($"{DemoConfiguration.SectionName}:{nameof(DemoConfiguration.Enabled)}"))
+        if (!configuration.GetDemoConfiguration().Enabled)
         {
             return;
         }
 
-        // The demo has no Spotify: the services that would reach it refuse instead. Registered after the real ones, so they win
+        // The demo has no Spotify and keeps a session to a few photos: what would reach Spotify refuses instead, and
+        // the quota is the demo's. Registered after the real ones, so they win
         services.Replace(ServiceDescriptor.Scoped<ISpotifyService, DemoSpotifyService>());
         services.Replace(ServiceDescriptor.Singleton<IHostTokenProvider, DemoHostTokenProvider>());
+        services.Replace(ServiceDescriptor.Singleton<IPhotoQuotaPolicy, DemoPhotoQuotaPolicy>());
     }
 
     private static void RegisterAccounts(this IServiceCollection services, IConfiguration configuration)
@@ -154,6 +158,7 @@ public static class DependencyInjection
     {
         services.AddSingleton<ISlideshowWatchers, SlideshowWatchers>();
         services.AddSingleton<ISlideshowScheduler, SlideshowScheduler>();
+        services.AddSingleton<IPhotoQuotaPolicy, UnlimitedPhotoQuotaPolicy>();
         services.AddSingleton<ISlideshowService, SlideshowService>();
         services.AddScoped<ISlideshowArchiveService, SlideshowArchiveService>();
         services.AddDomainEventHandler<SlideshowSettingsChanged, SlideshowSettingsHandler>();

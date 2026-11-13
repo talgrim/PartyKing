@@ -15,7 +15,6 @@ import { SlideshowControls } from '@/components/Music/SlideshowControls';
 import { useAutoLyrics } from '@/components/Music/useAutoLyrics';
 import { useUploadDialog } from '@/components/Music/useUploadDialog';
 import { SessionPasswordForm } from '@/components/Music/SessionPasswordForm';
-import { PageNavigation } from '@/components/common/PageNavigation';
 import { ResistanceInvite } from '@/pages/Games/ResistanceInvite';
 import { RingoInvite } from '@/pages/Games/RingoInvite';
 import { SlideshowView } from '@/pages/Slideshow/SlideshowView';
@@ -138,8 +137,8 @@ export const MusicQueue = (): ReactNode => {
   const hostPlayerPush = useRef<HostPlayerPushHandlers>({});
   const hub = useSessionMusicHub(sessionId, Boolean(session && !locked), hostPlayerPush, MUSIC_QUEUE_HUB_TOPICS);
   const unlocked = Boolean(session && !locked);
-  // The admin opens the games, so everyone else (the host included) is invited to join
-  const invitable = unlocked && !isAdmin;
+  // The host and admins open the games, so everyone else is invited to join
+  const invitable = unlocked && !isHost && !isAdmin;
 
   // A demo session is deleted when its time is up: the page shows that instead of a password form for a session that
   // no longer exists. The server answers 401 for a deleted session, so only a session that was open can have ended.
@@ -194,15 +193,6 @@ export const MusicQueue = (): ReactNode => {
         />
       )}
       <div className="w-full max-w-xl mx-auto pt-6">
-        <PageNavigation
-          className="px-2 pt-4"
-          links={[
-            // Photos can be added only once the session is unlocked
-            ...(session && !locked ? [{ onClick: uploadDialog.show, label: t('photoUpload.title') }] : []),
-            ...(isAdmin ? [{ to: ROUTE_PATHS.ADMIN, label: t('home.adminPanel') }] : []),
-          ]}
-        />
-
         {locked && joinFailed && (
           <p className="px-2 pt-4 text-amber-500">{t('sessionPage.qrExpired')}</p>
         )}
@@ -228,6 +218,7 @@ export const MusicQueue = (): ReactNode => {
               session={session}
               isHost={isHost}
               isAdmin={isAdmin}
+              onUploadPhotos={uploadDialog.show}
               onSessionChanged={() => void refreshSession()}
             />
             <NowPlayingCard nowPlaying={nowPlaying} />

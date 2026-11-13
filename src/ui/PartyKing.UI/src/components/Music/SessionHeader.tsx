@@ -1,4 +1,5 @@
 import { ReactNode, useState } from 'react';
+import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import { useIsDemo } from '@/service/endpoints/demo/useDemoConfig';
 import { SessionDto } from '@/service/endpoints/sessions/types';
 import { useAccount } from '@/service/endpoints/account/useAccount';
@@ -15,15 +16,17 @@ type Props = {
   isHost: boolean;
   /** The visitor is logged in as an admin. */
   isAdmin?: boolean;
+  /** Opens the dialog to upload photos; the icon is shown only with it. */
+  onUploadPhotos?: () => void;
   /** Called after the settings changed something the page shows, such as the session name. */
   onSessionChanged?: () => void;
 };
 
 /**
- * Card with the session name (the open games menu for everyone, the save-as-playlist icon for signed-in accounts, the QR code and settings icons for
+ * Card with the session name (the open games menu and the photo upload icon for everyone, the save-as-playlist icon for signed-in accounts, the QR code and settings icons for
  * the host and admins), its code, and either who the host is or the login that makes the visitor the host.
  */
-export const SessionHeader = ({ session, isHost, isAdmin = false, onSessionChanged }: Props): ReactNode => {
+export const SessionHeader = ({ session, isHost, isAdmin = false, onUploadPhotos, onSessionChanged }: Props): ReactNode => {
   const { t } = useTranslation();
   const { account } = useAccount();
   // The host of a demo is made by the demo itself: there is no Spotify login to offer
@@ -53,6 +56,16 @@ export const SessionHeader = ({ session, isHost, isAdmin = false, onSessionChang
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <OpenGamesMenu sessionId={session.id} canManage={isHost || isAdmin} />
+          {onUploadPhotos && (
+            <button
+              onClick={onUploadPhotos}
+              aria-label={t('photoUpload.title')}
+              title={t('photoUpload.title')}
+              className="p-1 text-slate-400 hover:text-slate-200 cursor-pointer"
+            >
+              <AddPhotoAlternateIcon />
+            </button>
+          )}
           {account && <SaveQueueAsPlaylist sessionId={session.id} sessionName={session.name} />}
           {(isHost || isAdmin) && (
             <>
