@@ -15,7 +15,12 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const apiProject = resolve(here, '../../../api/PartyKing.API');
 
-const workDir = join(here, '.work');
+// `E2E_DEMO=1` starts the demo variant (see playwright.demo.config.ts): another port, folder and database, and the
+// demo switched on, so it can run after the ordinary suite without sharing anything with it.
+const demo = process.env.E2E_DEMO === '1';
+const port = demo ? 4300 : 4200;
+
+const workDir = join(here, demo ? '.work-demo' : '.work');
 rmSync(workDir, { recursive: true, force: true });
 mkdirSync(join(workDir, 'wwwroot'), { recursive: true });
 // The API runs in the e2e environment: the same development helpers as Development (CORS, dev personas, no rate
@@ -32,13 +37,14 @@ const child = spawn('dotnet', ['run', '--project', apiProject, '--no-launch-prof
     ASPNETCORE_ENVIRONMENT: 'e2e',
     // `dotnet run` would make the project folder the content root, and its appsettings.Local.json the winner
     ASPNETCORE_CONTENTROOT: workDir,
-    ASPNETCORE_URLS: 'http://127.0.0.1:4200',
+    ASPNETCORE_URLS: `http://127.0.0.1:${port}`,
     ASPNETCORE_WEBROOT: join(workDir, 'wwwroot'),
-    PARTYKING_DATABASE_PATH: join(workDir, 'e2e.db'),
+    PARTYKING_DATABASE_PATH: join(workDir, demo ? 'e2e-demo.db' : 'e2e.db'),
     AdminSettings__Username: 'e2e-admin',
     AdminSettings__Password: 'e2e-admin-password',
     RateLimiting__Disabled: 'true',
     Resistance__Seed: '931902',
+    ...(demo ? { DemoSettings__Enabled: 'true' } : {}),
   },
 });
 
