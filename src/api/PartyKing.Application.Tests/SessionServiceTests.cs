@@ -1,6 +1,7 @@
 using ErrorOr;
 using Microsoft.Extensions.Options;
 using PartyKing.Application.Configuration;
+using PartyKing.Application.Demo.Services;
 using PartyKing.Application.Accounts.Services;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Sessions;
@@ -16,9 +17,11 @@ public class SessionServiceTests
     private readonly SessionService _service;
     private readonly Guid _id;
 
+    private static DemoMode Demo(DemoConfiguration configuration) => new(Options.Create(configuration), new FakeClock());
+
     public SessionServiceTests()
     {
-        _service = new SessionService(_sessions, new SessionAuthorizer(_sessions), Options.Create(new DemoConfiguration()));
+        _service = new SessionService(_sessions, new SessionAuthorizer(_sessions), Demo(new DemoConfiguration()));
         _id = _sessions.AddSession(HostId, new PasswordHasher().Hash("secret")).Id;
     }
 
@@ -28,7 +31,7 @@ public class SessionServiceTests
         var service = new SessionService(
             _sessions,
             new SessionAuthorizer(_sessions),
-            Options.Create(new DemoConfiguration { Enabled = true }));
+            Demo(new DemoConfiguration { Enabled = true }));
 
         var sessions = await service.GetAllAsync(CancellationToken.None);
 
