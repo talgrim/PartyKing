@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using PartyKing.API.Authorization;
 using PartyKing.API.Cookies;
-using PartyKing.Application.Demo.Models;
 using PartyKing.Application.Demo.Services;
 using PartyKing.Contract.V1.Demo;
 
@@ -34,7 +33,7 @@ public class DemoController : CoreController
     }
 
     /// <summary>
-    /// Starts a session for the visitor and makes them its host: the cookies are the ones a Spotify host login and the
+    /// Starts a session for the visitor and makes them its host: the cookies are the host cookie and the unlock that a
     /// session password would have set. 404 on a server that is not a demo, 409 while the demo is full.
     /// </summary>
     [HttpPost("demo/sessions")]
@@ -51,7 +50,6 @@ public class DemoController : CoreController
 
         var start = result.Value;
         _cookies.GrantHost(start.ProfileId, HttpContext);
-        _cookies.GrantSpotifyAccessToken(start.AccessToken, start.AccessTokenExpiresIn, HttpContext);
         _cookies.GrantSessionAccess(start.SessionId, start.AccessStamp, HttpContext);
         _cookies.GrantDemoSession(start.SessionId, start.ProfileId, HttpContext);
 
@@ -93,7 +91,6 @@ public class DemoController : CoreController
 
         var start = result.Value;
         _cookies.GrantHost(start.ProfileId, HttpContext);
-        _cookies.GrantSpotifyAccessToken(start.AccessToken, start.AccessTokenExpiresIn, HttpContext);
         _cookies.GrantSessionAccess(start.SessionId, start.AccessStamp, HttpContext);
 
         return Ok(new DemoStartedDto(start.SessionId, start.ExpiresAt));

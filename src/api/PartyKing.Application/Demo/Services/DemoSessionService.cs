@@ -103,7 +103,7 @@ internal class DemoSessionService : IDemoSessionService
             new AuthenticationResult(
                 profileId,
                 HostName,
-                AccessToken: "demo",
+                AccessToken: DemoSpotifyService.PlaceholderAccessToken,
                 RefreshToken: $"demo-refresh-{Guid.NewGuid():N}",
                 ExpiresIn: (int)lifetime.TotalSeconds),
             cancellationToken);
@@ -138,8 +138,6 @@ internal class DemoSessionService : IDemoSessionService
             return new DemoStart(
                 session.Id,
                 profileId,
-                AccessToken: "demo",
-                AccessTokenExpiresIn: (int)lifetime.TotalSeconds,
                 session.AccessStamp,
                 ToUtc(demoSession.ExpiresAt));
         }
@@ -185,13 +183,9 @@ internal class DemoSessionService : IDemoSessionService
             return DemoErrors.SessionGone();
         }
 
-        var left = (int)Math.Max(1, (live.Demo.ExpiresAt - _clock.UtcNow.UtcDateTime).TotalSeconds);
-
         return new DemoStart(
             live.Session.Id,
             started.ProfileId,
-            AccessToken: "demo",
-            AccessTokenExpiresIn: left,
             live.Session.AccessStamp,
             ToUtc(live.Demo.ExpiresAt));
     }
