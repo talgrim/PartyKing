@@ -8,11 +8,12 @@ development mode). Status: **planned**; Steps 0 and 1 are the first to be done.
 - **Entry:** a per-visitor throw-away session, created from a "Start demo" button.
 - **Audio:** YouTube only, with real playback. Spotify search, links and playlists are not available in the demo.
 - **Lifetime:** fixed 3 hours, with a countdown in the UI so visitors know when the session ends.
-- **Photos:** capped at 10 photos and 20 MB per session.
+- **Photos:** capped at 10 photos per session and 5 MB per photo (at most 50 MB a session; the first idea of 20 MB a
+  session would have allowed about four phone photos).
 - **Samples:** about 8 royalty-free YouTube tracks as one-tap "add" chips.
 - **Hostname:** `demo.party.talgrim.dev`.
-- **Deployment:** a separate Fly app built from the same image; the demo flag is a runtime setting (`Demo:Enabled`), not
-  a build flag.
+- **Deployment:** a separate Fly app built from the same image; the demo flag is a runtime setting
+  (`DemoSettings:Enabled`, env `DemoSettings__Enabled`), not a build flag.
 - **Not an iframe:** nginx sends `X-Frame-Options: DENY`; the website links to the demo.
 
 ## What works without Spotify (no change needed)
@@ -49,7 +50,22 @@ admin. The demo therefore gives each visitor a synthetic host.
   the token when a Spotify song is queued, the login redirect before the start, and no redirect while music plays.
 - Docs: `docs/frontend.md` (session page) and `docs/features/music.md` (`GET /spotify/token`).
 
-## Step 2: Backend
+## Step 2: Backend (done, uncommitted; details in `docs/features/demo.md`)
+
+Differences from the table below, found while building it:
+
+- No `DemoSpotifyIntegrationClient`. Replacing `ISpotifyService` and `IHostTokenProvider` (`DemoSpotifyService`,
+  `DemoHostTokenProvider`) refuses every path that reaches Spotify, so the real client is never called.
+- The "disabled" guard is the service answering 404 (and `GET /demo/config` answering `enabled: false`), not a
+  controller filter; the controllers are always registered, only the cleanup worker is conditional.
+- The worker (`BackgroundService`) is in the API project: Application references no hosting package.
+- `ISpotifyProfilesRepository` gained `DeleteProfileAsync` (the synthetic hosts), and the session is deleted before its
+  profile.
+- The photo quota is per photo (5 MB) and per session (10 photos) using the existing file count, not a total in bytes.
+- The settings section is `DemoSettings`, following the `<Name>Settings` rule.
+- Not done: a live run of the API in demo mode (the command was declined in this session). It is the first thing the
+  e2e variant of Step 4 covers.
+
 
 | Layer | Work |
 |---|---|
