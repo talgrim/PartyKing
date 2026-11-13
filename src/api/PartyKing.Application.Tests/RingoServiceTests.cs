@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Options;
+using PartyKing.Application.Configuration;
 using PartyKing.Application.Events;
 using PartyKing.Domain.Events.Games.Base;
 using PartyKing.Domain.Repositories;
@@ -252,6 +254,30 @@ public class RingoServiceTests
         Assert.Equal(ErrorOr.ErrorType.Forbidden, byHost.FirstError.Type);
         Assert.True(first.Value.IsOpen);
         Assert.True(again.Value.IsOpen);
+        Assert.Equal([_id], _notifier.Opens);
+    }
+
+    [Fact]
+    public async Task InTheDemo_TheHostOpensTheGameToo_ButAGuestStillCannot()
+    {
+        var ct = CancellationToken.None;
+        var clock = new FakeClock();
+        var service = new RingoService(
+            new RingoGameLobby(
+                new SessionAuthorizer(_sessions),
+                _sessions,
+                _games,
+                clock,
+                Options.Create(new DemoConfiguration { Enabled = true })),
+            _games,
+            clock);
+        await service.StartAsync(_id, Host, ct);
+
+        var byGuest = await service.OpenAsync(_id, new GameCaller("guest", false), ct);
+        var byHost = await service.OpenAsync(_id, Host, ct);
+
+        Assert.Equal(ErrorOr.ErrorType.Forbidden, byGuest.FirstError.Type);
+        Assert.True(byHost.Value.IsOpen);
         Assert.Equal([_id], _notifier.Opens);
     }
 

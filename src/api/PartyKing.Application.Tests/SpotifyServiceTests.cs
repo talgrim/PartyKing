@@ -131,5 +131,6 @@ public class SpotifyServiceTests
     {
         public Task<SpotifyProfile?> GetProfileAsync(string id, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task CreateProfileAsync(AuthenticationResult result, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task DeleteProfileAsync(string id, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 }

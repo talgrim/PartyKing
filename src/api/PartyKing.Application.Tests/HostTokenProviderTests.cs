@@ -87,6 +87,9 @@ public class HostTokenProviderTests
 
         public Task CreateProfileAsync(AuthenticationResult result, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
+
+        public Task DeleteProfileAsync(string id, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
     }
 
     private class FakeScopeFactory : IServiceScopeFactory

@@ -24,4 +24,9 @@ internal sealed class MeteredSpotifyProfilesRepository : MeteredRepository, ISpo
     {
         return MeasureAsync(nameof(GetProfileAsync), () => _inner.GetProfileAsync(id, cancellationToken));
     }
+
+    public Task DeleteProfileAsync(string id, CancellationToken cancellationToken)
+    {
+        return MeasureAsync(nameof(DeleteProfileAsync), () => _inner.DeleteProfileAsync(id, cancellationToken));
+    }
 }

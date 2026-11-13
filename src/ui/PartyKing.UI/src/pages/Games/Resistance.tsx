@@ -38,6 +38,7 @@ import { gamesApi } from '@/service/endpoints/games/gamesApi';
 import { useResistanceGame } from '@/service/endpoints/games/useResistanceGame';
 import { useResistancePresence } from '@/service/endpoints/games/useResistancePresence';
 import { ResistanceMissionCardKind } from '@/service/endpoints/games/types';
+import { useIsDemo } from '@/service/endpoints/demo/useDemoConfig';
 import { useViewerRole } from '@/service/endpoints/sessions/useViewerRole';
 import {
   RESISTANCE_HUB_TOPICS,
@@ -85,6 +86,9 @@ export const Resistance = (): ReactNode => {
   const navigate = useNavigate();
   const { data: game, error, mutate } = useResistanceGame(sessionId);
   const { isHost, isAdmin } = useViewerRole(sessionId);
+  // An admin opens the game to guests; a demo has none, so its host does
+  const isDemo = useIsDemo();
+  const canOpen = isAdmin || (isDemo && isHost);
   const [searchParams] = useSearchParams();
   // A frame of the multi-player dev page (development only) shows nothing but the player's own view, however wide it is
   const embedded = isDevEmbedded;
@@ -342,7 +346,7 @@ export const Resistance = (): ReactNode => {
   const banner = shownGame && (
     <>
       <ResistancePhaseBanner
-        text={resistancePhaseDescription(shownGame, { canManage, isAdmin }, board.teamSizes[0])}
+        text={resistancePhaseDescription(shownGame, { canManage, isAdmin: canOpen }, board.teamSizes[0])}
         defectorFlips={shownGame.defectorFlips}
       />
       {!logHidden && <ResistancePlotLog cards={shownGame.playedPlotCards} players={shownGame.players} />}
@@ -396,7 +400,7 @@ export const Resistance = (): ReactNode => {
   const managerControls = game && canManage && (
     <ResistanceManagerControls
       game={game}
-      isAdmin={isAdmin}
+      canOpen={canOpen}
       onManagePlayers={() => setManagingPlayers(true)}
       onManageSeats={() => setSeatsOpen(true)}
       onEnd={() => setConfirmingEnd(true)}

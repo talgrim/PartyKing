@@ -7,6 +7,7 @@ using PartyKing.API.Controllers.Games;
 using PartyKing.API.Development;
 using PartyKing.API.Hubs;
 using PartyKing.Application;
+using PartyKing.Application.Configuration;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Infrastructure;
 
@@ -45,6 +46,9 @@ if (builder.Environment.IsDevelopmentOrE2e())
     }));
 }
 
+var demoSettings = builder.Configuration.GetSection(DemoConfiguration.SectionName).Get<DemoConfiguration>()
+    ?? new DemoConfiguration();
+
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -75,6 +79,15 @@ builder.Services.AddRateLimiter(options =>
             {
                 PermitLimit = 10,
                 Window = TimeSpan.FromMinutes(1)
+            }));
+    // Every start makes a session with a host and its files, and a demo is open to anybody
+    options.AddPolicy(DemoController.StartRateLimitPolicy, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = demoSettings.StartsPerHourPerIp,
+                Window = TimeSpan.FromHours(1)
             }));
     // Every request spends the free quota of the language model
     options.AddPolicy(GameControllerBase.SuggestionsRateLimitPolicy, context =>

@@ -74,7 +74,7 @@ Ringo and Resistance share one lobby.
 
 ### Players and turns
 
-- An admin opens the game with `POST games/ringo/open` ("Open the game" in the nav of the Ringo board, admin only, disabled once open; idempotent, no close; pushes `RingoOpened` and `RingoChanged`).
+- An admin opens the game with `POST games/ringo/open` ("Open the game" in the nav of the Ringo board, admin only, or the host in a demo where there is no admin (`GameLobby` `hostMayOpen`, set from `DemoSettings:Enabled`); disabled once open; idempotent, no close; pushes `RingoOpened` and `RingoChanged`).
 - Guests and the session host (not admins, who opened it) then get `RingoInvite` (a non-modal MUI `Snackbar` on the session page; dismissal kept per session and seed in `sessionStorage`; "Tak" opens `/s/:id/games/ringo/join` in a new tab). The host and admins get a "Ringo board" link (new tab) in `PageNavigation` while it is open.
 - `GET games/ringo/lobby` (anyone unlocked) returns `{seed, isOpen, joined}`.
 - `POST games/ringo/join` (`{name}`, `session-join` rate limit) adds a `RingoPlayer` (key `SessionId` + `PlayerId`, `Order`, unique `NormalizedName` per session; names up to 30 characters, and a typed name ending in "(host)" is rejected) and grants the signed `cookie.partyKing.ringo` cookie (session id and player id pairs). A kicked player can join again. The session host joins as "<first word of the Spotify DisplayName> (host)" (`RingoService.HostName`, `RingoPlayer.ProfileId`); the admin under a typed name or as "admin".

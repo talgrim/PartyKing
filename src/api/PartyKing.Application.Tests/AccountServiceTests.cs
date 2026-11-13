@@ -1,4 +1,6 @@
 using ErrorOr;
+using Microsoft.Extensions.Options;
+using PartyKing.Application.Configuration;
 using PartyKing.Application.Accounts;
 using PartyKing.Application.Accounts.Services;
 using PartyKing.Domain.Entities.Auth;
@@ -14,9 +16,14 @@ public class AccountServiceTests
     private readonly FakePasswordHasher _hasher = new();
     private readonly FakeClock _clock = new();
 
-    private AccountService CreateService(AccountDummyHash? dummyHash = null)
+    private AccountService CreateService(AccountDummyHash? dummyHash = null, DemoConfiguration? demo = null)
     {
-        return new AccountService(_accounts, _hasher, dummyHash ?? new AccountDummyHash(_hasher), _clock);
+        return new AccountService(
+            _accounts,
+            _hasher,
+            dummyHash ?? new AccountDummyHash(_hasher),
+            _clock,
+            Options.Create(demo ?? new DemoConfiguration()));
     }
 
     private Account AddAccount(string username, string password, AccountRole role = AccountRole.User)
@@ -58,6 +65,18 @@ public class AccountServiceTests
 
         Assert.Equal(1, _hasher.Hashes);
         Assert.Equal([PasswordHasher.UserIterations], _hasher.Iterations);
+    }
+
+    [Fact]
+    public async Task Register_InTheDemo_IsRefused_AndMakesNoAccount()
+    {
+        var service = CreateService(demo: new DemoConfiguration { Enabled = true });
+
+        var result = await service.RegisterAsync("ann", "secret-password", Ct);
+
+        Assert.Equal(ErrorType.Forbidden, result.FirstError.Type);
+        Assert.Equal("Signing up is not available in the demo", result.FirstError.Description);
+        Assert.Empty(_accounts.Accounts);
     }
 
     [Fact]

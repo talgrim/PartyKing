@@ -264,6 +264,7 @@
   "hostPlayer": {
     "loginDidNotStick": "Logowanie hosta nie zostało zapamiętane. Sprawdź, czy ciasteczka są włączone, a strona i API używają tego samego hosta.",
     "loginStartFailed": "Nie udało się rozpocząć logowania hosta",
+    "spotifyLoginExpired": "Logowanie do Spotify wygasło, więc piosenki ze Spotify nie zagrają. Odśwież stronę, aby zalogować się ponownie.",
     "forbidden": "Tylko host tej sesji może odtwarzać jej muzykę",
     "nextSongFailed": "Nie udało się wczytać następnej piosenki",
     "logYoutubeError": "Błąd YouTube {{code}} przy \"{{name}}\" ({{url}}): {{reason}}",
@@ -1143,5 +1144,36 @@
     "about": "O oszacowaniu",
     "drinksLocked": "Najpierw podaj wagę",
     "alcoholGrams": "{{grams}} g alkoholu"
+  },
+  "demo": {
+    "landing": {
+      "title": "Wypróbuj PartyKing",
+      "intro": "Załóż własną imprezę jednym kliknięciem: jesteś jej gospodarzem, więc możesz dodawać muzykę, pokazywać zdjęcia w pokazie slajdów i grać w gry. Zaproś znajomego kodem QR, żeby zobaczyć aplikację oczami gościa.",
+      "noSpotify": "Ta wersja demo odtwarza tylko linki z YouTube; Spotify nie jest w niej dostępne.",
+      "start": "Rozpocznij demo",
+      "starting": "Uruchamianie...",
+      "hint": "Twoja impreza demo jest usuwana po kilku godzinach razem z całą zawartością."
+    },
+    "banner": {
+      "label": "Demo",
+      "endsIn": "Koniec za {{time}}",
+      "about": "Spotify nie jest tu dostępne, dodawaj linki z YouTube albo przykładowe utwory. Po upływie czasu wszystko jest usuwane.",
+      "soon": "Demo wkrótce się skończy, a impreza wraz ze wszystkimi zdjęciami zostanie wtedy usunięta."
+    },
+    "ended": {
+      "title": "Demo się skończyło",
+      "text": "Twoja impreza demo i wszystko, co w niej było, zostało usunięte. Dzięki za wypróbowanie PartyKing!",
+      "restart": "Rozpocznij nowe demo"
+    },
+    "errors": {
+      "tooMany": "Z Twojej sieci uruchomiono zbyt wiele dem. Spróbuj ponownie za godzinę.",
+      "full": "Demo jest teraz pełne. Spróbuj ponownie za kilka minut.",
+      "failed": "Nie udało się uruchomić dema. Spróbuj ponownie."
+    },
+    "queue": {
+      "placeholder": "Wklej link z YouTube",
+      "linkOnly": "Demo dodaje tylko linki z YouTube. Wklej link albo wybierz jeden z przykładów poniżej.",
+      "samples": "Przykładowe utwory"
+    }
   }
 }

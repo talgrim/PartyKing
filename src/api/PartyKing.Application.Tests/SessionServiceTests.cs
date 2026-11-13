@@ -1,4 +1,6 @@
 using ErrorOr;
+using Microsoft.Extensions.Options;
+using PartyKing.Application.Configuration;
 using PartyKing.Application.Accounts.Services;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Sessions;
@@ -15,8 +17,22 @@ public class SessionServiceTests
 
     public SessionServiceTests()
     {
-        _service = new SessionService(_sessions, new SessionAuthorizer(_sessions));
+        _service = new SessionService(_sessions, new SessionAuthorizer(_sessions), Options.Create(new DemoConfiguration()));
         _id = _sessions.AddSession(HostId, new PasswordHasher().Hash("secret")).Id;
+    }
+
+    [Fact]
+    public async Task TheList_InTheDemo_IsEmpty_SoVisitorsDoNotSeeEachOthersSessions()
+    {
+        // The fake cannot list sessions, so this also shows the list is not even read
+        var service = new SessionService(
+            _sessions,
+            new SessionAuthorizer(_sessions),
+            Options.Create(new DemoConfiguration { Enabled = true }));
+
+        var sessions = await service.GetAllAsync(CancellationToken.None);
+
+        Assert.Empty(sessions);
     }
 
     [Fact]

@@ -68,6 +68,7 @@ Path-scoped rules in `.claude/rules/` remind you to read the matching file when 
 | Sessions, password, QR join, host login, cookies, accounts (users, admins), dev personas | `docs/features/sessions-and-auth.md` |
 | Queue, player, fallback playlist, lyrics | `docs/features/music.md` |
 | Slideshow, photo upload, archive | `docs/features/slideshow.md` |
+| Demo mode (no Spotify, throw-away sessions) | `docs/features/demo.md` |
 | Games hub, lobby layer, Ringo, Never have I ever, LLM | `docs/games/games-lobby.md` |
 | Resistance implementation (presence, seats, phases, plot cards, views) | `docs/games/resistance-implementation.md` |
 | Resistance rules and expansions (Polish) | `docs/games/resistance-rules.md` |

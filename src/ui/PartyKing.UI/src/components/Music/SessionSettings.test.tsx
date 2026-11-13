@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { SWRConfig } from 'swr';
 import { SessionSettings } from './SessionSettings';
 
 const mocks = vi.hoisted(() => ({
@@ -10,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   getHostPlaylists: vi.fn(),
   setFallbackPlaylist: vi.fn(),
   getPhotoCount: vi.fn(),
+  getDemoConfig: vi.fn(),
 }));
 
 vi.mock('@/service/endpoints/sessions/sessionsApi', () => ({
@@ -25,6 +27,8 @@ vi.mock('@/service/endpoints/sessions/sessionsApi', () => ({
   },
 }));
 
+vi.mock('@/service/endpoints/demo/demoApi', () => ({ demoApi: { getConfig: mocks.getDemoConfig } }));
+
 const session = { id: 's1', code: 'ABC123', name: 'Party', hostName: 'Host', hasHost: true };
 
 const openDialog = async (onChanged = vi.fn()) => {
@@ -36,6 +40,7 @@ const openDialog = async (onChanged = vi.fn()) => {
 
 describe('SessionSettings', () => {
   beforeEach(() => {
+    mocks.getDemoConfig.mockReset().mockResolvedValue({ enabled: false, serverTime: '2026-11-13T12:00:00Z' });
     mocks.rename.mockReset().mockResolvedValue(undefined);
     mocks.changePassword.mockReset().mockResolvedValue(undefined);
     mocks.updateSlideshowSettings.mockReset().mockResolvedValue(undefined);
@@ -120,5 +125,26 @@ describe('SessionSettings', () => {
 
     expect(await screen.findByLabelText('Seconds per photo')).toHaveValue(10);
     expect(mocks.getSlideshowSettings).toHaveBeenCalledWith('s1');
+  });
+
+  it('has the fallback playlist, which is a Spotify one, everywhere but in the demo', async () => {
+    await openDialog();
+
+    expect(await screen.findByRole('region', { name: 'Fallback playlist' })).toBeVisible();
+  });
+
+  it('leaves the fallback playlist out of the demo', async () => {
+    mocks.getDemoConfig.mockResolvedValue({ enabled: true, serverTime: '2026-11-13T12:00:00Z' });
+    const user = userEvent.setup();
+    render(
+      <SWRConfig value={{ provider: () => new Map() }}>
+        <SessionSettings session={session} onChanged={vi.fn()} />
+      </SWRConfig>,
+    );
+    await waitFor(() => expect(mocks.getDemoConfig).toHaveBeenCalled());
+    await user.click(screen.getByRole('button', { name: 'Session settings' }));
+
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Fallback playlist' })).not.toBeInTheDocument());
+    expect(screen.getByRole('region', { name: 'Slideshow' })).toBeVisible();
   });
 });

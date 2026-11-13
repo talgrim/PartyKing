@@ -2,6 +2,7 @@ import { ReactNode, useState } from 'react';
 import CloseIcon from '@mui/icons-material/Close';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { Dialog, DialogContent, DialogTitle } from '@mui/material';
+import { useIsDemo } from '@/service/endpoints/demo/useDemoConfig';
 import { SessionDto } from '@/service/endpoints/sessions/types';
 import { AutoLyricsForm } from './AutoLyricsForm';
 import { FallbackPlaylistForm } from './FallbackPlaylistForm';
@@ -31,6 +32,8 @@ type Props = {
 export const SessionSettings = ({ session, onChanged }: Props): ReactNode => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  // The fallback playlist is a Spotify one
+  const isDemo = useIsDemo();
 
   return (
     <>
@@ -70,9 +73,11 @@ export const SessionSettings = ({ session, onChanged }: Props): ReactNode => {
           <SettingsSection title={t('sessionSettings.password')}>
             <SessionPasswordChangeForm sessionId={session.id} />
           </SettingsSection>
-          <SettingsSection title={t('sessionSettings.fallbackPlaylist')}>
-            <FallbackPlaylistForm session={session} onChanged={onChanged} />
-          </SettingsSection>
+          {!isDemo && (
+            <SettingsSection title={t('sessionSettings.fallbackPlaylist')}>
+              <FallbackPlaylistForm session={session} onChanged={onChanged} />
+            </SettingsSection>
+          )}
           <SettingsSection title={t('views.slideshow')}>
             <SlideshowSettingsForm sessionId={session.id} />
           </SettingsSection>

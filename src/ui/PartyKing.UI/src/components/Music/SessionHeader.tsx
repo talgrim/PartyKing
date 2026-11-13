@@ -1,4 +1,5 @@
 import { ReactNode, useState } from 'react';
+import { useIsDemo } from '@/service/endpoints/demo/useDemoConfig';
 import { SessionDto } from '@/service/endpoints/sessions/types';
 import { useAccount } from '@/service/endpoints/account/useAccount';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
@@ -25,6 +26,8 @@ type Props = {
 export const SessionHeader = ({ session, isHost, isAdmin = false, onSessionChanged }: Props): ReactNode => {
   const { t } = useTranslation();
   const { account } = useAccount();
+  // The host of a demo is made by the demo itself: there is no Spotify login to offer
+  const isDemo = useIsDemo();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,7 +68,7 @@ export const SessionHeader = ({ session, isHost, isAdmin = false, onSessionChang
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <span>{t('sessionHeader.currentHost', { name: session.hostName })}</span>
             {/* The host whose login expired gets back in here; anyone else is turned away after Spotify. */}
-            {!isHost && (
+            {!isHost && !isDemo && (
               <button
                 onClick={loginAsHost}
                 disabled={busy}
@@ -75,7 +78,7 @@ export const SessionHeader = ({ session, isHost, isAdmin = false, onSessionChang
               </button>
             )}
           </div>
-        ) : (
+        ) : !isDemo && (
           <button
             onClick={loginAsHost}
             disabled={busy}

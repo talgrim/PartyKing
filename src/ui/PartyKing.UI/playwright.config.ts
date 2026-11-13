@@ -4,6 +4,8 @@ import { API_URL, UI_URL } from './e2e/constants';
 export default defineConfig({
   testDir: './e2e',
   testMatch: '**/*.spec.ts',
+  // The demo server has its own suite and config
+  testIgnore: '**/demo/**',
   globalSetup: './e2e/global-setup.ts',
   // A game with ten players takes about 30 s on a CI runner, which is the default, so a test gets twice that
   timeout: 60_000,

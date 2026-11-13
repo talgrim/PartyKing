@@ -25,19 +25,22 @@ internal class GameLobby<TGame, TPlayer>
     private readonly ILobbyGamesRepository<TGame, TPlayer> _games;
     private readonly IDateTimeProvider _clock;
     private readonly LobbyErrors _errors;
+    private readonly bool _hostMayOpen;
 
     public GameLobby(
         ISessionAuthorizer sessionAuthorizer,
         ISessionsRepository sessions,
         ILobbyGamesRepository<TGame, TPlayer> games,
         IDateTimeProvider clock,
-        GameLobbyOptions options)
+        GameLobbyOptions options,
+        bool hostMayOpen = false)
     {
         _sessionAuthorizer = sessionAuthorizer;
         _sessions = sessions;
         _games = games;
         _clock = clock;
         _errors = new LobbyErrors(options);
+        _hostMayOpen = hostMayOpen;
     }
 
     public Error NoGame => _errors.NoGame;
@@ -89,12 +92,24 @@ internal class GameLobby<TGame, TPlayer>
         return new Access(!authorization.IsError, game);
     }
 
-    /// <summary>Admin only: opens the game to guests (idempotent). NotFound without a game, Forbidden for the host.</summary>
+    /// <summary>
+    /// Admin only, or the host as well when <c>hostMayOpen</c> is set (the demo has no admin): opens the game to guests
+    /// (idempotent). NotFound without a game, Forbidden for the host otherwise.
+    /// </summary>
     public async Task<ErrorOr<TGame>> OpenAsync(Guid sessionId, GameCaller caller, CancellationToken cancellationToken)
     {
         if (!caller.IsAdmin)
         {
-            return _errors.AdminOnly;
+            if (!_hostMayOpen)
+            {
+                return _errors.AdminOnly;
+            }
+
+            var authorization = await AuthorizeAsync(sessionId, caller, cancellationToken);
+            if (authorization.IsError)
+            {
+                return authorization.Errors;
+            }
         }
 
         var existing = await _games.GetAsync(sessionId, cancellationToken);

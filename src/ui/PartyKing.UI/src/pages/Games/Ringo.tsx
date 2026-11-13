@@ -8,6 +8,7 @@ import { HTTP_STATUS_CODE } from '@/service/constants';
 import { gamesApi } from '@/service/endpoints/games/gamesApi';
 import { RingoGameDto } from '@/service/endpoints/games/types';
 import { useRingoGame } from '@/service/endpoints/games/useRingoGame';
+import { useIsDemo } from '@/service/endpoints/demo/useDemoConfig';
 import { useViewerRole } from '@/service/endpoints/sessions/useViewerRole';
 import { ringoLobbyKey } from '@/service/realtime/sessionMusicEvents';
 import { useSessionMusicHub } from '@/service/realtime/useSessionMusicHub';
@@ -35,6 +36,9 @@ export const Ringo = (): ReactNode => {
   const navigate = useNavigate();
   const { data: game, error, mutate } = useRingoGame(sessionId);
   const { isHost, isAdmin } = useViewerRole(sessionId);
+  // An admin opens the game to guests; a demo has none, so its host does
+  const isDemo = useIsDemo();
+  const canOpen = isAdmin || (isDemo && isHost);
   const [managingPlayers, setManagingPlayers] = useState(false);
   const [confirmingEnd, setConfirmingEnd] = useState(false);
   const [message, setMessage] = useState<string>();
@@ -138,7 +142,7 @@ export const Ringo = (): ReactNode => {
             {t('lobby.players')}
           </button>
         )}
-        {game && isAdmin && (
+        {game && canOpen && (
           <button
             type="button"
             onClick={() => void openGame()}

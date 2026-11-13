@@ -54,6 +54,8 @@ public static class DependencyInjection
             (inner, metrics) => new MeteredSessionsRepository(inner, metrics));
         services.AddMetered<IOAuthStatesRepository, OAuthStatesRepository>(
             (inner, metrics) => new MeteredOAuthStatesRepository(inner, metrics));
+        services.AddMetered<IDemoSessionsRepository, DemoSessionsRepository>(
+            (inner, metrics) => new MeteredDemoSessionsRepository(inner, metrics));
         services.AddMetered<IAccountsRepository, AccountsRepository>(
             (inner, metrics) => new MeteredAccountsRepository(inner, metrics));
         services.AddMetered<ISavedPlaylistsRepository, SavedPlaylistsRepository>(

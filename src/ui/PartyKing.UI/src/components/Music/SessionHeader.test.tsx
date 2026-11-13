@@ -1,17 +1,50 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { SWRConfig } from 'swr';
 import { SessionHeader } from './SessionHeader';
 import { ACCOUNT_HINT_KEY } from '@/service/endpoints/account/useAccount';
 
-const mocks = vi.hoisted(() => ({ me: vi.fn() }));
+const mocks = vi.hoisted(() => ({ me: vi.fn(), getDemoConfig: vi.fn() }));
 
 vi.mock('@/service/endpoints/sessions/sessionsApi', () => ({ sessionsApi: {} }));
 vi.mock('@/service/endpoints/account/accountApi', () => ({ accountApi: { me: mocks.me } }));
+vi.mock('@/service/endpoints/demo/demoApi', () => ({ demoApi: { getConfig: mocks.getDemoConfig } }));
 vi.mock('./SaveQueueAsPlaylist', () => ({ SaveQueueAsPlaylist: () => <button>Save as playlist</button> }));
 
 const session = { id: 's', code: 'ABC123', name: 'Party', hostName: 'Host Person', hasHost: true };
 
 describe('SessionHeader', () => {
+  beforeEach(() => {
+    mocks.getDemoConfig.mockResolvedValue({ enabled: false, serverTime: '2026-11-13T12:00:00Z' });
+  });
+
+  describe('in the demo', () => {
+    const renderDemo = async (props: { hasHost: boolean; isHost: boolean }) => {
+      mocks.getDemoConfig.mockResolvedValue({ enabled: true, serverTime: '2026-11-13T12:00:00Z' });
+      render(
+        <SWRConfig value={{ provider: () => new Map() }}>
+          <SessionHeader session={{ ...session, hasHost: props.hasHost }} isHost={props.isHost} />
+        </SWRConfig>,
+      );
+      // The buttons are there until the page knows it is a demo
+      await waitFor(() => expect(mocks.getDemoConfig).toHaveBeenCalled());
+    };
+
+    it('offers a guest no Spotify host login', async () => {
+      await renderDemo({ hasHost: true, isHost: false });
+
+      await waitFor(() => expect(screen.queryByRole('button', { name: "I'm the host" })).not.toBeInTheDocument());
+      expect(screen.getByText('Current Host: Host Person')).toBeVisible();
+    });
+
+    it('offers no Spotify host login to a session without a host either', async () => {
+      await renderDemo({ hasHost: false, isHost: false });
+
+      await waitFor(() =>
+        expect(screen.queryByRole('button', { name: 'Log in as host with Spotify' })).not.toBeInTheDocument(),
+      );
+    });
+  });
+
   it('lets a visitor of a hosted session log in again as the host', () => {
     render(<SessionHeader session={session} isHost={false} />);
 

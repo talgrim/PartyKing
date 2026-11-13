@@ -36,4 +36,6 @@ yarn-error.log*
 /e2e/.auth
 /test-results
 /playwright-report
+/playwright-report-demo
 /e2e/.work
+/e2e/.work-demo

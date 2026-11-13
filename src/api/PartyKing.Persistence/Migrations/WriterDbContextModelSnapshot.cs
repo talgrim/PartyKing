@@ -70,6 +70,25 @@ namespace PartyKing.Persistence.Migrations
                     b.ToTable("OAuthStates");
                 });
 
+            modelBuilder.Entity("PartyKing.Domain.Entities.Demo.DemoSession", b =>
+                {
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("HostProfileId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("SessionId");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.ToTable("DemoSessions", (string)null);
+                });
+
             modelBuilder.Entity("PartyKing.Domain.Entities.Games.Resistance.ResistanceGame", b =>
                 {
                     b.Property<Guid>("SessionId")
@@ -598,6 +617,15 @@ namespace PartyKing.Persistence.Migrations
                 });
 
             modelBuilder.Entity("PartyKing.Domain.Entities.Auth.OAuthState", b =>
+                {
+                    b.HasOne("PartyKing.Domain.Entities.Sessions.Session", null)
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PartyKing.Domain.Entities.Demo.DemoSession", b =>
                 {
                     b.HasOne("PartyKing.Domain.Entities.Sessions.Session", null)
                         .WithMany()

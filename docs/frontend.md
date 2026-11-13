@@ -8,6 +8,7 @@ React 19, react-router, MUI + Tailwind v4, axios + SWR. Axios is configured in `
 - Session page (music, slideshow, settings)
 - API base URL and polling
 - BAC calculator
+- Demo mode
 - Language (i18n)
 
 ## Routes and pages
@@ -26,7 +27,7 @@ React 19, react-router, MUI + Tailwind v4, axios + SWR. Axios is configured in `
 
 - Everyone sees `NowPlayingCard` (art, title, artist, paused badge) and the queue. The viewer's role from `useViewerRole` (`GET /sessions/{id}/me`) adds:
   - For the host and any admin: a red delete icon on each "Up next" row (`Queue` prop `canRemove`, deletes at once, no confirmation).
-  - For the host: `HostPlayer`, which plays the music, so the host must keep the page open. `VolumeControl` sets the volume, stored in `localStorage` through `usePersistedNumber` (`usePlayerVolume`, `partyking.volume`), which follows the `storage` event, so another tab of the same browser (the Resistance queue panel) changes the volume of the playing tab. A YouTube player error skips to the next song, but only until 2 videos fail in a row; then it stops and shows a message until the host presses "Next song" or a song plays. `ErrorLog` lists errors for the admin only.
+  - For the host: `HostPlayer`, which plays the music, so the host must keep the page open. It needs no Spotify login for YouTube songs: it asks for the Spotify token (and mounts `SpotifyPlayer`) only once a Spotify song is playing, now playing or queued, and from then on keeps it. A 401 for that token goes to the Spotify login while the music has not started, and shows a message (reload to log in) once it plays, so a Spotify song queued mid-party never cuts the music. `VolumeControl` sets the volume, stored in `localStorage` through `usePersistedNumber` (`usePlayerVolume`, `partyking.volume`), which follows the `storage` event, so another tab of the same browser (the Resistance queue panel) changes the volume of the playing tab. A YouTube player error skips to the next song, but only until 2 videos fail in a row; then it stops and shows a message until the host presses "Next song" or a song plays. `ErrorLog` lists errors for the admin only.
   - For an admin who is not the host: `RemotePlayerControls` (Play/Pause through `POST player/commands`; Next through the admin endpoint for an admin, or the host's own for a host who is not an admin; disabled while no player is connected; optional volume when given one).
 - A host whose login expired uses "I'm the host" in `SessionHeader` to log in again. `SessionHeader` also shows, to the host and admins, a gear (`SessionSettings`, a MUI `Dialog` with `SessionNameForm`, `SessionPasswordChangeForm`, `FallbackPlaylistForm` (the host's Spotify playlists and the account's saved ones in one list-and-Save form, see "Fallback playlist" in `features/music.md`) and `SlideshowSettingsForm`). To any signed-in account (`useAccount`) it also shows a save-as-playlist icon (`SaveQueueAsPlaylist`, see `features/music.md`).
 - **Slideshow**: there is no separate slideshow route. The host and admins get `SlideshowView` in a left drawer that is open by default (closed by default on a touch device, `isMobileDevice`) and hidden with a toggle (persisted in `localStorage` through `usePersistedFlag`). `SlideshowView` fills its parent's box; guests never request the photos from this page.
@@ -47,6 +48,10 @@ React 19, react-router, MUI + Tailwind v4, axios + SWR. Axios is configured in `
 - Metric units only. Every number field is a `WheelNumberInput` (`components/common`): the mouse wheel adds or takes off a step (`stepNumber` in `utils/numberInput.ts`, within the min and max), but only in the focused field, so scrolling the dialog past a number never changes it. React's wheel handler is passive and cannot stop the page scrolling, so the component adds a native `wheel` listener with `passive: false`.
 - Drinks: `BacAddDrink` is a small form (a kind fills in its usual serving, then volume, strength and time can be changed in one row that ends with a small amber + icon) that puts a drink on the list; the list shows the drink started last on top (`newestFirst`) in a panel of about ten entries that scrolls when the list is longer, and its entries (`BacDrinkEntry`, a line like "500 ml · 5% · 19.7 g · 20 min ago (22:43)": volume, strength, grams of pure alcohol, time) are read-only and have icons: edit (the fields open in place, saved with the check or dropped with the cross), delete, and "add another now" (`drinkAgain`: the same values, started now, for noting a round quickly). A time is entered as minutes ago, or on a clock (`datetime-local`) with the "Pick the exact time" switch. `bacDrinkDraft.ts` holds the draft logic: minutes ago count from the moment the draft is saved, and an entry edited without touching its time keeps its start. `bacTime.ts` converts the times.
 - Persistence: `useBacState` keeps the profile, the drinks and the switch as one versioned JSON in `localStorage` (`partyking.bacCalculator`, `bacStorage.ts`). A field out of its range is dropped alone, drinks older than 24 hours are forgotten, and broken JSON or blocked storage gives the empty form. Drinks keep their start time, so an old list decays on its own.
+
+## Demo mode
+
+On a demo server the landing page, the header, the session page and the queue change; see "The UI" in `docs/features/demo.md`. `useIsDemo()` is the switch.
 
 ## Language (i18n)
 

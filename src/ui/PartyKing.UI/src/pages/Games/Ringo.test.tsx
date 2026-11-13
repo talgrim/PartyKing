@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { Ringo } from './Ringo';
 
 const mocks = vi.hoisted(() => ({
+  demo: false,
   role: { isHost: false, isAdmin: true },
   getRingo: vi.fn(),
   flip: vi.fn(),
@@ -52,8 +53,11 @@ const renderPage = () =>
     </SWRConfig>,
   );
 
+vi.mock('@/service/endpoints/demo/useDemoConfig', () => ({ useIsDemo: () => mocks.demo }));
+
 describe('Ringo', () => {
   beforeEach(() => {
+    mocks.demo = false;
     mocks.getRingo.mockReset();
     mocks.flip.mockReset();
     mocks.continue.mockReset();
@@ -239,6 +243,18 @@ describe('Ringo', () => {
 
     await waitFor(() => expect(mocks.open).toHaveBeenCalledWith('session-1'));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Open the game' })).toBeDisabled());
+  });
+
+  it('lets the host of a demo open the game, as there is no admin', async () => {
+    mocks.demo = true;
+    mocks.role = { isHost: true, isAdmin: false };
+    mocks.getRingo.mockResolvedValue({ seed: 1, flips: [], pendingCardId: null, ...table });
+    mocks.open.mockResolvedValue({ seed: 1, flips: [], pendingCardId: null, ...table, isOpen: true });
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Open the game' }));
+
+    await waitFor(() => expect(mocks.open).toHaveBeenCalledWith('session-1'));
   });
 
   it('hides "Open the game" from the host', async () => {

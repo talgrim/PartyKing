@@ -108,13 +108,34 @@ export const HostPlayer = ({ sessionId, isAdmin, pushHandlers }: Props): ReactNo
     }
   }, [sessionId, reportError, t]);
 
-  // Only the logged-in host plays the music. This also tells us whether we need to log in.
-  const { data: token } = useSWR('spotify-token', queueApi.getSpotifyToken, {
+  const { data: queue } = useQueueSongs(sessionId);
+
+  // The Spotify login is only needed for Spotify songs, so a host who plays YouTube links does not need one.
+  // Once needed it stays needed, so the Spotify device is not torn down between two songs.
+  const spotifySongPending =
+    song?.source === SongSource.Spotify ||
+    nowPlaying?.song?.source === SongSource.Spotify ||
+    (queue ?? []).some((queued) => queued.source === SongSource.Spotify);
+  const [spotifyUsed, setSpotifyUsed] = useState(false);
+  useEffect(() => {
+    if (spotifySongPending) setSpotifyUsed(true);
+  }, [spotifySongPending]);
+  const spotifyNeeded = spotifyUsed || spotifySongPending;
+
+  const startedRef = useRef(started);
+  startedRef.current = started;
+
+  // Only the logged-in host plays Spotify songs. This also tells us whether we need to log in.
+  const { data: token } = useSWR(spotifyNeeded ? 'spotify-token' : null, queueApi.getSpotifyToken, {
     refreshInterval: TOKEN_REFRESH_MS,
     revalidateOnFocus: false,
     shouldRetryOnError: false,
     onError: (e) => {
-      if (e?.status === HTTP_STATUS_CODE.UNAUTHORIZED) {
+      if (e?.status !== HTTP_STATUS_CODE.UNAUTHORIZED) return;
+      if (startedRef.current) {
+        // A redirect now would cut the music that is playing; the host logs in again after a reload
+        reportError(t('hostPlayer.spotifyLoginExpired'));
+      } else {
         void loginAsHost();
       }
     },
@@ -124,8 +145,6 @@ export const HostPlayer = ({ sessionId, isAdmin, pushHandlers }: Props): ReactNo
   useEffect(() => {
     if (token) sessionStorage.removeItem(loginAttemptKey(sessionId));
   }, [token, sessionId]);
-
-  const { data: queue } = useQueueSongs(sessionId);
 
   // Tells the server which song this player thinks is playing, so it only advances when that is still true.
   // When it is not (an admin skipped meanwhile), the song really playing comes back and nothing advances.
@@ -366,7 +385,7 @@ export const HostPlayer = ({ sessionId, isAdmin, pushHandlers }: Props): ReactNo
           <div className="p-4 text-center bg-slate-900 rounded-lg">
             <button
               onClick={() => void start()}
-              disabled={!token}
+              disabled={spotifyNeeded && !token}
               className="px-5 py-3 font-semibold text-slate-100 bg-amber-600 rounded-md cursor-pointer hover:bg-amber-500 disabled:opacity-50 disabled:hover:bg-amber-600"
             >
               {takeoverAvailable ? t('hostPlayer.playHere') : t('hostPlayer.start')}
@@ -394,8 +413,8 @@ export const HostPlayer = ({ sessionId, isAdmin, pushHandlers }: Props): ReactNo
           />
         )}
 
-        {/* Always mounted so the Spotify device is ready before the first Spotify song. */}
-        {token && (
+        {/* Mounted as soon as a Spotify song is queued, so its device is ready before that song starts. */}
+        {spotifyNeeded && token && (
           <SpotifyPlayer
             handle={spotifyPlayer}
             uri={song?.source === SongSource.Spotify ? song.url : null}
