@@ -48,6 +48,7 @@ internal class DemoSessionsRepository : IDemoSessionsRepository
 
         return await dbContext.DemoSessions
             .AsNoTracking()
+            // The same rule as DemoSession.IsExpired, as SQL
             .Where(x => x.ExpiresAt <= now)
             .OrderBy(x => x.ExpiresAt)
             .ToListAsync(cancellationToken);

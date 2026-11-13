@@ -69,7 +69,7 @@ internal class SlideshowService : ManagerGuardedService, ISlideshowService
     private readonly ISlideshowImagesRepository _imagesRepository;
     private readonly ISlideshowSettingsRepository _settingsRepository;
     private readonly SlideshowConfiguration _slideshowConfiguration;
-    private readonly DemoConfiguration _demoConfiguration;
+    private readonly IPhotoQuotaPolicy _photoQuota;
     private readonly ISlideshowWatchers _watchers;
     private readonly ISlideshowScheduler _scheduler;
     private readonly ISlideshowNotifier _notifier;
@@ -85,14 +85,14 @@ internal class SlideshowService : ManagerGuardedService, ISlideshowService
         ISlideshowWatchers watchers,
         ISlideshowScheduler scheduler,
         ISlideshowNotifier notifier,
-        IOptions<DemoConfiguration> demoOptions)
+        IPhotoQuotaPolicy photoQuota)
         : base(sessionAuthorizer)
     {
         _dateTimeProvider = dateTimeProvider;
         _imagesRepository = imagesRepository;
         _settingsRepository = settingsRepository;
         _slideshowConfiguration = slideshowSettingsOptions.Value;
-        _demoConfiguration = demoOptions.Value;
+        _photoQuota = photoQuota;
         _watchers = watchers;
         _scheduler = scheduler;
         _notifier = notifier;
@@ -163,7 +163,7 @@ internal class SlideshowService : ManagerGuardedService, ISlideshowService
         bool deleteAfterPresentation,
         CancellationToken cancellationToken)
     {
-        EnsureWithinDemoLimits(sessionId, files);
+        EnsureWithinQuota(sessionId, files);
 
         // Validate everything first so a bad file doesn't leave the rest of the batch half stored
         var validated = new List<(UploadedFile File, ImageFormat Image)>();
@@ -183,28 +183,13 @@ internal class SlideshowService : ManagerGuardedService, ISlideshowService
         await ShowFirstUploadAsync(sessionId, cancellationToken);
     }
 
-    /// <summary>
-    /// A public demo has no owner to pay for the disk, so it keeps a session to a few small photos. The count is read
-    /// before the files are written, so uploads racing each other can overshoot it by a batch.
-    /// </summary>
-    private void EnsureWithinDemoLimits(Guid sessionId, IReadOnlyList<UploadedFile> files)
+    /// <summary>The upload endpoint answers a refusal like it answers an invalid file, with a bad request and its text.</summary>
+    private void EnsureWithinQuota(Guid sessionId, IReadOnlyList<UploadedFile> files)
     {
-        if (!_demoConfiguration.Enabled)
+        var quota = _photoQuota.Check(SessionDirectory(sessionId), files);
+        if (quota.IsError)
         {
-            return;
-        }
-
-        if (files.Any(file => file.Length > _demoConfiguration.MaxPhotoBytes))
-        {
-            var megabytes = _demoConfiguration.MaxPhotoBytes / (1024 * 1024);
-            throw new InvalidUploadException($"In the demo a photo can be at most {megabytes} MB");
-        }
-
-        var stored = _imagesRepository.CountSessionPhotos(SessionDirectory(sessionId));
-        if (stored + files.Count > _demoConfiguration.MaxPhotosPerSession)
-        {
-            throw new InvalidUploadException(
-                $"In the demo a session can hold at most {_demoConfiguration.MaxPhotosPerSession} photos");
+            throw new InvalidUploadException(quota.FirstError.Description);
         }
     }
 

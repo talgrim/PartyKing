@@ -14,11 +14,6 @@ namespace PartyKing.Application.Demo.Services;
 /// </summary>
 internal class DemoSpotifyService : ISpotifyService
 {
-    /// <summary>What stands in for the host's access token, which no demo call uses.</summary>
-    public const string PlaceholderAccessToken = "demo";
-
-    private const int PlaceholderLifetimeSeconds = 3600;
-
     private readonly ISpotifyProfilesRepository _profilesRepository;
 
     public DemoSpotifyService(ISpotifyProfilesRepository profilesRepository)
@@ -44,7 +39,7 @@ internal class DemoSpotifyService : ISpotifyService
             return SpotifyErrors.ProfileNotFound(id);
         }
 
-        return new SpotifyAccessGrant(PlaceholderAccessToken, PlaceholderLifetimeSeconds);
+        return new SpotifyAccessGrant(DemoHost.PlaceholderAccessToken, DemoHost.PlaceholderLifetimeSeconds);
     }
 
     public Task<ErrorOr<IReadOnlyList<SpotifyTrackDto>>> SearchTracksAsync(
