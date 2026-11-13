@@ -27,12 +27,20 @@ public class SlideshowServiceTests
 
     public SlideshowServiceTests()
     {
+        _service = CreateService(new DemoConfiguration());
+        _sessionId = _sessions.AddSession(hostProfileId: "host").Id;
+        _repository.Events = TestEvents.SlideshowDispatcher(_service);
+    }
+
+    private SlideshowService CreateService(DemoConfiguration demo)
+    {
         var configuration = new SlideshowConfiguration
         {
             UploadedPhotosDirectory = "Images/Uploaded",
             SlideTime = TimeSpan.FromSeconds(5)
         };
-        _service = new SlideshowService(
+
+        return new SlideshowService(
             _clock,
             _repository,
             _repository,
@@ -40,9 +48,8 @@ public class SlideshowServiceTests
             Options.Create(configuration),
             new SlideshowWatchers(),
             _scheduler,
-            _notifier);
-        _sessionId = _sessions.AddSession(hostProfileId: "host").Id;
-        _repository.Events = TestEvents.SlideshowDispatcher(_service);
+            _notifier,
+            Options.Create(demo));
     }
 
     private static SessionCaller Admin => new(null, true);
@@ -481,6 +488,59 @@ public class SlideshowServiceTests
         Assert.Contains(_sessionId, _scheduler.Cancelled);
     }
 
+    private static DemoConfiguration Demo => new() { Enabled = true, MaxPhotosPerSession = 3, MaxPhotoBytes = 100 };
+
+    [Fact]
+    public async Task Upload_InTheDemo_RefusesAPhotoOverTheDemoSize()
+    {
+        var service = CreateService(Demo);
+        var big = new UploadedFile("big.jpg", 101, () => new MemoryStream(JpegBytes));
+
+        var failure = await Assert.ThrowsAsync<InvalidUploadException>(
+            () => service.UploadImagesAsync(_sessionId, [big], deleteAfterPresentation: false, CancellationToken.None));
+
+        Assert.Equal("In the demo a photo can be at most 0 MB", failure.Message);
+        Assert.Empty(_repository.Added);
+    }
+
+    [Fact]
+    public async Task Upload_InTheDemo_RefusesABatchThatWouldGoOverThePhotoLimit_AndStoresNothingOfIt()
+    {
+        _repository.StoredPhotos = 2;
+        var service = CreateService(Demo);
+
+        var failure = await Assert.ThrowsAsync<InvalidUploadException>(
+            () => service.UploadImagesAsync(
+                _sessionId,
+                [File("a.jpg", JpegBytes), File("b.jpg", JpegBytes)],
+                deleteAfterPresentation: false,
+                CancellationToken.None));
+
+        Assert.Equal("In the demo a session can hold at most 3 photos", failure.Message);
+        Assert.Empty(_repository.Added);
+    }
+
+    [Fact]
+    public async Task Upload_InTheDemo_AcceptsTheLastPhotoThatFits()
+    {
+        _repository.StoredPhotos = 2;
+        var service = CreateService(Demo);
+
+        await service.UploadImagesAsync(_sessionId, [File("a.jpg", JpegBytes)], deleteAfterPresentation: false, CancellationToken.None);
+
+        Assert.Single(_repository.Added);
+    }
+
+    [Fact]
+    public async Task Upload_OutsideTheDemo_HasNoPhotoLimit()
+    {
+        _repository.StoredPhotos = 1000;
+
+        await _service.UploadImagesAsync(_sessionId, [File("a.jpg", JpegBytes)], deleteAfterPresentation: false, CancellationToken.None);
+
+        Assert.Single(_repository.Added);
+    }
+
     private class FakeSlideshowImagesRepository : ISlideshowImagesRepository, ISlideshowSettingsRepository
     {
         public Dictionary<Guid, SlideshowImageReadResult> NextImages { get; } = [];
@@ -546,7 +606,9 @@ public class SlideshowServiceTests
             return Task.CompletedTask;
         }
 
-        public int CountSessionPhotos(string sessionDirectory) => 0;
+        public int StoredPhotos { get; set; }
+
+        public int CountSessionPhotos(string sessionDirectory) => StoredPhotos;
 
         public Task<string?> CreateSessionArchiveAsync(string sessionDirectory, CancellationToken cancellationToken) =>
             Task.FromResult<string?>(null);
