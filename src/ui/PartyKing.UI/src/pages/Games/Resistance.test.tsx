@@ -8,7 +8,6 @@ import { resistanceKey } from '@/service/realtime/sessionMusicEvents';
 import { ApiError } from '@/service/ApiError';
 
 const mocks = vi.hoisted(() => ({
-  demo: false,
   embedded: false,
   role: { isHost: false, isAdmin: true },
   getResistance: vi.fn(),
@@ -42,7 +41,6 @@ vi.mock('@/service/devPersona', () => ({
   },
 }));
 vi.mock('@/service/endpoints/sessions/useViewerRole', () => ({ useViewerRole: () => mocks.role }));
-vi.mock('@/service/endpoints/demo/useDemoConfig', () => ({ useIsDemo: () => mocks.demo }));
 vi.mock('@/service/realtime/useSessionMusicHub', () => ({ useSessionMusicHub: vi.fn() }));
 vi.mock('@/pages/Games/resistance/ResistanceQueuePanel', () => ({
   ResistanceQueuePanel: () => <section aria-label="Music queue panel">queue panel</section>,
@@ -165,7 +163,6 @@ const renderPage = (path = '/s/session-1/games/resistance') =>
 describe('Resistance', () => {
   beforeEach(() => {
     mocks.embedded = false;
-    mocks.demo = false;
     mocks.role = { isHost: false, isAdmin: true };
     mocks.getResistance.mockReset();
     mocks.getResistancePresence.mockReset();
@@ -242,8 +239,7 @@ describe('Resistance', () => {
     expect(await screen.findByRole('button', { name: 'Open the game' })).toBeDisabled();
   });
 
-  it('lets the host of a demo open the game, as there is no admin', async () => {
-    mocks.demo = true;
+  it('lets the host open the game too', async () => {
     mocks.role = { isHost: true, isAdmin: false };
     mocks.openResistance.mockResolvedValue(lobby([], true));
     renderPage();
@@ -586,12 +582,12 @@ describe('Resistance', () => {
     expect(screen.queryByRole('button', { name: 'Game settings' })).not.toBeInTheDocument();
   });
 
-  it('gives the host no Open button and links back to the games', async () => {
+  it('gives the host the Open button and links back to the games', async () => {
     mocks.role = { isHost: true, isAdmin: false };
     renderPage();
 
     await screen.findByRole('img', { name: 'Mission board' });
-    expect(screen.queryByRole('button', { name: 'Open the game' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open the game' })).toBeEnabled();
     expect(screen.getByRole('link', { name: 'Back to the games' })).toHaveAttribute('href', '/s/session-1/games');
   });
 
@@ -1222,7 +1218,8 @@ describe('Resistance', () => {
       expect(screen.getByRole('button', { name: 'Start game' })).toBeEnabled();
       expect(screen.getByRole('button', { name: 'Players' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'End game' })).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Open the game' })).not.toBeInTheDocument();
+      // The game is open already
+      expect(screen.getByRole('button', { name: 'Open the game' })).toBeDisabled();
 
       await userEvent.click(toggle);
       expect(screen.queryByRole('button', { name: 'End game' })).not.toBeInTheDocument();
