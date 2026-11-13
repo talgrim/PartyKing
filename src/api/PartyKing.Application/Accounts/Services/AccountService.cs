@@ -1,4 +1,7 @@
 using ErrorOr;
+using Microsoft.Extensions.Options;
+using PartyKing.Application.Configuration;
+using PartyKing.Application.Demo.Helpers;
 using PartyKing.Application.Accounts.Helpers;
 using PartyKing.Application.Mappings;
 using PartyKing.Application.System;
@@ -44,6 +47,7 @@ internal class AccountService : IAccountService
     private readonly IAccountsRepository _accountsRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly DemoConfiguration _demoConfiguration;
 
     // Verified against when the username is unknown, so both failures cost the same time
     private readonly AccountDummyHash _dummyHash;
@@ -52,12 +56,14 @@ internal class AccountService : IAccountService
         IAccountsRepository accountsRepository,
         IPasswordHasher passwordHasher,
         AccountDummyHash dummyHash,
-        IDateTimeProvider dateTimeProvider)
+        IDateTimeProvider dateTimeProvider,
+        IOptions<DemoConfiguration> demoOptions)
     {
         _accountsRepository = accountsRepository;
         _passwordHasher = passwordHasher;
         _dummyHash = dummyHash;
         _dateTimeProvider = dateTimeProvider;
+        _demoConfiguration = demoOptions.Value;
     }
 
     public async Task<ErrorOr<AccountIdentity>> RegisterAsync(
@@ -65,6 +71,12 @@ internal class AccountService : IAccountService
         string? password,
         CancellationToken cancellationToken)
     {
+        // Accounts are permanent rows, and a demo is a throw-away
+        if (_demoConfiguration.Enabled)
+        {
+            return DemoErrors.NotAvailableInDemo("Signing up");
+        }
+
         var passwordCreation = AccountPassword.Create(password);
 
         if (passwordCreation.Password is null)

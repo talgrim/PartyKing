@@ -50,4 +50,13 @@ internal class SpotifyProfilesRepository : ISpotifyProfilesRepository
 
         return await dbContext.SpotifyProfiles.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
     }
+
+    public async Task DeleteProfileAsync(string id, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        await dbContext.SpotifyProfiles
+            .Where(x => x.Id == id)
+            .ExecuteDeleteAsync(cancellationToken);
+    }
 }
