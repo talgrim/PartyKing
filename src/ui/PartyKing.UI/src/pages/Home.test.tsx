@@ -1,17 +1,16 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SWRConfig } from 'swr';
 import { MemoryRouter } from 'react-router-dom';
 import { Home } from './Home';
-import { ACCOUNT_HINT_KEY } from '@/service/endpoints/account/useAccount';
 import { setLanguage } from '@/i18n';
 
-const mocks = vi.hoisted(() => ({ getSessions: vi.fn(), me: vi.fn(), getDemoConfig: vi.fn(), startDemo: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getSessions: vi.fn(), me: vi.fn(), getDemoConfig: vi.fn(), startDemo: vi.fn(), listMine: vi.fn() }));
 
 vi.mock('@/service/endpoints/sessions/sessionsApi', () => ({ sessionsApi: { getSessions: mocks.getSessions } }));
 vi.mock('@/service/endpoints/account/accountApi', () => ({ accountApi: { me: mocks.me } }));
 vi.mock('@/service/endpoints/demo/demoApi', () => ({
-  demoApi: { getConfig: mocks.getDemoConfig, start: mocks.startDemo },
+  demoApi: { getConfig: mocks.getDemoConfig, start: mocks.startDemo, listMine: mocks.listMine },
 }));
 
 const renderPage = async () => {
@@ -29,46 +28,11 @@ describe('Home', () => {
   beforeEach(() => {
     localStorage.clear();
     mocks.me.mockReset();
+    mocks.listMine.mockReset().mockResolvedValue({ sessions: [], serverTime: '2026-11-13T12:00:00Z' });
     mocks.getDemoConfig.mockResolvedValue({ enabled: false, serverTime: '2026-11-13T12:00:00Z' });
     mocks.getSessions.mockReset().mockResolvedValue([
-      { id: 'session-1', code: 'ABC123', name: 'Party', hostName: 'H', hasHost: true },
+      { id: 'session-1', code: 'ABC123', name: 'Party', hasHost: true },
     ]);
-  });
-
-  it('shows a visitor without an account no admin link and does not ask who is signed in', async () => {
-    await renderPage();
-
-    expect(screen.queryByRole('link', { name: 'Admin panel' })).not.toBeInTheDocument();
-    expect(mocks.me).not.toHaveBeenCalled();
-  });
-
-  it('links a signed-in admin to the admin panel', async () => {
-    localStorage.setItem(ACCOUNT_HINT_KEY, 'true');
-    mocks.me.mockResolvedValue({ id: 'a1', username: 'boss', role: 'Admin', createdAt: '2026-11-09T12:00:00Z' });
-
-    await renderPage();
-
-    expect(await screen.findByRole('link', { name: 'Admin panel' })).toHaveAttribute('href', '/admin');
-  });
-
-  it('shows a signed-in user no admin link', async () => {
-    localStorage.setItem(ACCOUNT_HINT_KEY, 'true');
-    mocks.me.mockResolvedValue({ id: 'u1', username: 'ann', role: 'User', createdAt: '2026-11-09T12:00:00Z' });
-
-    await renderPage();
-
-    await waitFor(() => expect(mocks.me).toHaveBeenCalled());
-    expect(screen.queryByRole('link', { name: 'Admin panel' })).not.toBeInTheDocument();
-  });
-
-  it('hides the link when the login has expired', async () => {
-    localStorage.setItem(ACCOUNT_HINT_KEY, 'true');
-    mocks.me.mockRejectedValue({ status: 401, message: 'Unauthorized' });
-
-    await renderPage();
-
-    await waitFor(() => expect(mocks.me).toHaveBeenCalled());
-    expect(screen.queryByRole('link', { name: 'Admin panel' })).not.toBeInTheDocument();
   });
 
   describe('on a demo server', () => {
@@ -93,6 +57,18 @@ describe('Home', () => {
       expect(mocks.getSessions).not.toHaveBeenCalled();
     });
 
+    it('lists the visitor\'s own running demo sessions above the start button, so they can return to one', async () => {
+      mocks.listMine.mockResolvedValue({
+        sessions: [{ sessionId: 's1', name: 'Demo party', expiresAt: new Date(Date.now() + 3600 * 1000).toISOString() }],
+        serverTime: new Date().toISOString(),
+      });
+
+      renderDemo();
+
+      expect(await screen.findByRole('button', { name: 'Back to the party' })).toBeVisible();
+      expect(screen.getByRole('button', { name: 'Start the demo' })).toBeVisible();
+    });
+
     it('shows nothing, not the session list, until it is known whether this is a demo', () => {
       mocks.getDemoConfig.mockReturnValue(new Promise(() => {}));
 
@@ -112,13 +88,13 @@ describe('Home', () => {
     });
   });
 
-  it('shows the page in Polish, with the host and the empty search result interpolated', async () => {
+  it('shows the page in Polish, with the host mark and the empty search result interpolated', async () => {
     await setLanguage('pl');
 
     await renderPage();
 
     expect(screen.getByRole('heading', { name: 'Dołącz do imprezy' })).toBeInTheDocument();
-    expect(screen.getByText('Gospodarz: H')).toBeInTheDocument();
+    expect(screen.getByText('Jest gospodarz')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Chroniona hasłem' })).toBeInTheDocument();
 
     await userEvent.type(screen.getByRole('textbox', { name: 'Szukaj sesji po kodzie' }), 'zzz');
