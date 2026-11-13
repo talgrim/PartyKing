@@ -13,6 +13,8 @@ const mocks = vi.hoisted(() => ({
   joinWithToken: vi.fn(),
   getRingoLobby: vi.fn(),
   getResistanceLobby: vi.fn(),
+  getDemoConfig: vi.fn(),
+  getDemoSession: vi.fn(),
 }));
 
 vi.mock('@/service/endpoints/sessions/sessionsApi', () => ({
@@ -23,6 +25,9 @@ vi.mock('@/service/endpoints/sessions/sessionsApi', () => ({
     joinWithToken: mocks.joinWithToken,
     createJoinToken: vi.fn(),
   },
+}));
+vi.mock('@/service/endpoints/demo/demoApi', () => ({
+  demoApi: { getConfig: mocks.getDemoConfig, getSession: mocks.getDemoSession },
 }));
 vi.mock('@/service/endpoints/games/gamesApi', () => ({
   gamesApi: { getRingoLobby: mocks.getRingoLobby, getResistanceLobby: mocks.getResistanceLobby },
@@ -54,6 +59,8 @@ describe('MusicQueue', () => {
   beforeEach(() => {
     localStorage.clear();
     sessionStorage.clear();
+    mocks.getDemoConfig.mockResolvedValue({ enabled: false, serverTime: '2026-11-13T12:00:00Z' });
+    mocks.getDemoSession.mockReset().mockRejectedValue({ status: 404 });
     mocks.getRingoLobby.mockRejectedValue({ status: 404 });
     mocks.getResistanceLobby.mockRejectedValue({ status: 404 });
     mocks.getSession.mockResolvedValue({ id: 'session-1', code: 'ABC123', name: 'Party', hostName: 'H', hasHost: true });
@@ -305,5 +312,71 @@ describe('MusicQueue', () => {
       expect(await screen.findByText('This QR code has expired. Enter the password instead.')).toBeVisible();
       expect(screen.getByLabelText('Session password')).toBeVisible();
     });
+  });
+
+  describe('in the demo', () => {
+    const NOW = Date.now();
+    const demoSession = (endsInMs: number) => ({
+      expiresAt: new Date(NOW + endsInMs).toISOString(),
+      serverTime: new Date(NOW).toISOString(),
+    });
+
+    beforeEach(() => {
+      mocks.getDemoConfig.mockResolvedValue({ enabled: true, serverTime: '2026-11-13T12:00:00Z' });
+      mocks.getViewerRole.mockResolvedValue({ isHost: false, isAdmin: false });
+    });
+
+    it('tells everyone that it is a demo, and when it ends', async () => {
+      mocks.getDemoSession.mockResolvedValue(demoSession(2 * 3600 * 1000));
+
+      await renderPage();
+
+      expect(await screen.findByText(/Ends in 1:5\d:\d\d|Ends in 2:00:00/)).toBeVisible();
+      expect(mocks.getDemoSession).toHaveBeenCalledWith('session-1');
+    });
+
+    it('replaces the session with the end screen once the time is up', async () => {
+      mocks.getDemoSession.mockResolvedValue(demoSession(-1000));
+
+      render(
+        <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
+          <MemoryRouter initialEntries={['/s/session-1']}>
+            <Routes>
+              <Route path="/s/:sessionId" element={<MusicQueue />} />
+            </Routes>
+          </MemoryRouter>
+        </SWRConfig>,
+      );
+
+      expect(await screen.findByRole('heading', { name: 'The demo has ended' })).toBeVisible();
+      expect(screen.getByRole('button', { name: 'Start a new demo' })).toBeVisible();
+      expect(screen.queryByText('queue')).not.toBeInTheDocument();
+    });
+
+    it('still asks for the password of a locked session instead of saying that it ended', async () => {
+      mocks.getSession.mockRejectedValue({ status: 401, message: 'The session password is required' });
+
+      render(
+        <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
+          <MemoryRouter initialEntries={['/s/session-1']}>
+            <Routes>
+              <Route path="/s/:sessionId" element={<MusicQueue />} />
+            </Routes>
+          </MemoryRouter>
+        </SWRConfig>,
+      );
+
+      expect(await screen.findByLabelText('Session password')).toBeVisible();
+      expect(screen.queryByRole('heading', { name: 'The demo has ended' })).not.toBeInTheDocument();
+    });
+  });
+
+  it('shows no banner outside the demo', async () => {
+    mocks.getViewerRole.mockResolvedValue({ isHost: false, isAdmin: false });
+
+    await renderPage();
+
+    expect(screen.queryByText(/Ends in/)).not.toBeInTheDocument();
+    expect(mocks.getDemoSession).not.toHaveBeenCalled();
   });
 });
