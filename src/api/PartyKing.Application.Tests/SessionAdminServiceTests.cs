@@ -17,6 +17,18 @@ public class SessionAdminServiceTests
         _service = SessionTestServices.Admin(_sessions, _playerStates, _tokens, _slideshows);
     }
 
+    [Fact]
+    public async Task TheAdminList_KeepsTheHostsName()
+    {
+        _sessions.AddSession("profile-id", "hash");
+
+        var sessions = await _service.GetAllAsync(CancellationToken.None);
+
+        var session = Assert.Single(sessions);
+        Assert.True(session.HasHost);
+        Assert.Equal("profile-id", session.HostName);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]

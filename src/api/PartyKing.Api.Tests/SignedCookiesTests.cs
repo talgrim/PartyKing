@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using PartyKing.API.Cookies;
 using PartyKing.Application.Accounts;
+using PartyKing.Application.Demo.Models;
 using PartyKing.Application.Games.Services.Base;
 using PartyKing.Domain.Entities.Auth;
 using PartyKing.Domain.Entities.Games.Base;
@@ -15,6 +16,82 @@ public class SignedCookiesTests
     private readonly Guid _session = Guid.NewGuid();
 
     private SignedCookies Cookies() => new(_protection);
+
+    private HttpRequest DemoStarted(SignedCookies cookies, HttpRequest? previous, Guid session, string profileId)
+    {
+        var context = new DefaultHttpContext();
+        if (previous is not null)
+        {
+            context.Request.Headers.Cookie = previous.Headers.Cookie;
+        }
+
+        cookies.GrantDemoSession(session, profileId, context);
+
+        return Echo(context, CookieNames.DemoSessions);
+    }
+
+    [Fact]
+    public void TheDemoSessionsACookieRemembers_AreTheOnesThisBrowserStarted_WithTheirHosts()
+    {
+        var cookies = Cookies();
+        var other = Guid.NewGuid();
+
+        var request = DemoStarted(cookies, null, _session, "demo-aaa");
+        request = DemoStarted(cookies, request, other, "demo-bbb");
+
+        Assert.Equal(
+            [new StartedDemoSession(_session, "demo-aaa"), new StartedDemoSession(other, "demo-bbb")],
+            cookies.ReadDemoSessions(request));
+    }
+
+    [Fact]
+    public void StartingTheSameDemoSessionAgain_ReplacesItsEntry()
+    {
+        var cookies = Cookies();
+
+        var request = DemoStarted(cookies, null, _session, "demo-aaa");
+        request = DemoStarted(cookies, request, _session, "demo-ccc");
+
+        Assert.Equal([new StartedDemoSession(_session, "demo-ccc")], cookies.ReadDemoSessions(request));
+    }
+
+    [Fact]
+    public void TheDemoSessionsCookie_KeepsTheLastTwenty()
+    {
+        var cookies = Cookies();
+        var ids = Enumerable.Range(0, 22).Select(_ => Guid.NewGuid()).ToList();
+
+        HttpRequest? request = null;
+        foreach (var id in ids)
+        {
+            request = DemoStarted(cookies, request, id, $"demo-{id:N}");
+        }
+
+        Assert.Equal(ids.Skip(2), cookies.ReadDemoSessions(request!).Select(x => x.SessionId));
+    }
+
+    [Fact]
+    public void ADemoSessionsCookie_ThatWasTamperedWithOrIsMissing_ReadsAsNothing()
+    {
+        var cookies = Cookies();
+        var tampered = new DefaultHttpContext().Request;
+        tampered.Headers.Cookie = $"{CookieNames.DemoSessions}=not-a-protected-value";
+
+        Assert.Empty(cookies.ReadDemoSessions(tampered));
+        Assert.Empty(cookies.ReadDemoSessions(new DefaultHttpContext().Request));
+    }
+
+    [Fact]
+    public void TheDemoSessionsCookie_IsNotTheSessionAccessCookie()
+    {
+        var cookies = Cookies();
+        var context = new DefaultHttpContext();
+        cookies.GrantSessionAccess(_session, "stamp", context);
+        var request = Echo(context, CookieNames.SessionAccess);
+        request.Headers.Cookie = request.Headers.Cookie.ToString().Replace(CookieNames.SessionAccess, CookieNames.DemoSessions);
+
+        Assert.Empty(cookies.ReadDemoSessions(request));
+    }
 
     /// <summary>What the browser sends back after the server set the cookie (name and value only).</summary>
     private static HttpRequest Echo(HttpContext response, string cookieName)

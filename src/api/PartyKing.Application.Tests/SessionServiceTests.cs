@@ -4,6 +4,7 @@ using PartyKing.Application.Configuration;
 using PartyKing.Application.Accounts.Services;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Sessions;
+using PartyKing.Contract.V1.Sessions;
 
 namespace PartyKing.Application.Tests;
 
@@ -24,7 +25,6 @@ public class SessionServiceTests
     [Fact]
     public async Task TheList_InTheDemo_IsEmpty_SoVisitorsDoNotSeeEachOthersSessions()
     {
-        // The fake cannot list sessions, so this also shows the list is not even read
         var service = new SessionService(
             _sessions,
             new SessionAuthorizer(_sessions),
@@ -33,6 +33,19 @@ public class SessionServiceTests
         var sessions = await service.GetAllAsync(CancellationToken.None);
 
         Assert.Empty(sessions);
+    }
+
+    [Fact]
+    public async Task TheList_SaysWhetherASessionHasAHost_ButNotWho()
+    {
+        var withoutHost = _sessions.AddSession(null, new PasswordHasher().Hash("secret"));
+
+        var sessions = await _service.GetAllAsync(CancellationToken.None);
+
+        Assert.Equal(2, sessions.Count);
+        Assert.True(sessions.Single(x => x.Id == _id).HasHost);
+        Assert.False(sessions.Single(x => x.Id == withoutHost.Id).HasHost);
+        Assert.DoesNotContain("HostName", typeof(SessionListItemDto).GetProperties().Select(x => x.Name));
     }
 
     [Fact]

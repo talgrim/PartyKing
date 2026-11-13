@@ -38,6 +38,20 @@ public class DemoControllerTests
         };
     }
 
+    private readonly Dictionary<string, string> _jar = [];
+
+    /// <summary>The browser keeps what the server set and sends it with its next request.</summary>
+    private void Roundtrip()
+    {
+        foreach (var parts in _httpContext.Response.Headers.SetCookie.Select(x => x!.Split(';')[0].Split('=', 2)))
+        {
+            _jar[parts[0]] = parts[1];
+        }
+
+        _httpContext.Request.Headers.Cookie = string.Join("; ", _jar.Select(x => $"{x.Key}={x.Value}"));
+        _httpContext.Response.Headers.Remove("Set-Cookie");
+    }
+
     private static DemoStart AStart() => new(
         Guid.NewGuid(),
         "demo-host-1",
@@ -83,6 +97,89 @@ public class DemoControllerTests
 
         Assert.True(_cookies.TryReadSessionAccess(Echo(), start.SessionId, out var stamp));
         Assert.Equal("stamp-1", stamp);
+    }
+
+    [Fact]
+    public async Task Start_RemembersTheSessionAsOneThisBrowserStarted()
+    {
+        var start = AStart();
+        _service.StartResult = start;
+
+        await _controller.Start(CancellationToken.None);
+
+        Assert.Equal([new StartedDemoSession(start.SessionId, start.ProfileId)], _cookies.ReadDemoSessions(Echo()));
+    }
+
+    [Fact]
+    public async Task GetMine_ListsWhatTheBrowsersCookieRemembers()
+    {
+        var first = AStart();
+        var second = AStart() with { ProfileId = "demo-host-2" };
+        _service.StartResult = first;
+        await _controller.Start(CancellationToken.None);
+        Roundtrip();
+        _service.StartResult = second;
+        await _controller.Start(CancellationToken.None);
+        Roundtrip();
+        var answer = new MyDemoSessionsDto([new MyDemoSessionDto(second.SessionId, "Demo party", second.ExpiresAt)], Now);
+        _service.ListResult = answer;
+
+        var result = await _controller.GetMine(CancellationToken.None);
+
+        Assert.Same(answer, Assert.IsType<OkObjectResult>(result).Value);
+        Assert.Equal(
+            [new StartedDemoSession(first.SessionId, "demo-host-1"), new StartedDemoSession(second.SessionId, "demo-host-2")],
+            _service.LastStarted);
+    }
+
+    [Fact]
+    public async Task Resume_ForASessionThisBrowserDidNotStart_IsNotFound_WithoutAskingTheService()
+    {
+        var result = await _controller.Resume(Guid.NewGuid(), CancellationToken.None);
+
+        Assert.IsType<NotFoundResult>(result);
+        Assert.Null(_service.LastResumed);
+        Assert.Equal(0, _httpContext.Response.Headers.SetCookie.Count);
+    }
+
+    [Fact]
+    public async Task Resume_MakesTheVisitorTheHostOfThatSessionAgain()
+    {
+        var older = AStart();
+        var newer = AStart() with { ProfileId = "demo-host-2" };
+        _service.StartResult = older;
+        await _controller.Start(CancellationToken.None);
+        Roundtrip();
+        _service.StartResult = newer;
+        await _controller.Start(CancellationToken.None);
+        Roundtrip();
+        _service.ResumeResult = older with { AccessTokenExpiresIn = 600 };
+
+        var result = await _controller.Resume(older.SessionId, CancellationToken.None);
+
+        Assert.Equal(new StartedDemoSession(older.SessionId, "demo-host-1"), _service.LastResumed);
+        var started = Assert.IsType<DemoStartedDto>(Assert.IsType<OkObjectResult>(result).Value);
+        Assert.Equal(older.SessionId, started.SessionId);
+        var request = Echo();
+        Assert.True(_cookies.TryReadProfileId(request, out var profileId));
+        Assert.Equal("demo-host-1", profileId);
+        Assert.True(_cookies.TryReadSessionAccess(request, older.SessionId, out var stamp));
+        Assert.Equal("stamp-1", stamp);
+    }
+
+    [Fact]
+    public async Task Resume_OfASessionThatIsGone_AnswersTheError_AndSetsNoCookie()
+    {
+        var start = AStart();
+        _service.StartResult = start;
+        await _controller.Start(CancellationToken.None);
+        Roundtrip();
+        _service.ResumeResult = Error.NotFound(description: "gone");
+
+        var result = await _controller.Resume(start.SessionId, CancellationToken.None);
+
+        Assert.Equal(StatusCodes.Status404NotFound, Assert.IsType<ObjectResult>(result).StatusCode);
+        Assert.Equal(0, _httpContext.Response.Headers.SetCookie.Count);
     }
 
     [Fact]
@@ -168,7 +265,7 @@ public class DemoControllerTests
     [Fact]
     public void TheConfigAndTheStart_AreForEverybody()
     {
-        foreach (var name in new[] { nameof(DemoController.GetConfig), nameof(DemoController.Start) })
+        foreach (var name in new[] { nameof(DemoController.GetConfig), nameof(DemoController.Start), nameof(DemoController.GetMine), nameof(DemoController.Resume) })
         {
             var method = typeof(DemoController).GetMethod(name)!;
 
@@ -182,6 +279,24 @@ public class DemoControllerTests
         public DemoConfigDto Config { get; set; } = new(false, Now);
         public ErrorOr<DemoSessionDto> SessionResult { get; set; }
         public Guid? LastSessionId { get; private set; }
+        public ErrorOr<MyDemoSessionsDto> ListResult { get; set; }
+        public IReadOnlyCollection<StartedDemoSession> LastStarted { get; private set; } = [];
+        public ErrorOr<DemoStart> ResumeResult { get; set; }
+        public StartedDemoSession? LastResumed { get; private set; }
+
+        public Task<ErrorOr<MyDemoSessionsDto>> ListStartedAsync(
+            IReadOnlyCollection<StartedDemoSession> started,
+            CancellationToken cancellationToken)
+        {
+            LastStarted = started;
+            return Task.FromResult(ListResult);
+        }
+
+        public Task<ErrorOr<DemoStart>> ResumeAsync(StartedDemoSession started, CancellationToken cancellationToken)
+        {
+            LastResumed = started;
+            return Task.FromResult(ResumeResult);
+        }
 
         public DemoConfigDto GetConfig() => Config;
 
