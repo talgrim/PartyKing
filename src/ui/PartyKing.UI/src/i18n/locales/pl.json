@@ -264,6 +264,7 @@
   "hostPlayer": {
     "loginDidNotStick": "Logowanie hosta nie zostało zapamiętane. Sprawdź, czy ciasteczka są włączone, a strona i API używają tego samego hosta.",
     "loginStartFailed": "Nie udało się rozpocząć logowania hosta",
+    "spotifyLoginExpired": "Logowanie do Spotify wygasło, więc piosenki ze Spotify nie zagrają. Odśwież stronę, aby zalogować się ponownie.",
     "forbidden": "Tylko host tej sesji może odtwarzać jej muzykę",
     "nextSongFailed": "Nie udało się wczytać następnej piosenki",
     "logYoutubeError": "Błąd YouTube {{code}} przy \"{{name}}\" ({{url}}): {{reason}}",

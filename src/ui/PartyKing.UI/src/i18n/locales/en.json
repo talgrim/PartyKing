@@ -254,6 +254,7 @@
   "hostPlayer": {
     "loginDidNotStick": "Host login did not stick. Check that cookies are enabled and the page and API use the same host.",
     "loginStartFailed": "Could not start the host login",
+    "spotifyLoginExpired": "The Spotify login expired, so Spotify songs cannot play. Reload the page to log in again.",
     "forbidden": "Only the host of this session can play its music",
     "nextSongFailed": "Could not load the next song",
     "logYoutubeError": "YouTube error {{code}} on \"{{name}}\" ({{url}}): {{reason}}",
