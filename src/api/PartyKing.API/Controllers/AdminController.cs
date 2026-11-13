@@ -52,6 +52,15 @@ public class AdminController : CoreController
         return result.Match(_ => NoContent(), Problem);
     }
 
+    /// <summary>Every session with its host's name.</summary>
+    [HttpGet("admin/sessions")]
+    [AuthorizeAdmin]
+    [ProducesResponseType<IReadOnlyList<SessionDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetSessions(CancellationToken cancellationToken)
+    {
+        return Ok(await _sessionAdminService.GetAllAsync(cancellationToken));
+    }
+
     [HttpPost("admin/sessions")]
     [AuthorizeAdmin]
     [ProducesResponseType<SessionDto>(StatusCodes.Status200OK)]

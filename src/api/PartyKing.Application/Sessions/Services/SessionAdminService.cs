@@ -12,6 +12,9 @@ namespace PartyKing.Application.Sessions.Services;
 
 public interface ISessionAdminService
 {
+    /// <summary>Every session with its host's name, for the admin panel.</summary>
+    Task<IReadOnlyList<SessionDto>> GetAllAsync(CancellationToken cancellationToken);
+
     Task<ErrorOr<SessionDto>> CreateAsync(string? name, string? password, CancellationToken cancellationToken);
     Task<ErrorOr<Success>> DeleteAsync(Guid id, CancellationToken cancellationToken);
 
@@ -38,6 +41,13 @@ internal class SessionAdminService : ISessionAdminService
         _passwordHasher = passwordHasher;
         _clock = clock;
         _logger = logger;
+    }
+
+    public async Task<IReadOnlyList<SessionDto>> GetAllAsync(CancellationToken cancellationToken)
+    {
+        var sessions = await _sessionsRepository.GetAllAsync(cancellationToken);
+
+        return sessions.Select(session => session.ToDto()).ToList();
     }
 
     public async Task<ErrorOr<SessionDto>> CreateAsync(
