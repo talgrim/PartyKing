@@ -145,12 +145,13 @@ export const MusicQueue = (): ReactNode => {
   // no longer exists. The server answers 401 for a deleted session, so only a session that was open can have ended.
   const isDemo = useIsDemo();
   const demo = useDemoSession(sessionId, unlocked);
-  const [timeUp, setTimeUp] = useState(false);
-  const wasOpen = useRef(false);
+  // Both belong to one session: the page stays mounted when "Start a new demo" opens another one
+  const [timeUpFor, setTimeUpFor] = useState<string>();
+  const openedSession = useRef<string>();
   useEffect(() => {
-    if (unlocked) wasOpen.current = true;
-  }, [unlocked]);
-  const demoEnded = isDemo && (timeUp || (locked && wasOpen.current));
+    if (unlocked) openedSession.current = sessionId;
+  }, [unlocked, sessionId]);
+  const demoEnded = isDemo && (timeUpFor === sessionId || (locked && openedSession.current === sessionId));
 
   if (demoEnded) return <DemoEnded />;
 
@@ -222,7 +223,7 @@ export const MusicQueue = (): ReactNode => {
 
         {session && !locked && (
           <>
-            {demo && <DemoBanner demo={demo} onEnded={() => setTimeUp(true)} />}
+            {demo && <DemoBanner demo={demo} onEnded={() => setTimeUpFor(sessionId)} />}
             <SessionHeader
               session={session}
               isHost={isHost}
