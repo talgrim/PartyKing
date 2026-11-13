@@ -3,6 +3,7 @@ using ErrorOr;
 using Microsoft.AspNetCore.DataProtection;
 using PartyKing.Application.Events;
 using PartyKing.Application.Games.Services.Base;
+using PartyKing.Application.Ports;
 using PartyKing.Application.Queue.Services;
 using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions;
@@ -16,12 +17,15 @@ using PartyKing.Contract.V1.Lyrics;
 using PartyKing.Contract.V1.Player;
 using PartyKing.Contract.V1.Queue;
 using PartyKing.Contract.V1.Slideshow;
+using PartyKing.Domain.Entities.Demo;
 using PartyKing.Domain.Entities.Playlists;
 using PartyKing.Domain.Entities.Queue;
 using PartyKing.Domain.Entities.Sessions;
+using PartyKing.Domain.Entities.Spotify;
 using PartyKing.Domain.Enums;
 using PartyKing.Domain.Events;
 using PartyKing.Domain.Events.Sessions;
+using PartyKing.Domain.Results;
 
 namespace PartyKing.Application.Tests;
 
@@ -203,7 +207,38 @@ internal class FakeSessionsRepository : ISessionsRepository
 
         return true;
     }
-    public Task<SessionClaimResult> TryClaimAsync(Guid id, string profileId, CancellationToken cancellationToken) => throw new NotSupportedException();
+
+    /// <summary>Answers every claim with this instead of deciding it, to test a failed claim.</summary>
+    public SessionClaimResult? ForcedClaimResult { get; set; }
+
+    public async Task<SessionClaimResult> TryClaimAsync(Guid id, string profileId, CancellationToken cancellationToken)
+    {
+        var session = _sessions.FirstOrDefault(x => x.Id == id);
+        if (session is null)
+        {
+            return SessionClaimResult.SessionNotFound;
+        }
+
+        if (ForcedClaimResult is { } forced)
+        {
+            return forced;
+        }
+
+        if (_sessions.Any(x => x.Id != id && x.HostProfileId == profileId))
+        {
+            return SessionClaimResult.ProfileHostsAnotherSession;
+        }
+
+        switch (session.ClaimHost(profileId))
+        {
+            case HostClaimOutcome.HostedByAnother:
+                return SessionClaimResult.AlreadyClaimed;
+            default:
+                await DispatchAsync(session.DrainEvents());
+                return SessionClaimResult.Claimed;
+        }
+    }
+
     public async Task<bool> ReleaseAsync(Guid id, CancellationToken cancellationToken)
     {
         var session = _sessions.FirstOrDefault(x => x.Id == id);
@@ -566,4 +601,59 @@ internal sealed class FakeHostSessionCleanup : IHostSessionCleanup
         Forgotten.Add((sessionId, hostProfileId));
         return Task.CompletedTask;
     }
+}
+
+internal class FakeSpotifyProfilesRepository : ISpotifyProfilesRepository
+{
+    public Dictionary<string, AuthenticationResult> Profiles { get; } = [];
+    public List<string> Deleted { get; } = [];
+
+    public Task CreateProfileAsync(AuthenticationResult result, CancellationToken cancellationToken)
+    {
+        Profiles[result.ProfileId] = result;
+        return Task.CompletedTask;
+    }
+
+    public Task<SpotifyProfile?> GetProfileAsync(string id, CancellationToken cancellationToken) =>
+        Task.FromResult(Profiles.TryGetValue(id, out var result) ? new SpotifyProfile(id, result.RefreshToken) : null);
+
+    public Task DeleteProfileAsync(string id, CancellationToken cancellationToken)
+    {
+        Profiles.Remove(id);
+        Deleted.Add(id);
+        return Task.CompletedTask;
+    }
+}
+
+internal class FakeDemoSessionsRepository : IDemoSessionsRepository
+{
+    private readonly List<DemoSession> _items = [];
+
+    public IReadOnlyList<DemoSession> Items => _items;
+
+    /// <summary>Thrown by <see cref="AddAsync"/> when set, to test a start that fails half way.</summary>
+    public Exception? AddFailure { get; set; }
+
+    public Task AddAsync(DemoSession demoSession, CancellationToken cancellationToken)
+    {
+        if (AddFailure is not null)
+        {
+            throw AddFailure;
+        }
+
+        _items.Add(demoSession);
+        return Task.CompletedTask;
+    }
+
+    public Task<DemoSession?> GetAsync(Guid sessionId, CancellationToken cancellationToken) =>
+        Task.FromResult(_items.FirstOrDefault(x => x.SessionId == sessionId));
+
+    public Task<int> CountAsync(CancellationToken cancellationToken) => Task.FromResult(_items.Count);
+
+    public Task<IReadOnlyList<DemoSession>> ListExpiredAsync(DateTime now, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<DemoSession>>(
+            _items.Where(x => x.IsExpired(now)).OrderBy(x => x.ExpiresAt).ToList());
+
+    /// <summary>What deleting a session does to its marker in the real database.</summary>
+    public void Cascade(Guid sessionId) => _items.RemoveAll(x => x.SessionId == sessionId);
 }

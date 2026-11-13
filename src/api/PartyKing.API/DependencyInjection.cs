@@ -3,9 +3,11 @@ using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.DataProtection;
 using PartyKing.API.Authentication;
 using PartyKing.API.Authentication.Schemes;
+using PartyKing.API.Demo;
 using PartyKing.API.Hubs.Notifiers;
 using PartyKing.API.Metrics;
 using PartyKing.Application;
+using PartyKing.Application.Configuration;
 using PartyKing.Application.Realtime;
 using PartyKing.Infrastructure;
 using PartyKing.Infrastructure.Llm;
@@ -40,6 +42,7 @@ public static class DependencyInjection
 
         services.RegisterHubs();
         services.RegisterApplication(configuration);
+        services.RegisterDemoWorker(configuration);
         services.RegisterInfrastructure();
         services.RegisterSpotifyInfrastructure(configuration);
         services.RegisterYoutubeInfrastructure();
@@ -94,6 +97,15 @@ public static class DependencyInjection
                 policy.RequireAuthenticatedUser();
                 policy.RequireRole(nameof(AccountRole.Admin));
             });
+    }
+
+    /// <summary>The sweep of expired demo sessions runs only on a server that is a demo.</summary>
+    private static void RegisterDemoWorker(this IServiceCollection services, IConfiguration configuration)
+    {
+        if (configuration.GetValue<bool>($"{DemoConfiguration.SectionName}:{nameof(DemoConfiguration.Enabled)}"))
+        {
+            services.AddHostedService<DemoSessionCleanupWorker>();
+        }
     }
 
     private static void RegisterHubs(this IServiceCollection services)

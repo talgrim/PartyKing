@@ -1,9 +1,12 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { SWRConfig } from 'swr';
 import { MemoryRouter } from 'react-router-dom';
 import { AppHeader } from './AppHeader';
 
+const mocks = vi.hoisted(() => ({ getDemoConfig: vi.fn() }));
+
 vi.mock('@/service/endpoints/account/accountApi', () => ({ accountApi: { me: vi.fn() } }));
+vi.mock('@/service/endpoints/demo/demoApi', () => ({ demoApi: { getConfig: mocks.getDemoConfig } }));
 
 const renderAt = (path: string) =>
   render(
@@ -17,7 +20,10 @@ const renderAt = (path: string) =>
 const position = (first: HTMLElement, second: HTMLElement) => first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING;
 
 describe('AppHeader', () => {
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => {
+    localStorage.clear();
+    mocks.getDemoConfig.mockResolvedValue({ enabled: false, serverTime: '2026-11-13T12:00:00Z' });
+  });
 
   it.each(['/admin', '/s/abc', '/s/abc/games/ringo'])('links to all the sessions on %s, next to the account button', (path) => {
     renderAt(path);
@@ -57,6 +63,15 @@ describe('AppHeader', () => {
 
     expect(screen.getByRole('button', { name: 'BAC calculator' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument();
+  });
+
+  it('keeps only the calculator in a demo, which has no accounts and no list of sessions', async () => {
+    mocks.getDemoConfig.mockResolvedValue({ enabled: true, serverTime: '2026-11-13T12:00:00Z' });
+    renderAt('/s/abc');
+
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Log in' })).not.toBeInTheDocument());
+    expect(screen.queryByRole('link', { name: 'All sessions' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'BAC calculator' })).toBeInTheDocument();
   });
 
   it('puts the calculator between the link to all the sessions and the account button', () => {

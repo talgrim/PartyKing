@@ -18,7 +18,7 @@
 - **Advance**: `POST /sessions/{id}/songs/next?currentSongId=` is host-only (`[AuthorizeByCookie]` plus a check that the cookie's profile id is the session's `HostProfileId`; 403 otherwise). `currentSongId` is the song the player thinks is playing (none when omitted). `QueueRepository.AdvanceAsync` advances only when that is really the `Playing` item, otherwise it advances nothing; it returns a `QueueAdvanceResult` (`Playing`, `Advanced`, `PreviousSongId`), so the previous song comes from the same locked read as the advance.
 - The host's end-of-song call (`QueueService.GetNextAsync`) and an admin's skip (`PlayerService.SkipAsync`) both go through `IQueueAdvancer`, which tops up the queue before advancing. That keeps the host's end-of-song call from skipping a song an admin already skipped.
 - **Remove**: `DELETE /sessions/{id}/songs/{songId}` removes a song that is still `Queued`. It has no auth attribute: the controller reads the host cookie and the account cookie (like `GET /me`) and `QueueService.RemoveAsync` answers 403 unless the caller is an admin or the session's host (404 for an unknown session or song, 409 when the song is already playing or played). `QueueRepository.RemoveAsync` hard-deletes the row under the same per-session lock as `AdvanceAsync` and only matches songs of that session.
-- `GET /spotify/token` needs a host login but is per browser, not per session.
+- `GET /spotify/token` needs a host login but is per browser, not per session. `HostPlayer` only asks for it when a Spotify song is involved, so a host can play YouTube songs without one.
 
 ## Queue aggregate and events
 

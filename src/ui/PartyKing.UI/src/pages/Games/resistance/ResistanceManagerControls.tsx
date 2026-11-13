@@ -5,7 +5,8 @@ import { useTranslation } from 'react-i18next';
 
 type Props = {
   game: ResistanceGameDto;
-  isAdmin: boolean;
+  /** An admin, or the host in a demo: opens the game to guests. */
+  canOpen: boolean;
   onManagePlayers: () => void;
   onManageSeats: () => void;
   onEnd: () => void;
@@ -25,7 +26,7 @@ const buttonClass =
  * What the host and admins do to the game: manage the players, start, open it to guests (admin), free the seat of a
  * player who lost their device once it started, and end it.
  */
-export const ResistanceManagerControls = ({ game, isAdmin, onManagePlayers, onManageSeats, onEnd, onStart, onOpen, onRefreshRules, onContinue, onRestart, logHidden, onToggleLog }: Props): ReactNode => {
+export const ResistanceManagerControls = ({ game, canOpen, onManagePlayers, onManageSeats, onEnd, onStart, onOpen, onRefreshRules, onContinue, onRestart, logHidden, onToggleLog }: Props): ReactNode => {
   const { t } = useTranslation();
   const started = game.startedAt != null;
   const enough = game.players.length >= MIN_PLAYERS;
@@ -86,7 +87,7 @@ export const ResistanceManagerControls = ({ game, isAdmin, onManagePlayers, onMa
           {t('resistance.controls.refreshRules')}
         </button>
       )}
-      {isAdmin && !started && (
+      {canOpen && !started && (
         <button type="button" onClick={onOpen} disabled={game.isOpen} className={buttonClass}>
           {t('resistance.controls.open')}
         </button>

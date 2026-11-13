@@ -6,10 +6,13 @@ import { Home } from './Home';
 import { ACCOUNT_HINT_KEY } from '@/service/endpoints/account/useAccount';
 import { setLanguage } from '@/i18n';
 
-const mocks = vi.hoisted(() => ({ getSessions: vi.fn(), me: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getSessions: vi.fn(), me: vi.fn(), getDemoConfig: vi.fn(), startDemo: vi.fn() }));
 
 vi.mock('@/service/endpoints/sessions/sessionsApi', () => ({ sessionsApi: { getSessions: mocks.getSessions } }));
 vi.mock('@/service/endpoints/account/accountApi', () => ({ accountApi: { me: mocks.me } }));
+vi.mock('@/service/endpoints/demo/demoApi', () => ({
+  demoApi: { getConfig: mocks.getDemoConfig, start: mocks.startDemo },
+}));
 
 const renderPage = async () => {
   render(
@@ -26,7 +29,8 @@ describe('Home', () => {
   beforeEach(() => {
     localStorage.clear();
     mocks.me.mockReset();
-    mocks.getSessions.mockResolvedValue([
+    mocks.getDemoConfig.mockResolvedValue({ enabled: false, serverTime: '2026-11-13T12:00:00Z' });
+    mocks.getSessions.mockReset().mockResolvedValue([
       { id: 'session-1', code: 'ABC123', name: 'Party', hostName: 'H', hasHost: true },
     ]);
   });
@@ -65,6 +69,47 @@ describe('Home', () => {
 
     await waitFor(() => expect(mocks.me).toHaveBeenCalled());
     expect(screen.queryByRole('link', { name: 'Admin panel' })).not.toBeInTheDocument();
+  });
+
+  describe('on a demo server', () => {
+    beforeEach(() => {
+      mocks.getDemoConfig.mockResolvedValue({ enabled: true, serverTime: '2026-11-13T12:00:00Z' });
+    });
+
+    const renderDemo = () =>
+      render(
+        <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
+          <MemoryRouter>
+            <Home />
+          </MemoryRouter>
+        </SWRConfig>,
+      );
+
+    it('offers to start a demo instead of listing the sessions of everybody else', async () => {
+      renderDemo();
+
+      expect(await screen.findByRole('button', { name: 'Start the demo' })).toBeVisible();
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+      expect(mocks.getSessions).not.toHaveBeenCalled();
+    });
+
+    it('shows nothing, not the session list, until it is known whether this is a demo', () => {
+      mocks.getDemoConfig.mockReturnValue(new Promise(() => {}));
+
+      renderDemo();
+
+      expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+      expect(mocks.getSessions).not.toHaveBeenCalled();
+    });
+
+    it('shows the ordinary list when the server cannot say', async () => {
+      mocks.getDemoConfig.mockRejectedValue({ status: 404, message: 'Not found' });
+
+      renderDemo();
+
+      expect(await screen.findByText('Party')).toBeVisible();
+      expect(screen.queryByRole('button', { name: 'Start the demo' })).not.toBeInTheDocument();
+    });
   });
 
   it('shows the page in Polish, with the host and the empty search result interpolated', async () => {

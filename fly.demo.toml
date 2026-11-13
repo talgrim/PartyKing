@@ -1,0 +1,45 @@
+# The demo (https://demo.party.talgrim.dev): the same image as fly.toml, with the demo switched on at runtime. A separate
+# app, so nothing is shared with production: its own machine, its own /data volume and no secrets. Deployed with
+# `flyctl deploy --config fly.demo.toml` (see docs/deployment.md, "Demo app").
+
+app = 'partyking-demo'
+primary_region = 'fra'
+
+[build]
+  dockerfile = 'Dockerfile'
+
+[env]
+  # Fly's edge sets Fly-Client-IP / X-Forwarded-Proto; nginx may trust them only here. The demo start limit is per IP.
+  TRUST_FLY_CLIENT_IP = '1'
+  Logging__LogLevel__Default = 'Information'
+  Logging__LogLevel__Microsoft__AspNetCore = 'Warning'
+  Logging__LogLevel__Microsoft__EntityFrameworkCore = 'Warning'
+  DemoSettings__Enabled = 'true'
+  # The image persists the Data Protection keys on /data/keys, which needs a certificate secret. A demo has neither: the
+  # keys live in memory, so they are never the production ones, and a restart only ends the demos that were running.
+  DataProtection__KeysDirectory = ''
+
+[[mounts]]
+  source = 'partyking_demo_data'
+  destination = '/data'
+
+[http_service]
+  internal_port = 8181
+  force_https = true
+  # Scales to zero when nobody is there (a visitor's open tab keeps it running); the first visit after that is slower
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '20s'
+    method = 'GET'
+    # nginx serves /health on a separate internal port that the http_service does not expose
+    port = 8182
+    path = '/health'
+
+[[vm]]
+  size = 'shared-cpu-1x'
+  memory = '512mb'

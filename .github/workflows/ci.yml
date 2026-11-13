@@ -69,5 +69,6 @@ jobs:
           name: playwright-report
           path: |
             src/ui/PartyKing.UI/playwright-report
+            src/ui/PartyKing.UI/playwright-report-demo
             src/ui/PartyKing.UI/test-results
           retention-days: 7

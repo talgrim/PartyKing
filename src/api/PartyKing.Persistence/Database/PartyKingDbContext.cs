@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using PartyKing.Domain.Entities.Auth;
+using PartyKing.Domain.Entities.Demo;
 using PartyKing.Domain.Entities.Games.Resistance;
 using PartyKing.Domain.Entities.Games.Ringo;
 using PartyKing.Domain.Entities.Lyrics;
@@ -108,6 +109,7 @@ public class PartyKingDbContextBase : DbContext
     public DbSet<Account> Accounts { get; set; } = null!;
     public DbSet<SavedPlaylist> SavedPlaylists { get; set; } = null!;
     public DbSet<OAuthState> OAuthStates { get; set; } = null!;
+    public DbSet<DemoSession> DemoSessions { get; set; } = null!;
     public DbSet<LyricsOffset> LyricsOffsets { get; set; } = null!;
     public DbSet<RingoGame> RingoGames { get; set; } = null!;
     public DbSet<RingoFlip> RingoFlips { get; set; } = null!;

@@ -1,6 +1,8 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import useSWR, { useSWRConfig } from 'swr';
+import { DemoBanner } from '@/components/Demo/DemoBanner';
+import { DemoEnded } from '@/components/Demo/DemoEnded';
 import { RemotePlayerControls } from '@/components/Music/RemotePlayerControls';
 import { LyricsView } from '@/components/Music/LyricsView';
 import { MaximizedView } from '@/components/Music/MaximizedView';
@@ -19,6 +21,8 @@ import { RingoInvite } from '@/pages/Games/RingoInvite';
 import { SlideshowView } from '@/pages/Slideshow/SlideshowView';
 import { ROUTE_PATHS } from '@/router/constants';
 import { HTTP_STATUS_CODE } from '@/service/constants';
+import { useDemoSession } from '@/service/endpoints/demo/useDemoSession';
+import { useIsDemo } from '@/service/endpoints/demo/useDemoConfig';
 import { lyricsApi } from '@/service/endpoints/lyrics/lyricsApi';
 import { LyricsDto } from '@/service/endpoints/lyrics/types';
 import { useLyrics } from '@/service/endpoints/lyrics/useLyrics';
@@ -137,6 +141,20 @@ export const MusicQueue = (): ReactNode => {
   // The admin opens the games, so everyone else (the host included) is invited to join
   const invitable = unlocked && !isAdmin;
 
+  // A demo session is deleted when its time is up: the page shows that instead of a password form for a session that
+  // no longer exists. The server answers 401 for a deleted session, so only a session that was open can have ended.
+  const isDemo = useIsDemo();
+  const demo = useDemoSession(sessionId, unlocked);
+  // Both belong to one session: the page stays mounted when "Start a new demo" opens another one
+  const [timeUpFor, setTimeUpFor] = useState<string>();
+  const openedSession = useRef<string>();
+  useEffect(() => {
+    if (unlocked) openedSession.current = sessionId;
+  }, [unlocked, sessionId]);
+  const demoEnded = isDemo && (timeUpFor === sessionId || (locked && openedSession.current === sessionId));
+
+  if (demoEnded) return <DemoEnded />;
+
   return (
     <SessionHubContext.Provider value={hub}>
     <div className="w-full min-h-full bg-slate-800 text-slate-400 md:flex">
@@ -205,6 +223,7 @@ export const MusicQueue = (): ReactNode => {
 
         {session && !locked && (
           <>
+            {demo && <DemoBanner demo={demo} onEnded={() => setTimeUpFor(sessionId)} />}
             <SessionHeader
               session={session}
               isHost={isHost}

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PartyKing.Application.Accounts.Services;
 using PartyKing.Application.Configuration;
+using PartyKing.Application.Demo.Services;
 using PartyKing.Application.Events;
 using PartyKing.Application.Games.Handlers;
 using PartyKing.Application.Games.Services.Base;
@@ -51,6 +52,7 @@ public static class DependencyInjection
         services.RegisterGames(configuration);
         services.RegisterSessions();
         services.RegisterAccounts(configuration);
+        services.RegisterDemo(configuration);
     }
 
     /// <summary>Creates the first admin account from configuration when none exists.</summary>
@@ -85,6 +87,22 @@ public static class DependencyInjection
         services.AddDomainEventHandler<HostClaimed, SessionLogHandler>();
         services.AddDomainEventHandler<HostReleased, SessionLogHandler>();
         services.AddDomainEventHandler<SessionDeleted, SessionLogHandler>();
+    }
+
+    private static void RegisterDemo(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<DemoConfiguration>(configuration.GetSection(DemoConfiguration.SectionName));
+        services.AddScoped<IDemoSessionService, DemoSessionService>();
+        services.AddScoped<IDemoSessionCleanup, DemoSessionCleanup>();
+
+        if (!configuration.GetValue<bool>($"{DemoConfiguration.SectionName}:{nameof(DemoConfiguration.Enabled)}"))
+        {
+            return;
+        }
+
+        // The demo has no Spotify: the services that would reach it refuse instead. Registered after the real ones, so they win
+        services.Replace(ServiceDescriptor.Scoped<ISpotifyService, DemoSpotifyService>());
+        services.Replace(ServiceDescriptor.Singleton<IHostTokenProvider, DemoHostTokenProvider>());
     }
 
     private static void RegisterAccounts(this IServiceCollection services, IConfiguration configuration)

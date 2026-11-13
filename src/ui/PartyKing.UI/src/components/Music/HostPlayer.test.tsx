@@ -3,12 +3,15 @@ import { useEffect } from 'react';
 import { ScopedMutator, SWRConfig, useSWRConfig } from 'swr';
 import { HostPlayer } from './HostPlayer';
 import { SongSource } from '@/service/endpoints/queue/types';
-import { HostPlayerPushHandlers, nowPlayingKey } from '@/service/realtime/sessionMusicEvents';
+import { HostPlayerPushHandlers, nowPlayingKey, queueSongsKey } from '@/service/realtime/sessionMusicEvents';
 
 const mocks = vi.hoisted(() => ({
   next: vi.fn(),
   getNowPlaying: vi.fn(),
   reportState: vi.fn(),
+  getSpotifyToken: vi.fn(),
+  getQueue: vi.fn(),
+  createHostLoginUrl: vi.fn(),
 }));
 
 /** Captures the mutate bound to this SWRConfig provider (the global one cannot see it). */
@@ -18,18 +21,20 @@ const MutateCapture = ({ onReady }: { onReady: (mutate: ScopedMutator) => void }
   return null;
 };
 
-vi.mock('@/service/endpoints/sessions/sessionsApi', () => ({ sessionsApi: {} }));
+vi.mock('@/service/endpoints/sessions/sessionsApi', () => ({
+  sessionsApi: { createHostLoginUrl: mocks.createHostLoginUrl },
+}));
 vi.mock('@/service/endpoints/queue/queueApi', () => ({
   queueApi: {
-    getSpotifyToken: vi.fn().mockResolvedValue('token'),
-    getQueue: vi.fn().mockResolvedValue([]),
+    getSpotifyToken: mocks.getSpotifyToken,
+    getQueue: mocks.getQueue,
     next: mocks.next,
   },
 }));
 vi.mock('@/service/endpoints/player/playerApi', () => ({
   playerApi: { getNowPlaying: mocks.getNowPlaying, reportState: mocks.reportState },
 }));
-vi.mock('./SpotifyPlayer', () => ({ SpotifyPlayer: () => null }));
+vi.mock('./SpotifyPlayer', () => ({ SpotifyPlayer: () => <span>spotify player</span> }));
 vi.mock('./YoutubePlayer', () => ({
   YoutubePlayer: ({ songUrl, paused, volume, onError }: { songUrl: string; paused: boolean; volume: number; onError: (code: number) => void }) => (
     <div>
@@ -50,6 +55,16 @@ const song = (id: number, name: string) => ({
   durationMs: null,
 });
 
+const spotifySong = {
+  id: 9,
+  source: SongSource.Spotify,
+  url: 'spotify:track:queued',
+  name: 'Spotify song',
+  artists: 'Artist',
+  albumArtUrl: null,
+  durationMs: 200_000,
+};
+
 const nowPlaying = (current: ReturnType<typeof song> | null) => ({
   song: current,
   paused: false,
@@ -62,7 +77,7 @@ const startMusic = async () => {
   await act(async () => start.click());
 };
 
-const renderPlayer = async (isAdmin = false, pushHandlers?: { current: HostPlayerPushHandlers }) => {
+const renderUnstartedPlayer = (isAdmin = false, pushHandlers?: { current: HostPlayerPushHandlers }) => {
   let mutate!: ScopedMutator;
   render(
     <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
@@ -70,14 +85,27 @@ const renderPlayer = async (isAdmin = false, pushHandlers?: { current: HostPlaye
       <HostPlayer sessionId="session-1" isAdmin={isAdmin} pushHandlers={pushHandlers} />
     </SWRConfig>,
   );
+  return { mutate: () => mutate };
+};
+
+const renderPlayer = async (isAdmin = false, pushHandlers?: { current: HostPlayerPushHandlers }) => {
+  const { mutate } = renderUnstartedPlayer(isAdmin, pushHandlers);
   await startMusic();
   await screen.findByText('fail video');
-  return { mutate: () => mutate };
+  return { mutate };
 };
 
 describe('HostPlayer', () => {
   beforeEach(() => {
     localStorage.clear();
+    sessionStorage.clear();
+    window.location.hash = '';
+    mocks.getSpotifyToken.mockReset();
+    mocks.getSpotifyToken.mockResolvedValue('token');
+    mocks.getQueue.mockReset();
+    mocks.getQueue.mockResolvedValue([]);
+    mocks.createHostLoginUrl.mockReset();
+    mocks.createHostLoginUrl.mockResolvedValue('#spotify-login');
     mocks.next.mockReset();
     mocks.next.mockResolvedValueOnce(song(1, 'Blocked song'));
     mocks.getNowPlaying.mockReset();
@@ -269,5 +297,55 @@ describe('HostPlayer', () => {
 
     expect(screen.getByText('volume 0.8')).toBeVisible();
     expect(screen.getByText('80%')).toBeVisible();
+  });
+
+  describe('without a Spotify login', () => {
+    it('plays YouTube songs without asking for a Spotify token', async () => {
+      mocks.getSpotifyToken.mockRejectedValue({ status: 401 });
+
+      await renderPlayer();
+
+      expect(screen.getByText(/watch\?v=1 playing/)).toBeVisible();
+      expect(mocks.getSpotifyToken).not.toHaveBeenCalled();
+      expect(mocks.createHostLoginUrl).not.toHaveBeenCalled();
+      expect(screen.queryByText('spotify player')).not.toBeInTheDocument();
+    });
+
+    it('waits for the Spotify token while a Spotify song is queued', async () => {
+      let provideToken!: (token: string) => void;
+      mocks.getSpotifyToken.mockReturnValue(new Promise<string>((resolve) => (provideToken = resolve)));
+      mocks.getQueue.mockResolvedValue([spotifySong]);
+
+      renderUnstartedPlayer();
+
+      expect(await screen.findByRole('button', { name: 'Start the music' })).toBeDisabled();
+      expect(screen.queryByText('spotify player')).not.toBeInTheDocument();
+
+      await act(async () => provideToken('token'));
+
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Start the music' })).toBeEnabled());
+      expect(screen.getByText('spotify player')).toBeInTheDocument();
+    });
+
+    it('goes to the Spotify login before the music starts when a Spotify song needs it', async () => {
+      mocks.getSpotifyToken.mockRejectedValue({ status: 401 });
+      mocks.getQueue.mockResolvedValue([spotifySong]);
+
+      renderUnstartedPlayer();
+
+      await waitFor(() => expect(mocks.createHostLoginUrl).toHaveBeenCalledWith('session-1'));
+      await waitFor(() => expect(window.location.hash).toBe('#spotify-login'));
+    });
+
+    it('does not leave the page for the Spotify login while music plays', async () => {
+      mocks.getSpotifyToken.mockRejectedValue({ status: 401 });
+      const { mutate } = await renderPlayer();
+
+      await act(async () => mutate()(queueSongsKey('session-1'), [spotifySong], { revalidate: false }));
+
+      expect(await screen.findByText(/The Spotify login expired/)).toBeVisible();
+      expect(mocks.createHostLoginUrl).not.toHaveBeenCalled();
+      expect(screen.getByText(/watch\?v=1 playing/)).toBeVisible();
+    });
   });
 });

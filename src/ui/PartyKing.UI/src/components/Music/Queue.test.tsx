@@ -18,8 +18,10 @@ const mocks = vi.hoisted(() => ({
   enqueue: vi.fn(),
   searchSpotify: vi.fn(),
   remove: vi.fn(),
+  getDemoConfig: vi.fn(),
 }));
 
+vi.mock('@/service/endpoints/demo/demoApi', () => ({ demoApi: { getConfig: mocks.getDemoConfig } }));
 vi.mock('@/service/endpoints/queue/queueApi', () => ({
   queueApi: mocks,
   looksLikeSongLink: (input: string) => input.startsWith('http') || input.startsWith('spotify:'),
@@ -63,6 +65,7 @@ describe('Queue', () => {
 
   beforeEach(() => {
     pending = [];
+    mocks.getDemoConfig.mockResolvedValue({ enabled: false, serverTime: '2026-11-13T12:00:00Z' });
     mocks.getQueue.mockImplementation(async () => pending);
     mocks.searchSpotify.mockResolvedValue([track(1), track(2), track(3)]);
     mocks.enqueue.mockImplementation(async (_: string, uri: string) => {
@@ -198,5 +201,62 @@ describe('Queue', () => {
 
       expect(await screen.findByText('The song is no longer waiting in the queue')).toBeInTheDocument();
     });
+  });
+
+  describe('in the demo', () => {
+    beforeEach(() => {
+      mocks.getDemoConfig.mockResolvedValue({ enabled: true, serverTime: '2026-11-13T12:00:00Z' });
+    });
+
+    const renderDemoQueue = async () => {
+      const user = userEvent.setup();
+      render(
+        <SWRConfig value={{ provider: () => new Map() }}>
+          <Queue sessionId="session" />
+        </SWRConfig>,
+      );
+      await screen.findByPlaceholderText('Paste a YouTube link');
+      return user;
+    };
+
+    it('takes links only, and says so instead of searching Spotify', async () => {
+      const user = await renderDemoQueue();
+
+      await user.type(screen.getByPlaceholderText('Paste a YouTube link'), 'party');
+      expect(screen.queryByRole('button', { name: 'Search' })).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Add' }));
+
+      expect(await screen.findByText(/adds YouTube links only/)).toBeVisible();
+      expect(mocks.searchSpotify).not.toHaveBeenCalled();
+    });
+
+    it('queues a sample track with one tap', async () => {
+      mocks.enqueue.mockResolvedValue(undefined);
+      const user = await renderDemoQueue();
+
+      await user.click(screen.getByRole('button', { name: '+ Disfigure - Blank' }));
+
+      expect(mocks.enqueue).toHaveBeenCalledWith('session', 'https://www.youtube.com/watch?v=p7ZsBPK656s');
+      expect(await screen.findByText('Added to the queue')).toBeVisible();
+    });
+
+    it('does not offer a sample that is already waiting in the queue', async () => {
+      pending = [{ ...queued(1), url: 'https://www.youtube.com/watch?v=p7ZsBPK656s' }];
+      await renderDemoQueue();
+
+      await waitFor(() => expect(screen.getByRole('button', { name: '+ Disfigure - Blank' })).toBeDisabled());
+      expect(screen.getByRole('button', { name: '+ Janji - Heroes Tonight' })).toBeEnabled();
+    });
+  });
+
+  it('shows no sample tracks outside the demo', async () => {
+    render(
+      <SWRConfig value={{ provider: () => new Map() }}>
+        <Queue sessionId="session" />
+      </SWRConfig>,
+    );
+
+    await screen.findByPlaceholderText(/search spotify/i);
+    expect(screen.queryByRole('button', { name: /Disfigure/ })).not.toBeInTheDocument();
   });
 });

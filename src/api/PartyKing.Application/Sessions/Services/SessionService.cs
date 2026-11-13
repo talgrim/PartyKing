@@ -1,5 +1,7 @@
 using PartyKing.Domain.Repositories;
 using ErrorOr;
+using Microsoft.Extensions.Options;
+using PartyKing.Application.Configuration;
 using PartyKing.Application.Mappings;
 using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Contract.V1.Sessions;
@@ -24,17 +26,26 @@ public interface ISessionService
 internal class SessionService : ManagerGuardedService, ISessionService
 {
     private readonly ISessionsRepository _sessionsRepository;
+    private readonly DemoConfiguration _demoConfiguration;
 
     public SessionService(
         ISessionsRepository sessionsRepository,
-        ISessionAuthorizer authorizer)
+        ISessionAuthorizer authorizer,
+        IOptions<DemoConfiguration> demoOptions)
         : base(authorizer)
     {
         _sessionsRepository = sessionsRepository;
+        _demoConfiguration = demoOptions.Value;
     }
 
     public async Task<IReadOnlyList<SessionDto>> GetAllAsync(CancellationToken cancellationToken)
     {
+        // The sessions of the other visitors are none of a visitor's business
+        if (_demoConfiguration.Enabled)
+        {
+            return [];
+        }
+
         var sessions = await _sessionsRepository.GetAllAsync(cancellationToken);
 
         return sessions.Select(session => session.ToDto()).ToList();

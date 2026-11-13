@@ -15,6 +15,16 @@ The upload hardening (file rules, limits, rate limit) is in `features/slideshow.
 - `/health` is served on the internal port 8182, which Fly's check uses, and answers 404 on the public port. `/metrics` is exposed only on the internal port 8183, which Fly scrapes (`[metrics]` in `fly.toml`).
 - See the README section "Wdrożenie".
 
+## Demo app
+
+`fly.demo.toml` is the demo (`demo.party.talgrim.dev`, see `features/demo.md`): the same image and the same code, with `DemoSettings__Enabled=true` as a runtime setting. It is a separate Fly app (`partyking-demo`), so it shares no machine, volume, database or secret with production, and a visitor probing or flooding it cannot reach production: its UI calls its own `/api`, and production has the demo off (`/demo/sessions` answers 404 there).
+
+- No secrets: no Spotify, admin account or LLM key. `DataProtection__KeysDirectory` is emptied in `[env]`, because the image points it at `/data/keys`, which would need a certificate; the demo keeps its keys in memory (never the production ones; a restart only ends the demos that were running).
+- `auto_stop_machines = 'stop'`, `min_machines_running = 0`: it scales to zero when idle and starts on the next visit (a few seconds). The volume `partyking_demo_data` holds the database and the uploaded photos; expired sessions are deleted with their photos, so a small volume is enough (`MaxSessions` x `MaxPhotosPerSession` x `MaxPhotoBytes` is the ceiling, 2.5 GB at the defaults).
+- `deploy.yml` has a second job, `deploy-demo`, after the same tests, using the `FLY_API_TOKEN_DEMO` secret (a deploy token of the demo app).
+- One-time setup, by hand: `fly apps create partyking-demo`, `fly volumes create partyking_demo_data --region fra --size 3 -a partyking-demo`, `fly certs add demo.party.talgrim.dev -a partyking-demo` with the DNS record it asks for, and the repository secret `FLY_API_TOKEN_DEMO` (`fly tokens create deploy -a partyking-demo`).
+- Limits (sessions, starts per hour and IP, photos) are `DemoSettings__*` variables in `[env]` when the defaults do not fit.
+
 ## nginx
 
 - Trusts `Fly-Client-IP` / `X-Forwarded-Proto` only when `TRUST_FLY_CLIENT_IP=1` (set in `fly.toml`).
@@ -26,4 +36,4 @@ The keys on `/data/keys` are encrypted with an X.509 certificate (`ProtectKeysWi
 
 ## CI and deploy
 
-`ci.yml` runs on PRs (backend tests, lint, frontend tests, build, and the `e2e` job); `deploy.yml` reuses `ci.yml` and runs `flyctl deploy --remote-only` on push to `master`, so a failing job blocks a deploy.
+`ci.yml` runs on PRs (backend tests, lint, frontend tests, build, and the `e2e` job, which also runs the demo suite); `deploy.yml` reuses `ci.yml` and deploys production and the demo (`deploy-demo`) on push to `master`, so a failing job blocks both.
