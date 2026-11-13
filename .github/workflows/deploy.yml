@@ -4,7 +4,7 @@ on:
     branches: [master]
   workflow_dispatch:
 
-# One deploy at a time: the app runs on a single machine with a SQLite volume
+# One deploy at a time per workflow run: each app runs on a single machine with a SQLite volume
 concurrency: deploy-group
 
 jobs:
@@ -22,3 +22,16 @@ jobs:
       - run: flyctl deploy --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  # The demo is a separate app built from the same image (see docs/deployment.md, "Demo app"). It deploys after the same
+  # tests and does not wait for production, so a failure of one never blocks the other.
+  deploy-demo:
+    needs: test
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --remote-only --config fly.demo.toml
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_DEMO }}
