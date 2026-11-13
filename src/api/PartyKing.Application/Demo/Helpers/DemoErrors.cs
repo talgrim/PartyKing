@@ -19,6 +19,11 @@ internal static class DemoErrors
         return Error.Forbidden(description: $"{what} is not available in the demo");
     }
 
+    public static Error SessionGone()
+    {
+        return Error.NotFound(description: "That demo session is not there any more");
+    }
+
     public static Error StartFailed()
     {
         return Error.Failure(description: "Could not start the demo");
