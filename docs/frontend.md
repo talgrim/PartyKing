@@ -8,6 +8,7 @@ React 19, react-router, MUI + Tailwind v4, axios + SWR. Axios is configured in `
 - Session page (music, slideshow, settings)
 - API base URL and polling
 - BAC calculator
+- Demo mode
 - Language (i18n)
 
 ## Routes and pages
@@ -47,6 +48,10 @@ React 19, react-router, MUI + Tailwind v4, axios + SWR. Axios is configured in `
 - Metric units only. Every number field is a `WheelNumberInput` (`components/common`): the mouse wheel adds or takes off a step (`stepNumber` in `utils/numberInput.ts`, within the min and max), but only in the focused field, so scrolling the dialog past a number never changes it. React's wheel handler is passive and cannot stop the page scrolling, so the component adds a native `wheel` listener with `passive: false`.
 - Drinks: `BacAddDrink` is a small form (a kind fills in its usual serving, then volume, strength and time can be changed in one row that ends with a small amber + icon) that puts a drink on the list; the list shows the drink started last on top (`newestFirst`) in a panel of about ten entries that scrolls when the list is longer, and its entries (`BacDrinkEntry`, a line like "500 ml · 5% · 19.7 g · 20 min ago (22:43)": volume, strength, grams of pure alcohol, time) are read-only and have icons: edit (the fields open in place, saved with the check or dropped with the cross), delete, and "add another now" (`drinkAgain`: the same values, started now, for noting a round quickly). A time is entered as minutes ago, or on a clock (`datetime-local`) with the "Pick the exact time" switch. `bacDrinkDraft.ts` holds the draft logic: minutes ago count from the moment the draft is saved, and an entry edited without touching its time keeps its start. `bacTime.ts` converts the times.
 - Persistence: `useBacState` keeps the profile, the drinks and the switch as one versioned JSON in `localStorage` (`partyking.bacCalculator`, `bacStorage.ts`). A field out of its range is dropped alone, drinks older than 24 hours are forgotten, and broken JSON or blocked storage gives the empty form. Drinks keep their start time, so an old list decays on its own.
+
+## Demo mode
+
+On a demo server the landing page, the header, the session page and the queue change; see "The UI" in `docs/features/demo.md`. `useIsDemo()` is the switch.
 
 ## Language (i18n)
 

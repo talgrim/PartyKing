@@ -9,6 +9,7 @@ A server that is a demo needs no Spotify: each visitor starts a throw-away sessi
 - What the demo refuses
 - Expiry and cleanup
 - Limits
+- The UI
 
 ## Turning it on
 
@@ -37,3 +38,14 @@ A server that is a demo needs no Spotify: each visitor starts a throw-away sessi
 - `MaxSessions` is checked by counting rows before the session is made, so two simultaneous starts can overshoot it by one.
 - Photos: a photo over `MaxPhotoBytes` or a batch that would take the session over `MaxPhotosPerSession` is refused with a 400 (`SlideshowService.EnsureWithinDemoLimits`, using the file count of the session's folder; uploads racing each other can overshoot by a batch).
 - Tests: `DemoSessionTests` (Domain), `DemoSessionServiceTests`, `DemoSessionCleanupTests`, `DemoRefusalTests`, `DemoRegistrationTests`, `DemoSessionsRepositoryTests`, `SpotifyProfilesRepositoryTests` (Application), `DemoControllerTests` (Api).
+
+## The UI
+
+Code: `src/service/endpoints/demo` (API, `useDemoConfig`/`useIsDemo`, `useDemoSession`) and `components/Demo`. Nothing changes on a server where `GET /demo/config` says `enabled: false` or fails.
+
+- `useDemoConfig` asks once. `Home` renders nothing until it is known, then either `DemoLanding` (a "Start the demo" button, no list of sessions and no fetch of them) or the ordinary list. `StartDemoButton` calls `POST /demo/sessions` and opens the session; 409 (full) and 429 (too many starts) get their own message, anything else a generic one.
+- `DemoBanner` sits above the session header for everyone who got in (guests by QR too). It owns the one-second clock (`useDemoCountdown`), so the session page does not render every second. The offset between the server's clock and the device's is taken once per answer from `serverTime`; the warning styles start at 5 minutes and 1 minute.
+- The end: `MusicQueue` shows `DemoEnded` ("Start a new demo") when the banner reports the time is up, or when a session that was open answers 401 (the server answers 401, not 404, for a deleted session). A session never opened is still asked for its password.
+- Hidden in a demo: the account menu and the link to all sessions (`AppHeader`), the Spotify host login buttons (`SessionHeader`), the fallback playlist (`SessionSettings`). `Queue` takes links only (a plain text says so instead of searching Spotify) and shows the sample chips of `components/Demo/demoTracks.ts`.
+- The samples are copyright-free NoCopyrightSounds tracks. Check a new one with `https://www.youtube.com/oembed?url=<watch url>`: 403 means embedding is disabled and the host's player cannot play it.
+

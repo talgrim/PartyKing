@@ -81,7 +81,9 @@ Tests (separate commits): the `DemoSession` expiry rule (Domain); the repository
 cap and the photo quota, and the cleanup with `FakeClock` (Application, SQLite); the controller, cookies, the 404 guard
 when disabled and the empty list (Api).
 
-## Step 3: Frontend demo mode
+## Step 3: Frontend demo mode (done, uncommitted; details in `docs/features/demo.md`, "The UI")
+
+Differences: the ended screen is driven by the banner's countdown, or by a 401 for a session that was open (a deleted session answers 401, not 404, and there is no push for it); the clock lives in the banner so the session page does not tick; the eight samples are NCS tracks checked with oEmbed.
 
 - `service/endpoints/demo/demoApi.ts` and `useDemoConfig` (SWR). Nothing changes when the flag is off.
 - **Home:** in demo mode a landing with "Start demo" instead of the session list; the button calls

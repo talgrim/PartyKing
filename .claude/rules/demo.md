@@ -7,6 +7,8 @@ paths:
   - "src/api/PartyKing.Infrastructure/Repositories/DemoSessionsRepository.cs"
   - "src/api/PartyKing.API/Controllers/DemoController.cs"
   - "src/api/PartyKing.API/Demo/**"
+  - "src/ui/PartyKing.UI/src/components/Demo/**"
+  - "src/ui/PartyKing.UI/src/service/endpoints/demo/**"
   - "docs/plans/demo-mode.md"
 ---
 
