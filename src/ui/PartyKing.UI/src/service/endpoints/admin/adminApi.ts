@@ -21,6 +21,9 @@ export const adminApi = {
   resetPassword: (accountId: string, newPassword: string) =>
     unwrap<void>(axios.put(`/admin/users/${accountId}/password`, { newPassword }, withCredentials)),
 
+  /** Every session with its host's name. */
+  listSessions: () => unwrap<SessionDto[]>(axios.get('/admin/sessions', withCredentials)),
+
   createSession: (name: string | undefined, password: string) =>
     unwrap<SessionDto>(axios.post('/admin/sessions', { name: name || null, password }, withCredentials)),
 

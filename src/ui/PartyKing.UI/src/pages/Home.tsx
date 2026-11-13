@@ -3,9 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import useSWR from 'swr';
 import { DemoLanding } from '@/components/Demo/DemoLanding';
-import { PageNavigation } from '@/components/common/PageNavigation';
-import { ROUTE_PATHS, sessionPath } from '@/router/constants';
-import { useAccount } from '@/service/endpoints/account/useAccount';
+import { sessionPath } from '@/router/constants';
 import { useDemoConfig } from '@/service/endpoints/demo/useDemoConfig';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 
@@ -24,7 +22,6 @@ export const Home = (): ReactNode => {
 const SessionList = (): ReactNode => {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
-  const { account } = useAccount();
 
   const { data: sessions, error } = useSWR('sessions', sessionsApi.getSessions, {
     refreshInterval: 10000,
@@ -38,11 +35,6 @@ const SessionList = (): ReactNode => {
   return (
     <div className="w-full min-h-full bg-slate-800 text-slate-400">
       <div className="w-full max-w-xl mx-auto pt-6">
-        <PageNavigation
-          className="px-2 pt-4"
-          links={account?.role === 'Admin' ? [{ to: ROUTE_PATHS.ADMIN, label: t('home.adminPanel') }] : []}
-        />
-
         <div className="mx-2 mt-4 p-4 bg-slate-900 rounded-lg">
           <h1 className="text-2xl font-semibold text-slate-100">{t('home.title')}</h1>
           <div className="mt-1 text-sm text-slate-500">{t('home.subtitle')}</div>
@@ -80,7 +72,7 @@ const SessionList = (): ReactNode => {
                     <div className="min-w-0">
                       <div className="truncate text-lg font-semibold text-slate-100">{session.name}</div>
                       <div className="truncate text-sm text-slate-500">
-                        {session.hasHost ? t('common.hostName', { name: session.hostName }) : t('common.noHost')}
+                        {session.hasHost ? t('common.hasHost') : t('common.noHost')}
                       </div>
                     </div>
                     <span className="shrink-0 px-2 py-0.5 font-mono text-amber-500 bg-slate-900 rounded-md">

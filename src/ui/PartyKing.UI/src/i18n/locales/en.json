@@ -6,6 +6,7 @@
     "somethingWentWrong": "Something went wrong",
     "noSessionsYet": "There are no sessions yet.",
     "hostName": "Host: {{name}}",
+    "hasHost": "Host present",
     "noHost": "No host yet",
     "errorOccurred": "Error occurred: {{message}}",
     "close": "Close",
@@ -1137,6 +1138,12 @@
       "start": "Start the demo",
       "starting": "Starting...",
       "hint": "Your demo party is deleted after a few hours, with everything in it."
+    },
+    "mine": {
+      "title": "Your demo parties",
+      "open": "Back to the party",
+      "gone": "That party has ended.",
+      "failed": "Could not open the party. Try again."
     },
     "banner": {
       "label": "Demo",

@@ -1,3 +1,13 @@
+// Mirrors PartyKing.Contract.V1.Sessions.SessionListItemDto: a session of the public list, which says whether it has a
+// host and never who it is
+export type SessionListItemDto = {
+  id: string;
+  /** Short code guests can search for on the landing page. */
+  code: string;
+  name: string;
+  hasHost: boolean;
+};
+
 // Mirrors PartyKing.Contract.V1.Sessions.SessionDto
 export type SessionDto = {
   id: string;

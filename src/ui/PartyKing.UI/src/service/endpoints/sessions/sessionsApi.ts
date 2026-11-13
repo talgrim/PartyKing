@@ -1,12 +1,13 @@
 import envVariables from '@/envVariables';
 import { axios } from '@/service/request';
-import { JoinTokenDto, PlaylistDto, SessionDto, SlideshowPhotoCountDto, SlideshowSettingsDto, UserDto, ViewerRoleDto } from './types';
+import { JoinTokenDto, PlaylistDto, SessionDto, SessionListItemDto, SlideshowPhotoCountDto, SlideshowSettingsDto, UserDto, ViewerRoleDto } from './types';
 
 // The axios response interceptor unwraps `response.data`, so these resolve to the payload itself.
 const unwrap = <T>(promise: Promise<unknown>) => promise as Promise<T>;
 
 export const sessionsApi = {
-  getSessions: () => unwrap<SessionDto[]>(axios.get('/sessions')),
+  /** The public list: whether each session has a host, not who it is. */
+  getSessions: () => unwrap<SessionListItemDto[]>(axios.get('/sessions')),
 
   getSession: (sessionId: string) =>
     unwrap<SessionDto>(axios.get(`/sessions/${sessionId}`)),
