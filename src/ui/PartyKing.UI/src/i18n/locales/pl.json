@@ -1186,5 +1186,78 @@
       "linkOnly": "Demo dodaje tylko linki z YouTube. Wklej link albo wybierz jeden z przykładów poniżej.",
       "samples": "Przykładowe utwory"
     }
+  },
+  "help": {
+    "open": "Jak działa to demo",
+    "progress": "{{current}} z {{total}}",
+    "next": "Dalej",
+    "back": "Wstecz",
+    "done": "Gotowe",
+    "steps": {
+      "demoBanner": {
+        "title": "To impreza demo",
+        "text": "Jest tylko Twoja i zostanie usunięta po upływie czasu razem z kolejką muzyki i zdjęciami."
+      },
+      "games": {
+        "title": "Gry",
+        "text": "Otwiera gry imprezowe: Ringo, Resistance i Nigdy w życiu. Gospodarz otwiera grę dla gości, a oni dołączają ze swoich telefonów."
+      },
+      "photos": {
+        "title": "Dodaj zdjęcia",
+        "text": "Każdy może tu dodać zdjęcia. Gospodarz pokazuje je jako pokaz slajdów, gdy gra muzyka."
+      },
+      "qr": {
+        "title": "Zaproś gości",
+        "text": "Pokazuje kod QR. Znajomy, który go zeskanuje, dołącza do imprezy bez wpisywania hasła, więc zobaczysz aplikację oczami gościa."
+      },
+      "settings": {
+        "title": "Ustawienia imprezy",
+        "text": "Zmień nazwę imprezy i jej hasło, ustaw pokaz slajdów i pobierz zdjęcia."
+      },
+      "nowPlaying": {
+        "title": "Teraz gra",
+        "text": "Piosenka, która właśnie leci, widoczna dla wszystkich na imprezie."
+      },
+      "player": {
+        "title": "Twój odtwarzacz",
+        "text": "Odtwarzaj, wstrzymuj, przejdź do następnej piosenki i ustaw głośność. Muzyka gra w tej karcie przeglądarki, więc zostaw ją otwartą."
+      },
+      "queueAdd": {
+        "title": "Dodaj piosenki",
+        "text": "Wklej link z YouTube albo wybierz jeden z przykładowych utworów. Piosenki może dodawać każdy na imprezie."
+      },
+      "queueListHost": {
+        "title": "Kolejka",
+        "text": "Nadchodzące piosenki po kolei. Jako gospodarz możesz usunąć piosenkę czerwonym koszem."
+      },
+      "queueListGuest": {
+        "title": "Kolejka",
+        "text": "Nadchodzące piosenki po kolei. Gospodarz może usuwać z niej piosenki."
+      },
+      "slideshow": {
+        "title": "Pokaz slajdów",
+        "text": "Zdjęcia z imprezy w formie pokazu slajdów. Ten panel może też pokazywać tekst piosenki, która leci."
+      },
+      "lyrics": {
+        "title": "Tekst piosenki",
+        "text": "Tekst piosenki, która leci, przewijany razem z muzyką. Gospodarz ma tu też pokaz slajdów ze zdjęć z imprezy."
+      },
+      "drawerControlsHost": {
+        "title": "Przyciski panelu",
+        "text": "Strzałka ukrywa lub pokazuje panel, środkowy przycisk przełącza go między pokazem slajdów a tekstem piosenki, a ostatni otwiera go na pełnym ekranie."
+      },
+      "drawerControlsGuest": {
+        "title": "Przyciski panelu",
+        "text": "Strzałka ukrywa lub pokazuje tekst piosenki, a drugi przycisk otwiera go na pełnym ekranie."
+      },
+      "language": {
+        "title": "Język",
+        "text": "Przełącz aplikację między angielskim a polskim."
+      },
+      "bac": {
+        "title": "Kalkulator alkoholu we krwi",
+        "text": "Szacunkowa zawartość alkoholu we krwi na podstawie tego, co wypiłeś. To tylko szacunek i nigdy nie powód, żeby uznać, że możesz prowadzić."
+      }
+    }
   }
 }

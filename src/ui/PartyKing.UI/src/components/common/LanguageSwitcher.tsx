@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { setLanguage } from '@/i18n';
 import { isLanguage, LANGUAGE_NAMES, SUPPORTED_LANGUAGES } from '@/i18n/languages';
+import { helpTarget } from '@/components/Help/helpSteps';
 
 /**
  * The EN | PL toggle in the upper-left corner of every page. It is fixed and sits below the full-screen overlays
@@ -12,7 +13,7 @@ export const LanguageSwitcher = (): ReactNode => {
   const current = i18n.resolvedLanguage;
 
   return (
-    <div role="group" aria-label={t('language.label')} className="fixed top-1 left-1 z-40 flex overflow-hidden rounded-md bg-slate-900/80 text-xs">
+    <div {...helpTarget('language')} role="group" aria-label={t('language.label')} className="fixed top-1 left-1 z-40 flex overflow-hidden rounded-md bg-slate-900/80 text-xs">
       {SUPPORTED_LANGUAGES.map((language) => (
         <button
           key={language}

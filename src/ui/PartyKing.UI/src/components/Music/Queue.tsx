@@ -9,6 +9,7 @@ import { looksLikeSongLink, queueApi } from '@/service/endpoints/queue/queueApi'
 import { useQueueSongs } from '@/service/endpoints/queue/useQueueSongs';
 import { SpotifyTrackDto } from '@/service/endpoints/queue/types';
 import { useTranslation } from 'react-i18next';
+import { helpTarget } from '@/components/Help/helpSteps';
 
 type Props = {
   sessionId: string;
@@ -133,7 +134,7 @@ export const Queue = ({ sessionId, canRemove = false }: Props): ReactNode => {
 
   return (
     <>
-      <section ref={searchRef} aria-label={t('queue.addSong')} className="relative mx-2 mt-4 p-3 bg-slate-900 rounded-lg">
+      <section {...helpTarget('queueAdd')} ref={searchRef} aria-label={t('queue.addSong')} className="relative mx-2 mt-4 p-3 bg-slate-900 rounded-lg">
         <h2 className="pb-3 text-xs font-semibold tracking-wider text-slate-400 uppercase">
           {t('queue.addTitle')}
         </h2>

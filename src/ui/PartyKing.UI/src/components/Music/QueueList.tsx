@@ -4,6 +4,7 @@ import { i18n } from '@/i18n';
 import { queueApi } from '@/service/endpoints/queue/queueApi';
 import { useQueueSongs } from '@/service/endpoints/queue/useQueueSongs';
 import { useTranslation } from 'react-i18next';
+import { helpTarget } from '@/components/Help/helpSteps';
 
 type Props = {
   sessionId: string;
@@ -42,7 +43,10 @@ export const QueueList = ({ sessionId, canRemove = false, large = false }: Props
 
   return (
     // The big screen shows the list on a plain background; on the session page it is a card like the rest
-    <section aria-label={t('queue.upNext')} className={large ? '' : 'mx-2 mt-4 mb-4 p-3 bg-slate-900 rounded-lg'}>
+    <section
+      {...(large ? {} : helpTarget('queueList'))}
+      aria-label={t('queue.upNext')}
+      className={large ? '' : 'mx-2 mt-4 mb-4 p-3 bg-slate-900 rounded-lg'}>
       <h2 className={headingClass}>{t('queue.upNext')}</h2>
       {message && <p className="pt-2 text-sm text-amber-500">{message}</p>}
       {upNext.length === 0 ? (
