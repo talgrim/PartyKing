@@ -37,6 +37,12 @@ describe('SessionHeader', () => {
       expect(screen.getByText('Current Host: Host Person')).toBeVisible();
     });
 
+    it('offers the help tour to everybody, guests included', async () => {
+      await renderDemo({ hasHost: true, isHost: false });
+
+      expect(await screen.findByRole('button', { name: 'How this demo works' })).toBeVisible();
+    });
+
     it('offers no Spotify host login to a session without a host either', async () => {
       await renderDemo({ hasHost: false, isHost: false });
 
@@ -53,6 +59,17 @@ describe('SessionHeader', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Upload photos' }));
 
     expect(onUploadPhotos).toHaveBeenCalledTimes(1);
+  });
+
+  it('has no help tour outside a demo', async () => {
+    render(
+      <SWRConfig value={{ provider: () => new Map() }}>
+        <SessionHeader session={session} isHost />
+      </SWRConfig>,
+    );
+    await waitFor(() => expect(mocks.getDemoConfig).toHaveBeenCalled());
+
+    expect(screen.queryByRole('button', { name: 'How this demo works' })).not.toBeInTheDocument();
   });
 
   it('has no photo upload icon without a handler', () => {
