@@ -5,6 +5,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { sessionPath } from '@/router/constants';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 import { useTranslation } from 'react-i18next';
+import { helpTarget } from '@/components/Help/helpSteps';
 
 // The QR is swapped for a fresh one this long before its token expires
 const REFRESH_MARGIN_MS = 30_000;
@@ -58,6 +59,7 @@ export const JoinQrCode = ({ sessionId }: Props): ReactNode => {
   return (
     <>
       <button
+        {...helpTarget('qr')}
         onClick={() => setOpen(true)}
         aria-label={t('joinQr.show')}
         title={t('joinQr.show')}

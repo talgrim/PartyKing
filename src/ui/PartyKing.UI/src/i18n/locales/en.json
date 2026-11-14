@@ -1170,5 +1170,78 @@
       "linkOnly": "The demo adds YouTube links only. Paste a link or pick one of the samples below.",
       "samples": "Sample tracks"
     }
+  },
+  "help": {
+    "open": "How this demo works",
+    "progress": "{{current}} of {{total}}",
+    "next": "Next",
+    "back": "Back",
+    "done": "Done",
+    "steps": {
+      "demoBanner": {
+        "title": "This is a demo party",
+        "text": "It is yours alone and is deleted when the timer runs out, with the music queue and the photos in it."
+      },
+      "games": {
+        "title": "Games",
+        "text": "Opens the party games: Ringo, Resistance and Never have I ever. The host opens a game for the guests, and they join from their own phones."
+      },
+      "photos": {
+        "title": "Upload photos",
+        "text": "Anyone can add photos here. The host shows them as a slideshow while the music plays."
+      },
+      "qr": {
+        "title": "Invite guests",
+        "text": "Shows a QR code. A friend who scans it joins the party without typing a password, so you can see the app from the guest side."
+      },
+      "settings": {
+        "title": "Party settings",
+        "text": "Rename the party, change its password, tune the slideshow and download the photos."
+      },
+      "nowPlaying": {
+        "title": "Now playing",
+        "text": "The song that is playing right now, for everyone at the party."
+      },
+      "player": {
+        "title": "Your player",
+        "text": "Play, pause, skip to the next song and set the volume. The music plays in this browser tab, so keep it open."
+      },
+      "queueAdd": {
+        "title": "Add songs",
+        "text": "Paste a YouTube link, or tap one of the sample tracks. Everyone at the party can add songs."
+      },
+      "queueListHost": {
+        "title": "The queue",
+        "text": "The songs coming up, in order. As the host you can remove one with the red bin."
+      },
+      "queueListGuest": {
+        "title": "The queue",
+        "text": "The songs coming up, in order. The host can remove songs from it."
+      },
+      "slideshow": {
+        "title": "Slideshow",
+        "text": "The photos from the party, shown as a slideshow. This drawer can also show the lyrics of the song that is playing."
+      },
+      "lyrics": {
+        "title": "Lyrics",
+        "text": "The lyrics of the song that is playing, following the music. The host also has a slideshow of the party photos here."
+      },
+      "drawerControlsHost": {
+        "title": "Drawer buttons",
+        "text": "The arrow hides or shows the drawer, the middle button switches it between the slideshow and the lyrics, and the last one makes it full screen."
+      },
+      "drawerControlsGuest": {
+        "title": "Drawer buttons",
+        "text": "The arrow hides or shows the lyrics, and the other button makes them full screen."
+      },
+      "language": {
+        "title": "Language",
+        "text": "Switch the app between English and Polish."
+      },
+      "bac": {
+        "title": "Blood alcohol calculator",
+        "text": "An estimate of your blood alcohol from what you drank. It is only an estimate, never a reason to decide that you can drive."
+      }
+    }
   }
 }

@@ -14,6 +14,7 @@ import { useResistanceLobby } from '@/service/endpoints/games/useResistanceLobby
 import { useRingoLobby } from '@/service/endpoints/games/useRingoLobby';
 import { withDevPersona } from '@/service/devPersona';
 import { useTranslation } from 'react-i18next';
+import { helpTarget } from '@/components/Help/helpSteps';
 
 type Props = {
   sessionId: string;
@@ -128,6 +129,7 @@ export const OpenGamesMenu = ({ sessionId, canManage }: Props): ReactNode => {
   return (
     <>
       <button
+        {...helpTarget('games')}
         onClick={(event) => setAnchor(event.currentTarget)}
         aria-label={t('openGames.label')}
         title={enabled ? t('openGames.label') : t('openGames.waiting')}

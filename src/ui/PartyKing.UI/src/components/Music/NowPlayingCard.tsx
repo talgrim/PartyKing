@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { NowPlayingDto } from '@/service/endpoints/player/types';
 import { useTranslation } from 'react-i18next';
+import { helpTarget } from '@/components/Help/helpSteps';
 
 type Props = {
   nowPlaying: NowPlayingDto | undefined;
@@ -14,7 +15,7 @@ export const NowPlayingCard = ({ nowPlaying }: Props): ReactNode => {
   const { song, paused, playerConnected } = nowPlaying;
 
   return (
-    <section aria-label={t('nowPlaying.title')} className="mx-2 mt-4 p-3 bg-slate-900 rounded-lg">
+    <section {...helpTarget('nowPlaying')} aria-label={t('nowPlaying.title')} className="mx-2 mt-4 p-3 bg-slate-900 rounded-lg">
       <h2 className="text-xs font-semibold tracking-wider text-amber-500 uppercase">{t('nowPlaying.title')}</h2>
 
       {!song ? (

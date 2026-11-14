@@ -1,5 +1,7 @@
 import { ReactNode, useState } from 'react';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
+import { HelpButton } from '@/components/Help/HelpButton';
+import { helpTarget } from '@/components/Help/helpSteps';
 import { useIsDemo } from '@/service/endpoints/demo/useDemoConfig';
 import { SessionDto } from '@/service/endpoints/sessions/types';
 import { useAccount } from '@/service/endpoints/account/useAccount';
@@ -55,9 +57,11 @@ export const SessionHeader = ({ session, isHost, isAdmin = false, onUploadPhotos
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
+          <HelpButton canManage={isHost || isAdmin} />
           <OpenGamesMenu sessionId={session.id} canManage={isHost || isAdmin} />
           {onUploadPhotos && (
             <button
+              {...helpTarget('photos')}
               onClick={onUploadPhotos}
               aria-label={t('photoUpload.title')}
               title={t('photoUpload.title')}

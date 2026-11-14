@@ -6,6 +6,7 @@ import SlideshowIcon from '@mui/icons-material/Slideshow';
 import SubtitlesOffIcon from '@mui/icons-material/SubtitlesOff';
 import { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { helpTarget } from '@/components/Help/helpSteps';
 
 type Props = {
   open: boolean;
@@ -44,7 +45,7 @@ export const SlideshowControls = ({
     : open ? t('slideshowControls.hideSlideshow') : t('slideshowControls.showSlideshow');
 
   return (
-  <div className={`flex flex-col gap-1 ${className}`}>
+  <div {...helpTarget('drawerControls')} className={`flex flex-col gap-1 ${className}`}>
     <button
       type="button"
       onClick={onToggle}

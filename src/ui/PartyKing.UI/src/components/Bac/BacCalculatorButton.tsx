@@ -3,6 +3,7 @@ import LocalBarIcon from '@mui/icons-material/LocalBar';
 import { useTranslation } from 'react-i18next';
 import { headerIconClass, headerItemClass } from '@/components/Account/AccountMenu';
 import { BacCalculatorDialog } from './BacCalculatorDialog';
+import { helpTarget } from '@/components/Help/helpSteps';
 
 /** The header icon that opens the blood alcohol calculator; it needs no login. */
 export const BacCalculatorButton = (): ReactNode => {
@@ -12,6 +13,7 @@ export const BacCalculatorButton = (): ReactNode => {
   return (
     <>
       <button
+        {...helpTarget('bac')}
         type="button"
         aria-label={t('bac.title')}
         title={t('bac.title')}
