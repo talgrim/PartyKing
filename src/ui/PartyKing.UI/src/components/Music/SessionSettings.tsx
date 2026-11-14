@@ -11,6 +11,7 @@ import { SessionNameForm } from './SessionNameForm';
 import { SessionPasswordChangeForm } from './SessionPasswordChangeForm';
 import { SlideshowSettingsForm } from './SlideshowSettingsForm';
 import { useTranslation } from 'react-i18next';
+import { helpTarget } from '@/components/Help/helpSteps';
 
 const SettingsSection = ({ title, children }: { title: string; children: ReactNode }): ReactNode => (
   <section aria-label={title} className="p-4 bg-slate-900 rounded-lg">
@@ -38,6 +39,7 @@ export const SessionSettings = ({ session, onChanged }: Props): ReactNode => {
   return (
     <>
       <button
+        {...helpTarget('settings')}
         onClick={() => setOpen(true)}
         aria-label={t('sessionSettings.title')}
         title={t('sessionSettings.title')}

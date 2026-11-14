@@ -13,7 +13,9 @@ import { Queue } from '@/components/Music/Queue';
 import { SessionHeader } from '@/components/Music/SessionHeader';
 import { SlideshowControls } from '@/components/Music/SlideshowControls';
 import { useAutoLyrics } from '@/components/Music/useAutoLyrics';
+import { useSlideshowOpen } from '@/components/Music/useSlideshowOpen';
 import { useUploadDialog } from '@/components/Music/useUploadDialog';
+import { helpTarget } from '@/components/Help/helpSteps';
 import { SessionPasswordForm } from '@/components/Music/SessionPasswordForm';
 import { ResistanceInvite } from '@/pages/Games/ResistanceInvite';
 import { RingoInvite } from '@/pages/Games/RingoInvite';
@@ -36,7 +38,6 @@ import {
 } from '@/service/realtime/sessionMusicEvents';
 import { useSessionMusicHub } from '@/service/realtime/useSessionMusicHub';
 import { SessionHubContext } from '@/service/realtime/SessionHubContext';
-import { isMobileDevice } from '@/utils/isMobileDevice';
 import { usePersistedFlag } from '@/utils/usePersistedFlag';
 import { useTranslation } from 'react-i18next';
 
@@ -53,7 +54,7 @@ export const MusicQueue = (): ReactNode => {
   const { sessionId = '' } = useParams();
 
   const { mutate } = useSWRConfig();
-  const [slideshowOpen, setSlideshowOpen] = usePersistedFlag('partyking.slideshowOpen', !isMobileDevice());
+  const [slideshowOpen, setSlideshowOpen] = useSlideshowOpen();
   const [showLyrics, setShowLyrics] = usePersistedFlag('partyking.showLyrics', false);
   const [maximized, setMaximized] = useState(false);
   const { isHost, isAdmin } = useViewerRole(sessionId);
@@ -159,6 +160,7 @@ export const MusicQueue = (): ReactNode => {
     <div className="w-full min-h-full bg-slate-800 text-slate-400 md:flex">
       {session && !locked && slideshowOpen && !maximized && (
         <aside
+          {...helpTarget('slideshow')}
           aria-label={lyricsShown ? t('views.lyrics') : t('views.slideshow')}
           className="relative mx-2 mb-2 mt-9 rounded-md border-2 border-slate-400 md:w-[calc(50%-1rem)] md:shrink-0"
         >

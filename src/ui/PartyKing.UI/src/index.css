@@ -14,6 +14,33 @@ code {
     monospace;
 }
 
+/* The "?" of the demo until it was clicked once: a ring of light that turns around the button. Without @property
+   support the ring is still there, only not turning; without motion preference it does not turn either. */
+@property --help-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.help-attention {
+  border: 2px solid transparent;
+  background:
+    linear-gradient(#0f172a, #0f172a) padding-box,
+    conic-gradient(from var(--help-angle), #f59e0b, #fde68a, #b45309, #f59e0b) border-box;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .help-attention {
+    animation: help-attention-turn 2.4s linear infinite;
+  }
+}
+
+@keyframes help-attention-turn {
+  to {
+    --help-angle: 360deg;
+  }
+}
+
 .photos-slideshow {
   height: 100%;
   width: 100%;

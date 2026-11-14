@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { DemoSessionDto } from '@/service/endpoints/demo/types';
 import { CountdownLevel, formatCountdown } from './demoCountdown';
 import { useDemoCountdown } from './useDemoCountdown';
+import { helpTarget } from '@/components/Help/helpSteps';
 
 const LEVEL_STYLES: Record<CountdownLevel, string> = {
   normal: 'border-slate-800',
@@ -40,7 +41,7 @@ export const DemoBanner = ({ demo, onEnded }: Props): ReactNode => {
   const { level, remainingMs } = countdown;
 
   return (
-    <div className={`mx-2 mt-4 p-3 bg-slate-900 border rounded-lg ${LEVEL_STYLES[level]}`}>
+    <div {...helpTarget('demoBanner')} className={`mx-2 mt-4 p-3 bg-slate-900 border rounded-lg ${LEVEL_STYLES[level]}`}>
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-semibold tracking-wider text-amber-500 uppercase">{t('demo.banner.label')}</span>
         <span className={`font-mono ${TIME_STYLES[level]}`}>

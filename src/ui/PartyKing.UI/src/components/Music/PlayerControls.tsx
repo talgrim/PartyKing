@@ -4,6 +4,7 @@ import SkipNextIcon from '@mui/icons-material/SkipNext';
 import { iconButtonClass } from './controlStyles';
 import { VolumeControl } from './VolumeControl';
 import { useTranslation } from 'react-i18next';
+import { helpTarget } from '@/components/Help/helpSteps';
 
 type Props = {
   paused: boolean;
@@ -30,7 +31,7 @@ export const PlayerControls = ({
   const { t } = useTranslation();
 
   return (
-    <div className="flex items-center justify-center gap-4 mx-2 mt-4 p-3 bg-slate-900 rounded-lg">
+    <div {...helpTarget('player')} className="flex items-center justify-center gap-4 mx-2 mt-4 p-3 bg-slate-900 rounded-lg">
       {volume !== undefined && onVolumeChange && <VolumeControl volume={volume} onChange={onVolumeChange} />}
       <PlayPauseButton paused={paused} disabled={disabled || !hasSong} onToggle={onToggle} />
       <button
