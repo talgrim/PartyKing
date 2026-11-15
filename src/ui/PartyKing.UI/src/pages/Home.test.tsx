@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SWRConfig } from 'swr';
 import { MemoryRouter } from 'react-router-dom';
@@ -29,7 +29,7 @@ describe('Home', () => {
     localStorage.clear();
     mocks.me.mockReset();
     mocks.listMine.mockReset().mockResolvedValue({ sessions: [], serverTime: '2026-11-13T12:00:00Z' });
-    mocks.getDemoConfig.mockResolvedValue({ enabled: false, serverTime: '2026-11-13T12:00:00Z' });
+    mocks.getDemoConfig.mockReset().mockResolvedValue({ enabled: false, serverTime: '2026-11-13T12:00:00Z' });
     mocks.getSessions.mockReset().mockResolvedValue([
       { id: 'session-1', code: 'ABC123', name: 'Party', hasHost: true },
     ]);
@@ -78,13 +78,52 @@ describe('Home', () => {
       expect(mocks.getSessions).not.toHaveBeenCalled();
     });
 
-    it('shows the ordinary list when the server cannot say', async () => {
+    it('shows the ordinary list when the server answers that it is not a demo', async () => {
       mocks.getDemoConfig.mockRejectedValue({ status: 404, message: 'Not found' });
 
       renderDemo();
 
       expect(await screen.findByText('Party')).toBeVisible();
       expect(screen.queryByRole('button', { name: 'Start the demo' })).not.toBeInTheDocument();
+    });
+
+    describe('while the server is still starting', () => {
+      beforeEach(() => {
+        vi.useFakeTimers();
+      });
+
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      it('waits and offers the demo once the API answers, instead of showing the session list', async () => {
+        mocks.getDemoConfig
+          .mockRejectedValueOnce({ status: 502, message: 'Bad Gateway' })
+          .mockRejectedValueOnce({ message: 'Network Error' });
+
+        renderDemo();
+        await act(() => vi.advanceTimersByTimeAsync(0));
+
+        expect(screen.getByText('Waking up the server, just a moment…')).toBeVisible();
+        expect(screen.queryByText('Could not load the sessions')).not.toBeInTheDocument();
+        expect(mocks.getSessions).not.toHaveBeenCalled();
+
+        await act(() => vi.advanceTimersByTimeAsync(5000));
+
+        expect(screen.getByRole('button', { name: 'Start the demo' })).toBeVisible();
+        expect(mocks.getSessions).not.toHaveBeenCalled();
+        expect(mocks.getDemoConfig).toHaveBeenCalledTimes(3);
+      });
+
+      it('gives up after 20 retries and shows the ordinary list', async () => {
+        mocks.getDemoConfig.mockRejectedValue({ status: 503, message: 'Service Unavailable' });
+
+        renderDemo();
+        await act(() => vi.advanceTimersByTimeAsync(40000));
+
+        expect(screen.getByText('Party')).toBeVisible();
+        expect(mocks.getDemoConfig).toHaveBeenCalledTimes(21);
+      });
     });
   });
 
