@@ -27,6 +27,7 @@
     "searchLabel": "Search sessions by code",
     "loadError": "Could not load the sessions",
     "loading": "Loading sessions…",
+    "waking": "Waking up the server, just a moment…",
     "noMatch": "No session matches “{{search}}”.",
     "sessions": "Sessions",
     "passwordProtected": "Password protected"

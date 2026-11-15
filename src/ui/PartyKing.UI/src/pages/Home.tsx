@@ -9,11 +9,14 @@ import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 
 /**
  * Landing page: every session, with a search box that filters by code (or name). On a demo server it is a button
- * that starts a session instead, since the visitor has none and must not see anyone else's.
+ * that starts a session instead, since the visitor has none and must not see anyone else's. While the server is
+ * still starting (a suspended demo) it says so, since it cannot be known yet which of the two it is.
  */
 export const Home = (): ReactNode => {
-  const { enabled, settled } = useDemoConfig();
+  const { t } = useTranslation();
+  const { enabled, settled, waiting } = useDemoConfig();
 
+  if (waiting) return <p className="px-4 pt-6 text-slate-400">{t('home.waking')}</p>;
   if (!settled) return null;
 
   return enabled ? <DemoLanding /> : <SessionList />;
