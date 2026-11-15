@@ -27,6 +27,7 @@
     "searchLabel": "Szukaj sesji po kodzie",
     "loadError": "Nie udało się wczytać sesji",
     "loading": "Wczytywanie sesji…",
+    "waking": "Budzimy serwer, chwileczkę…",
     "noMatch": "Żadna sesja nie pasuje do „{{search}}”.",
     "sessions": "Sesje",
     "passwordProtected": "Chroniona hasłem"
