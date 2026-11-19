@@ -162,9 +162,15 @@ export const MusicQueue = (): ReactNode => {
         <aside
           {...helpTarget('slideshow')}
           aria-label={lyricsShown ? t('views.lyrics') : t('views.slideshow')}
-          className="relative mx-2 mb-2 mt-9 rounded-md border-2 border-slate-400 md:w-[calc(50%-1rem)] md:shrink-0"
+          className={`relative mx-2 mb-2 mt-9 rounded-md border-2 border-slate-400 md:w-[calc(50%-1rem)] md:shrink-0 md:self-start ${
+            lyricsShown ? 'md:sticky md:top-9 md:h-[calc(100dvh-2.75rem)]' : ''
+          }`}
         >
-          <div className="aspect-video w-full overflow-hidden rounded-sm bg-black">
+          <div
+            className={`aspect-video w-full overflow-hidden rounded-sm bg-black ${
+              lyricsShown ? 'md:aspect-auto md:h-full' : ''
+            }`}
+          >
             {lyricsShown ? (
               <LyricsView
                 lyrics={lyrics}
