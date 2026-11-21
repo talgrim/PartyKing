@@ -8,6 +8,7 @@ import { useAccount } from '@/service/endpoints/account/useAccount';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
 import { JoinQrCode } from './JoinQrCode';
 import { OpenGamesMenu } from './OpenGamesMenu';
+import { RequestSessionDeletion } from './RequestSessionDeletion';
 import { SaveQueueAsPlaylist } from './SaveQueueAsPlaylist';
 import { SessionSettings } from './SessionSettings';
 import { useTranslation } from 'react-i18next';
@@ -22,13 +23,22 @@ type Props = {
   onUploadPhotos?: () => void;
   /** Called after the settings changed something the page shows, such as the session name. */
   onSessionChanged?: () => void;
+  /** Called after the host or an admin deleted the session from its settings. */
+  onSessionDeleted?: () => void;
 };
 
 /**
- * Card with the session name (the open games menu and the photo upload icon for everyone, the save-as-playlist icon for signed-in accounts, the QR code and settings icons for
+ * Card with the session name (the open games menu and the photo upload icon for everyone, the save-as-playlist icon for signed-in accounts, the request-deletion icon for guests, the QR code and settings icons for
  * the host and admins), its code, and either who the host is or the login that makes the visitor the host.
  */
-export const SessionHeader = ({ session, isHost, isAdmin = false, onUploadPhotos, onSessionChanged }: Props): ReactNode => {
+export const SessionHeader = ({
+  session,
+  isHost,
+  isAdmin = false,
+  onUploadPhotos,
+  onSessionChanged,
+  onSessionDeleted,
+}: Props): ReactNode => {
   const { t } = useTranslation();
   const { account } = useAccount();
   // The host of a demo is made by the demo itself: there is no Spotify login to offer
@@ -71,10 +81,22 @@ export const SessionHeader = ({ session, isHost, isAdmin = false, onUploadPhotos
             </button>
           )}
           {account && <SaveQueueAsPlaylist sessionId={session.id} sessionName={session.name} />}
+          {/* The host and admins delete the session at once, in its settings; a guest can only ask for it */}
+          {!isHost && !isAdmin && (
+            <RequestSessionDeletion
+              session={session}
+              onRequested={() => onSessionChanged?.()}
+              onFailed={setError}
+            />
+          )}
           {(isHost || isAdmin) && (
             <>
               <JoinQrCode sessionId={session.id} />
-              <SessionSettings session={session} onChanged={() => onSessionChanged?.()} />
+              <SessionSettings
+                session={session}
+                onChanged={() => onSessionChanged?.()}
+                onDeleted={() => onSessionDeleted?.()}
+              />
             </>
           )}
         </div>

@@ -35,6 +35,21 @@ export const sessionsApi = {
     unwrap<void>(axios.patch(`/sessions/${sessionId}`, { name }, { withCredentials: true })),
 
   /**
+   * Deletes the session at once, with its queue, games and photos. Host or admin only; rejects with status 403 for
+   * anyone else (and in the demo), 404 for a session that is already gone.
+   */
+  deleteSession: (sessionId: string) =>
+    unwrap<void>(axios.delete(`/sessions/${sessionId}`, { withCredentials: true })),
+
+  /**
+   * Any guest with access asks for the session to be deleted after the delay; the operator is told by mail. Succeeds
+   * also when it was asked before (the first time is kept). Rejects with status 401 (session locked), 403 (in the
+   * demo), 404 (session gone) or 429 (asked too often).
+   */
+  requestDeletion: (sessionId: string) =>
+    unwrap<void>(axios.post(`/sessions/${sessionId}/deletion-request`, undefined, { withCredentials: true })),
+
+  /**
    * Host or admin only. Everyone else who had unlocked the session has to enter the new password; the caller
    * stays unlocked. Rejects with status 403 for anyone else, 400 for an invalid password.
    */

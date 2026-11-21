@@ -11,6 +11,7 @@ import { accountApi } from '@/service/endpoints/account/accountApi';
 import { useAccount } from '@/service/endpoints/account/useAccount';
 import { adminApi } from '@/service/endpoints/admin/adminApi';
 import { SessionDto } from '@/service/endpoints/sessions/types';
+import { formatDateTime } from '@/utils/formatDateTime';
 
 const MIN_PASSWORD_LENGTH = 4;
 
@@ -64,7 +65,7 @@ const NotAnAdmin = ({ username, onLoggedOut }: { username: string; onLoggedOut: 
 };
 
 const Sessions = ({ onLoggedOut }: { onLoggedOut: () => void }): ReactNode => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -106,6 +107,13 @@ const Sessions = ({ onLoggedOut }: { onLoggedOut: () => void }): ReactNode => {
   const release = (session: SessionDto) => {
     if (window.confirm(t('admin.confirmRemoveHost', { host: session.hostName, name: session.name }))) {
       void run(() => adminApi.releaseHost(session.id), t('admin.hostRemoved'));
+    }
+  };
+
+  // Only an admin can call off the deletion a guest asked for; the host's own way out is to delete at once
+  const cancelDeletion = (session: SessionDto) => {
+    if (window.confirm(t('admin.confirmCancelDeletion', { name: session.name }))) {
+      void run(() => adminApi.cancelSessionDeletion(session.id), t('admin.deletionCancelled'));
     }
   };
 
@@ -165,6 +173,11 @@ const Sessions = ({ onLoggedOut }: { onLoggedOut: () => void }): ReactNode => {
             <div className="text-sm text-slate-500">
               {session.hasHost ? t('common.hostName', { name: session.hostName }) : t('common.noHost')}
             </div>
+            {session.deletionScheduledAt && (
+              <div className="mt-1 text-sm text-amber-500">
+                {t('admin.deletionScheduled', { date: formatDateTime(session.deletionScheduledAt, i18n.language) })}
+              </div>
+            )}
             <div className="flex flex-wrap gap-2 mt-2">
               <button className={secondaryButton} disabled={busy} onClick={() => copyLink(session)}>
                 {t('admin.copyLink')}
@@ -175,6 +188,11 @@ const Sessions = ({ onLoggedOut }: { onLoggedOut: () => void }): ReactNode => {
               {session.hasHost && (
                 <button className={secondaryButton} disabled={busy} onClick={() => release(session)}>
                   {t('admin.removeHost')}
+                </button>
+              )}
+              {session.deletionScheduledAt && (
+                <button className={secondaryButton} disabled={busy} onClick={() => cancelDeletion(session)}>
+                  {t('admin.cancelDeletion')}
                 </button>
               )}
               <button className={`${secondaryButton} text-red-400`} disabled={busy} onClick={() => remove(session)}>

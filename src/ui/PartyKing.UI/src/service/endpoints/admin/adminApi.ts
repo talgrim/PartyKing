@@ -40,6 +40,10 @@ export const adminApi = {
       axios.post(`/admin/sessions/${sessionId}/songs/next`, null, { ...withCredentials, params: { currentSongId } }),
     ),
 
+  /** Calls off the deletion a guest asked for; the session stays. Also succeeds when none was scheduled. */
+  cancelSessionDeletion: (sessionId: string) =>
+    unwrap<void>(axios.delete(`/admin/sessions/${sessionId}/deletion-request`, withCredentials)),
+
   /** Removes the host so someone else can claim the session. */
   releaseHost: (sessionId: string) =>
     unwrap<void>(axios.delete(`/admin/sessions/${sessionId}/host`, withCredentials)),
