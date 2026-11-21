@@ -43,7 +43,7 @@ Frontend (from `src/ui/PartyKing.UI`):
 
 ## Architecture
 
-Layered, top to bottom: **AppHost** (Aspire) → **API** (controllers, hubs, cookies, `Program.cs`; the composition root) → **Application** (services, ports, event handlers, mappings) → **Domain** (aggregates, rules, events, repository ports). **Infrastructure** (`.Spotify`, `.Youtube`, `.Lyrics`, `.Llm`) implements the ports; **Persistence** is the EF Core SQLite layer; **Contract** holds the public DTOs (`V1/`); **ServiceDefaults** is Aspire telemetry. Each layer registers its services in its own `DependencyInjection.cs`.
+Layered, top to bottom: **AppHost** (Aspire) → **API** (controllers, hubs, cookies, `Program.cs`; the composition root) → **Application** (services, ports, event handlers, mappings) → **Domain** (aggregates, rules, events, repository ports). **Infrastructure** (`.Spotify`, `.Youtube`, `.Lyrics`, `.Llm`, `.Mail`) implements the ports; **Persistence** is the EF Core SQLite layer; **Contract** holds the public DTOs (`V1/`); **ServiceDefaults** is Aspire telemetry. Each layer registers its services in its own `DependencyInjection.cs`.
 
 **Layering** (checked by `LayerDependencyTests`): Domain references no `PartyKing`/`Microsoft` assembly and not `System.Text.Json`; Contract no `PartyKing` assembly; Application only Domain and Contract and no web assembly (Data Protection is allowed, `JoinTokenProtector` uses it); Persistence only Domain; no Infrastructure project sees the web, the API or another Infrastructure project, and only `PartyKing.Infrastructure` uses Persistence.
 

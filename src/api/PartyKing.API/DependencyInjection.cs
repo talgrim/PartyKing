@@ -12,6 +12,7 @@ using PartyKing.Application.Realtime;
 using PartyKing.Infrastructure;
 using PartyKing.Infrastructure.Llm;
 using PartyKing.Infrastructure.Lyrics;
+using PartyKing.Infrastructure.Mail;
 using PartyKing.Infrastructure.Spotify;
 using PartyKing.Domain.Entities.Auth;
 using PartyKing.Infrastructure.Youtube;
@@ -48,6 +49,8 @@ public static class DependencyInjection
         services.RegisterYoutubeInfrastructure();
         services.RegisterLyricsInfrastructure();
         services.RegisterLlmInfrastructure(configuration);
+        // After RegisterApplication, which registers the no-op mail client this one replaces
+        services.RegisterMailInfrastructure(configuration);
         services.AddAuthorization();
         AddConfigurations(configuration);
     }
