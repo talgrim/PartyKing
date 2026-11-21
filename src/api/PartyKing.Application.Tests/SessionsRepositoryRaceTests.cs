@@ -129,6 +129,29 @@ public class SessionsRepositoryRaceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ScheduleDeletion_AfterAnotherRequestScheduledIt_KeepsTheFirstTime_AndRaisesNothing()
+    {
+        var firstTime = new DateTime(2026, 11, 28, 12, 0, 0, DateTimeKind.Utc);
+        // another guest's request commits after this one loaded the session, but before it saved
+        _interceptor.OnFirstSave = () =>
+        {
+            using var connection = new SqliteConnection(ConnectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "UPDATE Sessions SET DeletionScheduledAt = $at WHERE Id = $id";
+            command.Parameters.AddWithValue("$at", firstTime);
+            command.Parameters.AddWithValue("$id", _sessionId);
+            command.ExecuteNonQuery();
+        };
+
+        var result = await _repository.ScheduleDeletionAsync(_sessionId, firstTime.AddDays(1), TimeSpan.FromDays(7), Ct);
+
+        Assert.Equal(SessionDeletionScheduleResult.AlreadyScheduled, result);
+        Assert.Equal(firstTime, (await ReadAsync()).DeletionScheduledAt);
+        Assert.Empty(_dispatcher.Events);
+    }
+
+    [Fact]
     public async Task Release_WhenTheHostKeepsChanging_ThrowsAfterThreeAttempts_AndDispatchesNothing()
     {
         await _repository.TryClaimAsync(_sessionId, "host-1", Ct);

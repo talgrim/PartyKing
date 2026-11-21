@@ -195,6 +195,57 @@ internal class FakeSessionsRepository : ISessionsRepository
         return Task.FromResult(matches);
     }
 
+    public async Task<SessionDeletionScheduleResult> ScheduleDeletionAsync(
+        Guid id,
+        DateTime now,
+        TimeSpan delay,
+        CancellationToken cancellationToken)
+    {
+        var session = _sessions.FirstOrDefault(x => x.Id == id);
+        if (session is null)
+        {
+            return SessionDeletionScheduleResult.SessionNotFound;
+        }
+
+        if (session.ScheduleDeletion(now, delay) == SessionDeletionScheduleOutcome.AlreadyScheduled)
+        {
+            return SessionDeletionScheduleResult.AlreadyScheduled;
+        }
+
+        await DispatchAsync(session.DrainEvents());
+
+        return SessionDeletionScheduleResult.Scheduled;
+    }
+
+    public async Task<SessionDeletionCancelResult> CancelDeletionAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var session = _sessions.FirstOrDefault(x => x.Id == id);
+        if (session is null)
+        {
+            return SessionDeletionCancelResult.SessionNotFound;
+        }
+
+        if (session.CancelDeletion() == SessionDeletionCancelOutcome.NotScheduled)
+        {
+            return SessionDeletionCancelResult.NotScheduled;
+        }
+
+        await DispatchAsync(session.DrainEvents());
+
+        return SessionDeletionCancelResult.Cancelled;
+    }
+
+    public Task<IReadOnlyList<Guid>> ListDueForDeletionAsync(DateTime now, CancellationToken cancellationToken)
+    {
+        IReadOnlyList<Guid> due = _sessions
+            .Where(x => x.IsDueForDeletion(now))
+            .OrderBy(x => x.DeletionScheduledAt)
+            .Select(x => x.Id)
+            .ToList();
+
+        return Task.FromResult(due);
+    }
+
     public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken)
     {
         var session = _sessions.FirstOrDefault(x => x.Id == id);
