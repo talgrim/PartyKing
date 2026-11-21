@@ -24,6 +24,30 @@ public class ApplicationMappingsTests
     };
 
     [Fact]
+    public void Session_ToDto_WithoutAScheduledDeletion_HasNone()
+    {
+        var session = new Session(Guid.NewGuid(), "ABC123", "Party", "hash", DateTime.UtcNow);
+
+        Assert.Null(session.ToDto().DeletionScheduledAt);
+    }
+
+    [Theory]
+    [InlineData(DateTimeKind.Utc)]
+    [InlineData(DateTimeKind.Unspecified)]
+    public void Session_ToDto_ReadsTheScheduledDeletionAsUtc_EvenWhenTheDatabaseLeftItsKindUnspecified(DateTimeKind kind)
+    {
+        var session = new Session(Guid.NewGuid(), "ABC123", "Party", "hash", DateTime.UtcNow)
+        {
+            DeletionScheduledAt = new DateTime(2026, 11, 28, 14, 5, 0, kind)
+        };
+
+        var scheduled = session.ToDto().DeletionScheduledAt;
+
+        Assert.Equal(new DateTimeOffset(2026, 11, 28, 14, 5, 0, TimeSpan.Zero), scheduled);
+        Assert.Equal(TimeSpan.Zero, scheduled!.Value.Offset);
+    }
+
+    [Fact]
     public void Session_ToDto_WithoutHost_HasNoHost()
     {
         var session = new Session(Guid.NewGuid(), "ABC123", "Party", "hash", DateTime.UtcNow);
