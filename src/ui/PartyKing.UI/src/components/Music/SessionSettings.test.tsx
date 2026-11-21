@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SWRConfig } from 'swr';
 import { SessionSettings } from './SessionSettings';
@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   setFallbackPlaylist: vi.fn(),
   getPhotoCount: vi.fn(),
   getDemoConfig: vi.fn(),
+  deleteSession: vi.fn(),
 }));
 
 vi.mock('@/service/endpoints/sessions/sessionsApi', () => ({
@@ -23,6 +24,7 @@ vi.mock('@/service/endpoints/sessions/sessionsApi', () => ({
     getHostPlaylists: mocks.getHostPlaylists,
     setFallbackPlaylist: mocks.setFallbackPlaylist,
     getPhotoCount: mocks.getPhotoCount,
+    deleteSession: mocks.deleteSession,
     photoArchiveUrl: (id: string) => `/api/sessions/${id}/photos/archive`,
   },
 }));
@@ -31,11 +33,11 @@ vi.mock('@/service/endpoints/demo/demoApi', () => ({ demoApi: { getConfig: mocks
 
 const session = { id: 's1', code: 'ABC123', name: 'Party', hostName: 'Host', hasHost: true };
 
-const openDialog = async (onChanged = vi.fn()) => {
+const openDialog = async (onChanged = vi.fn(), onDeleted = vi.fn()) => {
   const user = userEvent.setup();
-  render(<SessionSettings session={session} onChanged={onChanged} />);
+  render(<SessionSettings session={session} onChanged={onChanged} onDeleted={onDeleted} />);
   await user.click(screen.getByRole('button', { name: 'Session settings' }));
-  return { user, onChanged };
+  return { user, onChanged, onDeleted };
 };
 
 describe('SessionSettings', () => {
@@ -47,13 +49,14 @@ describe('SessionSettings', () => {
     mocks.getHostPlaylists.mockReset().mockResolvedValue([]);
     mocks.setFallbackPlaylist.mockReset().mockResolvedValue(undefined);
     mocks.getPhotoCount.mockReset().mockResolvedValue({ count: 2 });
+    mocks.deleteSession.mockReset().mockResolvedValue(undefined);
     mocks.getSlideshowSettings
       .mockReset()
       .mockResolvedValue({ autoRepeat: true, startFromBeginning: false, slideTime: '00:00:10' });
   });
 
   it('keeps the settings closed until the gear is pressed', async () => {
-    render(<SessionSettings session={session} onChanged={vi.fn()} />);
+    render(<SessionSettings session={session} onChanged={vi.fn()} onDeleted={vi.fn()} />);
 
     expect(screen.queryByText('Session settings')).not.toBeInTheDocument();
     expect(mocks.getSlideshowSettings).not.toHaveBeenCalled();
@@ -138,7 +141,7 @@ describe('SessionSettings', () => {
     const user = userEvent.setup();
     render(
       <SWRConfig value={{ provider: () => new Map() }}>
-        <SessionSettings session={session} onChanged={vi.fn()} />
+        <SessionSettings session={session} onChanged={vi.fn()} onDeleted={vi.fn()} />
       </SWRConfig>,
     );
     await waitFor(() => expect(mocks.getDemoConfig).toHaveBeenCalled());
@@ -146,5 +149,49 @@ describe('SessionSettings', () => {
 
     await waitFor(() => expect(screen.queryByRole('region', { name: 'Fallback playlist' })).not.toBeInTheDocument());
     expect(screen.getByRole('region', { name: 'Slideshow' })).toBeVisible();
+  });
+
+  describe('deleting the session', () => {
+    let confirm: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    });
+
+    afterEach(() => confirm.mockRestore());
+
+    it('has a section that deletes the session now, and tells the page once it is gone', async () => {
+      const { user, onDeleted } = await openDialog();
+      const section = screen.getByRole('region', { name: 'Delete session' });
+
+      await user.click(within(section).getByRole('button', { name: 'Delete session' }));
+
+      await waitFor(() => expect(onDeleted).toHaveBeenCalledTimes(1));
+      expect(mocks.deleteSession).toHaveBeenCalledWith('s1');
+    });
+
+    it('deletes nothing when the confirmation is refused', async () => {
+      confirm.mockReturnValue(false);
+      const { user, onDeleted } = await openDialog();
+
+      await user.click(within(screen.getByRole('region', { name: 'Delete session' })).getByRole('button', { name: 'Delete session' }));
+
+      expect(mocks.deleteSession).not.toHaveBeenCalled();
+      expect(onDeleted).not.toHaveBeenCalled();
+    });
+
+    it('is left out of the demo, whose sessions end on their own', async () => {
+      mocks.getDemoConfig.mockResolvedValue({ enabled: true, serverTime: '2026-11-13T12:00:00Z' });
+      const user = userEvent.setup();
+      render(
+        <SWRConfig value={{ provider: () => new Map() }}>
+          <SessionSettings session={session} onChanged={vi.fn()} onDeleted={vi.fn()} />
+        </SWRConfig>,
+      );
+      await waitFor(() => expect(mocks.getDemoConfig).toHaveBeenCalled());
+      await user.click(screen.getByRole('button', { name: 'Session settings' }));
+
+      await waitFor(() => expect(screen.queryByRole('region', { name: 'Delete session' })).not.toBeInTheDocument());
+    });
   });
 });
