@@ -36,6 +36,31 @@ internal class FakeClock : IDateTimeProvider
     public void Advance(TimeSpan by) => UtcNow += by;
 }
 
+/// <summary>Keeps the mails it is asked to send; with <see cref="Failure"/> set it refuses them, like a provider that is down.</summary>
+internal class FakeMailClient : IMailClient
+{
+    public List<MailMessage> Sent { get; } = [];
+
+    /// <summary>How many times sending was tried, also when it failed.</summary>
+    public int Attempts { get; private set; }
+
+    public Exception? Failure { get; set; }
+
+    public Task SendAsync(MailMessage message, CancellationToken cancellationToken)
+    {
+        Attempts++;
+
+        if (Failure is not null)
+        {
+            return Task.FromException(Failure);
+        }
+
+        Sent.Add(message);
+
+        return Task.CompletedTask;
+    }
+}
+
 /// <summary>Hands every action a new <see cref="Random"/> from the same seed.</summary>
 internal class FakeRandomProvider(int seed) : IRandomProvider
 {
