@@ -84,6 +84,20 @@ public class AdminController : CoreController
         return result.Match(_ => NoContent(), Problem);
     }
 
+    /// <summary>
+    /// Calls off the deletion a guest asked for; the session stays. 204 also when none was scheduled. The host cannot
+    /// do this, only delete the session at once.
+    /// </summary>
+    [HttpDelete("admin/sessions/{sessionId:guid}/deletion-request")]
+    [AuthorizeAdmin]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> CancelSessionDeletion(Guid sessionId, CancellationToken cancellationToken)
+    {
+        var result = await _sessionAdminService.CancelDeletionAsync(sessionId, cancellationToken);
+
+        return result.Match(_ => NoContent(), Problem);
+    }
+
     /// <summary>Removes the host of the session so that someone else can claim it.</summary>
     [HttpDelete("admin/sessions/{sessionId:guid}/host")]
     [AuthorizeAdmin]

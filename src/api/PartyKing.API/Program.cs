@@ -79,6 +79,16 @@ builder.Services.AddRateLimiter(options =>
                 PermitLimit = 10,
                 Window = TimeSpan.FromMinutes(1)
             }));
+    // A request is idempotent and costs only a lookup, but it is open to every guest and a new one can send mail: keep a flood small.
+    // Guests on one Wi-Fi share an IP, and a real request is made once per session
+    options.AddPolicy(SessionsController.DeletionRequestRateLimitPolicy, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromHours(1)
+            }));
     // Every start makes a session with a host and its files, and a demo is open to anybody
     options.AddPolicy(DemoController.StartRateLimitPolicy, context =>
         RateLimitPartition.GetFixedWindowLimiter(

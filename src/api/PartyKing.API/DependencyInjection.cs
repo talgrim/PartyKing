@@ -11,6 +11,7 @@ using PartyKing.Application.Configuration;
 using PartyKing.Application.Realtime;
 using PartyKing.Infrastructure;
 using PartyKing.Infrastructure.Llm;
+using PartyKing.API.Workers;
 using PartyKing.Infrastructure.Lyrics;
 using PartyKing.Infrastructure.Mail;
 using PartyKing.Infrastructure.Spotify;
@@ -44,6 +45,8 @@ public static class DependencyInjection
         services.RegisterHubs();
         services.RegisterApplication(configuration);
         services.RegisterDemoWorker(configuration);
+        // Not behind the demo flag, unlike the demo sweep: a guest's request is honoured on every server
+        services.AddHostedService<SessionDeletionWorker>();
         services.RegisterInfrastructure();
         services.RegisterSpotifyInfrastructure(configuration);
         services.RegisterYoutubeInfrastructure();

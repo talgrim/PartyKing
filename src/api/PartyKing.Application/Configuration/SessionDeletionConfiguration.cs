@@ -12,9 +12,10 @@ public class SessionDeletionConfiguration
     public double DelayDays { get; set; } = 7;
 
     /// <summary>How often the sweep looks for sessions whose deletion is due.</summary>
-    public int SweepIntervalSeconds { get; set; } = 300;
+    public int SweepIntervalSeconds { get; set; } = 3600;
 
     public TimeSpan Delay => TimeSpan.FromDays(DelayDays);
 
-    public TimeSpan SweepInterval => TimeSpan.FromSeconds(SweepIntervalSeconds);
+    /// <summary>At least a second, because a timer refuses an interval of zero.</summary>
+    public TimeSpan SweepInterval => TimeSpan.FromSeconds(Math.Max(1, SweepIntervalSeconds));
 }
