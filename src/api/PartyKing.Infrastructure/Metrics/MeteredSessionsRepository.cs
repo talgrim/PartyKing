@@ -86,6 +86,27 @@ internal sealed class MeteredSessionsRepository : MeteredRepository, ISessionsRe
         return MeasureAsync(nameof(UpdatePasswordHashAsync), () => _inner.UpdatePasswordHashAsync(id, passwordHash, cancellationToken));
     }
 
+    public Task<SessionDeletionScheduleResult> ScheduleDeletionAsync(
+        Guid id,
+        DateTime now,
+        TimeSpan delay,
+        CancellationToken cancellationToken)
+    {
+        return MeasureAsync(
+            nameof(ScheduleDeletionAsync),
+            () => _inner.ScheduleDeletionAsync(id, now, delay, cancellationToken));
+    }
+
+    public Task<SessionDeletionCancelResult> CancelDeletionAsync(Guid id, CancellationToken cancellationToken)
+    {
+        return MeasureAsync(nameof(CancelDeletionAsync), () => _inner.CancelDeletionAsync(id, cancellationToken));
+    }
+
+    public Task<IReadOnlyList<Guid>> ListDueForDeletionAsync(DateTime now, CancellationToken cancellationToken)
+    {
+        return MeasureAsync(nameof(ListDueForDeletionAsync), () => _inner.ListDueForDeletionAsync(now, cancellationToken));
+    }
+
     public Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken)
     {
         return MeasureAsync(nameof(DeleteAsync), () => _inner.DeleteAsync(id, cancellationToken));

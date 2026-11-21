@@ -505,6 +505,10 @@ namespace PartyKing.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("DeletionScheduledAt")
+                        .IsConcurrencyToken()
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("FallbackCursor")
                         .HasColumnType("INTEGER");
 
@@ -536,6 +540,8 @@ namespace PartyKing.Persistence.Migrations
 
                     b.HasIndex("Code")
                         .IsUnique();
+
+                    b.HasIndex("DeletionScheduledAt");
 
                     b.HasIndex("HostProfileId")
                         .IsUnique();
