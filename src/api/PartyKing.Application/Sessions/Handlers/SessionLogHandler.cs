@@ -10,7 +10,9 @@ internal sealed class SessionLogHandler :
     IDomainEventHandler<SessionPasswordChanged>,
     IDomainEventHandler<HostClaimed>,
     IDomainEventHandler<HostReleased>,
-    IDomainEventHandler<SessionDeleted>
+    IDomainEventHandler<SessionDeleted>,
+    IDomainEventHandler<SessionDeletionScheduled>,
+    IDomainEventHandler<SessionDeletionCancelled>
 {
     private readonly ILogger<SessionLogHandler> _logger;
 
@@ -50,6 +52,23 @@ internal sealed class SessionLogHandler :
     public Task HandleAsync(SessionDeleted domainEvent, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Deleted session {SessionId}", domainEvent.SessionId);
+
+        return Task.CompletedTask;
+    }
+
+    public Task HandleAsync(SessionDeletionScheduled domainEvent, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation(
+            "Deletion of session {SessionId} was requested and is scheduled for {DeletionScheduledAt:u}",
+            domainEvent.SessionId,
+            domainEvent.DeletionScheduledAt);
+
+        return Task.CompletedTask;
+    }
+
+    public Task HandleAsync(SessionDeletionCancelled domainEvent, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Cancelled the scheduled deletion of session {SessionId}", domainEvent.SessionId);
 
         return Task.CompletedTask;
     }

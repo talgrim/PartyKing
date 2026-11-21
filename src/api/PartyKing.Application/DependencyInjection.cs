@@ -13,8 +13,10 @@ using PartyKing.Application.Games.Services.NeverHaveIEver;
 using PartyKing.Application.Games.Services.Resistance;
 using PartyKing.Application.Games.Services.Ringo;
 using PartyKing.Application.Lyrics.Handlers;
+using PartyKing.Application.Mail;
 using PartyKing.Application.Lyrics.Services;
 using PartyKing.Application.Playlists.Services;
+using PartyKing.Application.Ports;
 using PartyKing.Application.Player.Services;
 using PartyKing.Application.Queue.Handlers;
 using PartyKing.Application.Queue.Services;
@@ -50,7 +52,7 @@ public static class DependencyInjection
         services.RegisterPlayer();
         services.RegisterLyrics();
         services.RegisterGames(configuration);
-        services.RegisterSessions();
+        services.RegisterSessions(configuration);
         services.RegisterAccounts(configuration);
         services.RegisterDemo(configuration);
     }
@@ -62,8 +64,13 @@ public static class DependencyInjection
         await scope.ServiceProvider.GetRequiredService<IAdminSeeder>().SeedAsync(CancellationToken.None);
     }
 
-    private static void RegisterSessions(this IServiceCollection services)
+    private static void RegisterSessions(this IServiceCollection services, IConfiguration configuration)
     {
+        services.Configure<SessionDeletionConfiguration>(configuration.GetSection(SessionDeletionConfiguration.SectionName));
+        services.Configure<MailConfiguration>(configuration.GetSection(MailConfiguration.SectionName));
+        // Nothing is sent until a mail provider's registration replaces this
+        services.TryAddSingleton<IMailClient, NullMailClient>();
+        services.AddScoped<IScheduledSessionDeletionSweep, ScheduledSessionDeletionSweep>();
         services.AddSingleton<IJoinTokenProtector, JoinTokenProtector>();
         services.AddSingleton<ISessionAuthorizer, SessionAuthorizer>();
         services.AddScoped<ISessionService, SessionService>();
@@ -87,6 +94,9 @@ public static class DependencyInjection
         services.AddDomainEventHandler<HostClaimed, SessionLogHandler>();
         services.AddDomainEventHandler<HostReleased, SessionLogHandler>();
         services.AddDomainEventHandler<SessionDeleted, SessionLogHandler>();
+        services.AddDomainEventHandler<SessionDeletionScheduled, SessionDeletionMailHandler>();
+        services.AddDomainEventHandler<SessionDeletionScheduled, SessionLogHandler>();
+        services.AddDomainEventHandler<SessionDeletionCancelled, SessionLogHandler>();
     }
 
     private static void RegisterDemo(this IServiceCollection services, IConfiguration configuration)
