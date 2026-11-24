@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { ReactNode } from 'react';
 import { SWRConfig } from 'swr';
-import { ACCOUNT_HINT_KEY, useAccount, useIsAdmin } from './useAccount';
+import { ACCOUNT_HINT_KEY, IDENTITY_HINT_COOKIE, useAccount, useIsAdmin } from './useAccount';
 
 const mocks = vi.hoisted(() => ({ me: vi.fn() }));
 
@@ -17,6 +17,7 @@ const user = { id: 'u1', username: 'ann', role: 'User', createdAt: '2026-11-09T1
 describe('useAccount', () => {
   beforeEach(() => {
     localStorage.clear();
+    document.cookie = `${IDENTITY_HINT_COOKIE}=; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
     mocks.me.mockReset();
   });
 
@@ -80,14 +81,15 @@ describe('useAccount', () => {
     expect(result.current.isLoading).toBe(false);
   });
 
-  it('starts asking after signedIn, and forgets the account after signedOut', async () => {
+  it('asks when the identity service left its cookie, and forgets the account after signedOut', async () => {
+    document.cookie = `${IDENTITY_HINT_COOKIE}=1`;
     mocks.me.mockResolvedValue(user);
     const { result } = renderHook(() => useAccount(), { wrapper });
 
-    act(() => result.current.signedIn());
     await waitFor(() => expect(result.current.account).toEqual(user));
     expect(localStorage.getItem(ACCOUNT_HINT_KEY)).toBe('true');
 
+    document.cookie = `${IDENTITY_HINT_COOKIE}=; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
     act(() => result.current.signedOut());
     await waitFor(() => expect(result.current.account).toBeNull());
     expect(localStorage.getItem(ACCOUNT_HINT_KEY)).toBe('false');
@@ -97,6 +99,7 @@ describe('useAccount', () => {
 describe('useIsAdmin', () => {
   beforeEach(() => {
     localStorage.clear();
+    document.cookie = `${IDENTITY_HINT_COOKIE}=; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
     mocks.me.mockReset();
   });
 
