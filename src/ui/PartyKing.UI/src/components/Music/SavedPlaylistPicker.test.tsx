@@ -34,13 +34,11 @@ describe('SavedPlaylistPicker', () => {
     mocks.me.mockReset();
   });
 
-  it('asks a visitor to log in, and asks for no playlists', async () => {
-    const { user } = renderPicker();
+  it('asks a visitor to log in, and asks for no playlists', () => {
+    renderPicker();
 
     expect(screen.getByText('Log in to use the playlists you saved.')).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'Log in' }));
-
-    expect(await screen.findByRole('dialog')).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Log in' })).toHaveAttribute('href', expect.stringContaining('/login?next='));
     expect(mocks.list).not.toHaveBeenCalled();
   });
 

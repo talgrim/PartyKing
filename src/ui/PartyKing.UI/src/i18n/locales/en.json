@@ -33,30 +33,16 @@
     "passwordProtected": "Password protected"
   },
   "account": {
-    "title": "Account",
     "settings": "Account settings",
-    "username": "Username",
-    "password": "Password",
     "logIn": "Log in",
     "signUp": "Sign up",
-    "passwordHint": "At least 8 characters",
-    "signedInAs": "Signed in as {{name}}",
-    "changePassword": "Change password",
-    "currentPassword": "Current password",
-    "newPassword": "New password",
-    "passwordChanged": "Password changed",
-    "logOut": "Log out",
-    "logOutEverywhere": "Log out everywhere",
-    "confirmLogOutEverywhere": "Log out on every device, including this one?",
-    "deleteAccount": "Delete account",
-    "deleteWarning": "This deletes your account for good. Enter your password to confirm.",
-    "passwordToDelete": "Password to confirm",
-    "confirmDelete": "Delete my account"
+    "logOut": "Log out"
   },
   "admin": {
     "allSessions": "All sessions",
     "title": "Admin",
     "checkingLogin": "Checking the login…",
+    "loginNeeded": "Log in with an admin account to manage the sessions.",
     "apiUnreachable": "Could not reach the API",
     "logOut": "Log out",
     "newSessionNamePlaceholder": "New session name (optional)",
@@ -76,27 +62,10 @@
     "delete": "Delete",
     "registeredUsers": "Registered users",
     "notAnAdmin": "You are signed in as {{name}}, which is not an admin account.",
-    "users": {
-      "title": "Registered users",
-      "adminOnly": "Only an admin can see the users.",
-      "toAdminPage": "Go to the admin page",
-      "searchLabel": "Search users by username",
-      "searchPlaceholder": "Search by username",
-      "loading": "Loading users…",
-      "loadError": "Could not load the users",
-      "none": "Nobody has registered yet.",
-      "noMatch": "No user matches “{{search}}”.",
-      "registered": "Registered {{date}}",
-      "resetPassword": "Reset password",
-      "resetTitle": "Reset the password of {{name}}",
-      "newPassword": "New password",
-      "passwordReset": "The password of {{name}} was reset. They are logged out everywhere.",
-      "pagination": "Users pages",
-      "previous": "Previous",
-      "next": "Next",
-      "pageOf": "Page {{page}} of {{pages}}",
-      "total": "Users: {{count}}"
-    }
+    "deletionScheduled": "Deletion requested by a guest, scheduled for {{date}}",
+    "cancelDeletion": "Cancel deletion",
+    "confirmCancelDeletion": "Cancel the deletion of “{{name}}”? The session stays.",
+    "deletionCancelled": "Deletion cancelled"
   },
   "imagePreview": {
     "name": "Name:",
@@ -1243,6 +1212,23 @@
         "title": "Blood alcohol calculator",
         "text": "An estimate of your blood alcohol from what you drank. It is only an estimate, never a reason to decide that you can drive."
       }
+    }
+  },
+  "sessionDeletion": {
+    "requestTitle": "Request deletion of this session",
+    "requestConfirm": "Ask for this session to be deleted? In {{days}} days it will be deleted for good, with its queue, games and photos. Only an admin can call that off.",
+    "requestFailed": "Could not request the deletion",
+    "banner": {
+      "label": "Scheduled for deletion",
+      "text": "This session will be deleted on {{date}}, together with its queue, games and photos."
+    },
+    "deleteTitle": "Delete session",
+    "deleteText": "Deletes the session now, together with its queue, games and photos. This cannot be undone.",
+    "deleteButton": "Delete session",
+    "deleteConfirm": "Delete “{{name}}” together with its queue, games and photos? This cannot be undone.",
+    "deleted": {
+      "title": "This session was deleted",
+      "text": "The session and everything in it is gone."
     }
   }
 }

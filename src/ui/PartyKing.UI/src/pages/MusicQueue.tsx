@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import useSWR, { useSWRConfig } from 'swr';
 import { DemoBanner } from '@/components/Demo/DemoBanner';
 import { DemoEnded } from '@/components/Demo/DemoEnded';
@@ -10,6 +10,8 @@ import { HostPlayer } from '@/components/Music/HostPlayer';
 import { NowPlayingCard } from '@/components/Music/NowPlayingCard';
 import { PhotoUploadDialog } from '@/components/Music/PhotoUploadDialog';
 import { Queue } from '@/components/Music/Queue';
+import { SessionDeleted } from '@/components/Music/SessionDeleted';
+import { SessionDeletionBanner } from '@/components/Music/SessionDeletionBanner';
 import { SessionHeader } from '@/components/Music/SessionHeader';
 import { SlideshowControls } from '@/components/Music/SlideshowControls';
 import { useAutoLyrics } from '@/components/Music/useAutoLyrics';
@@ -29,6 +31,7 @@ import { LyricsDto } from '@/service/endpoints/lyrics/types';
 import { useLyrics } from '@/service/endpoints/lyrics/useLyrics';
 import { useNowPlaying } from '@/service/endpoints/player/useNowPlaying';
 import { sessionsApi } from '@/service/endpoints/sessions/sessionsApi';
+import { useSessionGone } from '@/service/endpoints/sessions/useSessionGone';
 import { useViewerRole } from '@/service/endpoints/sessions/useViewerRole';
 import {
   applyLyricsOffsetChanged,
@@ -52,6 +55,7 @@ const JOIN_PARAM = 'join';
 export const MusicQueue = (): ReactNode => {
   const { t } = useTranslation();
   const { sessionId = '' } = useParams();
+  const navigate = useNavigate();
 
   const { mutate } = useSWRConfig();
   const [slideshowOpen, setSlideshowOpen] = useSlideshowOpen();
@@ -153,7 +157,18 @@ export const MusicQueue = (): ReactNode => {
   }, [unlocked, sessionId]);
   const demoEnded = isDemo && (timeUpFor === sessionId || (locked && openedSession.current === sessionId));
 
+  // The server answers 401 to a deleted session just as to one whose password changed, so a session that was open and
+  // is not in the list any more is the deleted one; the password form would only mislead
+  const sessionGone = useSessionGone(sessionId, !isDemo && locked && openedSession.current === sessionId);
+
   if (demoEnded) return <DemoEnded />;
+  if (sessionGone) return (
+    <div className="w-full min-h-full bg-slate-800 text-slate-400">
+      <div className="w-full max-w-xl mx-auto pt-6">
+        <SessionDeleted />
+      </div>
+    </div>
+  );
 
   return (
     <SessionHubContext.Provider value={hub}>
@@ -222,12 +237,14 @@ export const MusicQueue = (): ReactNode => {
         {session && !locked && (
           <>
             {demo && <DemoBanner demo={demo} onEnded={() => setTimeUpFor(sessionId)} />}
+            {session.deletionScheduledAt && <SessionDeletionBanner deletionScheduledAt={session.deletionScheduledAt} />}
             <SessionHeader
               session={session}
               isHost={isHost}
               isAdmin={isAdmin}
               onUploadPhotos={uploadDialog.show}
               onSessionChanged={() => void refreshSession()}
+              onSessionDeleted={() => navigate(ROUTE_PATHS.HOME)}
             />
             <NowPlayingCard nowPlaying={nowPlaying} />
             {/* An admin who is also the host plays the music themselves, so only the host's player is shown. */}

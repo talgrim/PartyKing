@@ -1,5 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
-import { API_URL, UI_URL } from './e2e/constants';
+import { API_URL, IDENTITY_URL, UI_URL } from './e2e/constants';
 
 export default defineConfig({
   testDir: './e2e',
@@ -22,6 +22,15 @@ export default defineConfig({
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: [
     {
+      // The accounts live in the identity service; this stands in for it (the API calls it, and so does the UI)
+      command: 'node e2e/fixtures/fake-identity/server.mjs',
+      url: `${IDENTITY_URL}/health`,
+      reuseExistingServer: false,
+      timeout: 30_000,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    },
+    {
       command: 'node e2e/start-api.mjs',
       url: `${API_URL}/health`,
       // A running dev API has other settings (admin, rate limits), so never reuse one
@@ -33,6 +42,7 @@ export default defineConfig({
     {
       command: 'npm start',
       url: UI_URL,
+      env: { VITE_IDENTITY_URL: IDENTITY_URL },
       reuseExistingServer: false,
       timeout: 60_000,
     },

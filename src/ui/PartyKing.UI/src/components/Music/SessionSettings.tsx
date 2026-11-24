@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogTitle } from '@mui/material';
 import { useIsDemo } from '@/service/endpoints/demo/useDemoConfig';
 import { SessionDto } from '@/service/endpoints/sessions/types';
 import { AutoLyricsForm } from './AutoLyricsForm';
+import { DeleteSessionForm } from './DeleteSessionForm';
 import { FallbackPlaylistForm } from './FallbackPlaylistForm';
 import { PhotoDownload } from './PhotoDownload';
 import { SessionNameForm } from './SessionNameForm';
@@ -24,16 +25,18 @@ type Props = {
   session: SessionDto;
   /** Called after a change that the session page shows, such as the name. */
   onChanged: () => void;
+  /** Called after the session was deleted from the settings, to leave a page with nothing left to show. */
+  onDeleted: () => void;
 };
 
 /**
- * Gear button with the session's settings in a dialog: name, password, fallback playlist, slideshow, photo download and lyrics. Meant for the host and
+ * Gear button with the session's settings in a dialog: name, password, fallback playlist, slideshow, photo download, lyrics and deleting the session. Meant for the host and
  * admins only; the API refuses everyone else.
  */
-export const SessionSettings = ({ session, onChanged }: Props): ReactNode => {
+export const SessionSettings = ({ session, onChanged, onDeleted }: Props): ReactNode => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  // The fallback playlist is a Spotify one
+  // The fallback playlist is a Spotify one, and a demo session ends on its own
   const isDemo = useIsDemo();
 
   return (
@@ -89,6 +92,11 @@ export const SessionSettings = ({ session, onChanged }: Props): ReactNode => {
           <SettingsSection title={t('views.lyrics')}>
             <AutoLyricsForm />
           </SettingsSection>
+          {!isDemo && (
+            <SettingsSection title={t('sessionDeletion.deleteTitle')}>
+              <DeleteSessionForm sessionId={session.id} sessionName={session.name} onDeleted={onDeleted} />
+            </SettingsSection>
+          )}
         </DialogContent>
       </Dialog>
     </>

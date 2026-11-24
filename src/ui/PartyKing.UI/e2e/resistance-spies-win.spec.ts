@@ -1,5 +1,6 @@
 import { Page } from '@playwright/test';
 import {
+  continueMission,
   playMission,
   rejectTeams,
   ResistanceGameSetup,
@@ -29,7 +30,26 @@ test('three failed missions end the game for the spies and reveal every role', a
   const session = await createSession();
   const setup = await startResistanceGame(session, { openAdmin, openGuest });
 
-  for (let mission = 0; mission < 3; mission++) {
+  // The first mission is played by hand: a member of the Resistance cannot play a Fail card, a spy can
+  const spies = await spyNames(setup);
+  const resistance = [...setup.guests.keys()].filter((name) => !spies.includes(name));
+  const [, leader] = await waitForLeader(setup);
+  await submitTeam(leader, [spies[0], resistance[0]]);
+  await voteAll(setup, 'Approve');
+
+  const card = (name: string, kind: 'Fail' | 'Success') =>
+    setup.guests.get(name)!.getByRole('region', { name: 'Mission' }).getByRole('button', { name: kind });
+  await expect(card(resistance[0], 'Fail')).toBeDisabled();
+  await expect(card(spies[0], 'Fail')).toBeEnabled();
+  // A disabled card is not just greyed out: the member of the Resistance can only play Success
+  await card(resistance[0], 'Success').click();
+  await card(spies[0], 'Fail').click();
+  const first = await waitForPhase(setup, 'MissionResult');
+  expect(first.missionResults).toHaveLength(1);
+  await expect(setup.admin.getByRole('status').filter({ hasText: 'The mission failed (Fail cards: 1)' })).toBeVisible();
+  await continueMission(leader);
+
+  for (let mission = 1; mission < 3; mission++) {
     await playMission(setup, 'fail');
   }
 
@@ -57,29 +77,4 @@ test('five rejected teams in a row end the game for the spies', async ({ createS
     await expect(page.getByRole('status').filter({ hasText: 'The spies won: 5 teams in a row were rejected' })).toBeVisible();
   }
   await expectRolesRevealed(setup.admin, setup);
-});
-
-test('a member of the Resistance cannot play a Fail card, a spy can', async ({ createSession, openAdmin, openGuest }) => {
-  const session = await createSession();
-  const setup = await startResistanceGame(session, { openAdmin, openGuest });
-  const spies = await spyNames(setup);
-  const resistance = [...setup.guests.keys()].filter((name) => !spies.includes(name));
-
-  // One spy and one member of the Resistance on the team
-  const [, leader] = await waitForLeader(setup);
-  const team = [spies[0], resistance[0]];
-  await submitTeam(leader, team);
-  await voteAll(setup, 'Approve');
-
-  const fail = (name: string) =>
-    setup.guests.get(name)!.getByRole('region', { name: 'Mission' }).getByRole('button', { name: 'Fail' });
-  await expect(fail(resistance[0])).toBeDisabled();
-  await expect(fail(spies[0])).toBeEnabled();
-
-  // A disabled card is not just greyed out: the member of the Resistance can only play Success
-  await setup.guests.get(resistance[0])!.getByRole('region', { name: 'Mission' }).getByRole('button', { name: 'Success' }).click();
-  await fail(spies[0]).click();
-  const view = await waitForPhase(setup, 'MissionResult');
-  expect(view.missionResults).toHaveLength(1);
-  await expect(setup.admin.getByRole('status').filter({ hasText: 'The mission failed (Fail cards: 1)' })).toBeVisible();
 });

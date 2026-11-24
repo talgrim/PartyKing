@@ -1,42 +1,42 @@
+using PartyKing.Domain.Entities.Playlists;
 using PartyKing.Domain.Repositories;
 using System.Diagnostics.Metrics;
-using PartyKing.Domain.Entities.Auth;
 using PartyKing.Infrastructure.Metrics;
 
 namespace PartyKing.Application.Tests;
 
 public class MeteredRepositoryTests
 {
-    private sealed class FakeAccountsRepository : IAccountsRepository
+    private sealed class FakeSavedPlaylistsRepository : ISavedPlaylistsRepository
     {
         public Exception? Failure { get; init; }
 
-        public Task<bool> AnyAdminAsync(CancellationToken cancellationToken) =>
-            Failure is null ? Task.FromResult(true) : throw Failure;
+        public Task<int> CountByOwnerAsync(Guid ownerAccountId, CancellationToken cancellationToken) =>
+            Run(() => 3);
 
-        public Task<Account?> GetByUsernameAsync(string username, CancellationToken cancellationToken) =>
-            Task.FromResult<Account?>(null);
+        public Task<IReadOnlyList<SavedPlaylistSummary>> ListByOwnerAsync(
+            Guid ownerAccountId,
+            CancellationToken cancellationToken) =>
+            Run<IReadOnlyList<SavedPlaylistSummary>>(() => []);
 
-        public Task<Account?> GetAsync(Guid id, CancellationToken cancellationToken) =>
-            Task.FromResult<Account?>(null);
+        public Task<SavedPlaylist?> GetAsync(Guid id, CancellationToken cancellationToken) =>
+            Run<SavedPlaylist?>(() => null);
 
-        public Task<bool> TryAddAsync(Account account, CancellationToken cancellationToken) => Task.FromResult(true);
+        public Task AddAsync(SavedPlaylist playlist, CancellationToken cancellationToken) =>
+            Run(() => 0);
 
-        public Task<bool> ChangePasswordAsync(Guid id, string passwordHash, Guid newSecurityStamp, CancellationToken cancellationToken) =>
-            Task.FromResult(true);
+        public Task<int> DeleteByOwnerAsync(Guid ownerAccountId, CancellationToken cancellationToken) =>
+            Run(() => 2);
 
-        public Task<bool> SignOutEverywhereAsync(Guid id, Guid newSecurityStamp, CancellationToken cancellationToken) =>
-            Task.FromResult(true);
-
-        public Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken) => Task.FromResult(true);
-
-        public Task<AccountPage> GetUsersPageAsync(string? search, int page, int pageSize, CancellationToken cancellationToken) =>
-            Task.FromResult(new AccountPage([], 0));
+        private Task<T> Run<T>(Func<T> result)
+        {
+            return Failure is null ? Task.FromResult(result()) : throw Failure;
+        }
     }
 
     private static List<Dictionary<string, object?>> Capture(
-        IAccountsRepository inner,
-        Func<IAccountsRepository, Task> act)
+        ISavedPlaylistsRepository inner,
+        Func<ISavedPlaylistsRepository, Task> act)
     {
         var tagSets = new List<Dictionary<string, object?>>();
         using var metrics = new RepositoryMetrics();
@@ -54,7 +54,7 @@ public class MeteredRepositoryTests
 
         try
         {
-            act(new MeteredAccountsRepository(inner, metrics)).GetAwaiter().GetResult();
+            act(new MeteredSavedPlaylistsRepository(inner, metrics)).GetAwaiter().GetResult();
         }
         catch (InvalidOperationException)
         {
@@ -64,40 +64,40 @@ public class MeteredRepositoryTests
     }
 
     [Fact]
-    public void AnyAdminAsync_OnSuccess_RecordsRepositoryOperationAndOutcome()
+    public void CountByOwnerAsync_OnSuccess_RecordsRepositoryOperationAndOutcome()
     {
-        var tags = Assert.Single(Capture(new FakeAccountsRepository(), r => r.AnyAdminAsync(default)));
+        var tags = Assert.Single(Capture(new FakeSavedPlaylistsRepository(), r => r.CountByOwnerAsync(Guid.NewGuid(), default)));
 
-        Assert.Equal("AccountsRepository", tags["repository"]);
-        Assert.Equal("AnyAdminAsync", tags["operation"]);
+        Assert.Equal("SavedPlaylistsRepository", tags["repository"]);
+        Assert.Equal("CountByOwnerAsync", tags["operation"]);
         Assert.Equal(RepositoryMetrics.SuccessOutcome, tags["outcome"]);
     }
 
     [Fact]
-    public void TryAddAsync_RecordsTheCall()
+    public void DeleteByOwnerAsync_RecordsTheCall()
     {
-        var tags = Assert.Single(Capture(new FakeAccountsRepository(), r => r.TryAddAsync(Account.Create(Guid.NewGuid(), "admin", "hash", AccountRole.Admin, Guid.NewGuid(), DateTime.UtcNow).Account!, default)));
+        var tags = Assert.Single(Capture(new FakeSavedPlaylistsRepository(), r => r.DeleteByOwnerAsync(Guid.NewGuid(), default)));
 
-        Assert.Equal("TryAddAsync", tags["operation"]);
+        Assert.Equal("DeleteByOwnerAsync", tags["operation"]);
         Assert.Equal(RepositoryMetrics.SuccessOutcome, tags["outcome"]);
     }
 
     [Fact]
-    public void AnyAdminAsync_WhenTheInnerCallThrows_RecordsAnExceptionOutcome()
+    public void CountByOwnerAsync_WhenTheInnerCallThrows_RecordsAnExceptionOutcome()
     {
-        var inner = new FakeAccountsRepository { Failure = new InvalidOperationException("boom") };
+        var inner = new FakeSavedPlaylistsRepository { Failure = new InvalidOperationException("boom") };
 
-        var tags = Assert.Single(Capture(inner, r => r.AnyAdminAsync(default)));
+        var tags = Assert.Single(Capture(inner, r => r.CountByOwnerAsync(Guid.NewGuid(), default)));
 
         Assert.Equal(RepositoryMetrics.ExceptionOutcome, tags["outcome"]);
     }
 
     [Fact]
-    public async Task AnyAdminAsync_ReturnsTheInnerResult()
+    public async Task CountByOwnerAsync_ReturnsTheInnerResult()
     {
         using var metrics = new RepositoryMetrics();
-        var repository = new MeteredAccountsRepository(new FakeAccountsRepository(), metrics);
+        var repository = new MeteredSavedPlaylistsRepository(new FakeSavedPlaylistsRepository(), metrics);
 
-        Assert.True(await repository.AnyAdminAsync(default));
+        Assert.Equal(3, await repository.CountByOwnerAsync(Guid.NewGuid(), default));
     }
 }

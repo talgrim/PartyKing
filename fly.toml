@@ -17,6 +17,14 @@ primary_region = 'fra'
   Logging__LogLevel__Microsoft__AspNetCore = 'Warning'
   Logging__LogLevel__Microsoft__EntityFrameworkCore = 'Warning'
   SpotifySettings__RedirectUri = 'https://party.talgrim.dev/callback'
+  # The mail about a guest's deletion request; the key is the secret MailSettings__ApiKey. The sender must be on the domain verified at Resend
+  MailSettings__Sender = 'partyking-requests@talgrim.dev'
+  MailSettings__Recipient = 'partyking@talgrim.dev'
+  MailSettings__ReplyTo = 'partyking@talgrim.dev'
+  # Accounts live in the identity service; the session cookie it sets on .talgrim.dev is only forwarded to it. The secret
+  # Identity__WebhookSecret signs its account deletion webhook (a signed POST to /api/internal/events)
+  Identity__BaseUrl = 'https://auth.talgrim.dev/'
+  Identity__CookieName = '__Secure-talgrim.session'
 
 [[mounts]]
   source = 'partyking_data'

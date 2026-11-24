@@ -5,6 +5,7 @@
 - `ReaderDbContext` and `WriterDbContext` both derive from `PartyKingDbContextBase`, which sets `UseSqlite("Data Source=PartyKing.db")` (or `PARTYKING_DATABASE_PATH`) in `OnConfiguring` only when the options are not configured already. A test can pass its own connection string through `AddDbContextFactory<WriterDbContext>(o => o.UseSqlite(...))`.
 - Both are registered with `AddDbContextFactory`. Repositories are **singletons** and create short-lived contexts through the factories.
 - Migrations target `WriterDbContext`; the snapshot is `WriterDbContextModelSnapshot.cs`.
+- Concurrency tokens: `Session.HostProfileId` and `Session.DeletionScheduledAt`. A save based on a stale value matches no row, and `SessionsRepository.UpdateAsync` runs the action again on a fresh load (at most 3 attempts). Details in `../features/sessions-and-auth.md`.
 
 ## SQLite waits
 

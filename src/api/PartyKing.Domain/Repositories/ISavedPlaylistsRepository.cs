@@ -15,4 +15,7 @@ public interface ISavedPlaylistsRepository
 
     /// <summary>Stores the playlist with all of its songs.</summary>
     Task AddAsync(SavedPlaylist playlist, CancellationToken cancellationToken);
+
+    /// <summary>Deletes every playlist the account saved, with its songs. Returns how many playlists there were.</summary>
+    Task<int> DeleteByOwnerAsync(Guid ownerAccountId, CancellationToken cancellationToken);
 }

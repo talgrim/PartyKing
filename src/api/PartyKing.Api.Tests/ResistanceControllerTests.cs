@@ -1,6 +1,5 @@
 using PartyKing.Application.Demo.Models;
 using PartyKing.Domain.Entities.Auth;
-using PartyKing.Application.Accounts;
 using PartyKing.API.Cookies;
 using ErrorOr;
 using Microsoft.AspNetCore.Authentication;
@@ -318,31 +317,10 @@ public class ResistanceControllerTests
 
         public void GrantHost(string profileId, HttpContext? httpContext) => throw new NotSupportedException();
         public void GrantSpotifyAccessToken(string spotifyAccessToken, int expiresIn, HttpContext? httpContext) => throw new NotSupportedException();
-        public void GrantAccount(AccountIdentity identity, HttpContext? httpContext) => throw new NotSupportedException();
-        public bool TryReadAccount(HttpRequest request, out Guid accountId, out Guid securityStamp, out AccountRole role)
-        {
-            accountId = Guid.Empty;
-            securityStamp = Guid.Empty;
-            role = AccountRole.User;
-
-            return false;
-        }
-        public void RevokeAccount(HttpContext? httpContext) => throw new NotSupportedException();
         public void GrantSessionAccess(Guid sessionId, string stamp, HttpContext? httpContext) => throw new NotSupportedException();
         public bool TryReadSessionAccess(HttpRequest request, Guid sessionId, out string stamp) => throw new NotSupportedException();
         public void GrantGamePlayer(GameKind game, Guid sessionId, GameSeat seat, HttpContext? httpContext) => throw new NotSupportedException();
         public void GrantDemoSession(Guid sessionId, string profileId, HttpContext? httpContext) => throw new NotSupportedException();
         public IReadOnlyList<StartedDemoSession> ReadDemoSessions(HttpRequest request) => throw new NotSupportedException();
-    }
-
-    private sealed class NoAuthenticationService : IAuthenticationService
-    {
-        public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) =>
-            Task.FromResult(AuthenticateResult.NoResult());
-
-        public Task ChallengeAsync(HttpContext context, string? scheme, AuthenticationProperties? properties) => Task.CompletedTask;
-        public Task ForbidAsync(HttpContext context, string? scheme, AuthenticationProperties? properties) => Task.CompletedTask;
-        public Task SignInAsync(HttpContext context, string? scheme, System.Security.Claims.ClaimsPrincipal principal, AuthenticationProperties? properties) => Task.CompletedTask;
-        public Task SignOutAsync(HttpContext context, string? scheme, AuthenticationProperties? properties) => Task.CompletedTask;
     }
 }

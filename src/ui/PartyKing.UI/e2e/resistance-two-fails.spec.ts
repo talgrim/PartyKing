@@ -14,7 +14,7 @@ import {
 import { expect, test } from './fixtures/test';
 
 // With seven or more players the fourth mission only fails from two Fail cards. Three spies sit among the seven, so the
-// team of four can hold one or two of them.
+// team of four can hold one or two of them. That two Fail cards do fail it is checked by `ResistanceRoundServiceTests`.
 
 /**
  * Plays the first three missions with the given outcomes (two of one kind, one of the other) so that nobody has won yet
@@ -68,22 +68,4 @@ test('a single Fail card does not fail the fourth mission, and the fifth fails f
   const over = await waitForPhase(setup, 'GameOver');
   expect(over.winner).toBe('Spy');
   expect(over.missionResults).toHaveLength(5);
-});
-
-test('two Fail cards fail the fourth mission', async ({ createSession, openAdmin, openGuest }) => {
-  const session = await createSession();
-  const setup = await startResistanceGame(session, { openAdmin, openGuest }, { players: 7 });
-  const { leader, view, spies, resistance } = await reachFourthMission(setup, ['success', 'fail', 'success']);
-
-  const team = [spies[0], spies[1], ...resistance.slice(0, view.requiredTeamSize! - 2)];
-  await submitTeam(leader, team);
-  await voteAll(setup, 'Approve');
-  await waitForPhase(setup, 'PlayingMission');
-  await playMissionCards(setup, team, [spies[0], spies[1]]);
-
-  const resolved = await waitForPhase(setup, 'MissionResult');
-  expect(resolved.missionResults).toHaveLength(4);
-  await expect(setup.admin.getByRole('status').filter({ hasText: 'The mission failed (Fail cards: 2)' })).toBeVisible();
-  // 2:2 again, so the game goes on
-  expect(resolved.winner).toBeNull();
 });

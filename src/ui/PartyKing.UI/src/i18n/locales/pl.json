@@ -33,30 +33,16 @@
     "passwordProtected": "Chroniona hasłem"
   },
   "account": {
-    "title": "Konto",
     "settings": "Ustawienia konta",
-    "username": "Nazwa użytkownika",
-    "password": "Hasło",
     "logIn": "Zaloguj się",
     "signUp": "Zarejestruj się",
-    "passwordHint": "Co najmniej 8 znaków",
-    "signedInAs": "Zalogowano jako {{name}}",
-    "changePassword": "Zmień hasło",
-    "currentPassword": "Obecne hasło",
-    "newPassword": "Nowe hasło",
-    "passwordChanged": "Hasło zmienione",
-    "logOut": "Wyloguj się",
-    "logOutEverywhere": "Wyloguj wszędzie",
-    "confirmLogOutEverywhere": "Wylogować na wszystkich urządzeniach, także na tym?",
-    "deleteAccount": "Usuń konto",
-    "deleteWarning": "To trwale usunie Twoje konto. Podaj hasło, aby potwierdzić.",
-    "passwordToDelete": "Hasło do potwierdzenia",
-    "confirmDelete": "Usuń moje konto"
+    "logOut": "Wyloguj się"
   },
   "admin": {
     "allSessions": "Wszystkie sesje",
     "title": "Administrator",
     "checkingLogin": "Sprawdzanie logowania…",
+    "loginNeeded": "Zaloguj się kontem administratora, aby zarządzać sesjami.",
     "apiUnreachable": "Nie można połączyć się z API",
     "logOut": "Wyloguj się",
     "newSessionNamePlaceholder": "Nazwa nowej sesji (opcjonalnie)",
@@ -76,27 +62,10 @@
     "delete": "Usuń",
     "registeredUsers": "Zarejestrowani użytkownicy",
     "notAnAdmin": "Jesteś zalogowany jako {{name}}, a to nie jest konto administratora.",
-    "users": {
-      "title": "Zarejestrowani użytkownicy",
-      "adminOnly": "Użytkowników widzi tylko administrator.",
-      "toAdminPage": "Przejdź do strony administratora",
-      "searchLabel": "Szukaj użytkowników po nazwie",
-      "searchPlaceholder": "Szukaj po nazwie użytkownika",
-      "loading": "Wczytywanie użytkowników…",
-      "loadError": "Nie udało się wczytać użytkowników",
-      "none": "Nikt jeszcze się nie zarejestrował.",
-      "noMatch": "Żaden użytkownik nie pasuje do „{{search}}”.",
-      "registered": "Zarejestrowano {{date}}",
-      "resetPassword": "Resetuj hasło",
-      "resetTitle": "Resetuj hasło użytkownika {{name}}",
-      "newPassword": "Nowe hasło",
-      "passwordReset": "Hasło użytkownika {{name}} zostało zresetowane. Został wylogowany wszędzie.",
-      "pagination": "Strony użytkowników",
-      "previous": "Poprzednia",
-      "next": "Następna",
-      "pageOf": "Strona {{page}} z {{pages}}",
-      "total": "Użytkownicy: {{count}}"
-    }
+    "deletionScheduled": "Usunięcie zażądane przez gościa, zaplanowane na {{date}}",
+    "cancelDeletion": "Anuluj usunięcie",
+    "confirmCancelDeletion": "Anulować usunięcie „{{name}}”? Sesja zostanie.",
+    "deletionCancelled": "Usunięcie anulowane"
   },
   "imagePreview": {
     "name": "Nazwa:",
@@ -1259,6 +1228,23 @@
         "title": "Kalkulator alkoholu we krwi",
         "text": "Szacunkowa zawartość alkoholu we krwi na podstawie tego, co wypiłeś. To tylko szacunek i nigdy nie powód, żeby uznać, że możesz prowadzić."
       }
+    }
+  },
+  "sessionDeletion": {
+    "requestTitle": "Poproś o usunięcie tej sesji",
+    "requestConfirm": "Poprosić o usunięcie tej sesji? Za {{days}} dni zostanie usunięta na stałe, razem z kolejką, grami i zdjęciami. Anulować to może tylko administrator.",
+    "requestFailed": "Nie udało się poprosić o usunięcie",
+    "banner": {
+      "label": "Zaplanowane usunięcie",
+      "text": "Ta sesja zostanie usunięta {{date}}, razem z kolejką, grami i zdjęciami."
+    },
+    "deleteTitle": "Usuń sesję",
+    "deleteText": "Usuwa sesję od razu, razem z kolejką, grami i zdjęciami. Tego nie można cofnąć.",
+    "deleteButton": "Usuń sesję",
+    "deleteConfirm": "Usunąć „{{name}}” razem z kolejką, grami i zdjęciami? Tego nie można cofnąć.",
+    "deleted": {
+      "title": "Ta sesja została usunięta",
+      "text": "Sesji i wszystkiego, co w niej było, już nie ma."
     }
   }
 }

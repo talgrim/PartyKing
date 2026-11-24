@@ -22,6 +22,8 @@ export type SessionDto = {
   fallbackShuffle?: boolean;
   /** Id of the saved playlist played when the queue is empty; null when the fallback is a Spotify playlist or none. */
   fallbackSavedPlaylistId?: string | null;
+  /** ISO instant at which the session is deleted because a guest asked for it; absent or null when no deletion is scheduled. */
+  deletionScheduledAt?: string | null;
 };
 
 // Mirrors PartyKing.Contract.V1.Spotify.PlaylistDto

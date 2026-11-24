@@ -11,12 +11,6 @@ using PartyKing.Application.Configuration;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Infrastructure;
 
-// `dotnet run --project PartyKing.API -- hash-password [password]` prints a hash for AdminSettings:PasswordHash
-if (args is ["hash-password", ..])
-{
-    return PasswordHashTool.Run(args.Skip(1).ToArray());
-}
-
 // The web root is no longer in git and is only picked up by the host when it exists, so create it first
 Directory.CreateDirectory(
     Environment.GetEnvironmentVariable("ASPNETCORE_WEBROOT") ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"));
@@ -51,23 +45,13 @@ var demoSettings = builder.Configuration.GetDemoConfiguration();
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    // Several guests can share one Wi-Fi (one IP), so signing in is more generous than the session password.
-    // Changing and deleting an account check a password too, so they share this limit
-    options.AddPolicy(AccountController.LoginRateLimitPolicy, context =>
+    // The identity service retries a failed delivery, but a few a minute is plenty; the rest is somebody guessing
+    options.AddPolicy(InternalEventsController.RateLimitPolicy, context =>
         RateLimitPartition.GetFixedWindowLimiter(
             context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 20,
-                Window = TimeSpan.FromMinutes(1)
-            }));
-    // Every registration costs a PBKDF2 run and a row
-    options.AddPolicy(AccountController.RegisterRateLimitPolicy, context =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = 10,
+                PermitLimit = 30,
                 Window = TimeSpan.FromMinutes(1)
             }));
     // Every attempt costs a PBKDF2 run, and a short password is easy to guess, so guessing is capped per IP
@@ -78,6 +62,16 @@ builder.Services.AddRateLimiter(options =>
             {
                 PermitLimit = 10,
                 Window = TimeSpan.FromMinutes(1)
+            }));
+    // A request is idempotent and costs only a lookup, but it is open to every guest and a new one can send mail: keep a flood small.
+    // Guests on one Wi-Fi share an IP, and a real request is made once per session
+    options.AddPolicy(SessionsController.DeletionRequestRateLimitPolicy, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromHours(1)
             }));
     // Every start makes a session with a host and its files, and a demo is open to anybody
     options.AddPolicy(DemoController.StartRateLimitPolicy, context =>
@@ -173,7 +167,6 @@ app.MapControllers();
 app.MapHub<SessionHub>(SessionHub.Path);
 
 await app.Services.MigrateDb();
-await app.Services.SeedAdminAsync();
 await app.Services.GetRequiredService<ISlideshowService>().InitializeAsync(app.Environment.WebRootPath, CancellationToken.None);
 
 app.Run();

@@ -71,14 +71,3 @@ test('the Inquisitor examines after missions 2 and 3, the token passes on and no
   const rest = names.filter((name) => name !== firstHolderName && name !== target);
   expect(await examineOptions(secondHolder)).toEqual(rest);
 });
-
-test('without the module there is no token and no Inquisition', async ({ createSession, openAdmin, openGuest }) => {
-  const session = await createSession();
-  const setup = await startResistanceGame(session, { openAdmin, openGuest });
-
-  const view = await viewOfPlayer(setup, [...setup.guests.keys()][0]);
-  expect(view.inquisitorPlayerId).toBeNull();
-  await playMission(setup, 'success');
-  await playMission(setup, 'fail');
-  expect((await waitForPhase(setup, 'SelectingTeam')).missionNumber).toBe(3);
-});

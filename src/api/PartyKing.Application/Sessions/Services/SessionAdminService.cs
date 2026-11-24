@@ -1,12 +1,12 @@
 using PartyKing.Domain.Repositories;
 using ErrorOr;
 using Microsoft.Extensions.Logging;
-using PartyKing.Application.Accounts.Services;
 using PartyKing.Application.Mappings;
 using PartyKing.Application.Sessions.Helpers;
 using PartyKing.Application.System;
 using PartyKing.Contract.V1.Sessions;
 using PartyKing.Domain.Entities.Sessions;
+using PartyKing.Domain.Enums;
 
 namespace PartyKing.Application.Sessions.Services;
 
@@ -20,6 +20,12 @@ public interface ISessionAdminService
 
     /// <summary>Removes the host so someone else can claim the session.</summary>
     Task<ErrorOr<Success>> ReleaseAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Calls off the deletion a guest asked for; the session stays. Only an admin may (the host has the immediate
+    /// delete instead). Succeeds when no deletion was scheduled, so a second click is harmless.
+    /// </summary>
+    Task<ErrorOr<Success>> CancelDeletionAsync(Guid id, CancellationToken cancellationToken);
 }
 
 internal class SessionAdminService : ISessionAdminService
@@ -96,5 +102,12 @@ internal class SessionAdminService : ISessionAdminService
         var released = await _sessionsRepository.ReleaseAsync(id, cancellationToken);
 
         return released ? Result.Success : SessionErrors.NotFound();
+    }
+
+    public async Task<ErrorOr<Success>> CancelDeletionAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _sessionsRepository.CancelDeletionAsync(id, cancellationToken);
+
+        return result == SessionDeletionCancelResult.SessionNotFound ? SessionErrors.NotFound() : Result.Success;
     }
 }

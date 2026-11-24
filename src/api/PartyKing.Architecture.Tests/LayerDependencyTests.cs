@@ -13,6 +13,7 @@ public class LayerDependencyTests
         "PartyKing.Infrastructure",
         "PartyKing.Infrastructure.Llm",
         "PartyKing.Infrastructure.Lyrics",
+        "PartyKing.Infrastructure.Mail",
         "PartyKing.Infrastructure.Spotify",
         "PartyKing.Infrastructure.Youtube"
     ];

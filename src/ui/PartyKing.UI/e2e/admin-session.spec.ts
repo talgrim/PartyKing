@@ -5,10 +5,12 @@ test('an admin logs in, creates a session and guests find it by its code', async
   const name = `Admin made ${Date.now().toString(36)}`;
 
   await page.goto('/admin');
+  await page.getByRole('link', { name: 'Log in' }).first().click();
   await page.getByLabel('Username').fill(ADMIN_USERNAME);
   await page.getByLabel('Password').fill(ADMIN_PASSWORD);
-  await page.locator('form').getByRole('button', { name: 'Log in' }).click();
+  await page.getByRole('button', { name: 'Log in' }).click();
 
+  // The identity service sent the browser back to the admin page
   await page.getByLabel('New session name').fill(name);
   await page.getByLabel('New session password').fill('party-pass');
   await page.getByRole('button', { name: 'Create session' }).click();
@@ -34,12 +36,15 @@ test('an admin logs in, creates a session and guests find it by its code', async
   await expect(page.getByText('Session deleted')).toBeVisible();
 });
 
-test('a wrong admin password is refused', async ({ page }) => {
+test('a wrong admin password is refused by the identity service, and the admin page stays shut', async ({ page }) => {
   await page.goto('/admin');
+  await page.getByRole('link', { name: 'Log in' }).first().click();
   await page.getByLabel('Username').fill(ADMIN_USERNAME);
   await page.getByLabel('Password').fill('not-the-password');
-  await page.locator('form').getByRole('button', { name: 'Log in' }).click();
+  await page.getByRole('button', { name: 'Log in' }).click();
 
+  await expect(page.getByRole('alert')).toHaveText('Invalid username or password');
+  await page.goto('/admin');
   await expect(page.getByLabel('New session name')).toBeHidden();
-  await expect(page.locator('form').getByRole('button', { name: 'Log in' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Log in' }).first()).toBeVisible();
 });

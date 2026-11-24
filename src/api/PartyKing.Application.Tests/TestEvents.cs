@@ -1,5 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using PartyKing.Application.Configuration;
+using PartyKing.Application.Ports;
 using PartyKing.Application.Events;
 using PartyKing.Application.Games.Handlers;
 using PartyKing.Application.Lyrics.Handlers;
@@ -17,6 +21,7 @@ using PartyKing.Domain.Events.Games.Ringo;
 using PartyKing.Domain.Events.Lyrics;
 using PartyKing.Domain.Events.Sessions;
 using PartyKing.Domain.Events.Slideshow;
+using PartyKing.Domain.Repositories;
 
 namespace PartyKing.Application.Tests;
 
@@ -97,6 +102,24 @@ internal static class TestEvents
         services.AddScoped<IDomainEventHandler<FallbackPlaylistChanged>, FallbackPlaylistHandler>();
         services.AddScoped<IDomainEventHandler<FallbackPlaylistCleared>, FallbackPlaylistHandler>();
         services.AddScoped<IDomainEventHandler<SessionDeleted>, FallbackPlaylistHandler>();
+
+        return new DomainEventDispatcher(
+            services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<DomainEventDispatcher>.Instance);
+    }
+
+    /// <summary>The real dispatcher with the handler that mails the operator about a deletion request: what the API wires up.</summary>
+    public static IDomainEventDispatcher SessionDeletionDispatcher(
+        ISessionsRepository sessions,
+        IMailClient mailClient,
+        MailConfiguration mailConfiguration)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(sessions);
+        services.AddSingleton(mailClient);
+        services.AddSingleton(Options.Create(mailConfiguration));
+        services.AddSingleton<ILogger<SessionDeletionMailHandler>>(NullLogger<SessionDeletionMailHandler>.Instance);
+        services.AddScoped<IDomainEventHandler<SessionDeletionScheduled>, SessionDeletionMailHandler>();
 
         return new DomainEventDispatcher(
             services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),

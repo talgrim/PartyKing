@@ -559,6 +559,85 @@ public class SessionTests
     }
 
     [Fact]
+    public void ScheduleDeletion_OfASessionWithoutOne_SetsTheTimeToNowPlusTheDelay_AndRaisesTheEvent()
+    {
+        var session = NewSession();
+
+        var outcome = session.ScheduleDeletion(Now, TimeSpan.FromDays(7));
+
+        var expected = Now.AddDays(7);
+        Assert.Equal(SessionDeletionScheduleOutcome.Scheduled, outcome);
+        Assert.Equal(expected, session.DeletionScheduledAt);
+        Assert.Equal(new SessionDeletionScheduled(session.Id, expected), Assert.Single(session.DrainEvents()));
+    }
+
+    [Fact]
+    public void ScheduleDeletion_Again_KeepsTheFirstTime_AndRaisesNothing()
+    {
+        var session = NewSession();
+        session.ScheduleDeletion(Now, TimeSpan.FromDays(7));
+        session.DrainEvents();
+
+        var outcome = session.ScheduleDeletion(Now.AddDays(3), TimeSpan.FromDays(7));
+
+        Assert.Equal(SessionDeletionScheduleOutcome.AlreadyScheduled, outcome);
+        Assert.Equal(Now.AddDays(7), session.DeletionScheduledAt);
+        Assert.Empty(session.DrainEvents());
+    }
+
+    [Fact]
+    public void CancelDeletion_OfAScheduledDeletion_ClearsIt_AndRaisesTheEvent()
+    {
+        var session = NewSession();
+        session.ScheduleDeletion(Now, TimeSpan.FromDays(7));
+        session.DrainEvents();
+
+        var outcome = session.CancelDeletion();
+
+        Assert.Equal(SessionDeletionCancelOutcome.Cancelled, outcome);
+        Assert.Null(session.DeletionScheduledAt);
+        Assert.Equal(new SessionDeletionCancelled(session.Id), Assert.Single(session.DrainEvents()));
+    }
+
+    [Fact]
+    public void CancelDeletion_WithoutAScheduledDeletion_ChangesAndRaisesNothing()
+    {
+        var session = NewSession();
+
+        var outcome = session.CancelDeletion();
+
+        Assert.Equal(SessionDeletionCancelOutcome.NotScheduled, outcome);
+        Assert.Empty(session.DrainEvents());
+    }
+
+    [Fact]
+    public void ACancelledDeletion_CanBeScheduledAgain_FromTheNewTime()
+    {
+        var session = NewSession();
+        session.ScheduleDeletion(Now, TimeSpan.FromDays(7));
+        session.CancelDeletion();
+
+        var outcome = session.ScheduleDeletion(Now.AddDays(1), TimeSpan.FromDays(7));
+
+        Assert.Equal(SessionDeletionScheduleOutcome.Scheduled, outcome);
+        Assert.Equal(Now.AddDays(8), session.DeletionScheduledAt);
+    }
+
+    [Fact]
+    public void IsDueForDeletion_IsFalseWithoutASchedule_AndBeforeTheInstant_AndTrueFromTheInstantOn()
+    {
+        var session = NewSession();
+        Assert.False(session.IsDueForDeletion(Now.AddYears(1)));
+
+        session.ScheduleDeletion(Now, TimeSpan.FromDays(7));
+        var due = Now.AddDays(7);
+
+        Assert.False(session.IsDueForDeletion(due.AddTicks(-1)));
+        Assert.True(session.IsDueForDeletion(due));
+        Assert.True(session.IsDueForDeletion(due.AddTicks(1)));
+    }
+
+    [Fact]
     public void DrainEvents_ForgetsWhatItReturned()
     {
         var session = NewSession();

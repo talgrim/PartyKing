@@ -4,9 +4,9 @@ import { SWRConfig } from 'swr';
 import { SessionHeader } from './SessionHeader';
 import { ACCOUNT_HINT_KEY } from '@/service/endpoints/account/useAccount';
 
-const mocks = vi.hoisted(() => ({ me: vi.fn(), getDemoConfig: vi.fn() }));
+const mocks = vi.hoisted(() => ({ me: vi.fn(), getDemoConfig: vi.fn(), requestDeletion: vi.fn() }));
 
-vi.mock('@/service/endpoints/sessions/sessionsApi', () => ({ sessionsApi: {} }));
+vi.mock('@/service/endpoints/sessions/sessionsApi', () => ({ sessionsApi: { requestDeletion: mocks.requestDeletion } }));
 vi.mock('@/service/endpoints/account/accountApi', () => ({ accountApi: { me: mocks.me } }));
 vi.mock('@/service/endpoints/demo/demoApi', () => ({ demoApi: { getConfig: mocks.getDemoConfig } }));
 vi.mock('./SaveQueueAsPlaylist', () => ({ SaveQueueAsPlaylist: () => <button>Save as playlist</button> }));
@@ -156,6 +156,66 @@ describe('SessionHeader', () => {
 
       await vi.waitFor(() => expect(mocks.me).toHaveBeenCalled());
       expect(screen.queryByRole('button', { name: 'Save as playlist' })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('deleting the session', () => {
+    const renderHeader = async (props: { isHost?: boolean; isAdmin?: boolean; deletionScheduledAt?: string } = {}) => {
+      const onSessionChanged = vi.fn();
+      render(
+        <SWRConfig value={{ provider: () => new Map() }}>
+          <SessionHeader
+            session={{ ...session, deletionScheduledAt: props.deletionScheduledAt }}
+            isHost={props.isHost ?? false}
+            isAdmin={props.isAdmin}
+            onSessionChanged={onSessionChanged}
+          />
+        </SWRConfig>,
+      );
+      await waitFor(() => expect(mocks.getDemoConfig).toHaveBeenCalled());
+
+      return onSessionChanged;
+    };
+
+    beforeEach(() => {
+      mocks.requestDeletion.mockReset().mockResolvedValue(undefined);
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+    });
+
+    afterEach(() => vi.mocked(window.confirm).mockRestore());
+
+    it('lets a guest ask for the deletion, and refreshes the session so the date shows', async () => {
+      const onSessionChanged = await renderHeader();
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Request deletion of this session' }));
+
+      await waitFor(() => expect(onSessionChanged).toHaveBeenCalledTimes(1));
+      expect(mocks.requestDeletion).toHaveBeenCalledWith('s');
+    });
+
+    it('shows the reason in the header when the request fails', async () => {
+      mocks.requestDeletion.mockRejectedValueOnce({ status: 429, message: 'Too many requests' });
+      await renderHeader();
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Request deletion of this session' }));
+
+      expect(await screen.findByText('Too many requests')).toBeVisible();
+    });
+
+    it.each([
+      ['the host', { isHost: true }],
+      ['an admin', { isAdmin: true }],
+    ])('does not offer %s the request, who delete at once in the settings', async (_name, props) => {
+      await renderHeader(props);
+
+      expect(screen.queryByRole('button', { name: 'Request deletion of this session' })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Session settings' })).toBeVisible();
+    });
+
+    it('no longer offers the request once a deletion is scheduled', async () => {
+      await renderHeader({ deletionScheduledAt: '2026-11-28T14:05:00Z' });
+
+      expect(screen.queryByRole('button', { name: 'Request deletion of this session' })).not.toBeInTheDocument();
     });
   });
 });

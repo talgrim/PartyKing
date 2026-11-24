@@ -4,6 +4,7 @@ import {
   startResistanceGame,
   submitTeam,
   viewOf,
+  viewOfPlayer,
   vote,
   waitForLeader,
   waitForPhase,
@@ -17,6 +18,9 @@ test('a full Resistance game: three successful missions end it for the Resistanc
 }) => {
   const session = await createSession();
   const setup = await startResistanceGame(session, { openAdmin, openGuest });
+
+  // Without the Inquisitor module there is no token
+  expect((await viewOfPlayer(setup, [...setup.guests.keys()][0])).inquisitorPlayerId).toBeNull();
 
   // Five players: 2, 3 and 2 people go on the first three missions
   const teamSizes: (number | null)[] = [];
@@ -33,26 +37,7 @@ test('a full Resistance game: three successful missions end it for the Resistanc
   }
 });
 
-test('a rejected team passes the lead on and counts towards the five-rejection loss', async ({
-  createSession,
-  openAdmin,
-  openGuest,
-}) => {
-  const session = await createSession();
-  const setup = await startResistanceGame(session, { openAdmin, openGuest });
-
-  const [firstName] = await waitForLeader(setup);
-  const mission = (await waitForPhase(setup, 'SelectingTeam')).missionNumber;
-  await rejectTeams(setup, 1);
-
-  // The lead moved to another player, who picks a new team for the same mission
-  const [secondName, second] = await waitForLeader(setup);
-  expect(secondName).not.toBe(firstName);
-  await expect(second.getByRole('status').filter({ hasText: 'Rejected teams in a row: 1/5' })).toBeVisible();
-  expect((await waitForPhase(setup, 'SelectingTeam')).missionNumber).toBe(mission);
-});
-
-test('only the leader gets the team picker, and only a team of the right size can be submitted', async ({
+test('only the leader gets the team picker, only a team of the right size can be submitted, and a rejected team passes the lead on', async ({
   createSession,
   openAdmin,
   openGuest,
@@ -80,6 +65,15 @@ test('only the leader gets the team picker, and only a team of the right size ca
   await picker.getByText(second, { exact: true }).click();
   await expect(submit).toBeDisabled();
   await expect(picker.getByRole('checkbox', { name: third, exact: true })).toBeEnabled();
+  await picker.getByText(first, { exact: true }).click();
+
+  // A rejected team passes the lead on and counts towards the five-rejection loss
+  const mission = (await waitForPhase(setup, 'SelectingTeam')).missionNumber;
+  await rejectTeams(setup, 1);
+  const [secondName, nextLeader] = await waitForLeader(setup);
+  expect(secondName).not.toBe(leaderName);
+  await expect(nextLeader.getByRole('status').filter({ hasText: 'Rejected teams in a row: 1/5' })).toBeVisible();
+  expect((await waitForPhase(setup, 'SelectingTeam')).missionNumber).toBe(mission);
 });
 
 test('a tied vote rejects the team', async ({ createSession, openAdmin, openGuest }) => {

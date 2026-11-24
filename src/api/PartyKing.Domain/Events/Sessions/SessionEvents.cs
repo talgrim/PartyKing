@@ -24,6 +24,15 @@ public sealed record HostReleased(Guid SessionId, string? PreviousHostProfileId)
 public sealed record SessionDeleted(Guid SessionId, string? HostProfileId, string? FallbackPlaylistId) : IDomainEvent;
 
 /// <summary>
+/// A guest asked for the session to be deleted and it will be at <paramref name="DeletionScheduledAt"/> (UTC). Raised
+/// once: asking again keeps the first time and raises nothing.
+/// </summary>
+public sealed record SessionDeletionScheduled(Guid SessionId, DateTime DeletionScheduledAt) : IDomainEvent;
+
+/// <summary>An admin called off the scheduled deletion; the session stays.</summary>
+public sealed record SessionDeletionCancelled(Guid SessionId) : IDomainEvent;
+
+/// <summary>
 /// A fallback playlist was set (or saved again, e.g. to change the shuffle flag) and rewound to its start.
 /// <paramref name="PlaylistId"/> is what <paramref name="Kind"/> says: a Spotify playlist id or the id of an account's
 /// saved playlist. <paramref name="PreviousSpotifyPlaylistId"/> is the Spotify playlist it replaced, if any, so its

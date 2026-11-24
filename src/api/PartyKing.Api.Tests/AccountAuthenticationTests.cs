@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.DataProtection;
@@ -7,24 +8,25 @@ using PartyKing.API;
 using PartyKing.API.Authentication;
 using PartyKing.API.Cookies;
 using PartyKing.API.Metrics;
-using PartyKing.Application.Accounts;
-using PartyKing.Application.Accounts.Services;
-using PartyKing.Contract.V1.Accounts;
-using PartyKing.Domain.Entities.Auth;
-using ErrorOr;
+using PartyKing.Application.Configuration;
+using PartyKing.Application.Ports;
+using PartyKing.Contract.V1.Enums;
 
 namespace PartyKing.Api.Tests;
 
 /// <summary>
-/// The real authentication wiring (the account scheme, the policies) with a fake account service: a cookie signs an
-/// account in only while its stamp matches, and only an account that is an admin now counts as one. A signed-in user
-/// must never be an admin, in the policy or when a session asks who the caller is.
+/// The real authentication wiring (the account scheme, the policies) with a fake identity client: the session cookie
+/// signs an account in only while the identity service knows it, and only an account that is an admin now counts as one.
+/// A signed-in user must never be an admin, in the policy or when a session asks who the caller is, and a request
+/// without the session cookie must never cost a call.
 /// </summary>
 public class AccountAuthenticationTests : IDisposable
 {
-    private readonly FakeAccountService _accounts = new();
+    private static readonly string CookieName = new IdentityConfiguration().CookieName;
+
+    private readonly FakeIdentityClient _identity = new();
     private readonly ServiceProvider _provider;
-    private readonly SignedCookies _cookies;
+    private readonly ISignedCookies _cookies;
     private readonly List<IServiceScope> _scopes = [];
 
     public AccountAuthenticationTests()
@@ -32,13 +34,14 @@ public class AccountAuthenticationTests : IDisposable
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddWebEncoders();
+        services.AddOptions<IdentityConfiguration>();
         services.AddSingleton<IDataProtectionProvider>(DataProtectionProvider.Create("partyking-tests"));
         services.AddSingleton<AuthorizationMetrics>();
-        services.AddSingleton<IAccountService>(_accounts);
+        services.AddSingleton<IIdentityClient>(_identity);
         DependencyInjection.AddAuthorization(services);
 
         _provider = services.BuildServiceProvider();
-        _cookies = (SignedCookies)_provider.GetRequiredService<ISignedCookies>();
+        _cookies = _provider.GetRequiredService<ISignedCookies>();
     }
 
     public void Dispose()
@@ -48,21 +51,18 @@ public class AccountAuthenticationTests : IDisposable
     }
 
     /// <summary>
-    /// A request that carries the account cookie the server would set for this identity (and none when it is null).
-    /// Each request has its own DI scope, as in the server: ASP.NET keeps the authentication handler of a scheme per scope.
+    /// A request that carries the given cookie header (none when it is null). Each request has its own DI scope, as in
+    /// the server: ASP.NET keeps the authentication handler of a scheme per scope.
     /// </summary>
-    private HttpContext RequestWith(AccountIdentity? cookieOf)
+    private HttpContext RequestWith(string? cookieHeader)
     {
         var scope = _provider.CreateScope();
         _scopes.Add(scope);
         var http = new DefaultHttpContext { RequestServices = scope.ServiceProvider };
 
-        if (cookieOf is not null)
+        if (cookieHeader is not null)
         {
-            var response = new DefaultHttpContext();
-            _cookies.GrantAccount(cookieOf, response);
-            var setCookie = response.Response.Headers.SetCookie.ToString().Split(';')[0];
-            http.Request.Headers.Cookie = setCookie;
+            http.Request.Headers.Cookie = cookieHeader;
         }
 
         return http;
@@ -78,21 +78,21 @@ public class AccountAuthenticationTests : IDisposable
         return await evaluator.AuthorizeAsync(policy, authentication, http, null);
     }
 
-    private AccountIdentity SignedUp(AccountRole role)
+    /// <summary>An account the identity service knows, and the request of a browser that has its session cookie.</summary>
+    private HttpContext SignedUp(AccountRole role, out IdentityResult.Account account)
     {
-        var identity = new AccountIdentity(Guid.NewGuid(), role, Guid.NewGuid());
-        _accounts.Known.Add(identity);
+        var token = Guid.NewGuid().ToString("N");
+        account = new IdentityResult.Account(Guid.NewGuid(), "ann", role);
+        _identity.Known[token] = account;
 
-        return identity;
+        return RequestWith($"{CookieNames.User}=host; {CookieName}={token}");
     }
 
     [Fact]
     public async Task AUser_PassesTheAccountPolicy_ButNotTheAdminOne()
     {
-        var user = SignedUp(AccountRole.User);
-
-        var asAccount = await EvaluateAsync(Policies.Account, RequestWith(user));
-        var asAdmin = await EvaluateAsync(Policies.Admin, RequestWith(user));
+        var asAccount = await EvaluateAsync(Policies.Account, SignedUp(AccountRole.User, out _));
+        var asAdmin = await EvaluateAsync(Policies.Admin, SignedUp(AccountRole.User, out _));
 
         Assert.True(asAccount.Succeeded);
         Assert.False(asAdmin.Succeeded);
@@ -102,20 +102,26 @@ public class AccountAuthenticationTests : IDisposable
     [Fact]
     public async Task AnAdmin_PassesBothPolicies()
     {
-        var admin = SignedUp(AccountRole.Admin);
+        Assert.True((await EvaluateAsync(Policies.Account, SignedUp(AccountRole.Admin, out _))).Succeeded);
+        Assert.True((await EvaluateAsync(Policies.Admin, SignedUp(AccountRole.Admin, out _))).Succeeded);
+    }
 
-        Assert.True((await EvaluateAsync(Policies.Account, RequestWith(admin))).Succeeded);
-        Assert.True((await EvaluateAsync(Policies.Admin, RequestWith(admin))).Succeeded);
+    [Fact]
+    public async Task TheAccountTheIdentityServiceNamed_IsTheOneTheRequestActsAs()
+    {
+        var http = SignedUp(AccountRole.User, out var account);
+
+        var result = await http.AuthenticateAsync(SchemeNames.Account);
+
+        Assert.Equal(account.Id.ToString(), result.Principal!.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
+        Assert.Equal("ann", result.Principal.Identity!.Name);
     }
 
     [Fact]
     public async Task AUserIsNotAnAdminToASession_ButAnAdminIs()
     {
-        var user = SignedUp(AccountRole.User);
-        var admin = SignedUp(AccountRole.Admin);
-
-        var asUser = await RequestWith(user).ReadSessionCallerAsync(_cookies);
-        var asAdmin = await RequestWith(admin).ReadSessionCallerAsync(_cookies);
+        var asUser = await SignedUp(AccountRole.User, out _).ReadSessionCallerAsync(_cookies);
+        var asAdmin = await SignedUp(AccountRole.Admin, out _).ReadSessionCallerAsync(_cookies);
         var anonymous = await RequestWith(null).ReadSessionCallerAsync(_cookies);
 
         Assert.False(asUser.IsAdmin);
@@ -124,98 +130,78 @@ public class AccountAuthenticationTests : IDisposable
     }
 
     /// <summary>
-    /// The polled session endpoints (every game fetch) ask who the caller is, and every registered guest has an
-    /// account cookie: a user's cookie must cost no database read there.
+    /// The polled session endpoints (every game fetch) ask who the caller is, and guests have no account: they must
+    /// not cost a call to the identity service.
     /// </summary>
     [Fact]
-    public async Task AUsersCookie_CostsNoLookup_WhenASessionAsksWhoTheCallerIs()
-    {
-        var user = SignedUp(AccountRole.User);
-
-        var caller = await RequestWith(user).ReadSessionCallerAsync(_cookies);
-
-        Assert.False(caller.IsAdmin);
-        Assert.Equal(0, _accounts.Validations);
-    }
-
-    [Fact]
-    public async Task NoCookie_CostsNoLookup_WhenASessionAsksWhoTheCallerIs()
+    public async Task NoSessionCookie_CostsNoCall_WhenASessionAsksWhoTheCallerIs()
     {
         await RequestWith(null).ReadSessionCallerAsync(_cookies);
+        await RequestWith($"{CookieNames.User}=host; {CookieNames.Auth}=token").ReadSessionCallerAsync(_cookies);
 
-        Assert.Equal(0, _accounts.Validations);
+        Assert.Equal(0, _identity.Calls);
     }
 
     [Fact]
-    public async Task AnAdminsCookie_IsStillCheckedAgainstTheDatabase_OncePerRequest()
+    public async Task NoSessionCookie_IsNoResult_NotAFailure()
     {
-        var admin = SignedUp(AccountRole.Admin);
-        var http = RequestWith(admin);
+        var result = await RequestWith($"{CookieNames.User}=host").AuthenticateAsync(SchemeNames.Account);
+
+        Assert.True(result.None);
+        Assert.Equal(0, _identity.Calls);
+    }
+
+    [Fact]
+    public async Task TheSessionCookieAskedAbout_IsTheOneTheBrowserSent()
+    {
+        var http = SignedUp(AccountRole.User, out _);
+
+        await http.AuthenticateAsync(SchemeNames.Account);
+
+        Assert.Contains($"{CookieName}=", _identity.LastCookieHeader);
+    }
+
+    [Fact]
+    public async Task TheIdentityServiceIsAskedOnce_PerRequest()
+    {
+        var http = SignedUp(AccountRole.Admin, out _);
 
         var first = await http.ReadSessionCallerAsync(_cookies);
         var second = await http.ReadSessionCallerAsync(_cookies);
+        var policy = await EvaluateAsync(Policies.Admin, http);
 
         Assert.True(first.IsAdmin);
         Assert.True(second.IsAdmin);
-        Assert.Equal(1, _accounts.Validations);
+        Assert.True(policy.Succeeded);
+        Assert.Equal(1, _identity.Calls);
     }
 
     [Fact]
-    public async Task AUsersCookie_IsNotAnAdmin_EvenWhenTheAccountIsAnAdminInTheDatabaseNow()
+    public async Task TheRoleIsTheOneTheIdentityServiceSaysNow()
     {
-        var user = SignedUp(AccountRole.User);
-        var http = RequestWith(user);
-        _accounts.Known.Remove(user);
-        _accounts.Known.Add(user with { Role = AccountRole.Admin });
+        var http = SignedUp(AccountRole.Admin, out var account);
+        _identity.Known[_identity.Known.Keys.Single()] = account with { Role = AccountRole.User };
 
         var caller = await http.ReadSessionCallerAsync(_cookies);
-
-        // It takes a new login to carry the new role
-        Assert.False(caller.IsAdmin);
-    }
-
-    [Fact]
-    public async Task TheRoleIsTheOneTheAccountHasNow_NotTheOneInTheCookie()
-    {
-        var admin = SignedUp(AccountRole.Admin);
-        var cookieOfAnAdmin = RequestWith(admin);
-        _accounts.Known.Remove(admin);
-        _accounts.Known.Add(admin with { Role = AccountRole.User });
-
-        var caller = await cookieOfAnAdmin.ReadSessionCallerAsync(_cookies);
-        var policy = await EvaluateAsync(Policies.Admin, cookieOfAnAdmin);
+        var policy = await EvaluateAsync(Policies.Admin, http);
 
         Assert.False(caller.IsAdmin);
         Assert.False(policy.Succeeded);
     }
 
     [Fact]
-    public async Task ACookieWithAnOldStamp_SignsNobodyIn()
+    public async Task ACookieTheIdentityServiceDoesNotKnow_SignsNobodyIn_AndIsChallengedAs401()
     {
-        var admin = SignedUp(AccountRole.Admin);
-        var cookieOfTheOldStamp = RequestWith(admin);
-        _accounts.Known.Remove(admin);
-        _accounts.Known.Add(admin with { SecurityStamp = Guid.NewGuid() });
+        var http = RequestWith($"{CookieName}=expired");
 
-        var caller = await cookieOfTheOldStamp.ReadSessionCallerAsync(_cookies);
-        var policy = await EvaluateAsync(Policies.Account, cookieOfTheOldStamp);
-
-        Assert.False(caller.IsAdmin);
-        Assert.False(policy.Succeeded);
-        Assert.True(policy.Challenged);
-    }
-
-    [Fact]
-    public async Task ADeletedAccount_SignsNobodyIn()
-    {
-        var user = SignedUp(AccountRole.User);
-        var http = RequestWith(user);
-        _accounts.Known.Clear();
-
+        var caller = await http.ReadSessionCallerAsync(_cookies);
         var policy = await EvaluateAsync(Policies.Account, http);
+        await http.ChallengeAsync(SchemeNames.Account);
 
+        Assert.False(caller.IsAdmin);
         Assert.False(policy.Succeeded);
         Assert.True(policy.Challenged);
+        Assert.Equal(StatusCodes.Status401Unauthorized, http.Response.StatusCode);
     }
 
     [Fact]
@@ -226,36 +212,70 @@ public class AccountAuthenticationTests : IDisposable
         Assert.True(policy.Challenged);
     }
 
-    private sealed class FakeAccountService : IAccountService
+    /// <summary>The UI reads a 401 as "signed out" and drops its hint, so an outage must not look like one.</summary>
+    [Fact]
+    public async Task WhenTheIdentityServiceIsDown_TheChallengeIs503_Not401()
     {
-        public List<AccountIdentity> Known { get; } = [];
+        var http = SignedUp(AccountRole.User, out _);
+        _identity.Down = true;
 
-        /// <summary>How many times the database would have been asked.</summary>
-        public int Validations { get; private set; }
+        var policy = await EvaluateAsync(Policies.Account, http);
+        await http.ChallengeAsync(SchemeNames.Account);
 
-        public Task<AccountIdentity?> ValidateAsync(Guid accountId, Guid securityStamp, CancellationToken cancellationToken)
+        Assert.False(policy.Succeeded);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, http.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task WhenTheIdentityServiceIsDown_ASessionSeesAPlainGuest_NotAFailedRequest()
+    {
+        var http = SignedUp(AccountRole.Admin, out _);
+        _identity.Down = true;
+
+        var caller = await http.ReadSessionCallerAsync(_cookies);
+
+        Assert.False(caller.IsAdmin);
+    }
+
+    private sealed class FakeIdentityClient : IIdentityClient
+    {
+        /// <summary>The accounts by the value of their session cookie.</summary>
+        public Dictionary<string, IdentityResult.Account> Known { get; } = [];
+
+        public bool Down { get; set; }
+
+        public int Calls { get; private set; }
+
+        public string? LastCookieHeader { get; private set; }
+
+        public Task<IdentityResult> GetCallerAsync(
+            string? cookieHeader,
+            AccountRole? requiredRole,
+            CancellationToken cancellationToken)
         {
-            Validations++;
+            Calls++;
+            LastCookieHeader = cookieHeader;
 
-            return Task.FromResult(Known.FirstOrDefault(x => x.Id == accountId && x.SecurityStamp == securityStamp));
+            if (Down)
+            {
+                return Task.FromResult<IdentityResult>(IdentityResult.Unavailable.Instance);
+            }
+
+            var token = cookieHeader?
+                .Split(';', StringSplitOptions.TrimEntries)
+                .Where(x => x.StartsWith($"{CookieName}=", StringComparison.Ordinal))
+                .Select(x => x[(CookieName.Length + 1)..])
+                .FirstOrDefault();
+
+            if (token is null || !Known.TryGetValue(token, out var account))
+            {
+                return Task.FromResult<IdentityResult>(IdentityResult.Anonymous.Instance);
+            }
+
+            return Task.FromResult<IdentityResult>(
+                requiredRole is not null && account.Role != requiredRole
+                    ? IdentityResult.Forbidden.Instance
+                    : account);
         }
-
-        public Task<ErrorOr<AccountIdentity>> RegisterAsync(string? username, string? password, CancellationToken cancellationToken) =>
-            throw new NotSupportedException();
-
-        public Task<ErrorOr<AccountIdentity>> LoginAsync(string? username, string? password, CancellationToken cancellationToken) =>
-            throw new NotSupportedException();
-
-        public Task<ErrorOr<AccountDto>> GetAsync(Guid accountId, CancellationToken cancellationToken) =>
-            throw new NotSupportedException();
-
-        public Task<ErrorOr<AccountIdentity>> ChangePasswordAsync(Guid accountId, string? currentPassword, string? newPassword, CancellationToken cancellationToken) =>
-            throw new NotSupportedException();
-
-        public Task<ErrorOr<Success>> SignOutEverywhereAsync(Guid accountId, CancellationToken cancellationToken) =>
-            throw new NotSupportedException();
-
-        public Task<ErrorOr<Success>> DeleteAsync(Guid accountId, string? password, CancellationToken cancellationToken) =>
-            throw new NotSupportedException();
     }
 }

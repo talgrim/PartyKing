@@ -28,6 +28,12 @@ public interface ISavedPlaylistService
 
     /// <summary>How many songs every part of the session's queue holds now.</summary>
     Task<ErrorOr<SavedPlaylistPreviewDto>> GetPreviewAsync(Guid sessionId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Deletes every playlist the account saved. The identity service owns the accounts now, so it tells us when one
+    /// is deleted (there is no foreign key to cascade). Succeeds whether or not there was anything to delete.
+    /// </summary>
+    Task<ErrorOr<Success>> DeleteByOwnerAsync(Guid accountId, CancellationToken cancellationToken);
 }
 
 internal class SavedPlaylistService : ISavedPlaylistService
@@ -108,5 +114,14 @@ internal class SavedPlaylistService : ISavedPlaylistService
         var items = await _queueRepository.GetAllAsync(sessionId, cancellationToken);
 
         return new SavedPlaylistPreviewDto(_queueSelection.Count(items).Select(x => x.ToDto()).ToList());
+    }
+
+    public async Task<ErrorOr<Success>> DeleteByOwnerAsync(Guid accountId, CancellationToken cancellationToken)
+    {
+        var deleted = await _savedPlaylistsRepository.DeleteByOwnerAsync(accountId, cancellationToken);
+
+        _logger.LogInformation("Deleted {Count} saved playlists of the deleted account {AccountId}", deleted, accountId);
+
+        return Result.Success;
     }
 }

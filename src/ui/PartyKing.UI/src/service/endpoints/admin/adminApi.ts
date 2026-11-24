@@ -1,5 +1,4 @@
 import { axios } from '@/service/request';
-import { AccountDto, PagedDto } from '../account/types';
 import { SongDto } from '../queue/types';
 import { SessionDto } from '../sessions/types';
 
@@ -8,19 +7,6 @@ const unwrap = <T>(promise: Promise<unknown>) => promise as Promise<T>;
 const withCredentials = { withCredentials: true };
 
 export const adminApi = {
-  /** One page of the registered users (never the admins), ordered by username. `page` is 1-based. */
-  listUsers: (params: { search?: string; page: number; pageSize: number }) =>
-    unwrap<PagedDto<AccountDto>>(
-      axios.get('/admin/users', {
-        ...withCredentials,
-        params: { search: params.search || undefined, page: params.page, pageSize: params.pageSize },
-      }),
-    ),
-
-  /** Sets a new password for a user, who is signed out everywhere. Rejects with 403 for an admin, 404 for an unknown user. */
-  resetPassword: (accountId: string, newPassword: string) =>
-    unwrap<void>(axios.put(`/admin/users/${accountId}/password`, { newPassword }, withCredentials)),
-
   /** Every session with its host's name. */
   listSessions: () => unwrap<SessionDto[]>(axios.get('/admin/sessions', withCredentials)),
 
@@ -39,6 +25,10 @@ export const adminApi = {
     unwrap<SongDto>(
       axios.post(`/admin/sessions/${sessionId}/songs/next`, null, { ...withCredentials, params: { currentSongId } }),
     ),
+
+  /** Calls off the deletion a guest asked for; the session stays. Also succeeds when none was scheduled. */
+  cancelSessionDeletion: (sessionId: string) =>
+    unwrap<void>(axios.delete(`/admin/sessions/${sessionId}/deletion-request`, withCredentials)),
 
   /** Removes the host so someone else can claim the session. */
   releaseHost: (sessionId: string) =>

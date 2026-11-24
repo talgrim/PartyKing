@@ -55,6 +55,25 @@ public interface ISessionsRepository
         int cursor,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Schedules the deletion for <paramref name="delay"/> after <paramref name="now"/> (UTC). The first request wins: a
+    /// later one keeps the time and raises nothing, also when two race.
+    /// </summary>
+    Task<SessionDeletionScheduleResult> ScheduleDeletionAsync(
+        Guid id,
+        DateTime now,
+        TimeSpan delay,
+        CancellationToken cancellationToken);
+
+    /// <summary>Calls off a scheduled deletion. Only an admin may; that is decided above the repository.</summary>
+    Task<SessionDeletionCancelResult> CancelDeletionAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The ids of the sessions whose scheduled deletion is due at <paramref name="now"/> (UTC), the oldest schedule first.
+    /// The same rule as <c>Session.IsDueForDeletion</c>.
+    /// </summary>
+    Task<IReadOnlyList<Guid>> ListDueForDeletionAsync(DateTime now, CancellationToken cancellationToken);
+
     /// <summary>Deletes the session together with its queue.</summary>
     Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken);
 

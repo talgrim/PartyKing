@@ -31,14 +31,14 @@ describe('AppHeader', () => {
     renderAt(path);
 
     expect(screen.getByRole('link', { name: 'All sessions' })).toHaveAttribute('href', '/');
-    expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Log in' })).toBeInTheDocument();
   });
 
   it('has no link to all the sessions on the landing page, which is that list', () => {
     renderAt('/');
 
     expect(screen.queryByRole('link', { name: 'All sessions' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Log in' })).toBeInTheDocument();
   });
 
   it('shows the link as an icon, named and titled "All sessions"', () => {
@@ -55,7 +55,7 @@ describe('AppHeader', () => {
     renderAt('/admin');
 
     const link = screen.getByRole('link', { name: 'All sessions' });
-    const button = screen.getByRole('button', { name: 'Log in' });
+    const button = screen.getByRole('link', { name: 'Log in' });
 
     expect(link.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
@@ -64,14 +64,14 @@ describe('AppHeader', () => {
     renderAt(path);
 
     expect(screen.getByRole('button', { name: 'BAC calculator' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Log in' })).toBeInTheDocument();
   });
 
   it('keeps only the calculator in a demo, which has no accounts and no list of sessions', async () => {
     mocks.getDemoConfig.mockResolvedValue({ enabled: true, serverTime: '2026-11-13T12:00:00Z' });
     renderAt('/s/abc');
 
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'Log in' })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('link', { name: 'Log in' })).not.toBeInTheDocument());
     expect(screen.queryByRole('link', { name: 'All sessions' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'BAC calculator' })).toBeInTheDocument();
   });
@@ -123,7 +123,7 @@ describe('AppHeader', () => {
 
     const link = screen.getByRole('link', { name: 'All sessions' });
     const calculator = screen.getByRole('button', { name: 'BAC calculator' });
-    const account = screen.getByRole('button', { name: 'Log in' });
+    const account = screen.getByRole('link', { name: 'Log in' });
 
     expect(position(link, calculator)).toBeTruthy();
     expect(position(calculator, account)).toBeTruthy();

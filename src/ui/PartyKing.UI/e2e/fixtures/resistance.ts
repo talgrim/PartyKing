@@ -60,19 +60,29 @@ export async function startResistanceGame(
   await admin.getByRole('button', { name: 'Create' }).click();
   await admin.getByRole('button', { name: 'Open the game' }).click();
 
-  // Opening a page (new context, loading the app, unlocking) is the slow part, so all of them open at once; the joining
-  // itself stays one by one, because the seats are taken in the order of joining
+  // Opening a page (new context, loading the app, unlocking, loading the join page) is the slow part, so all of them
+  // open at once; the joining itself stays one by one, because the seats are taken in the order of joining
   const names = PLAYER_NAMES.slice(0, players);
-  const pages = await Promise.all(names.map(() => openGuest(session)));
+  const pages = await Promise.all(
+    names.map(async () => {
+      const guest = await openGuest(session);
+      await guest.goto(`/s/${session.id}/games/resistance/join`);
+      await expect(guest.getByLabel('Your name')).toBeVisible();
+      return guest;
+    }),
+  );
   const guests = new Map<string, Page>();
   for (const [index, name] of names.entries()) {
     const guest = pages[index];
-    await guest.goto(`/s/${session.id}/games/resistance/join`);
     await guest.getByLabel('Your name').fill(name);
-    await guest.getByRole('button', { name: 'Join' }).click();
+    // The seat is taken when the server has answered, which is quicker than the admin's lobby noticing it
+    await Promise.all([
+      guest.waitForResponse((response) => response.url().endsWith('/games/resistance/join') && response.request().method() === 'POST'),
+      guest.getByRole('button', { name: 'Join' }).click(),
+    ]);
     guests.set(name, guest);
-    await expect(admin.getByText(`${index + 1}/10 players`)).toBeVisible();
   }
+  await expect(admin.getByText(`${names.length}/10 players`)).toBeVisible();
 
   if (plotCards) {
     await enableModule(admin, 'Plot cards');
@@ -104,7 +114,9 @@ export async function startResistanceGame(
 
 /** Turns an add-on on in the "Game settings" dialog. It has to happen before the game starts. */
 export async function enableModule(admin: Page, module: 'Plot cards' | 'Inquisitor' | 'Blind Spies' | 'Reverser' | 'Defectors' | 'Assassin'): Promise<void> {
-  await admin.getByRole('button', { name: 'Game settings' }).click();
+  // Pressed, not clicked: with the e2e-only "Dev: all players" chip the toolbar of the board reaches under the fixed header
+  // in the upper-right corner (wider for a signed-in admin), which then intercepts the pointer
+  await admin.getByRole('button', { name: 'Game settings' }).press('Enter');
   const dialog = admin.getByRole('dialog', { name: 'Game settings' });
   const checkbox = dialog.getByRole('checkbox', { name: `Enable ${module}` });
   // Controlled by the server state, so it only ticks after the round trip (`check()` would not wait for that)
@@ -116,7 +128,9 @@ export async function enableModule(admin: Page, module: 'Plot cards' | 'Inquisit
 
 /** Turns optional characters of the Assassin module on in the "Game settings" dialog (the module itself has to be on). */
 export async function enableAssassinCharacters(admin: Page, characters: AssassinCharacter[]): Promise<void> {
-  await admin.getByRole('button', { name: 'Game settings' }).click();
+  // Pressed, not clicked: with the e2e-only "Dev: all players" chip the toolbar of the board reaches under the fixed header
+  // in the upper-right corner (wider for a signed-in admin), which then intercepts the pointer
+  await admin.getByRole('button', { name: 'Game settings' }).press('Enter');
   const dialog = admin.getByRole('dialog', { name: 'Game settings' });
   for (const character of characters) {
     const checkbox = dialog.getByRole('checkbox', { name: character, exact: true });
