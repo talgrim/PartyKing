@@ -81,8 +81,10 @@ test('a name can be used once, and the admin can kick a player before the start'
   await admin.getByRole('button', { name: 'Players' }).click();
   await admin.getByRole('button', { name: 'Kick Anna' }).click();
   await expect(admin.getByRole('button', { name: 'Kick Anna' })).toBeHidden();
-  await expect(anna.getByText('You were removed from the game.')).toBeVisible();
-  await expect(bartek.getByText('You were removed from the game.')).toBeHidden();
+  // Depending on timing the kicked player is told on the join page or on the board they were still looking at
+  const told = /You were removed from the game\.|You are no longer a player in this game/;
+  await expect(anna.getByText(told)).toBeVisible();
+  await expect(bartek.getByText(told)).toBeHidden();
   await admin.getByRole('button', { name: 'Close' }).click();
   await expect(admin.getByText('1/10 players')).toBeVisible();
 });

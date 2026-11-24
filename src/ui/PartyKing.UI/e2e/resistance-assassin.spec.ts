@@ -28,7 +28,7 @@ async function toTheAssassination(setup: ResistanceGameSetup) {
   return waitForPhase(setup, 'Assassination');
 }
 
-test('the Assassin module deals a Commander who knows the spies and an Assassin, and the third success waits for the Assassin', async ({
+test('the Assassin module deals a Commander who knows the spies and an Assassin, and the third success waits for the Assassin, whom the host does not have to wait for', async ({
   createSession,
   openAdmin,
   openGuest,
@@ -83,6 +83,10 @@ test('the Assassin module deals a Commander who knows the spies and an Assassin,
       : expect(page.getByLabel('Player to name')).toBeHidden());
     await expect(page.getByText(/the Assassin is choosing the player they take for the Commander/)).toBeVisible();
   }
+
+  // An absent Assassin does not hold the game: the host can restart it from here
+  await setup.admin.getByRole('button', { name: 'Restart game' }).click();
+  await expect(setup.admin.getByRole('button', { name: 'Start game' })).toBeVisible();
 });
 
 test('the spies win when the Assassin names the Commander', async ({ createSession, openAdmin, openGuest }) => {
@@ -124,16 +128,6 @@ test('the resistance wins when the Assassin names anybody else, and the host can
 
   // A finished game restarts as ever
   await setup.admin.getByRole('button', { name: 'Restart game' }).click();
-  await expect(setup.admin.getByRole('button', { name: 'Start game' })).toBeVisible();
-});
-
-test('the host can restart a game that waits for an absent Assassin', async ({ createSession, openAdmin, openGuest }) => {
-  const session = await createSession();
-  const setup = await startResistanceGame(session, { openAdmin, openGuest }, { assassin: true });
-  await toTheAssassination(setup);
-
-  await setup.admin.getByRole('button', { name: 'Restart game' }).click();
-
   await expect(setup.admin.getByRole('button', { name: 'Start game' })).toBeVisible();
 });
 
