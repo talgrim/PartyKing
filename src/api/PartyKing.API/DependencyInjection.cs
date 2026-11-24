@@ -15,7 +15,7 @@ using PartyKing.API.Workers;
 using PartyKing.Infrastructure.Lyrics;
 using PartyKing.Infrastructure.Mail;
 using PartyKing.Infrastructure.Spotify;
-using PartyKing.Domain.Entities.Auth;
+using PartyKing.Contract.V1.Enums;
 using PartyKing.Infrastructure.Youtube;
 
 namespace PartyKing.API;
@@ -54,6 +54,8 @@ public static class DependencyInjection
         services.RegisterLlmInfrastructure(configuration);
         // After RegisterApplication, which registers the no-op mail client this one replaces
         services.RegisterMailInfrastructure(configuration);
+        // Same reason: this replaces the client that never signs anybody in
+        services.RegisterIdentityInfrastructure(configuration);
         services.AddAuthorization();
         AddConfigurations(configuration);
     }
@@ -80,6 +82,7 @@ public static class DependencyInjection
     internal static void AddAuthorization(this IServiceCollection services)
     {
         services.AddSingleton<ISignedCookies, SignedCookies>();
+        services.AddSingleton<IIdentityWebhookVerifier, IdentityWebhookVerifier>();
 
         services
             .AddAuthentication()

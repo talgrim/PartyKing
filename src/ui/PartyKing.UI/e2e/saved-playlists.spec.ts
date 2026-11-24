@@ -1,6 +1,6 @@
 import { Page, expect } from '@playwright/test';
 import { API_URL } from './constants';
-import { signUpThroughTheDialog, uniqueUsername } from './fixtures/accounts';
+import { signUpThroughIdentity, uniqueUsername } from './fixtures/accounts';
 import { CreatedSession, test } from './fixtures/test';
 
 // Embeddable videos; when YouTube cannot be reached the server queues the link under its URL
@@ -35,7 +35,7 @@ test('a signed-in guest saves the queue as a playlist', async ({ createSession, 
   await queueSong(guest, session, SONGS[1]);
   await queueSong(guest, session, SONGS[0]);
 
-  await signUpThroughTheDialog(guest, uniqueUsername('lister'));
+  await signUpThroughIdentity(guest, uniqueUsername('lister'));
   await guest.goto(`/s/${session.id}`);
   await guest.getByRole('button', { name: 'Save as playlist' }).click();
 
@@ -64,7 +64,7 @@ test('a session without songs has nothing to save', async ({
 }) => {
   const session = await createSession();
   const guest = await openGuest(session);
-  await signUpThroughTheDialog(guest, uniqueUsername('empty'));
+  await signUpThroughIdentity(guest, uniqueUsername('empty'));
   await guest.goto(`/s/${session.id}`);
 
   await guest.getByRole('button', { name: 'Save as playlist' }).click();

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { SWRConfig } from 'swr';
 import { MemoryRouter } from 'react-router-dom';
 import { Admin } from './Admin';
+import envVariables from '@/envVariables';
 import { setLanguage } from '@/i18n';
 import { ACCOUNT_HINT_KEY } from '@/service/endpoints/account/useAccount';
 
@@ -45,12 +46,15 @@ describe('Admin', () => {
     expect(links.map((link) => link.getAttribute('href'))).toEqual(['/s/session-1/games', '/s/session-2/games']);
   });
 
-  it('links the registered users page for an admin', async () => {
+  it('links the registered users page of the identity service for an admin', async () => {
     mocks.me.mockResolvedValue(admin);
 
     renderPage();
 
-    expect(await screen.findByRole('link', { name: 'Registered users' })).toHaveAttribute('href', '/admin/users');
+    expect(await screen.findByRole('link', { name: 'Registered users' })).toHaveAttribute(
+      'href',
+      `${envVariables.identityUrl}/admin/users`,
+    );
   });
 
   it('turns a signed-in user away from the admin panel and offers to log out', async () => {
@@ -64,13 +68,15 @@ describe('Admin', () => {
     expect(screen.queryByRole('link', { name: 'Registered users' })).not.toBeInTheDocument();
   });
 
-  it('shows the login form to a visitor nobody is signed in as', async () => {
+  it('links a visitor nobody is signed in as to the login of the identity service', async () => {
     localStorage.clear();
     mocks.me.mockRejectedValue({ status: 401, message: 'Unauthorized' });
 
     renderPage();
 
-    expect(await screen.findByLabelText('Password')).toBeInTheDocument();
+    const login = await screen.findByRole('link', { name: 'Log in' });
+    expect(login).toHaveAttribute('href', expect.stringContaining(`${envVariables.identityUrl}/login?next=`));
+    expect(screen.queryByLabelText('Password')).not.toBeInTheDocument();
   });
 
   it('shows the panel to an admin whose browser lost the account hint, and remembers them again', async () => {
@@ -88,7 +94,7 @@ describe('Admin', () => {
 
     renderPage();
 
-    await screen.findByLabelText(/password/i);
+    await screen.findByRole('link', { name: 'Log in' });
     expect(screen.queryByRole('link', { name: 'Games' })).not.toBeInTheDocument();
   });
 

@@ -1,5 +1,5 @@
 using ErrorOr;
-using PartyKing.Application.Accounts.Services;
+using PartyKing.Application.System;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Sessions;
 
@@ -170,7 +170,7 @@ public class SessionAccessServiceTests
 
         public int HashCalls { get; private set; }
 
-        public string Hash(string password, int iterations = PasswordHasher.AdminIterations)
+        public string Hash(string password, int iterations = PasswordHasher.SessionIterations)
         {
             HashCalls++;
             return _inner.Hash(password, iterations);

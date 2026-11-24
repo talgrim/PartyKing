@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.DataProtection;
-using PartyKing.Application.Accounts;
 using PartyKing.Application.Demo.Models;
 using PartyKing.Application.Games.Services.Base;
-using PartyKing.Domain.Entities.Auth;
 using PartyKing.Domain.Entities.Games.Base;
 
 namespace PartyKing.API.Cookies;
@@ -10,15 +8,12 @@ namespace PartyKing.API.Cookies;
 internal class SignedCookies : ISignedCookies
 {
     private static readonly int UserExpirationTime = (int)TimeSpan.FromDays(30).TotalSeconds;
-    private static readonly TimeSpan AdminAccountLifetime = TimeSpan.FromHours(12);
-    private static readonly TimeSpan UserAccountLifetime = TimeSpan.FromDays(30);
     private static readonly int SessionAccessExpirationTime = (int)TimeSpan.FromDays(30).TotalSeconds;
 
     // Keeps the cookie small; when exceeded the oldest unlocks are forgotten and the password is asked again
     private const int MaxUnlockedSessions = 20;
 
     private readonly IDataProtector _userProtector;
-    private readonly ITimeLimitedDataProtector _accountProtector;
     private readonly IDataProtector _sessionAccessProtector;
     private readonly IDataProtector _demoSessionsProtector;
     private readonly Dictionary<GameKind, (string CookieName, IDataProtector Protector)> _gamePlayerCookies;
@@ -26,7 +21,6 @@ internal class SignedCookies : ISignedCookies
     public SignedCookies(IDataProtectionProvider dataProtectionProvider)
     {
         _userProtector = dataProtectionProvider.CreateProtector("PartyKing.UserCookie");
-        _accountProtector = dataProtectionProvider.CreateProtector("PartyKing.AccountCookie").ToTimeLimitedDataProtector();
         _sessionAccessProtector = dataProtectionProvider.CreateProtector("PartyKing.SessionAccessCookie");
         _demoSessionsProtector = dataProtectionProvider.CreateProtector("PartyKing.DemoSessionsCookie");
         _gamePlayerCookies = new()
@@ -53,17 +47,6 @@ internal class SignedCookies : ISignedCookies
         context.Response.Cookies.Append(CookieNames.Auth, spotifyAccessToken, GetOptions(expiresIn, context));
     }
 
-    public void GrantAccount(AccountIdentity identity, HttpContext context)
-    {
-        var lifetime = identity.Role == AccountRole.Admin ? AdminAccountLifetime : UserAccountLifetime;
-
-        // The lifetime is signed into the value, so a copied cookie can't be kept alive by editing its expiry
-        context.Response.Cookies.Append(
-            CookieNames.Account,
-            _accountProtector.Protect($"{identity.Id:N}:{identity.SecurityStamp:N}:{identity.Role}", lifetime),
-            GetOptions((int)lifetime.TotalSeconds, context));
-    }
-
     public bool TryReadProfileId(HttpRequest request, out string profileId)
     {
         profileId = string.Empty;
@@ -74,31 +57,6 @@ internal class SignedCookies : ISignedCookies
         }
 
         return TryUnprotect(_userProtector, protectedValue, out profileId);
-    }
-
-    public bool TryReadAccount(HttpRequest request, out Guid accountId, out Guid securityStamp, out AccountRole role)
-    {
-        accountId = Guid.Empty;
-        securityStamp = Guid.Empty;
-        role = AccountRole.User;
-
-        // An expired cookie fails to unprotect like a tampered one
-        if (!request.Cookies.TryGetValue(CookieNames.Account, out var protectedValue)
-            || !TryUnprotect(_accountProtector, protectedValue, out var value))
-        {
-            return false;
-        }
-
-        return value.Split(':') is [var id, var stamp, var roleName]
-            && Guid.TryParseExact(id, "N", out accountId)
-            && Guid.TryParseExact(stamp, "N", out securityStamp)
-            && Enum.TryParse(roleName, out role)
-            && Enum.IsDefined(role);
-    }
-
-    public void RevokeAccount(HttpContext context)
-    {
-        context.Response.Cookies.Delete(CookieNames.Account, new CookieOptions { Path = "/" });
     }
 
     public void GrantSessionAccess(Guid sessionId, string stamp, HttpContext context)

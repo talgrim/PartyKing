@@ -15,6 +15,8 @@ primary_region = 'fra'
   Logging__LogLevel__Microsoft__AspNetCore = 'Warning'
   Logging__LogLevel__Microsoft__EntityFrameworkCore = 'Warning'
   DemoSettings__Enabled = 'true'
+  # The demo has no accounts: nobody is ever signed in and the identity service is never called
+  Identity__Enabled = 'false'
   # The image persists the Data Protection keys on /data/keys, which needs a certificate secret. A demo has neither: the
   # keys live in memory, so they are never the production ones, and a restart only ends the demos that were running.
   DataProtection__KeysDirectory = ''

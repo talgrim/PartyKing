@@ -114,7 +114,9 @@ export async function startResistanceGame(
 
 /** Turns an add-on on in the "Game settings" dialog. It has to happen before the game starts. */
 export async function enableModule(admin: Page, module: 'Plot cards' | 'Inquisitor' | 'Blind Spies' | 'Reverser' | 'Defectors' | 'Assassin'): Promise<void> {
-  await admin.getByRole('button', { name: 'Game settings' }).click();
+  // Pressed, not clicked: with the e2e-only "Dev: all players" chip the toolbar of the board reaches under the fixed header
+  // in the upper-right corner (wider for a signed-in admin), which then intercepts the pointer
+  await admin.getByRole('button', { name: 'Game settings' }).press('Enter');
   const dialog = admin.getByRole('dialog', { name: 'Game settings' });
   const checkbox = dialog.getByRole('checkbox', { name: `Enable ${module}` });
   // Controlled by the server state, so it only ticks after the round trip (`check()` would not wait for that)
@@ -126,7 +128,9 @@ export async function enableModule(admin: Page, module: 'Plot cards' | 'Inquisit
 
 /** Turns optional characters of the Assassin module on in the "Game settings" dialog (the module itself has to be on). */
 export async function enableAssassinCharacters(admin: Page, characters: AssassinCharacter[]): Promise<void> {
-  await admin.getByRole('button', { name: 'Game settings' }).click();
+  // Pressed, not clicked: with the e2e-only "Dev: all players" chip the toolbar of the board reaches under the fixed header
+  // in the upper-right corner (wider for a signed-in admin), which then intercepts the pointer
+  await admin.getByRole('button', { name: 'Game settings' }).press('Enter');
   const dialog = admin.getByRole('dialog', { name: 'Game settings' });
   for (const character of characters) {
     const checkbox = dialog.getByRole('checkbox', { name: character, exact: true });

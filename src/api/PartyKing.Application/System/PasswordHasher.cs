@@ -1,10 +1,10 @@
 using System.Security.Cryptography;
 
-namespace PartyKing.Application.Accounts.Services;
+namespace PartyKing.Application.System;
 
 public interface IPasswordHasher
 {
-    string Hash(string password, int iterations = PasswordHasher.AdminIterations);
+    string Hash(string password, int iterations = PasswordHasher.SessionIterations);
     bool Verify(string password, string hash);
 
     /// <summary>True when the value has the format produced by <see cref="Hash"/>.</summary>
@@ -17,22 +17,13 @@ public class PasswordHasher : IPasswordHasher
     private const int SaltSize = 16;
     private const int HashSize = 32;
 
-    /// <summary>The default, for admin passwords, which are rare and worth the cost.</summary>
-    public const int AdminIterations = 600_000;
-
     /// <summary>
     /// For session passwords: every guest joining a session pays one hash on a small shared CPU, and a party
     /// password guards only a slideshow and a queue. The iteration count is stored in the hash, so old hashes still verify.
     /// </summary>
     public const int SessionIterations = 100_000;
 
-    /// <summary>
-    /// For user accounts: a login and a registration pay one hash each, and a party guest's account guards little, so
-    /// this sits between the session and the admin cost (about 19 ms against 56 ms on a desktop CPU).
-    /// </summary>
-    public const int UserIterations = 200_000;
-
-    public string Hash(string password, int iterations = AdminIterations)
+    public string Hash(string password, int iterations = SessionIterations)
     {
         var salt = RandomNumberGenerator.GetBytes(SaltSize);
         var hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA256, HashSize);

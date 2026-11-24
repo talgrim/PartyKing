@@ -2,7 +2,6 @@ export const ROUTE_PATHS = {
   HOME: '/',
   CALLBACK: '/callback',
   ADMIN: '/admin',
-  ADMIN_USERS: '/admin/users',
   SESSION: '/s/:sessionId',
   SESSION_UPLOAD: '/s/:sessionId/upload',
   SESSION_GAMES: '/s/:sessionId/games',

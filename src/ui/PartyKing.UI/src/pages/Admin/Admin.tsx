@@ -3,39 +3,35 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import useSWR from 'swr';
 import { errorMessage, inputClass, primaryButton, secondaryButton } from '@/components/Account/accountForm';
-import { CredentialsForm } from '@/components/Account/CredentialsForm';
-import { PageNavigation } from '@/components/common/PageNavigation';
-import { ROUTE_PATHS, sessionGamesPath, sessionPath } from '@/router/constants';
+import { sessionGamesPath, sessionPath } from '@/router/constants';
 import { HTTP_STATUS_CODE } from '@/service/constants';
 import { accountApi } from '@/service/endpoints/account/accountApi';
 import { useAccount } from '@/service/endpoints/account/useAccount';
 import { adminApi } from '@/service/endpoints/admin/adminApi';
 import { SessionDto } from '@/service/endpoints/sessions/types';
+import { identityLinks } from '@/service/identityLinks';
 import { formatDateTime } from '@/utils/formatDateTime';
 
 const MIN_PASSWORD_LENGTH = 4;
 
 export const Admin = (): ReactNode => {
   const { t } = useTranslation();
-  const { account, isLoading, error, signedIn, signedOut } = useAccount({ alwaysCheck: true });
+  const { account, isLoading, error, signedOut } = useAccount({ alwaysCheck: true });
   const isAdmin = account?.role === 'Admin';
 
   return (
     <div className="w-full min-h-full bg-slate-800 text-slate-400">
       <div className="max-w-xl mx-auto pt-6">
-        <PageNavigation
-          className="px-2 pt-4"
-          links={[
-            ...(isAdmin ? [{ to: ROUTE_PATHS.ADMIN_USERS, label: t('admin.registeredUsers') }] : []),
-          ]}
-        />
         <h1 className="px-2 pt-4 text-2xl text-slate-200">{t('admin.title')}</h1>
 
         {isLoading && <p className="px-2">{t('admin.checkingLogin')}</p>}
         {error && <p className="px-2 text-amber-500">{t('admin.apiUnreachable')}</p>}
         {!isLoading && !error && !account && (
-          <div className="px-2 pt-4">
-            <CredentialsForm mode="login" onDone={signedIn} />
+          <div className="px-2 pt-4 space-y-2">
+            <p>{t('admin.loginNeeded')}</p>
+            <a className={`${primaryButton} inline-block`} href={identityLinks.login()}>
+              {t('account.logIn')}
+            </a>
           </div>
         )}
         {account && !isAdmin && <NotAnAdmin username={account.username} onLoggedOut={signedOut} />}
@@ -204,7 +200,10 @@ const Sessions = ({ onLoggedOut }: { onLoggedOut: () => void }): ReactNode => {
         {sessions?.length === 0 && <li>{t('common.noSessionsYet')}</li>}
       </ul>
 
-      <div className="px-2 pb-4">
+      <div className="flex flex-wrap gap-2 px-2 pb-4">
+        <a className={secondaryButton} href={identityLinks.adminUsers()}>
+          {t('admin.registeredUsers')}
+        </a>
         <button className={secondaryButton} onClick={logout}>
           {t('admin.logOut')}
         </button>

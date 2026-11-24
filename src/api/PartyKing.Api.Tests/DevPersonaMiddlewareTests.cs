@@ -1,20 +1,26 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
 using PartyKing.API.Cookies;
 using PartyKing.API.Development;
 using PartyKing.API.Hubs;
+using PartyKing.Application.Configuration;
 
 namespace PartyKing.Api.Tests;
 
 public class DevPersonaMiddlewareTests
 {
+    private static readonly string SessionCookie = new IdentityConfiguration().CookieName;
+
     private static async Task<string> CookiesSeenByTheNextMiddlewareAsync(string path, string query, string? header = null)
     {
         var seen = "";
-        var middleware = new DevPersonaMiddleware(context =>
-        {
-            seen = context.Request.Headers.Cookie.ToString();
-            return Task.CompletedTask;
-        });
+        var middleware = new DevPersonaMiddleware(
+            context =>
+            {
+                seen = context.Request.Headers.Cookie.ToString();
+                return Task.CompletedTask;
+            },
+            Options.Create(new IdentityConfiguration()));
         var http = new DefaultHttpContext();
         http.Request.Path = path;
         http.Request.QueryString = new QueryString(query);
@@ -63,21 +69,23 @@ public class DevPersonaMiddlewareTests
     }
 
     [Fact]
-    public async Task APersonaDoesNotCarryTheSignedInAccount()
+    public async Task APersonaDoesNotCarryTheIdentityServicesSessionCookie()
     {
         var seen = "";
-        var middleware = new DevPersonaMiddleware(context =>
-        {
-            seen = context.Request.Headers.Cookie.ToString();
-            return Task.CompletedTask;
-        });
+        var middleware = new DevPersonaMiddleware(
+            context =>
+            {
+                seen = context.Request.Headers.Cookie.ToString();
+                return Task.CompletedTask;
+            },
+            Options.Create(new IdentityConfiguration()));
         var http = new DefaultHttpContext();
         http.Request.Path = "/sessions";
-        http.Request.Headers.Cookie = $"{CookieNames.Account}=signed-in";
+        http.Request.Headers.Cookie = $"{SessionCookie}=signed-in";
         http.Request.Headers[DevPersonaMiddleware.HeaderName] = "anna";
 
         await middleware.InvokeAsync(http);
 
-        Assert.DoesNotContain(CookieNames.Account, seen);
+        Assert.DoesNotContain(SessionCookie, seen);
     }
 }

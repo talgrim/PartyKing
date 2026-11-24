@@ -56,4 +56,14 @@ internal class SavedPlaylistsRepository : ISavedPlaylistsRepository
         dbContext.SavedPlaylists.Add(playlist);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task<int> DeleteByOwnerAsync(Guid ownerAccountId, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        // The songs go with their playlist through the foreign key's cascade
+        return await dbContext.SavedPlaylists
+            .Where(x => x.OwnerAccountId == ownerAccountId)
+            .ExecuteDeleteAsync(cancellationToken);
+    }
 }

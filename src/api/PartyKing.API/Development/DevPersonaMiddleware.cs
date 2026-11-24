@@ -1,5 +1,7 @@
+using Microsoft.Extensions.Options;
 using PartyKing.API.Cookies;
 using PartyKing.API.Hubs;
+using PartyKing.Application.Configuration;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Primitives;
 
@@ -17,13 +19,6 @@ public sealed partial class DevPersonaMiddleware
     public const string HeaderName = "X-Dev-Persona";
     public const string QueryName = "persona";
 
-    private static readonly string[] HiddenCookies =
-    [
-        CookieNames.User,
-        CookieNames.Auth,
-        CookieNames.Account,
-    ];
-
     private static readonly string[] PerPersonaCookies =
     [
         CookieNames.RingoPlayer,
@@ -32,9 +27,13 @@ public sealed partial class DevPersonaMiddleware
 
     private readonly RequestDelegate _next;
 
-    public DevPersonaMiddleware(RequestDelegate next)
+    // The host's own cookies and the identity service's session cookie: a persona is a plain guest
+    private readonly string[] _hiddenCookies;
+
+    public DevPersonaMiddleware(RequestDelegate next, IOptions<IdentityConfiguration> identityOptions)
     {
         _next = next;
+        _hiddenCookies = [CookieNames.User, CookieNames.Auth, identityOptions.Value.CookieName];
     }
 
     public Task InvokeAsync(HttpContext context)
@@ -67,12 +66,12 @@ public sealed partial class DevPersonaMiddleware
         return persona is not null && ValidPersona().IsMatch(persona) ? persona : null;
     }
 
-    private static string RewriteRequestCookies(HttpRequest request, string persona)
+    private string RewriteRequestCookies(HttpRequest request, string persona)
     {
         var cookies = new List<string>();
         foreach (var (name, value) in request.Cookies)
         {
-            if (HiddenCookies.Contains(name) || PerPersonaCookies.Contains(name))
+            if (_hiddenCookies.Contains(name) || PerPersonaCookies.Contains(name))
             {
                 continue;
             }

@@ -1,4 +1,4 @@
-using PartyKing.Application.Accounts.Services;
+using PartyKing.Application.System;
 
 namespace PartyKing.Application.Tests;
 

@@ -29,6 +29,18 @@ const configureAxios = (
 export const axios = axiosObject.create();
 configureAxios(axios);
 
+/**
+ * The identity service (auth.talgrim.dev), called cross-origin with the session cookie. It is not the API: no dev
+ * persona and no Accept-Language go to it, and its 401 means nobody is signed in, like the API's.
+ */
+export const identityAxios = axiosObject.create({
+  baseURL: envVariables.identityUrl,
+  withCredentials: true,
+  headers: { Accept: 'application/json' },
+  validateStatus: (status) => status < 400,
+});
+identityAxios.interceptors.response.use(onResponseFulfilled, onResponseRejected);
+
 export const addAccessTokenToApiHeaders = (accessToken?: string) => {
   addAuthorizationHeader(axios, accessToken);
 };

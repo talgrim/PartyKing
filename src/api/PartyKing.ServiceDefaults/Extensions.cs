@@ -65,6 +65,7 @@ public static class Extensions
                     .AddMeter("PartyKing.API")
                     .AddMeter("PartyKing.Infrastructure.Spotify")
                     .AddMeter("PartyKing.Infrastructure")
+                    .AddMeter("PartyKing.Infrastructure.Identity")
                     .AddPrometheusExporter();
             });
 

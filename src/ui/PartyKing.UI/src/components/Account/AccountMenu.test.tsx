@@ -2,11 +2,14 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SWRConfig } from 'swr';
 import { AccountMenu } from './AccountMenu';
-import { ACCOUNT_HINT_KEY } from '@/service/endpoints/account/useAccount';
+import { ACCOUNT_HINT_KEY, IDENTITY_HINT_COOKIE } from '@/service/endpoints/account/useAccount';
+import envVariables from '@/envVariables';
 
 const mocks = vi.hoisted(() => ({ me: vi.fn(), logout: vi.fn() }));
 
 vi.mock('@/service/endpoints/account/accountApi', () => ({ accountApi: { me: mocks.me, logout: mocks.logout } }));
+
+const IDENTITY = envVariables.identityUrl;
 
 const ann = { id: 'u1', username: 'ann', role: 'User', createdAt: '2026-11-09T12:00:00Z' };
 
@@ -20,25 +23,43 @@ const renderMenu = () =>
 describe('AccountMenu', () => {
   beforeEach(() => {
     localStorage.clear();
+    document.cookie = `${IDENTITY_HINT_COOKIE}=; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
     mocks.me.mockReset();
     mocks.logout.mockReset();
   });
 
   describe('for a visitor', () => {
-    it('offers to log in without asking who is signed in', () => {
+    it('offers to log in and to sign up without asking who is signed in', () => {
       renderMenu();
 
-      expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Log in' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Sign up' })).toBeInTheDocument();
       expect(mocks.me).not.toHaveBeenCalled();
     });
 
-    it('opens the login dialog from "Log in", with no menu', async () => {
+    it('links to the identity service, which brings the visitor back to this page', () => {
       renderMenu();
 
-      await userEvent.click(screen.getByRole('button', { name: 'Log in' }));
+      const next = encodeURIComponent(window.location.href);
+      expect(screen.getByRole('link', { name: 'Log in' })).toHaveAttribute('href', `${IDENTITY}/login?next=${next}`);
+      expect(screen.getByRole('link', { name: 'Sign up' })).toHaveAttribute('href', `${IDENTITY}/register?next=${next}`);
+    });
+
+    it('has no menu and no dialog', () => {
+      renderMenu();
 
       expect(screen.queryByRole('menuitem')).not.toBeInTheDocument();
-      expect(await screen.findByRole('dialog', { name: 'Account' })).toBeInTheDocument();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    it('notices a login made on the identity service, whose cookie says to ask', async () => {
+      document.cookie = `${IDENTITY_HINT_COOKIE}=1`;
+      mocks.me.mockResolvedValue(ann);
+
+      renderMenu();
+
+      expect(await screen.findByRole('button', { name: 'ann' })).toBeInTheDocument();
+      expect(mocks.me).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -65,14 +86,16 @@ describe('AccountMenu', () => {
       expect(button.lastElementChild).toBe(screen.getByTestId('AccountCircleIcon'));
     });
 
-    it('opens the account settings from "Account settings"', async () => {
+    it('opens the account settings of the identity service from "Account settings"', async () => {
+      const assign = vi.fn();
+      vi.spyOn(window, 'location', 'get').mockReturnValue({ ...window.location, assign } as Location);
       renderMenu();
 
       await userEvent.click(await screen.findByRole('button', { name: 'ann' }));
       await userEvent.click(screen.getByRole('menuitem', { name: 'Account settings' }));
 
-      expect(await screen.findByRole('dialog', { name: 'Account settings' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Change password' })).toBeInTheDocument();
+      expect(assign).toHaveBeenCalledWith(`${IDENTITY}/account`);
+      vi.restoreAllMocks();
     });
 
     it('logs out from "Log out" and offers to log in again', async () => {
@@ -83,7 +106,7 @@ describe('AccountMenu', () => {
       await userEvent.click(screen.getByRole('menuitem', { name: 'Log out' }));
 
       expect(mocks.logout).toHaveBeenCalledTimes(1);
-      expect(await screen.findByRole('button', { name: 'Log in' })).toBeInTheDocument();
+      expect(await screen.findByRole('link', { name: 'Log in' })).toBeInTheDocument();
     });
 
     it('stays signed in when logging out failed', async () => {
@@ -101,24 +124,7 @@ describe('AccountMenu', () => {
       mocks.me.mockRejectedValue({ status: 401, message: 'Unauthorized' });
       renderMenu();
 
-      expect(await screen.findByRole('button', { name: 'Log in' })).toBeInTheDocument();
+      expect(await screen.findByRole('link', { name: 'Log in' })).toBeInTheDocument();
     });
-  });
-
-  it('shows a login made elsewhere on the page, such as the admin form, without a reload', async () => {
-    mocks.me.mockResolvedValue(ann);
-    const { useAccount } = await import('@/service/endpoints/account/useAccount');
-    const Elsewhere = () => <button onClick={useAccount().signedIn}>login elsewhere</button>;
-    render(
-      <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
-        <AccountMenu />
-        <Elsewhere />
-      </SWRConfig>,
-    );
-    expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole('button', { name: 'login elsewhere' }));
-
-    expect(await screen.findByRole('button', { name: 'ann' })).toBeInTheDocument();
   });
 });
