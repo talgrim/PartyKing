@@ -1,10 +1,10 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect } from 'react';
 import CheckIcon from '@mui/icons-material/Check';
 import { useTranslation } from 'react-i18next';
-import { AccountDialog } from '@/components/Account/AccountDialog';
 import { HTTP_STATUS_CODE } from '@/service/constants';
 import { useAccount } from '@/service/endpoints/account/useAccount';
 import { useSavedPlaylists } from '@/service/endpoints/playlists/useSavedPlaylists';
+import { identityLinks } from '@/service/identityLinks';
 import { settingsButtonClass, settingsLabelClass, settingsMessageClass } from './settingsStyles';
 
 type Props = {
@@ -20,9 +20,8 @@ type Props = {
  */
 export const SavedPlaylistPicker = ({ inUseId, selectedId, onSelect }: Props): ReactNode => {
   const { t } = useTranslation();
-  const { account, isLoading: accountLoading, signedIn, signedOut } = useAccount();
+  const { account, isLoading: accountLoading, signedOut } = useAccount();
   const { playlists, error } = useSavedPlaylists(account !== null);
-  const [accountDialogOpen, setAccountDialogOpen] = useState(false);
 
   // A login that expired is the same as no login
   useEffect(() => {
@@ -34,16 +33,9 @@ export const SavedPlaylistPicker = ({ inUseId, selectedId, onSelect }: Props): R
       <div className="space-y-2">
         <p className={settingsLabelClass}>{t('myPlaylists.choose')}</p>
         <p className="text-sm text-slate-400">{t('myPlaylists.signInHint')}</p>
-        <button type="button" className={settingsButtonClass} onClick={() => setAccountDialogOpen(true)}>
+        <a className={settingsButtonClass} href={identityLinks.login()}>
           {t('account.logIn')}
-        </button>
-        <AccountDialog
-          open={accountDialogOpen}
-          onClose={() => setAccountDialogOpen(false)}
-          account={null}
-          signedIn={signedIn}
-          signedOut={signedOut}
-        />
+        </a>
       </div>
     );
   }

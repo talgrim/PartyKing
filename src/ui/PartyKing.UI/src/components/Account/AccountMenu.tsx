@@ -1,11 +1,11 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode } from 'react';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import { useTranslation } from 'react-i18next';
 import { MenuButton } from '@/components/common/MenuButton';
 import { HTTP_STATUS_CODE } from '@/service/constants';
 import { accountApi } from '@/service/endpoints/account/accountApi';
 import { useAccount } from '@/service/endpoints/account/useAccount';
-import { AccountDialog } from './AccountDialog';
+import { identityLinks } from '@/service/identityLinks';
 
 /** Every item of the header has the same height, whatever it holds. */
 export const headerItemClass =
@@ -17,13 +17,13 @@ export const headerIconClass = 'text-base!';
 const buttonClass = `${headerItemClass} max-w-[45vw]`;
 
 /**
- * The account button of the header: "Log in" for a visitor (it opens the dialog), the username for a signed-in
- * account (it drops "Account settings" and "Log out").
+ * The account part of the header. The accounts live in the identity service, so a visitor gets "Log in" and "Sign up"
+ * links to its pages (which send them back here), and a signed-in account its username with "Account settings" (a link
+ * to the identity service) and "Log out".
  */
 export const AccountMenu = (): ReactNode => {
   const { t } = useTranslation();
-  const { account, signedIn, signedOut } = useAccount();
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const { account, signedOut } = useAccount();
 
   // A failed request leaves the account shown, so it can be tried again; a lost login is the same as logged out
   const logOut = async () => {
@@ -35,30 +35,28 @@ export const AccountMenu = (): ReactNode => {
     }
   };
 
+  if (account) {
+    return (
+      <MenuButton
+        label={account.username}
+        icon={<AccountCircleIcon fontSize="inherit" className={`${headerIconClass} shrink-0`} />}
+        className={buttonClass}
+        entries={[
+          { label: t('account.settings'), onClick: () => window.location.assign(identityLinks.settings()) },
+          { label: t('account.logOut'), onClick: () => void logOut() },
+        ]}
+      />
+    );
+  }
+
   return (
     <>
-      {account ? (
-        <MenuButton
-          label={account.username}
-          icon={<AccountCircleIcon fontSize="inherit" className={`${headerIconClass} shrink-0`} />}
-          className={buttonClass}
-          entries={[
-            { label: t('account.settings'), onClick: () => setDialogOpen(true) },
-            { label: t('account.logOut'), onClick: () => void logOut() },
-          ]}
-        />
-      ) : (
-        <button type="button" className={buttonClass} onClick={() => setDialogOpen(true)}>
-          {t('account.logIn')}
-        </button>
-      )}
-      <AccountDialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        account={account}
-        signedIn={signedIn}
-        signedOut={signedOut}
-      />
+      <a className={buttonClass} href={identityLinks.login()}>
+        {t('account.logIn')}
+      </a>
+      <a className={buttonClass} href={identityLinks.register()}>
+        {t('account.signUp')}
+      </a>
     </>
   );
 };

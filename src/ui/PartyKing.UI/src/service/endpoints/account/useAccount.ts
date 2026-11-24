@@ -7,6 +7,15 @@ import { accountApi } from './accountApi';
 /** localStorage hint that this browser had an account login; `useAccount` keeps it up to date. */
 export const ACCOUNT_HINT_KEY = 'partyking.accountHint';
 
+/**
+ * The cookie the identity service sets next to its session cookie, on the domain of every site. It carries no
+ * identity: it only says "ask", so a browser that logged in on auth.talgrim.dev is noticed here without a visit first.
+ */
+export const IDENTITY_HINT_COOKIE = 'talgrim-signed-in';
+
+const hasIdentityHintCookie = (): boolean =>
+  document.cookie.split(';').some((cookie) => cookie.trim().startsWith(`${IDENTITY_HINT_COOKIE}=`));
+
 const ACCOUNT_KEY = 'account-me';
 
 type Options = {
@@ -18,15 +27,15 @@ type Options = {
 };
 
 /**
- * Who is signed in (a user or an admin), or null. Visitors who never signed in have no hint, so nothing is requested
- * for them (unless `alwaysCheck`). With a hint, the cookie is verified through `GET /account/me`, and a 401 drops the
- * hint; an account found without a hint sets it. Call `signedIn` after a login or registration and `signedOut`
- * after a logout or a deleted account.
+ * Who is signed in (a user or an admin), or null. The accounts belong to the identity service, which is asked through
+ * `GET /api/me`. Visitors who never signed in have no hint (neither ours nor the identity service's cookie), so nothing
+ * is requested for them (unless `alwaysCheck`). With a hint, the session is verified, and a 401 drops our hint; an
+ * account found without a hint sets it. Call `signedOut` after a logout.
  */
 export const useAccount = ({ alwaysCheck = false }: Options = {}) => {
   const [hint, setHint] = usePersistedFlag(ACCOUNT_HINT_KEY, false);
   const { mutate } = useSWRConfig();
-  const active = hint || alwaysCheck;
+  const active = hint || alwaysCheck || hasIdentityHintCookie();
 
   const { data, error, isLoading } = useSWR(active ? ACCOUNT_KEY : null, accountApi.me, {
     shouldRetryOnError: false,
@@ -44,11 +53,6 @@ export const useAccount = ({ alwaysCheck = false }: Options = {}) => {
     }
   }, [data, hint, setHint]);
 
-  const signedIn = useCallback(() => {
-    setHint(true);
-    void mutate(ACCOUNT_KEY);
-  }, [setHint, mutate]);
-
   const signedOut = useCallback(() => {
     setHint(false);
     void mutate(ACCOUNT_KEY, undefined, { revalidate: false });
@@ -59,7 +63,6 @@ export const useAccount = ({ alwaysCheck = false }: Options = {}) => {
     isLoading: active && isLoading,
     /** Set for any failure except a 401, which only means nobody is signed in. */
     error: active && (error as { status?: number } | undefined)?.status !== HTTP_STATUS_CODE.UNAUTHORIZED ? error : undefined,
-    signedIn,
     signedOut,
   };
 };
