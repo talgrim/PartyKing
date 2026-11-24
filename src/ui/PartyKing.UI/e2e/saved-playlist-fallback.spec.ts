@@ -1,6 +1,6 @@
 import { APIRequestContext, Page, expect } from '@playwright/test';
 import { API_URL } from './constants';
-import { signUpThroughTheDialog, uniqueUsername } from './fixtures/accounts';
+import { signUpThroughIdentity, uniqueUsername } from './fixtures/accounts';
 import { CreatedSession, test } from './fixtures/test';
 
 // Embeddable videos; when YouTube cannot be reached the server queues the link under its URL
@@ -30,15 +30,6 @@ async function savePlaylist(page: Page, session: CreatedSession, name: string): 
   return (await response.json()) as SavedPlaylist;
 }
 
-/**
- * The admin cookies come from the API, so this browser has no localStorage hint that it holds a login, and the page
- * would take the admin for a visitor (as it does for anybody who cleared their site data).
- */
-async function rememberTheLogin(page: Page): Promise<void> {
-  await page.evaluate(() => localStorage.setItem('partyking.accountHint', 'true'));
-  await page.reload();
-}
-
 const setFallback = (api: APIRequestContext, session: CreatedSession, playlistId: string) =>
   api.put(`${API_URL}/sessions/${session.id}/fallback-saved-playlist`, { data: { playlistId, shuffle: false } });
 
@@ -60,7 +51,6 @@ test('the admin plays a playlist they saved when the queue of another session is
   await queueSongs(sourcePage, source, SONGS);
   await savePlaylist(sourcePage, source, name);
   const admin = await openAdmin(target);
-  await rememberTheLogin(admin);
   expect(await queueOf(admin, target)).toEqual([]);
 
   await admin.getByRole('button', { name: 'Session settings' }).click();
@@ -99,7 +89,7 @@ test('only a manager signed in as the owner can choose a saved playlist', async 
 }) => {
   const session = await createSession();
   const owner = await openGuest(session);
-  await signUpThroughTheDialog(owner, uniqueUsername('owner'));
+  await signUpThroughIdentity(owner, uniqueUsername('owner'));
   await queueSongs(owner, session, [SONGS[0]]);
   const playlist = await savePlaylist(owner, session, uniqueName());
   const admin = await openAdmin(session);

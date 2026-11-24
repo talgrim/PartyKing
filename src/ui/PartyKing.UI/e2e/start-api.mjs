@@ -1,4 +1,5 @@
-// Starts the API for the e2e run on a throw-away database, with the admin account the tests log in as.
+// Starts the API for the e2e run on a throw-away database, pointed at the fake identity service (the admin the tests log
+// in as is seeded there).
 //
 // The API reads appsettings.Local.json from its content root, after (so over) the environment variables, and
 // a developer's copy holds real Spotify secrets and an admin seed. So its content root is an empty directory that
@@ -40,14 +41,17 @@ const child = spawn('dotnet', ['run', '--project', apiProject, '--no-launch-prof
     ASPNETCORE_URLS: `http://127.0.0.1:${port}`,
     ASPNETCORE_WEBROOT: join(workDir, 'wwwroot'),
     PARTYKING_DATABASE_PATH: join(workDir, demo ? 'e2e-demo.db' : 'e2e.db'),
-    AdminSettings__Username: 'e2e-admin',
-    AdminSettings__Password: 'e2e-admin-password',
+    // The accounts are the fake identity service's (e2e/fixtures/fake-identity, started by playwright.config.ts); a
+    // demo has none and never calls it
+    Identity__BaseUrl: 'http://127.0.0.1:4400/',
+    Identity__CookieName: 'talgrim.session',
+    Identity__WebhookSecret: 'e2e-webhook-secret',
     RateLimiting__Disabled: 'true',
     Resistance__Seed: '931902',
     // A requested deletion happens after 15 s (not 7 days), and the sweep looks every second, so a spec sees it
     SessionDeletionSettings__DelayDays: String(15 / 86400),
     SessionDeletionSettings__SweepIntervalSeconds: '1',
-    ...(demo ? { DemoSettings__Enabled: 'true' } : {}),
+    ...(demo ? { DemoSettings__Enabled: 'true', Identity__Enabled: 'false' } : {}),
   },
 });
 

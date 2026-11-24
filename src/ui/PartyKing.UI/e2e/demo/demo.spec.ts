@@ -23,7 +23,8 @@ test('the landing page offers to start a demo, with no list of sessions and no a
   await expect(page.getByRole('textbox')).toHaveCount(0);
   // The header keeps the calculator, but not the account menu
   await expect(page.getByRole('button', { name: 'BAC calculator' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Log in' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Log in' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Sign up' })).toHaveCount(0);
 
   const config = await page.request.get(`${DEMO_API_URL}/demo/config`);
   expect((await config.json()).enabled).toBe(true);
@@ -153,12 +154,13 @@ test('a demo holds at most ten photos', async ({ page }) => {
   expect(current.status()).toBe(204);
 });
 
-test('signing up is refused in a demo', async ({ request }) => {
-  const response = await request.post(`${DEMO_API_URL}/account/register`, {
-    data: { username: 'demo-visitor', password: 'a-long-enough-password' },
+test('a demo has no accounts: a session cookie is not asked about, and nobody is an admin', async ({ request }) => {
+  // The demo never calls the identity service (none runs in this suite), so whatever cookie arrives is a stranger's
+  const response = await request.get(`${DEMO_API_URL}/admin/sessions`, {
+    headers: { Cookie: 'talgrim.session=made-up' },
   });
 
-  expect(response.status()).toBe(403);
+  expect(response.status()).toBe(401);
 });
 
 test('when the time is up the session is replaced by the end screen, and a new demo can start', async ({ page }) => {
