@@ -194,6 +194,60 @@ internal class SessionsRepository : ISessionsRepository
         return updated > 0;
     }
 
+    public async Task<SessionDeletionScheduleResult> ScheduleDeletionAsync(
+        Guid id,
+        DateTime now,
+        TimeSpan delay,
+        CancellationToken cancellationToken)
+    {
+        var outcome = SessionDeletionScheduleOutcome.AlreadyScheduled;
+
+        // DeletionScheduledAt is a concurrency token: of two racing requests the second save fails, is retried on the
+        // fresh row and finds the deletion scheduled, so the first time wins and only one event is raised
+        var found = await UpdateAsync(
+            id,
+            session => outcome = session.ScheduleDeletion(now, delay),
+            cancellationToken);
+
+        if (!found)
+        {
+            return SessionDeletionScheduleResult.SessionNotFound;
+        }
+
+        return outcome == SessionDeletionScheduleOutcome.Scheduled
+            ? SessionDeletionScheduleResult.Scheduled
+            : SessionDeletionScheduleResult.AlreadyScheduled;
+    }
+
+    public async Task<SessionDeletionCancelResult> CancelDeletionAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var outcome = SessionDeletionCancelOutcome.NotScheduled;
+
+        var found = await UpdateAsync(id, session => outcome = session.CancelDeletion(), cancellationToken);
+
+        if (!found)
+        {
+            return SessionDeletionCancelResult.SessionNotFound;
+        }
+
+        return outcome == SessionDeletionCancelOutcome.Cancelled
+            ? SessionDeletionCancelResult.Cancelled
+            : SessionDeletionCancelResult.NotScheduled;
+    }
+
+    public async Task<IReadOnlyList<Guid>> ListDueForDeletionAsync(DateTime now, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _readerDbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        return await dbContext.Sessions
+            .AsNoTracking()
+            // The same rule as Session.IsDueForDeletion, as SQL
+            .Where(x => x.DeletionScheduledAt != null && x.DeletionScheduledAt <= now)
+            .OrderBy(x => x.DeletionScheduledAt)
+            .Select(x => x.Id)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken)
     {
         await using var dbContext = await _writerDbContextFactory.CreateDbContextAsync(cancellationToken);

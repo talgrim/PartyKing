@@ -23,6 +23,12 @@ public class SessionConfiguration : IEntityTypeConfiguration<Session>
         builder.Property(x => x.HostProfileId).IsConcurrencyToken();
         builder.Ignore(x => x.HostDisplayName);
 
+        // Two guests asking at once must not both schedule: the second save is retried and finds the first time
+        builder.Property(x => x.DeletionScheduledAt).IsConcurrencyToken();
+
+        // The sweep looks up the due sessions by this (NULLs are the sessions without a scheduled deletion)
+        builder.HasIndex(x => x.DeletionScheduledAt);
+
         // The kind tells what FallbackPlaylistId names, and is null with it; the saved playlist's Guid view of it is not a column
         builder.Property(x => x.FallbackPlaylistKind).HasConversion<string>();
         builder.Ignore(x => x.FallbackSavedPlaylistId);

@@ -106,6 +106,12 @@ public class Session : AggregateRoot
     public int FallbackCursor { get; internal set; }
     public DateTime CreatedAt { get; internal set; }
 
+    /// <summary>
+    /// UTC instant from which the session is deleted by the scheduled sweep; null when no deletion is scheduled. Set
+    /// when a guest asks for deletion, see <see cref="ScheduleDeletion"/>.
+    /// </summary>
+    public DateTime? DeletionScheduledAt { get; internal set; }
+
     /// <summary>The stamp a session with this password hash has, for callers that only know the new hash.</summary>
     public static string AccessStampOf(string passwordHash)
     {
@@ -146,6 +152,47 @@ public class Session : AggregateRoot
         Raise(new SessionRenamed(Id, Name));
 
         return SessionNameFailure.None;
+    }
+
+    /// <summary>
+    /// Schedules the deletion of the session for <paramref name="delay"/> after <paramref name="now"/> (UTC) and raises
+    /// <see cref="SessionDeletionScheduled"/>. Idempotent: when a deletion is already scheduled the first time is kept,
+    /// so asking again cannot push it back, and nothing is raised.
+    /// </summary>
+    public SessionDeletionScheduleOutcome ScheduleDeletion(DateTime now, TimeSpan delay)
+    {
+        if (DeletionScheduledAt is not null)
+        {
+            return SessionDeletionScheduleOutcome.AlreadyScheduled;
+        }
+
+        DeletionScheduledAt = now.Add(delay);
+        Raise(new SessionDeletionScheduled(Id, DeletionScheduledAt.Value));
+
+        return SessionDeletionScheduleOutcome.Scheduled;
+    }
+
+    /// <summary>
+    /// Calls off a scheduled deletion and raises <see cref="SessionDeletionCancelled"/>. Without a scheduled deletion it
+    /// changes and raises nothing. Who may cancel (an admin) is decided above the Domain.
+    /// </summary>
+    public SessionDeletionCancelOutcome CancelDeletion()
+    {
+        if (DeletionScheduledAt is null)
+        {
+            return SessionDeletionCancelOutcome.NotScheduled;
+        }
+
+        DeletionScheduledAt = null;
+        Raise(new SessionDeletionCancelled(Id));
+
+        return SessionDeletionCancelOutcome.Cancelled;
+    }
+
+    /// <summary>A scheduled deletion is due from its instant on; a session without one never is.</summary>
+    public bool IsDueForDeletion(DateTime now)
+    {
+        return DeletionScheduledAt <= now;
     }
 
     /// <summary>Replaces the password hash. Every access stamp derives from it, so the old unlocks stop working.</summary>

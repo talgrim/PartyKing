@@ -9,12 +9,21 @@ public static partial class SessionMappings
 {
     [MapPropertyFromSource(nameof(SessionDto.HostName), Use = nameof(HostNameOf))]
     [MapPropertyFromSource(nameof(SessionDto.HasHost), Use = nameof(HasHostOf))]
+    [MapPropertyFromSource(nameof(SessionDto.DeletionScheduledAt), Use = nameof(DeletionScheduledAtOf))]
     public static partial SessionDto ToDto(this Session session);
 
     [MapPropertyFromSource(nameof(SessionListItemDto.HasHost), Use = nameof(HasHostOf))]
     public static partial SessionListItemDto ToListItemDto(this Session session);
 
     private static string? HostNameOf(Session session) => session.HostDisplayName ?? session.HostProfileId;
+
+    /// <summary>The stored time is UTC, but a database read leaves its kind unspecified, which a plain conversion would take as local time.</summary>
+    private static DateTimeOffset? DeletionScheduledAtOf(Session session)
+    {
+        return session.DeletionScheduledAt is { } scheduledAt
+            ? new DateTimeOffset(DateTime.SpecifyKind(scheduledAt, DateTimeKind.Utc))
+            : null;
+    }
 
     private static bool HasHostOf(Session session) => session.HostProfileId is not null;
 }

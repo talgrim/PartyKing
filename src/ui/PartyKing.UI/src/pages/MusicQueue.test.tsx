@@ -15,11 +15,13 @@ const mocks = vi.hoisted(() => ({
   getResistanceLobby: vi.fn(),
   getDemoConfig: vi.fn(),
   getDemoSession: vi.fn(),
+  getSessions: vi.fn(),
 }));
 
 vi.mock('@/service/endpoints/sessions/sessionsApi', () => ({
   sessionsApi: {
     getSession: mocks.getSession,
+    getSessions: mocks.getSessions,
     getViewerRole: mocks.getViewerRole,
     join: mocks.join,
     joinWithToken: mocks.joinWithToken,
@@ -43,7 +45,7 @@ vi.mock('@/service/realtime/useSessionMusicHub', () => ({ useSessionMusicHub: ()
 
 const renderPage = async () => {
   render(
-    <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
+    <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, focusThrottleInterval: 0 }}>
       <MemoryRouter initialEntries={['/s/session-1']}>
         <Routes>
           <Route path="/s/:sessionId" element={<MusicQueue />} />
@@ -61,6 +63,7 @@ describe('MusicQueue', () => {
     sessionStorage.clear();
     mocks.getDemoConfig.mockResolvedValue({ enabled: false, serverTime: '2026-11-13T12:00:00Z' });
     mocks.getDemoSession.mockReset().mockRejectedValue({ status: 404 });
+    mocks.getSessions.mockReset().mockResolvedValue([{ id: 'session-1', code: 'ABC123', name: 'Party', hasHost: true }]);
     mocks.getRingoLobby.mockRejectedValue({ status: 404 });
     mocks.getResistanceLobby.mockRejectedValue({ status: 404 });
     mocks.getSession.mockResolvedValue({ id: 'session-1', code: 'ABC123', name: 'Party', hostName: 'H', hasHost: true });
@@ -122,7 +125,7 @@ describe('MusicQueue', () => {
     mocks.getViewerRole.mockResolvedValue({ isHost: false, isAdmin: false });
 
     render(
-      <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
+      <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, focusThrottleInterval: 0 }}>
         <MemoryRouter initialEntries={['/s/session-1']}>
           <Routes>
             <Route path="/s/:sessionId" element={<MusicQueue />} />
@@ -231,7 +234,7 @@ describe('MusicQueue', () => {
     mocks.join.mockResolvedValue(undefined);
 
     render(
-      <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
+      <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, focusThrottleInterval: 0 }}>
         <MemoryRouter initialEntries={['/s/session-1']}>
           <Routes>
             <Route path="/s/:sessionId" element={<MusicQueue />} />
@@ -269,7 +272,7 @@ describe('MusicQueue', () => {
   describe('joining through a QR code', () => {
     const renderScanned = () =>
       render(
-        <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
+        <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, focusThrottleInterval: 0 }}>
           <MemoryRouter initialEntries={['/s/session-1?join=tok']}>
             <Routes>
               <Route path="/s/:sessionId" element={<MusicQueue />} />
@@ -327,7 +330,7 @@ describe('MusicQueue', () => {
       mocks.getDemoSession.mockResolvedValue(demoSession(-1000));
 
       render(
-        <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
+        <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, focusThrottleInterval: 0 }}>
           <MemoryRouter initialEntries={['/s/session-1']}>
             <Routes>
               <Route path="/s/:sessionId" element={<MusicQueue />} />
@@ -354,7 +357,7 @@ describe('MusicQueue', () => {
       }));
 
       render(
-        <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
+        <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, focusThrottleInterval: 0 }}>
           <MemoryRouter initialEntries={['/s/session-1']}>
             <Link to="/s/session-2">next demo</Link>
             <Routes>
@@ -375,7 +378,7 @@ describe('MusicQueue', () => {
       mocks.getSession.mockRejectedValue({ status: 401, message: 'The session password is required' });
 
       render(
-        <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
+        <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, focusThrottleInterval: 0 }}>
           <MemoryRouter initialEntries={['/s/session-1']}>
             <Routes>
               <Route path="/s/:sessionId" element={<MusicQueue />} />
@@ -396,5 +399,66 @@ describe('MusicQueue', () => {
 
     expect(screen.queryByText(/Ends in/)).not.toBeInTheDocument();
     expect(mocks.getDemoSession).not.toHaveBeenCalled();
+  });
+
+  describe('a deletion that a guest asked for', () => {
+    it('tells everyone when the session will be deleted', async () => {
+      mocks.getViewerRole.mockResolvedValue({ isHost: false, isAdmin: false });
+      mocks.getSession.mockResolvedValue({
+        id: 'session-1',
+        code: 'ABC123',
+        name: 'Party',
+        hostName: 'H',
+        hasHost: true,
+        deletionScheduledAt: '2026-11-28T14:05:00Z',
+      });
+
+      await renderPage();
+
+      expect(screen.getByText('Scheduled for deletion')).toBeVisible();
+      expect(screen.getByText(/This session will be deleted on .*November.*2026/)).toBeVisible();
+    });
+
+    it('shows no banner when no deletion is scheduled', async () => {
+      mocks.getViewerRole.mockResolvedValue({ isHost: false, isAdmin: false });
+
+      await renderPage();
+
+      expect(screen.queryByText('Scheduled for deletion')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('a session that was open and then answers 401', () => {
+    const renderOpened = async () => {
+      mocks.getViewerRole.mockResolvedValue({ isHost: false, isAdmin: false });
+      mocks.getSession
+        .mockResolvedValueOnce({ id: 'session-1', code: 'ABC123', name: 'Party', hostName: 'H', hasHost: true })
+        .mockRejectedValue({ status: 401, message: 'The session password is required' });
+
+      await renderPage();
+      // The page polls the session; a new request is what finds out
+      await userEvent.click(screen.getByRole('button', { name: 'Upload photos' }));
+    };
+
+    // The page revalidates when the visitor comes back to its tab
+    const comeBack = () => window.dispatchEvent(new Event('focus'));
+
+    it('says that the session was deleted when it is no longer in the list, instead of asking for a password', async () => {
+      mocks.getSessions.mockResolvedValue([]);
+      await renderOpened();
+      comeBack();
+
+      expect(await screen.findByRole('heading', { name: 'This session was deleted' })).toBeVisible();
+      expect(screen.queryByLabelText('Session password')).not.toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Back to the sessions' })).toBeVisible();
+    });
+
+    it('still asks for the password when the session is in the list, as after a password change', async () => {
+      await renderOpened();
+      comeBack();
+
+      expect(await screen.findByLabelText('Session password')).toBeVisible();
+      expect(screen.queryByRole('heading', { name: 'This session was deleted' })).not.toBeInTheDocument();
+    });
   });
 });

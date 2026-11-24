@@ -376,6 +376,21 @@ public class ResistanceRoundServiceTests : ResistanceServiceTestBase
     }
 
     [Fact]
+    public async Task AMissionThatNeedsTwoFails_IsFailedByTwoFailCards()
+    {
+        var ct = CancellationToken.None;
+        _rules.Rules.PlayerCounts[5] = new ResistanceCountRules(2, [2, 3, 2, 3, 3], [2, 1, 1, 1, 1]);
+        var mission = await StartMissionAsync(5, spiesOnTeam: 2);
+
+        await _roundService.PlayMissionCardAsync(_id, ResistanceMissionCardKindDto.Fail, mission.Spies[0], ct);
+        await _roundService.PlayMissionCardAsync(_id, ResistanceMissionCardKindDto.Fail, mission.Spies[1], ct);
+
+        var game = (await _lobbyService.GetAsync(_id, Host, ct)).Value;
+        var result = Assert.Single(game.MissionResults);
+        Assert.Equal((1, false, 2), (result.MissionNumber, result.Succeeded, result.FailCount));
+    }
+
+    [Fact]
     public async Task ContinuingAfterAMission_StartsTheNextOneWithTheNextLeader()
     {
         var ct = CancellationToken.None;

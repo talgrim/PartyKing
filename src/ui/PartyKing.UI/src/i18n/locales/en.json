@@ -96,7 +96,11 @@
       "next": "Next",
       "pageOf": "Page {{page}} of {{pages}}",
       "total": "Users: {{count}}"
-    }
+    },
+    "deletionScheduled": "Deletion requested by a guest, scheduled for {{date}}",
+    "cancelDeletion": "Cancel deletion",
+    "confirmCancelDeletion": "Cancel the deletion of “{{name}}”? The session stays.",
+    "deletionCancelled": "Deletion cancelled"
   },
   "imagePreview": {
     "name": "Name:",
@@ -1243,6 +1247,23 @@
         "title": "Blood alcohol calculator",
         "text": "An estimate of your blood alcohol from what you drank. It is only an estimate, never a reason to decide that you can drive."
       }
+    }
+  },
+  "sessionDeletion": {
+    "requestTitle": "Request deletion of this session",
+    "requestConfirm": "Ask for this session to be deleted? In {{days}} days it will be deleted for good, with its queue, games and photos. Only an admin can call that off.",
+    "requestFailed": "Could not request the deletion",
+    "banner": {
+      "label": "Scheduled for deletion",
+      "text": "This session will be deleted on {{date}}, together with its queue, games and photos."
+    },
+    "deleteTitle": "Delete session",
+    "deleteText": "Deletes the session now, together with its queue, games and photos. This cannot be undone.",
+    "deleteButton": "Delete session",
+    "deleteConfirm": "Delete “{{name}}” together with its queue, games and photos? This cannot be undone.",
+    "deleted": {
+      "title": "This session was deleted",
+      "text": "The session and everything in it is gone."
     }
   }
 }

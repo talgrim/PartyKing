@@ -44,6 +44,9 @@ const child = spawn('dotnet', ['run', '--project', apiProject, '--no-launch-prof
     AdminSettings__Password: 'e2e-admin-password',
     RateLimiting__Disabled: 'true',
     Resistance__Seed: '931902',
+    // A requested deletion happens after 15 s (not 7 days), and the sweep looks every second, so a spec sees it
+    SessionDeletionSettings__DelayDays: String(15 / 86400),
+    SessionDeletionSettings__SweepIntervalSeconds: '1',
     ...(demo ? { DemoSettings__Enabled: 'true' } : {}),
   },
 });

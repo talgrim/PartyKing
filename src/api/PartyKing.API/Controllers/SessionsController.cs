@@ -11,6 +11,7 @@ namespace PartyKing.API.Controllers;
 public class SessionsController : CoreController
 {
     public const string JoinRateLimitPolicy = "session-join";
+    public const string DeletionRequestRateLimitPolicy = "session-deletion-request";
 
     private readonly ISessionService _sessionService;
     private readonly ISessionAccessService _accessService;
@@ -147,6 +148,38 @@ public class SessionsController : CoreController
         _cookies.GrantSessionAccess(sessionId, result.Value, HttpContext);
 
         return NoContent();
+    }
+
+    /// <summary>
+    /// Deletes the session at once, with its queue, photos and games. Host or admin only (403 otherwise). Refused in
+    /// the demo (403).
+    /// </summary>
+    [HttpDelete("sessions/{sessionId:guid}")]
+    [RequireSessionAccess]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> DeleteSession(Guid sessionId, CancellationToken cancellationToken)
+    {
+        var caller = await HttpContext.ReadSessionCallerAsync(_cookies);
+
+        var result = await _sessionService.DeleteAsync(sessionId, caller, cancellationToken);
+
+        return result.Match(_ => NoContent(), Problem);
+    }
+
+    /// <summary>
+    /// Any guest with access asks for the session to be deleted after the configured delay (7 days by default), and
+    /// the operator is told by mail. Idempotent: 204 whether or not it was already scheduled, and the first time is
+    /// kept. Only an admin can call it off. Refused in the demo (403).
+    /// </summary>
+    [HttpPost("sessions/{sessionId:guid}/deletion-request")]
+    [RequireSessionAccess]
+    [EnableRateLimiting(DeletionRequestRateLimitPolicy)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> RequestDeletion(Guid sessionId, CancellationToken cancellationToken)
+    {
+        var result = await _sessionService.RequestDeletionAsync(sessionId, cancellationToken);
+
+        return result.Match(_ => NoContent(), Problem);
     }
 
     [HttpGet("sessions/{sessionId:guid}")]

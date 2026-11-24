@@ -96,7 +96,11 @@
       "next": "Następna",
       "pageOf": "Strona {{page}} z {{pages}}",
       "total": "Użytkownicy: {{count}}"
-    }
+    },
+    "deletionScheduled": "Usunięcie zażądane przez gościa, zaplanowane na {{date}}",
+    "cancelDeletion": "Anuluj usunięcie",
+    "confirmCancelDeletion": "Anulować usunięcie „{{name}}”? Sesja zostanie.",
+    "deletionCancelled": "Usunięcie anulowane"
   },
   "imagePreview": {
     "name": "Nazwa:",
@@ -1259,6 +1263,23 @@
         "title": "Kalkulator alkoholu we krwi",
         "text": "Szacunkowa zawartość alkoholu we krwi na podstawie tego, co wypiłeś. To tylko szacunek i nigdy nie powód, żeby uznać, że możesz prowadzić."
       }
+    }
+  },
+  "sessionDeletion": {
+    "requestTitle": "Poproś o usunięcie tej sesji",
+    "requestConfirm": "Poprosić o usunięcie tej sesji? Za {{days}} dni zostanie usunięta na stałe, razem z kolejką, grami i zdjęciami. Anulować to może tylko administrator.",
+    "requestFailed": "Nie udało się poprosić o usunięcie",
+    "banner": {
+      "label": "Zaplanowane usunięcie",
+      "text": "Ta sesja zostanie usunięta {{date}}, razem z kolejką, grami i zdjęciami."
+    },
+    "deleteTitle": "Usuń sesję",
+    "deleteText": "Usuwa sesję od razu, razem z kolejką, grami i zdjęciami. Tego nie można cofnąć.",
+    "deleteButton": "Usuń sesję",
+    "deleteConfirm": "Usunąć „{{name}}” razem z kolejką, grami i zdjęciami? Tego nie można cofnąć.",
+    "deleted": {
+      "title": "Ta sesja została usunięta",
+      "text": "Sesji i wszystkiego, co w niej było, już nie ma."
     }
   }
 }
