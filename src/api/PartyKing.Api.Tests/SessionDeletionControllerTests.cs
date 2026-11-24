@@ -1,5 +1,6 @@
 using System.Reflection;
 using ErrorOr;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -32,7 +33,11 @@ public class SessionDeletionControllerTests
 
     public SessionDeletionControllerTests()
     {
-        var services = new ServiceCollection().AddLogging().AddControllers().Services.BuildServiceProvider();
+        var services = new ServiceCollection()
+            .AddLogging()
+            .AddControllers().Services
+            .AddSingleton<IAuthenticationService, NoAuthenticationService>()
+            .BuildServiceProvider();
         _httpContext = new DefaultHttpContext { RequestServices = services };
         var accessor = new HttpContextAccessor { HttpContext = _httpContext };
         var context = new ControllerContext { HttpContext = _httpContext };
@@ -41,7 +46,7 @@ public class SessionDeletionControllerTests
         {
             ControllerContext = context
         };
-        _adminController = new AdminController(accessor, null!, _admin)
+        _adminController = new AdminController(accessor, _admin)
         {
             ControllerContext = context
         };

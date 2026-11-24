@@ -442,6 +442,9 @@ internal class FakeSavedPlaylistsRepository : ISavedPlaylistsRepository
         Saved.Add(playlist);
         return Task.CompletedTask;
     }
+
+    public Task<int> DeleteByOwnerAsync(Guid ownerAccountId, CancellationToken cancellationToken) =>
+        Task.FromResult(Saved.RemoveAll(x => x.OwnerAccountId == ownerAccountId));
 }
 
 internal class FakeSlideshowService : ISlideshowService

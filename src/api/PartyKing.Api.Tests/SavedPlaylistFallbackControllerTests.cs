@@ -10,7 +10,6 @@ using Microsoft.Extensions.DependencyInjection;
 using PartyKing.API.Authorization;
 using PartyKing.API.Controllers;
 using PartyKing.API.Cookies;
-using PartyKing.Application.Accounts;
 using PartyKing.Application.Games.Services.Base;
 using PartyKing.Application.Playlists.Services;
 using PartyKing.Application.Queue.Services;
@@ -192,6 +191,9 @@ public class SavedPlaylistFallbackControllerTests
 
     private sealed class FakeSavedPlaylistService : ISavedPlaylistService
     {
+        public Task<ErrorOr<Success>> DeleteByOwnerAsync(Guid accountId, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
         public IReadOnlyList<SavedPlaylistDto> ListResult { get; set; } = [];
 
         public Guid? ListedAccountId { get; private set; }
@@ -226,35 +228,14 @@ public class SavedPlaylistFallbackControllerTests
             return true;
         }
 
-        public bool TryReadAccount(HttpRequest request, out Guid accountId, out Guid securityStamp, out AccountRole role)
-        {
-            accountId = Guid.Empty;
-            securityStamp = Guid.Empty;
-            role = AccountRole.User;
-
-            return false;
-        }
 
         public void GrantHost(string profileId, HttpContext? httpContext) => throw new NotSupportedException();
         public void GrantSpotifyAccessToken(string spotifyAccessToken, int expiresIn, HttpContext? httpContext) => throw new NotSupportedException();
-        public void GrantAccount(AccountIdentity identity, HttpContext? httpContext) => throw new NotSupportedException();
-        public void RevokeAccount(HttpContext? httpContext) => throw new NotSupportedException();
         public void GrantSessionAccess(Guid sessionId, string stamp, HttpContext? httpContext) => throw new NotSupportedException();
         public bool TryReadSessionAccess(HttpRequest request, Guid sessionId, out string stamp) => throw new NotSupportedException();
         public void GrantGamePlayer(GameKind game, Guid sessionId, GameSeat seat, HttpContext? httpContext) => throw new NotSupportedException();
         public void GrantDemoSession(Guid sessionId, string profileId, HttpContext? httpContext) => throw new NotSupportedException();
         public IReadOnlyList<StartedDemoSession> ReadDemoSessions(HttpRequest request) => throw new NotSupportedException();
         public bool TryReadGamePlayer(GameKind game, HttpRequest request, Guid sessionId, out GameSeat seat) => throw new NotSupportedException();
-    }
-
-    private sealed class NoAuthenticationService : IAuthenticationService
-    {
-        public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) =>
-            Task.FromResult(AuthenticateResult.NoResult());
-
-        public Task ChallengeAsync(HttpContext context, string? scheme, AuthenticationProperties? properties) => Task.CompletedTask;
-        public Task ForbidAsync(HttpContext context, string? scheme, AuthenticationProperties? properties) => Task.CompletedTask;
-        public Task SignInAsync(HttpContext context, string? scheme, ClaimsPrincipal principal, AuthenticationProperties? properties) => Task.CompletedTask;
-        public Task SignOutAsync(HttpContext context, string? scheme, AuthenticationProperties? properties) => Task.CompletedTask;
     }
 }

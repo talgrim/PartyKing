@@ -219,4 +219,26 @@ public class SavedPlaylistServiceTests
         Assert.False(result.IsError);
         Assert.Empty(result.Value);
     }
+
+    [Fact]
+    public async Task DeleteByOwner_DeletesThePlaylistsOfThatAccount_AndOnlyThose()
+    {
+        var other = Guid.NewGuid();
+        AddASession();
+        await _service.SaveQueueAsync(AccountId, _sessionId, "Mine", [PlaylistSection.History], Ct);
+        await _service.SaveQueueAsync(other, _sessionId, "Theirs", [PlaylistSection.History], Ct);
+
+        var result = await _service.DeleteByOwnerAsync(AccountId, Ct);
+
+        Assert.False(result.IsError);
+        Assert.Equal(other, Assert.Single(_playlists.Saved).OwnerAccountId);
+    }
+
+    [Fact]
+    public async Task DeleteByOwner_OfAnAccountWithoutPlaylists_Succeeds()
+    {
+        var result = await _service.DeleteByOwnerAsync(Guid.NewGuid(), Ct);
+
+        Assert.False(result.IsError);
+    }
 }

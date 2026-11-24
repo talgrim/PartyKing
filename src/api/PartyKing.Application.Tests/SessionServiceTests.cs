@@ -2,7 +2,7 @@ using ErrorOr;
 using Microsoft.Extensions.Options;
 using PartyKing.Application.Configuration;
 using PartyKing.Application.Demo.Services;
-using PartyKing.Application.Accounts.Services;
+using PartyKing.Application.System;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Sessions;
 using PartyKing.Contract.V1.Sessions;
