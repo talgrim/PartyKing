@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using PartyKing.Domain.Entities.Auth;
 using PartyKing.Domain.Entities.Playlists;
 
 namespace PartyKing.Persistence.Configurations;
@@ -16,12 +15,8 @@ public class SavedPlaylistConfiguration : IEntityTypeConfiguration<SavedPlaylist
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.HasIndex(x => x.OwnerAccountId);
 
-        // The playlist goes away with its owner
-        builder
-            .HasOne<Account>()
-            .WithMany()
-            .HasForeignKey(x => x.OwnerAccountId)
-            .OnDelete(DeleteBehavior.Cascade);
+        // The owner is an account of the identity service, so there is no foreign key: the playlists go away when its
+        // identity service reports the account as deleted (an `account.deleted` event)
         builder
             .HasMany(x => x.Items)
             .WithOne()

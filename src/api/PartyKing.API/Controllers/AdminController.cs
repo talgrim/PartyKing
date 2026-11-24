@@ -1,55 +1,20 @@
 using Microsoft.AspNetCore.Mvc;
 using PartyKing.API.Authorization;
-using PartyKing.Application.Accounts.Services;
 using PartyKing.Application.Sessions.Services;
-using PartyKing.Contract.V1.Accounts;
-using PartyKing.Contract.V1.Common;
 using PartyKing.Contract.V1.Sessions;
 
 namespace PartyKing.API.Controllers;
 
 public class AdminController : CoreController
 {
-    private readonly IAccountAdminService _accountAdminService;
     private readonly ISessionAdminService _sessionAdminService;
 
     public AdminController(
         IHttpContextAccessor httpContextAccessor,
-        IAccountAdminService accountAdminService,
         ISessionAdminService sessionAdminService)
         : base(httpContextAccessor)
     {
-        _accountAdminService = accountAdminService;
         _sessionAdminService = sessionAdminService;
-    }
-
-    /// <summary>One page of the registered users (never the admins), ordered by username.</summary>
-    [HttpGet("admin/users")]
-    [AuthorizeAdmin]
-    [ProducesResponseType<PagedDto<AccountDto>>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> ListUsers(
-        [FromQuery] string? search,
-        [FromQuery] int? page,
-        [FromQuery] int? pageSize,
-        CancellationToken cancellationToken)
-    {
-        var result = await _accountAdminService.ListUsersAsync(search, page, pageSize, cancellationToken);
-
-        return Ok(result);
-    }
-
-    /// <summary>Sets a new password for a user, who is signed out everywhere. Admin passwords are not reset here.</summary>
-    [HttpPut("admin/users/{accountId:guid}/password")]
-    [AuthorizeAdmin]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> ResetPassword(
-        Guid accountId,
-        [FromBody] ResetPasswordRequestDto request,
-        CancellationToken cancellationToken)
-    {
-        var result = await _accountAdminService.ResetPasswordAsync(accountId, request.NewPassword, cancellationToken);
-
-        return result.Match(_ => NoContent(), Problem);
     }
 
     /// <summary>Every session with its host's name.</summary>

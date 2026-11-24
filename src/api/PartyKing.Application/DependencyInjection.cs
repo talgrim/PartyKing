@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using PartyKing.Application.Accounts.Services;
 using PartyKing.Application.Configuration;
 using PartyKing.Application.Demo.Services;
 using PartyKing.Application.Events;
@@ -12,6 +11,7 @@ using PartyKing.Application.Games.Services.Base;
 using PartyKing.Application.Games.Services.NeverHaveIEver;
 using PartyKing.Application.Games.Services.Resistance;
 using PartyKing.Application.Games.Services.Ringo;
+using PartyKing.Application.Identity;
 using PartyKing.Application.Lyrics.Handlers;
 using PartyKing.Application.Mail;
 using PartyKing.Application.Lyrics.Services;
@@ -53,15 +53,8 @@ public static class DependencyInjection
         services.RegisterLyrics();
         services.RegisterGames(configuration);
         services.RegisterSessions(configuration);
-        services.RegisterAccounts(configuration);
+        services.RegisterIdentity(configuration);
         services.RegisterDemo(configuration);
-    }
-
-    /// <summary>Creates the first admin account from configuration when none exists.</summary>
-    public static async Task SeedAdminAsync(this IServiceProvider services)
-    {
-        await using var scope = services.CreateAsyncScope();
-        await scope.ServiceProvider.GetRequiredService<IAdminSeeder>().SeedAsync(CancellationToken.None);
     }
 
     private static void RegisterSessions(this IServiceCollection services, IConfiguration configuration)
@@ -119,19 +112,17 @@ public static class DependencyInjection
         services.Replace(ServiceDescriptor.Singleton<IPhotoQuotaPolicy, DemoPhotoQuotaPolicy>());
     }
 
-    private static void RegisterAccounts(this IServiceCollection services, IConfiguration configuration)
+    private static void RegisterIdentity(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddSingleton<IPasswordHasher, PasswordHasher>();
-        services.AddSingleton<AccountDummyHash>();
-        services.AddScoped<IAccountService, AccountService>();
-        services.AddScoped<IAccountAdminService, AccountAdminService>();
-        services.AddScoped<IAdminSeeder, AdminSeeder>();
-        services.Configure<AdminConfiguration>(configuration.GetSection(AdminConfiguration.SectionName));
+        services.Configure<IdentityConfiguration>(configuration.GetSection(IdentityConfiguration.SectionName));
+        // Nobody is signed in until the identity service's registration replaces this
+        services.TryAddSingleton<IIdentityClient, NullIdentityClient>();
     }
 
     private static void RegisterSystem(this IServiceCollection services)
     {
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
+        services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddSingleton<IRandomProvider, SharedRandomProvider>();
     }
 

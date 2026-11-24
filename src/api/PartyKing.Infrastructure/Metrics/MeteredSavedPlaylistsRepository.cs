@@ -35,4 +35,9 @@ internal sealed class MeteredSavedPlaylistsRepository : MeteredRepository, ISave
     {
         return MeasureAsync(nameof(AddAsync), () => _inner.AddAsync(playlist, cancellationToken));
     }
+
+    public Task<int> DeleteByOwnerAsync(Guid ownerAccountId, CancellationToken cancellationToken)
+    {
+        return MeasureAsync(nameof(DeleteByOwnerAsync), () => _inner.DeleteByOwnerAsync(ownerAccountId, cancellationToken));
+    }
 }

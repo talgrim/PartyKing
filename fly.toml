@@ -21,6 +21,10 @@ primary_region = 'fra'
   MailSettings__Sender = 'partyking-requests@talgrim.dev'
   MailSettings__Recipient = 'partyking@talgrim.dev'
   MailSettings__ReplyTo = 'partyking@talgrim.dev'
+  # Accounts live in the identity service; the session cookie it sets on .talgrim.dev is only forwarded to it. The secret
+  # Identity__WebhookSecret signs its account deletion webhook (a signed POST to /api/internal/events)
+  Identity__BaseUrl = 'https://auth.talgrim.dev/'
+  Identity__CookieName = '__Secure-talgrim.session'
 
 [[mounts]]
   source = 'partyking_data'
