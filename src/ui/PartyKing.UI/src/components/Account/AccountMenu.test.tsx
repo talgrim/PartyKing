@@ -69,13 +69,32 @@ describe('AccountMenu', () => {
       mocks.me.mockResolvedValue(ann);
     });
 
-    it('names the account on the button and drops "Account settings" and "Log out"', async () => {
+    it('names the account on the button and drops the sites, "Account settings" and "Log out"', async () => {
       renderMenu();
 
       await userEvent.click(await screen.findByRole('button', { name: 'ann' }));
 
-      expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Account settings', 'Log out']);
+      expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+        'Home',
+        'PartyKing · you are here',
+        'Notes',
+        'Account settings',
+        'Log out',
+      ]);
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    it('links the three sites of the family and marks this one as the current page', async () => {
+      renderMenu();
+
+      await userEvent.click(await screen.findByRole('button', { name: 'ann' }));
+
+      expect(screen.getByRole('menuitem', { name: 'Home' })).toHaveAttribute('href', 'https://talgrim.dev/');
+      expect(screen.getByRole('menuitem', { name: 'Notes' })).toHaveAttribute('href', 'https://notes.talgrim.dev/');
+      const here = screen.getByRole('menuitem', { name: /PartyKing/ });
+      expect(here).toHaveAttribute('href', 'https://party.talgrim.dev/');
+      expect(here).toHaveAttribute('aria-current', 'page');
+      expect(screen.getByRole('menuitem', { name: 'Home' })).not.toHaveAttribute('aria-current');
     });
 
     it('shows a person icon to the right of the username', async () => {

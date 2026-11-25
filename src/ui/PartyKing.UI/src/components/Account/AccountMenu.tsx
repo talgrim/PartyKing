@@ -6,6 +6,7 @@ import { HTTP_STATUS_CODE } from '@/service/constants';
 import { accountApi } from '@/service/endpoints/account/accountApi';
 import { useAccount } from '@/service/endpoints/account/useAccount';
 import { identityLinks } from '@/service/identityLinks';
+import { CURRENT_SITE, SITE_IDS, siteLinks } from '@/service/siteLinks';
 
 /** Every item of the header has the same height, whatever it holds. */
 export const headerItemClass =
@@ -19,7 +20,7 @@ const buttonClass = `${headerItemClass} max-w-[45vw]`;
 /**
  * The account part of the header. The accounts live in the identity service, so a visitor gets "Log in" and "Sign up"
  * links to its pages (which send them back here), and a signed-in account its username with "Account settings" (a link
- * to the identity service) and "Log out".
+ * to the identity service) and "Log out", under the same list of sites as the menus of the other sites.
  */
 export const AccountMenu = (): ReactNode => {
   const { t } = useTranslation();
@@ -42,6 +43,12 @@ export const AccountMenu = (): ReactNode => {
         icon={<AccountCircleIcon fontSize="inherit" className={`${headerIconClass} shrink-0`} />}
         className={buttonClass}
         entries={[
+          ...SITE_IDS.map((site, index) => ({
+            label: site === CURRENT_SITE ? `${t(`account.sites.${site}`)} · ${t('account.here')}` : t(`account.sites.${site}`),
+            href: siteLinks[site],
+            current: site === CURRENT_SITE,
+            divider: index === SITE_IDS.length - 1,
+          })),
           { label: t('account.settings'), onClick: () => window.location.assign(identityLinks.settings()) },
           { label: t('account.logOut'), onClick: () => void logOut() },
         ]}
