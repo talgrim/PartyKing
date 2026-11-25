@@ -2,7 +2,16 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import en from './locales/en.json';
 import pl from './locales/pl.json';
-import { DEFAULT_LANGUAGE, isLanguage, Language, LANGUAGE_STORAGE_KEY, readStoredLanguage, storeLanguage, SUPPORTED_LANGUAGES } from './languages';
+import {
+  DEFAULT_LANGUAGE,
+  isLanguage,
+  Language,
+  LANGUAGE_STORAGE_KEY,
+  readLanguageCookie,
+  readStoredLanguage,
+  storeLanguage,
+  SUPPORTED_LANGUAGES,
+} from './languages';
 
 void i18n.use(initReactI18next).init({
   resources: { en: { translation: en }, pl: { translation: pl } },
@@ -25,6 +34,14 @@ if (typeof window !== 'undefined') {
   window.addEventListener('storage', (event) => {
     if (event.key === LANGUAGE_STORAGE_KEY && isLanguage(event.newValue) && event.newValue !== i18n.language) {
       void i18n.changeLanguage(event.newValue);
+    }
+  });
+
+  // The home page or notes changed it (the cookie is shared), which is seen when this tab is looked at again
+  window.addEventListener('focus', () => {
+    const shared = readLanguageCookie();
+    if (shared && shared !== i18n.language) {
+      void i18n.changeLanguage(shared);
     }
   });
 }
