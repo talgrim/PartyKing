@@ -28,9 +28,10 @@ export async function accountIdOf(api: APIRequestContext): Promise<string> {
   return (await response.json()).id as string;
 }
 
-/** Follows the header's "Sign up" link to the identity service's page and signs up there; ends back on the landing page. */
+/** Follows the bar's "Log in" button to the identity service and from its login page to "Sign up", and signs up there; ends back on the landing page. */
 export async function signUpThroughIdentity(page: Page, username: string, password = USER_PASSWORD): Promise<void> {
   await page.goto('/');
+  await page.getByRole('link', { name: 'Log in' }).click();
   await page.getByRole('link', { name: 'Sign up' }).click();
   await page.getByLabel('Username').fill(username);
   await page.getByLabel('Password').fill(password);
@@ -38,7 +39,7 @@ export async function signUpThroughIdentity(page: Page, username: string, passwo
   await expect(page.getByRole('button', { name: username })).toBeVisible();
 }
 
-/** Follows the header's "Log in" link to the identity service's page and logs in there; ends back where it started. */
+/** Follows the bar's "Log in" button to the identity service's page and logs in there; ends back where it started. */
 export async function logInThroughIdentity(page: Page, username: string, password = USER_PASSWORD): Promise<void> {
   await page.goto('/');
   await page.getByRole('link', { name: 'Log in' }).click();

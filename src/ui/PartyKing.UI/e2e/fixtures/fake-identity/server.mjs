@@ -104,7 +104,10 @@ const credentialsPage = (mode) => `<!doctype html>
     <button type="submit">${mode === 'login' ? 'Log in' : 'Sign up'}</button>
     <p id="error" role="alert"></p>
   </form>
+  <p><a id="other" href="/${mode === 'login' ? 'register' : 'login'}">${mode === 'login' ? 'Sign up' : 'Log in'}</a></p>
   <script>
+    // The other page keeps the way back, like the real service
+    document.getElementById('other').search = location.search;
     const next = new URLSearchParams(location.search).get('next');
     // Only the local sites, like the real service's allowlist
     const target = next && /^http:\\/\\/127\\.0\\.0\\.1:\\d+\\//.test(next) ? next : '/account';

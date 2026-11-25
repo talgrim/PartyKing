@@ -28,7 +28,7 @@ test('a visitor signs up at the identity service, comes back signed in, stays so
 
   await logOutFromTheMenu(page, username);
   await page.reload();
-  await expect(page.getByRole('link', { name: 'Sign up' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Log in' })).toBeVisible();
 });
 
 test('a user logs in again at the identity service and comes back to the page they left', async ({ page }) => {
