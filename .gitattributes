@@ -2,3 +2,8 @@
 *.sh text eol=lf
 docker/nginx.conf text eol=lf
 Dockerfile text eol=lf
+# Copies from talgrim/site-kit: byte-identical to the kit, whatever autocrlf says
+src/ui/PartyKing.UI/src/kit/* text eol=lf
+src/ui/PartyKing.UI/public/*.svg text eol=lf
+src/ui/PartyKing.UI/public/*.ico binary
+src/ui/PartyKing.UI/public/*.png binary
