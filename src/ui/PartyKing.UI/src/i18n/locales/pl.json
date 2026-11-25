@@ -33,6 +33,12 @@
     "passwordProtected": "Chroniona hasłem"
   },
   "account": {
+    "sites": {
+      "home": "Strona główna",
+      "party": "PartyKing",
+      "notes": "Notatki"
+    },
+    "here": "jesteś tutaj",
     "settings": "Ustawienia konta",
     "logIn": "Zaloguj się",
     "signUp": "Zarejestruj się",

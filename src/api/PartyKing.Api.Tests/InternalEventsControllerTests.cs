@@ -1,11 +1,10 @@
 using System.Text;
+using Identity.Client.AspNetCore;
+using Identity.Contract.V1.Webhooks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
-using PartyKing.API.Authentication;
+using Microsoft.Extensions.DependencyInjection;
 using PartyKing.API.Controllers;
-using PartyKing.Application.Configuration;
-using PartyKing.Application.System;
 using ErrorOr;
 using PartyKing.Application.Playlists.Services;
 using PartyKing.Contract.V1.Playlists;
@@ -25,12 +24,16 @@ public class InternalEventsControllerTests
     private static readonly DateTimeOffset Now = new(2026, 11, 24, 12, 0, 0, TimeSpan.Zero);
 
     private readonly FakeClock _clock = new() { UtcNow = Now };
-    private readonly IdentityConfiguration _settings = new() { WebhookSecret = Secret };
     private readonly FakeSavedPlaylists _playlists = new();
+    private string? _webhookSecret = Secret;
 
+    // The verifier is the client package's, registered the way the server registers it
     private InternalEventsController Controller(DefaultHttpContext http)
     {
-        var verifier = new IdentityWebhookVerifier(Options.Create(_settings), _clock);
+        var services = new ServiceCollection();
+        services.AddSingleton<TimeProvider>(_clock);
+        services.AddIdentityWebhookVerifier(options => options.Secret = _webhookSecret);
+        var verifier = services.BuildServiceProvider().GetRequiredService<IIdentityWebhookVerifier>();
 
         return new InternalEventsController(new HttpContextAccessor(), verifier, _playlists)
         {
@@ -54,9 +57,9 @@ public class InternalEventsControllerTests
         http.Request.Method = "POST";
         http.Request.Path = "/internal/events";
         http.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(body));
-        http.Request.Headers[IdentityWebhookVerifier.TimestampHeader] = timestamp;
-        http.Request.Headers[IdentityWebhookVerifier.SignatureHeader] = signature
-            ?? IdentityWebhookVerifier.Sign(secret!, timestamp, Encoding.UTF8.GetBytes(signedBody ?? body));
+        http.Request.Headers[WebhookSignature.TimestampHeader] = timestamp;
+        http.Request.Headers[WebhookSignature.SignatureHeader] = signature
+            ?? WebhookSignature.Sign(secret!, timestamp, Encoding.UTF8.GetBytes(signedBody ?? body));
 
         return http;
     }
@@ -121,7 +124,7 @@ public class InternalEventsControllerTests
     public async Task ACallWithoutASignature_IsRefused()
     {
         var http = Call(DeletedBody(AccountId));
-        http.Request.Headers.Remove(IdentityWebhookVerifier.SignatureHeader);
+        http.Request.Headers.Remove(WebhookSignature.SignatureHeader);
 
         Assert.IsType<UnauthorizedResult>(await ReceiveAsync(http));
     }
@@ -133,7 +136,7 @@ public class InternalEventsControllerTests
     public async Task ACallWithAnUnreadableTimestamp_IsRefused(string timestamp)
     {
         var http = Call(DeletedBody(AccountId));
-        http.Request.Headers[IdentityWebhookVerifier.TimestampHeader] = timestamp;
+        http.Request.Headers[WebhookSignature.TimestampHeader] = timestamp;
 
         Assert.IsType<UnauthorizedResult>(await ReceiveAsync(http));
     }
@@ -157,7 +160,7 @@ public class InternalEventsControllerTests
     [Fact]
     public async Task WithoutAConfiguredSecret_EveryCallIsRefused_EvenOneSignedWithAnEmptyKey()
     {
-        _settings.WebhookSecret = null;
+        _webhookSecret = null;
 
         Assert.IsType<UnauthorizedResult>(await ReceiveAsync(Call(DeletedBody(AccountId), secret: "")));
     }
@@ -198,9 +201,11 @@ public class InternalEventsControllerTests
             typeof(ApiExplorerSettingsAttribute))!).IgnoreApi);
     }
 
-    private sealed class FakeClock : IDateTimeProvider
+    private sealed class FakeClock : TimeProvider
     {
         public DateTimeOffset UtcNow { get; set; }
+
+        public override DateTimeOffset GetUtcNow() => UtcNow;
     }
 
     private sealed class FakeSavedPlaylists : ISavedPlaylistService

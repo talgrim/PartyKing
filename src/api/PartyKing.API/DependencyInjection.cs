@@ -1,5 +1,9 @@
+using Identity.Client;
+using Identity.Client.AspNetCore;
+using Identity.Contract.V1.Enums;
 using PartyKing.API.Cookies;
 using System.Security.Cryptography.X509Certificates;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
 using PartyKing.API.Authentication;
 using PartyKing.API.Authentication.Schemes;
@@ -15,7 +19,6 @@ using PartyKing.API.Workers;
 using PartyKing.Infrastructure.Lyrics;
 using PartyKing.Infrastructure.Mail;
 using PartyKing.Infrastructure.Spotify;
-using PartyKing.Contract.V1.Enums;
 using PartyKing.Infrastructure.Youtube;
 
 namespace PartyKing.API;
@@ -54,8 +57,7 @@ public static class DependencyInjection
         services.RegisterLlmInfrastructure(configuration);
         // After RegisterApplication, which registers the no-op mail client this one replaces
         services.RegisterMailInfrastructure(configuration);
-        // Same reason: this replaces the client that never signs anybody in
-        services.RegisterIdentityInfrastructure(configuration);
+        services.RegisterIdentity(configuration);
         services.AddAuthorization();
         AddConfigurations(configuration);
     }
@@ -79,15 +81,39 @@ public static class DependencyInjection
         configuration.AddJsonFile("appsettings.Local.json", optional: true);
     }
 
+    /// <summary>
+    /// The accounts are the identity service's: its client (<c>Talgrim.Identity.Client</c>) asks it who a session cookie
+    /// belongs to, and the verifier checks the events it sends. With <c>Identity:Enabled</c> off (the demo has no
+    /// accounts) nobody is ever signed in and nothing is called.
+    /// </summary>
+    internal static void RegisterIdentity(this IServiceCollection services, IConfiguration configuration)
+    {
+        var section = configuration.GetSection(IdentityConfiguration.SectionName);
+        var settings = section.Get<IdentityConfiguration>() ?? new IdentityConfiguration();
+
+        if (settings.Enabled)
+        {
+            services.AddIdentityClient(section)
+                .ConfigureHttpClient(client => client.DefaultRequestHeaders.UserAgent.ParseAdd("PartyKing/1.0"));
+        }
+        else
+        {
+            // The handler and the dev personas still need the cookie name, which is the client's option
+            services.AddOptions<IdentityClientOptions>().Bind(section);
+            services.AddSingleton<IIdentityClient, NullIdentityClient>();
+        }
+
+        services.AddIdentityWebhookVerifier(options => options.Secret = settings.WebhookSecret);
+    }
+
     internal static void AddAuthorization(this IServiceCollection services)
     {
         services.AddSingleton<ISignedCookies, SignedCookies>();
-        services.AddSingleton<IIdentityWebhookVerifier, IdentityWebhookVerifier>();
 
         services
             .AddAuthentication()
             .AddScheme<CookieAuthenticationOptions, CookieAuthenticationHandler>(SchemeNames.Host, null)
-            .AddScheme<CookieAuthenticationOptions, AccountCookieAuthenticationHandler>(SchemeNames.Account, null);
+            .AddScheme<AuthenticationSchemeOptions, AccountCookieAuthenticationHandler>(SchemeNames.Account, null);
 
         services
             .AddAuthorizationBuilder()

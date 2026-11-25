@@ -14,6 +14,7 @@
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.8" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.10" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.3" />
+        <PackageReference Include="Talgrim.Identity.Client.AspNetCore" Version="0.1.0" />
     </ItemGroup>
 
     <ItemGroup>

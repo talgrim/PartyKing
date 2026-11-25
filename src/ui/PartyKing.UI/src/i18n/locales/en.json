@@ -33,6 +33,12 @@
     "passwordProtected": "Password protected"
   },
   "account": {
+    "sites": {
+      "home": "Home",
+      "party": "PartyKing",
+      "notes": "Notes"
+    },
+    "here": "you are here",
     "settings": "Account settings",
     "logIn": "Log in",
     "signUp": "Sign up",

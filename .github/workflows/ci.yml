@@ -4,6 +4,11 @@ on:
   workflow_call:
   workflow_dispatch:
 
+# packages: read is for the identity client packages (Talgrim.Identity.*) on GitHub Packages, see docs/deployment.md
+permissions:
+  contents: read
+  packages: read
+
 jobs:
   backend:
     runs-on: ubuntu-latest
@@ -15,7 +20,10 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x
-      - run: dotnet test PartyKing.sln
+      # The token is NuGet's credential for the source named in src/api/nuget.config; it is read from the environment
+      - run: env "NuGetPackageSourceCredentials_github-talgrim=Username=talgrim;Password=$NUGET_TOKEN" dotnet test PartyKing.sln
+        env:
+          NUGET_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   frontend:
     runs-on: ubuntu-latest
@@ -61,6 +69,12 @@ jobs:
       # through apt (over 5 minutes). With the cache this is a no-op. If a runner image ever misses a library, Chromium
       # fails to start; add the flag back then.
       - run: npx playwright install chromium
+      # The API's packages are restored here, in a step of their own: `npm run` starts its script through sh (dash on
+      # the runner), which drops the credential variable (its name has a hyphen), so the `dotnet run` that Playwright
+      # starts could not restore them itself. With the packages already restored that run has nothing to download.
+      - run: env "NuGetPackageSourceCredentials_github-talgrim=Username=talgrim;Password=$NUGET_TOKEN" dotnet restore ../../api/PartyKing.API/PartyKing.API.csproj
+        env:
+          NUGET_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # Playwright starts the API (dotnet run) and Vite itself; see playwright.config.ts
       - run: npm run e2e
       - uses: actions/upload-artifact@v4

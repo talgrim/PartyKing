@@ -1,7 +1,7 @@
 using System.Text.Json;
+using Identity.Client.AspNetCore;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using PartyKing.API.Authentication;
 using PartyKing.Application.Playlists.Services;
 
 namespace PartyKing.API.Controllers;

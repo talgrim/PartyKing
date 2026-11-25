@@ -10,16 +10,24 @@ concurrency: deploy-group
 jobs:
   test:
     uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+      packages: read
 
+  # packages: read lets the token restore the identity client packages (GitHub Packages) in the image build on Fly's
+  # builder: it goes in as the build secret nuget_token, which the Dockerfile uses for that one command
   deploy:
     needs: test
     # Manual runs from other branches only run the tests, never deploy
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     steps:
       - uses: actions/checkout@v4
       - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: flyctl deploy --remote-only
+      - run: flyctl deploy --remote-only --build-secret nuget_token=${{ secrets.GITHUB_TOKEN }}
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
@@ -29,9 +37,12 @@ jobs:
     needs: test
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     steps:
       - uses: actions/checkout@v4
       - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: flyctl deploy --remote-only --config fly.demo.toml
+      - run: flyctl deploy --remote-only --config fly.demo.toml --build-secret nuget_token=${{ secrets.GITHUB_TOKEN }}
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_DEMO }}

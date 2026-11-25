@@ -1,3 +1,4 @@
+import type { MockInstance } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SWRConfig } from 'swr';
@@ -29,7 +30,7 @@ const renderIcon = async (props: { deletionScheduledAt?: string | null; enabledD
 };
 
 describe('RequestSessionDeletion', () => {
-  let confirm: ReturnType<typeof vi.spyOn>;
+  let confirm: MockInstance<typeof window.confirm>;
 
   beforeEach(() => {
     mocks.requestDeletion.mockReset().mockResolvedValue(undefined);

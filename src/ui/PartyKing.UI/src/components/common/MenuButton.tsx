@@ -2,7 +2,11 @@ import { ReactNode, useState } from 'react';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 
-export type MenuEntry = { label: string; onClick: () => void };
+/** An action, or a link to another page (`current` marks the page the visitor is on, `divider` a line below the entry). */
+export type MenuEntry = { label: string; divider?: boolean } & (
+  | { onClick: () => void; href?: undefined; current?: undefined }
+  | { href: string; current?: boolean; onClick?: undefined }
+);
 
 type Props = {
   label: string;
@@ -18,7 +22,7 @@ export const MenuButton = ({ label, icon, entries, className }: Props): ReactNod
 
   const choose = (entry: MenuEntry) => {
     setAnchor(null);
-    entry.onClick();
+    entry.onClick?.();
   };
 
   return (
@@ -35,7 +39,14 @@ export const MenuButton = ({ label, icon, entries, className }: Props): ReactNod
         slotProps={{ paper: { className: 'bg-slate-800! text-slate-200!' } }}
       >
         {entries.map((entry) => (
-          <MenuItem key={entry.label} onClick={() => choose(entry)}>
+          <MenuItem
+            key={entry.label}
+            divider={entry.divider}
+            onClick={() => choose(entry)}
+            {...(entry.href === undefined
+              ? {}
+              : { component: 'a', href: entry.href, selected: entry.current, 'aria-current': entry.current ? 'page' : undefined })}
+          >
             {entry.label}
           </MenuItem>
         ))}

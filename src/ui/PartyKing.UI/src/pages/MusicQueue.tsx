@@ -151,7 +151,7 @@ export const MusicQueue = (): ReactNode => {
   const demo = useDemoSession(sessionId, unlocked);
   // Both belong to one session: the page stays mounted when "Start a new demo" opens another one
   const [timeUpFor, setTimeUpFor] = useState<string>();
-  const openedSession = useRef<string>();
+  const openedSession = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (unlocked) openedSession.current = sessionId;
   }, [unlocked, sessionId]);

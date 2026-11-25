@@ -1,7 +1,7 @@
+using Identity.Contract.V1.Enums;
 using Microsoft.AspNetCore.Authentication;
 using PartyKing.API.Cookies;
 using PartyKing.Application.Sessions;
-using PartyKing.Contract.V1.Enums;
 
 namespace PartyKing.API.Authentication;
 
