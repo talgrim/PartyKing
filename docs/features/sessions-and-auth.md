@@ -85,9 +85,9 @@ Users and admins are accounts of a separate service, `auth.talgrim.dev` (repo `t
 
 ### UI
 
-- Every page has the account part of the header (`AccountMenu`). For a visitor it is two links, "Log in" and "Sign up", to `{identityUrl}/login?next=<this page>` and `/register?next=...`; signed in, the username with "Account settings" (a link to the identity service) and "Log out" (`POST {identityUrl}/api/logout`). `useAccount` asks `GET {identityUrl}/api/me` cross-origin with credentials; it asks when the identity service's hint cookie is there, when PartyKing's own localStorage hint is set (`partyking.accountHint`) or with `alwaysCheck` (the admin page). A 401 drops the localStorage hint. See `frontend.md`.
+- Every page has the account button of the site bar (`AccountMenu`). For a visitor it is one link, "Log in", to `{identityUrl}/login?next=<this page>` (the page links on to sign-up); signed in, the username with "Account settings" (a link to the identity service) and "Log out" (`POST {identityUrl}/api/logout`). `useAccount` asks `GET {identityUrl}/api/me` cross-origin with credentials; it asks when the identity service's hint cookie is there, when PartyKing's own localStorage hint is set (`partyking.accountHint`) or with `alwaysCheck` (the admin page). A 401 drops the localStorage hint. See `frontend.md`.
 - `/admin` shows a link to the login when nobody is signed in, the "not an admin account" notice for a user and the panel for an admin, with a link to the identity service's list of users.
-- The demo has no accounts: `AppHeader` hides the menu (and a demo runs with `Identity__Enabled=false`).
+- The demo has no accounts: `SiteBar` hides the menu and the links to the other sites (and a demo runs with `Identity__Enabled=false`).
 
 Tests: `IdentityRegistrationTests`, `AccountAuthenticationTests`, `InternalEventsControllerTests`, `DevPersonaMiddlewareTests` (Api; the client's own tests are in the `talgrim/auth` repo), `SavedPlaylistsRepositoryTests` and `SavedPlaylistServiceTests` (deleting an owner's playlists), and the e2e spec `identity.spec.ts` with its fake identity service (`testing-e2e.md`).
 

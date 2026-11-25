@@ -34,12 +34,12 @@ export const Callback = () => {
 
   if (message) {
     return (
-      <div className="pt-8">
+      <div className="pt-4">
         <ErrorMessage message={message}/>
         <Link to={ROUTE_PATHS.HOME} className="text-amber-500 underline">{t('common.backToSessions')}</Link>
       </div>
     );
   }
 
-  return <div className="pt-8"><InfoMessage message={t('callback.success')}/></div>;
+  return <div className="pt-4"><InfoMessage message={t('callback.success')}/></div>;
 };

@@ -1,21 +1,16 @@
 import { FC, PropsWithChildren } from 'react';
 import Stack from '@mui/material/Stack';
-import { AppHeader } from '@/components/Layout/AppHeader';
-import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
+import { SiteBar } from '@/components/Layout/SiteBar';
 import { isDevEmbedded } from '@/service/devPersona';
+import { usePageTitle } from '@/components/Layout/usePageTitle';
 
 export const Layout: FC<PropsWithChildren> = ({ children }) => {
+  usePageTitle();
+
   return (
-    <Stack minHeight='100dvh'>
-      <Stack
-        flexGrow={1}
-        gap={1}
-        alignItems='center'
-        component='main'
-        sx={{ backgroundColor: (theme) => theme.palette.background.default }}
-      >
-        {!isDevEmbedded && <LanguageSwitcher />}
-        {!isDevEmbedded && <AppHeader />}
+    <Stack minHeight="100dvh" sx={{ backgroundColor: (theme) => theme.palette.background.default }}>
+      {!isDevEmbedded && <SiteBar />}
+      <Stack flexGrow={1} gap={1} alignItems="center" component="main">
         {children}
       </Stack>
     </Stack>
