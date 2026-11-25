@@ -10,8 +10,13 @@ RUN npm run build
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS api-build
 WORKDIR /src
 COPY src/api/ ./
+# The identity client packages (Talgrim.Identity.*) come from GitHub Packages, which wants a token even to read. nuget.config
+# names the source; the token is a build secret (flyctl deploy --build-secret nuget_token=...), handed to this one command
+# as NuGet's credential for that source, and never written to a file or a layer
 # ReadyToRun precompiles the assemblies so startup needs far less JIT (the shared CPU is throttled hard after a burst)
-RUN dotnet publish PartyKing.API/PartyKing.API.csproj -c Release -o /out -r linux-x64 --self-contained false \
+RUN --mount=type=secret,id=nuget_token \
+    env "NuGetPackageSourceCredentials_github-talgrim=Username=talgrim;Password=$(cat /run/secrets/nuget_token)" \
+    dotnet publish PartyKing.API/PartyKing.API.csproj -c Release -o /out -r linux-x64 --self-contained false \
     /p:UseAppHost=false /p:PublishReadyToRun=true
 
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final

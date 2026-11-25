@@ -1,15 +1,15 @@
+using Identity.Client;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using PartyKing.API.Cookies;
 using PartyKing.API.Development;
 using PartyKing.API.Hubs;
-using PartyKing.Application.Configuration;
 
 namespace PartyKing.Api.Tests;
 
 public class DevPersonaMiddlewareTests
 {
-    private static readonly string SessionCookie = new IdentityConfiguration().CookieName;
+    private static readonly string SessionCookie = new IdentityClientOptions().CookieName;
 
     private static async Task<string> CookiesSeenByTheNextMiddlewareAsync(string path, string query, string? header = null)
     {
@@ -20,7 +20,7 @@ public class DevPersonaMiddlewareTests
                 seen = context.Request.Headers.Cookie.ToString();
                 return Task.CompletedTask;
             },
-            Options.Create(new IdentityConfiguration()));
+            Options.Create(new IdentityClientOptions()));
         var http = new DefaultHttpContext();
         http.Request.Path = path;
         http.Request.QueryString = new QueryString(query);
@@ -78,7 +78,7 @@ public class DevPersonaMiddlewareTests
                 seen = context.Request.Headers.Cookie.ToString();
                 return Task.CompletedTask;
             },
-            Options.Create(new IdentityConfiguration()));
+            Options.Create(new IdentityClientOptions()));
         var http = new DefaultHttpContext();
         http.Request.Path = "/sessions";
         http.Request.Headers.Cookie = $"{SessionCookie}=signed-in";

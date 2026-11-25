@@ -13,9 +13,9 @@ runs (401) are not in the first group. Its top row is the machine, from Fly's ow
 0). The latency panels jumping to seconds while the balance is 0 and steal is high is throttling, not load.
 
 `identity.json` shows PartyKing's calls to the identity service (`auth.talgrim.dev`, `GET /api/session`): calls and their
-latency by outcome (`partyking_identity_calls_total`, `partyking_identity_call_duration_milliseconds_*`, label `outcome`:
-`account`, `anonymous`, `forbidden`, `unavailable`), the cache hit ratio (`partyking_identity_cache_hits_total`) and the
-answers served from an expired entry during an outage (`partyking_identity_stale_total`). Requests without the session
+latency by outcome (`talgrim_identity_client_calls_total`, `talgrim_identity_client_call_duration_milliseconds_*`, label `outcome`:
+`account`, `anonymous`, `forbidden`, `unavailable`), the cache hit ratio (`talgrim_identity_client_cache_hits_total`) and the
+answers served from an expired entry during an outage (`talgrim_identity_client_stale_total`). Requests without the session
 cookie never call the service, so guests are not in it.
 
 Import them in Fly's managed Grafana (Dashboards > New > Import > Upload JSON file) and pick the Fly Prometheus data

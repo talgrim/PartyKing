@@ -1,11 +1,7 @@
-using PartyKing.Application.Configuration;
 using PartyKing.Application.Ports;
 using PartyKing.Domain.Repositories;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using PartyKing.Infrastructure.Identity;
 using PartyKing.Infrastructure.Metrics;
 using PartyKing.Infrastructure.Repositories;
 using PartyKing.Persistence.Database;
@@ -18,34 +14,6 @@ public static class DependencyInjection
     {
         services.RegisterDatabase();
         services.RegisterRepositories();
-    }
-
-    /// <summary>
-    /// Registers the client of the identity service as <see cref="IIdentityClient"/> unless <c>Identity:Enabled</c> is
-    /// off. Otherwise nothing is registered and Application's <c>NullIdentityClient</c> stays (the demo has no
-    /// accounts). Call it after <c>RegisterApplication</c>, so that this registration is the later one and wins.
-    /// </summary>
-    public static void RegisterIdentityInfrastructure(this IServiceCollection services, IConfiguration configuration)
-    {
-        var settings = configuration.GetSection(IdentityConfiguration.SectionName).Get<IdentityConfiguration>()
-            ?? new IdentityConfiguration();
-
-        if (!settings.Enabled)
-        {
-            return;
-        }
-
-        services.AddSingleton<IdentityMetrics>();
-        services.AddSingleton<IdentityCache>();
-        services.AddSingleton<IIdentityClient, IdentityClient>();
-        services.AddHttpClient(IdentityClient.HttpClientName, (provider, client) =>
-        {
-            var options = provider.GetRequiredService<IOptions<IdentityConfiguration>>().Value;
-
-            client.BaseAddress = new Uri(options.BaseUrl);
-            client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("PartyKing/1.0");
-        });
     }
 
     public static async Task MigrateDb(this IServiceProvider services)

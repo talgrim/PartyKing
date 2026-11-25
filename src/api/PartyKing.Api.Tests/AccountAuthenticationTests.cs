@@ -1,3 +1,5 @@
+using Identity.Client;
+using Identity.Contract.V1.Enums;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
@@ -8,9 +10,6 @@ using PartyKing.API;
 using PartyKing.API.Authentication;
 using PartyKing.API.Cookies;
 using PartyKing.API.Metrics;
-using PartyKing.Application.Configuration;
-using PartyKing.Application.Ports;
-using PartyKing.Contract.V1.Enums;
 
 namespace PartyKing.Api.Tests;
 
@@ -22,7 +21,7 @@ namespace PartyKing.Api.Tests;
 /// </summary>
 public class AccountAuthenticationTests : IDisposable
 {
-    private static readonly string CookieName = new IdentityConfiguration().CookieName;
+    private static readonly string CookieName = new IdentityClientOptions().CookieName;
 
     private readonly FakeIdentityClient _identity = new();
     private readonly ServiceProvider _provider;
@@ -34,7 +33,7 @@ public class AccountAuthenticationTests : IDisposable
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddWebEncoders();
-        services.AddOptions<IdentityConfiguration>();
+        services.AddOptions<IdentityClientOptions>();
         services.AddSingleton<IDataProtectionProvider>(DataProtectionProvider.Create("partyking-tests"));
         services.AddSingleton<AuthorizationMetrics>();
         services.AddSingleton<IIdentityClient>(_identity);

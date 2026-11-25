@@ -20,7 +20,7 @@
     "to": "now"
   },
   "refresh": "1m",
-  "description": "How PartyKing's calls to the identity service (auth.talgrim.dev, GET /api/session) go: outcomes, latency, the cache in front of them and the stale answers served during an outage (partyking.identity.*). A request without the session cookie never calls the service, so guests do not show up here.",
+  "description": "How PartyKing's calls to the identity service (auth.talgrim.dev, GET /api/session) go: outcomes, latency, the cache in front of them and the stale answers served during an outage (talgrim.identity.client.*). A request without the session cookie never calls the service, so guests do not show up here.",
   "templating": {
     "list": []
   },
@@ -66,7 +66,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum by (outcome) (rate(partyking_identity_calls_total[$__rate_interval]))",
+          "expr": "sum by (outcome) (rate(talgrim_identity_client_calls_total[$__rate_interval]))",
           "legendFormat": "{{outcome}}"
         }
       ]
@@ -113,7 +113,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum(rate(partyking_identity_calls_total{outcome=\"unavailable\"}[$__rate_interval])) / sum(rate(partyking_identity_calls_total[$__rate_interval]))",
+          "expr": "sum(rate(talgrim_identity_client_calls_total{outcome=\"unavailable\"}[$__rate_interval])) / sum(rate(talgrim_identity_client_calls_total[$__rate_interval]))",
           "legendFormat": "unavailable"
         }
       ]
@@ -159,7 +159,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "histogram_quantile(0.95, sum by (le, outcome) (rate(partyking_identity_call_duration_milliseconds_bucket[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum by (le, outcome) (rate(talgrim_identity_client_call_duration_milliseconds_bucket[$__rate_interval])))",
           "legendFormat": "{{outcome}}"
         }
       ]
@@ -168,7 +168,7 @@
       "id": 4,
       "type": "timeseries",
       "title": "Cache hit ratio",
-      "description": "Requests answered from the cache (partyking.identity.cache.hits) against all lookups (hits plus calls). Low means many distinct sessions or a cache that is too small (10,000 entries).",
+      "description": "Requests answered from the cache (talgrim.identity.client.cache.hits) against all lookups (hits plus calls). Low means many distinct sessions or a cache that is too small (10,000 entries).",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
@@ -207,7 +207,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum(rate(partyking_identity_cache_hits_total[$__rate_interval])) / (sum(rate(partyking_identity_cache_hits_total[$__rate_interval])) + sum(rate(partyking_identity_calls_total[$__rate_interval])))",
+          "expr": "sum(rate(talgrim_identity_client_cache_hits_total[$__rate_interval])) / (sum(rate(talgrim_identity_client_cache_hits_total[$__rate_interval])) + sum(rate(talgrim_identity_client_calls_total[$__rate_interval])))",
           "legendFormat": "hit ratio"
         }
       ]
@@ -216,7 +216,7 @@
       "id": 5,
       "type": "timeseries",
       "title": "Stale answers",
-      "description": "Answers served from an expired cache entry because the identity service was unreachable (partyking.identity.stale): people stay logged in during an outage, for at most Identity:StaleSeconds. Any rate above 0 means an outage is going on.",
+      "description": "Answers served from an expired cache entry because the identity service was unreachable (talgrim.identity.client.stale): people stay logged in during an outage, for at most Identity:StaleSeconds. Any rate above 0 means an outage is going on.",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
@@ -253,7 +253,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum(rate(partyking_identity_stale_total[$__rate_interval]))",
+          "expr": "sum(rate(talgrim_identity_client_stale_total[$__rate_interval]))",
           "legendFormat": "stale"
         }
       ]
