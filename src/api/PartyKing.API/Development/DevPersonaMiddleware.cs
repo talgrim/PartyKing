@@ -1,7 +1,7 @@
+using Identity.Client;
 using Microsoft.Extensions.Options;
 using PartyKing.API.Cookies;
 using PartyKing.API.Hubs;
-using PartyKing.Application.Configuration;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Primitives;
 
@@ -30,7 +30,7 @@ public sealed partial class DevPersonaMiddleware
     // The host's own cookies and the identity service's session cookie: a persona is a plain guest
     private readonly string[] _hiddenCookies;
 
-    public DevPersonaMiddleware(RequestDelegate next, IOptions<IdentityConfiguration> identityOptions)
+    public DevPersonaMiddleware(RequestDelegate next, IOptions<IdentityClientOptions> identityOptions)
     {
         _next = next;
         _hiddenCookies = [CookieNames.User, CookieNames.Auth, identityOptions.Value.CookieName];

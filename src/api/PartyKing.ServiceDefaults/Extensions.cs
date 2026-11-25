@@ -65,7 +65,9 @@ public static class Extensions
                     .AddMeter("PartyKing.API")
                     .AddMeter("PartyKing.Infrastructure.Spotify")
                     .AddMeter("PartyKing.Infrastructure")
-                    .AddMeter("PartyKing.Infrastructure.Identity")
+                    // The meter of Talgrim.Identity.Client (IdentityClientTelemetry.MeterName). A name, so that this project
+                    // needs no reference to the package
+                    .AddMeter("Talgrim.Identity.Client")
                     .AddPrometheusExporter();
             });
 

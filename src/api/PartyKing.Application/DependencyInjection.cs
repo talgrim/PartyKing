@@ -11,7 +11,6 @@ using PartyKing.Application.Games.Services.Base;
 using PartyKing.Application.Games.Services.NeverHaveIEver;
 using PartyKing.Application.Games.Services.Resistance;
 using PartyKing.Application.Games.Services.Ringo;
-using PartyKing.Application.Identity;
 using PartyKing.Application.Lyrics.Handlers;
 using PartyKing.Application.Mail;
 using PartyKing.Application.Lyrics.Services;
@@ -53,7 +52,6 @@ public static class DependencyInjection
         services.RegisterLyrics();
         services.RegisterGames(configuration);
         services.RegisterSessions(configuration);
-        services.RegisterIdentity(configuration);
         services.RegisterDemo(configuration);
     }
 
@@ -110,13 +108,6 @@ public static class DependencyInjection
         services.Replace(ServiceDescriptor.Scoped<ISpotifyService, DemoSpotifyService>());
         services.Replace(ServiceDescriptor.Singleton<IHostTokenProvider, DemoHostTokenProvider>());
         services.Replace(ServiceDescriptor.Singleton<IPhotoQuotaPolicy, DemoPhotoQuotaPolicy>());
-    }
-
-    private static void RegisterIdentity(this IServiceCollection services, IConfiguration configuration)
-    {
-        services.Configure<IdentityConfiguration>(configuration.GetSection(IdentityConfiguration.SectionName));
-        // Nobody is signed in until the identity service's registration replaces this
-        services.TryAddSingleton<IIdentityClient, NullIdentityClient>();
     }
 
     private static void RegisterSystem(this IServiceCollection services)
