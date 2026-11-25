@@ -4,6 +4,11 @@ on:
   workflow_call:
   workflow_dispatch:
 
+# packages: read is for the identity client packages (Talgrim.Identity.*) on GitHub Packages, see docs/deployment.md
+permissions:
+  contents: read
+  packages: read
+
 jobs:
   backend:
     runs-on: ubuntu-latest
@@ -15,7 +20,10 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x
-      - run: dotnet test PartyKing.sln
+      # The token is NuGet's credential for the source named in src/api/nuget.config; it is read from the environment
+      - run: env "NuGetPackageSourceCredentials_github-talgrim=Username=talgrim;Password=$NUGET_TOKEN" dotnet test PartyKing.sln
+        env:
+          NUGET_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   frontend:
     runs-on: ubuntu-latest
@@ -61,8 +69,11 @@ jobs:
       # through apt (over 5 minutes). With the cache this is a no-op. If a runner image ever misses a library, Chromium
       # fails to start; add the flag back then.
       - run: npx playwright install chromium
-      # Playwright starts the API (dotnet run) and Vite itself; see playwright.config.ts
-      - run: npm run e2e
+      # Playwright starts the API (dotnet run) and Vite itself; see playwright.config.ts. The API restores its packages
+      # then, so it gets the NuGet credential as the backend job does
+      - run: env "NuGetPackageSourceCredentials_github-talgrim=Username=talgrim;Password=$NUGET_TOKEN" npm run e2e
+        env:
+          NUGET_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
