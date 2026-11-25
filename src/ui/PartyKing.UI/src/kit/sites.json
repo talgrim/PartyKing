@@ -1,0 +1,36 @@
+{
+  "brand": "talgrim.dev",
+  "sites": [
+    {
+      "id": "home",
+      "name": { "en": "Home", "pl": "Strona główna" },
+      "url": "https://talgrim.dev/",
+      "urls": { "pl": "https://talgrim.dev/pl/" },
+      "switcher": true
+    },
+    {
+      "id": "party",
+      "name": { "en": "PartyKing", "pl": "PartyKing" },
+      "url": "https://party.talgrim.dev/",
+      "switcher": true
+    },
+    {
+      "id": "notes",
+      "name": { "en": "Notes", "pl": "Notatki" },
+      "url": "https://notes.talgrim.dev/",
+      "switcher": true
+    },
+    {
+      "id": "auth",
+      "name": { "en": "Account", "pl": "Konto" },
+      "url": "https://auth.talgrim.dev/",
+      "switcher": false
+    },
+    {
+      "id": "wip",
+      "name": { "en": "wip", "pl": "wip" },
+      "url": "https://wip.talgrim.dev/",
+      "switcher": false
+    }
+  ]
+}

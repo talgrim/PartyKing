@@ -1,0 +1,173 @@
+/*
+ * The top bar of every talgrim.dev site: the current site on the left, the sites to switch to,
+ * the site's own links, then the language switcher and the account button on the right.
+ * Synced from talgrim/site-kit, so change it there, not in the site. Needs tokens.css.
+ * The markup it styles is described in docs/site-bar.md.
+ * The bar sits in the page flow (it is not fixed), so no page needs an offset below it.
+ */
+.site-bar,
+.site-bar *,
+.site-bar *::before,
+.site-bar *::after {
+  box-sizing: border-box;
+}
+
+.site-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.75rem 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font: 16px/1.5 var(--font-sans);
+}
+
+/* The path of the page, from the specific to the general: the current site, then talgrim.dev (`Notes · talgrim.dev`). */
+.site-bar__title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.site-bar__site,
+.site-bar__brand {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.site-bar__site {
+  font-weight: 600;
+}
+
+.site-bar__brand {
+  color: var(--muted);
+}
+
+/* On the home site the brand is the only part of the title, so it is the site's name and reads like one. */
+.site-bar__brand:only-child {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.site-bar__brand:hover {
+  color: var(--text);
+}
+
+/* The dot only joins the two when the site comes first; on home the brand stands alone. */
+.site-bar__site + .site-bar__brand::before {
+  content: '·';
+  margin-right: 0.5rem;
+  color: var(--muted);
+}
+
+.site-bar__sites,
+.site-bar__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+/* The switcher is for signed-in visitors only: a site renders it with the hidden attribute until it knows who is there. */
+.site-bar__sites[hidden] {
+  display: none;
+}
+
+.site-bar__sites a,
+.site-bar__nav a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.site-bar__sites a:hover,
+.site-bar__nav a:hover,
+.site-bar__nav button:hover {
+  color: var(--text);
+}
+
+/* An action of the site (such as locking it) sits among its links and reads like one. */
+.site-bar__nav button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.site-bar__sites [aria-current='page'],
+.site-bar__nav [aria-current='page'] {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+/* Everything after the site's own links goes to the right edge. */
+.site-bar__end {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin-left: auto;
+}
+
+.site-bar__languages {
+  display: flex;
+  gap: 0.25rem;
+}
+
+/* Buttons where the site switches in place, links where it navigates (home). */
+.site-bar__languages :is(button, a) {
+  padding: 0.25rem 0.5rem;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.site-bar__languages :is(button, a):hover {
+  color: var(--text);
+}
+
+.site-bar__languages :is([aria-pressed='true'], [aria-current]) {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* The one button or link for logging in, or for the signed-in menu. */
+.site-bar__account-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.site-bar__account-button:hover {
+  background: var(--bg);
+}
+
+.site-bar :is(a, button):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* On a narrow screen the site switcher takes a row of its own under the brand and the right-hand side. */
+@media (max-width: 40rem) {
+  .site-bar__sites {
+    order: 1;
+    width: 100%;
+  }
+
+  .site-bar__nav {
+    order: 2;
+    width: 100%;
+  }
+}

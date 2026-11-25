@@ -24,7 +24,6 @@ test('the landing page offers to start a demo, with no list of sessions and no a
   // The header keeps the calculator, but not the account menu
   await expect(page.getByRole('button', { name: 'BAC calculator' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Log in' })).toHaveCount(0);
-  await expect(page.getByRole('link', { name: 'Sign up' })).toHaveCount(0);
 
   const config = await page.request.get(`${DEMO_API_URL}/demo/config`);
   expect((await config.json()).enabled).toBe(true);

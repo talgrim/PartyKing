@@ -1,0 +1,10 @@
+{
+  "files": {
+    "src/tokens.css": "src/kit/tokens.css",
+    "src/site-bar.css": "src/kit/site-bar.css",
+    "sites.json": "src/kit/sites.json",
+    "icons/favicon.svg": "public/favicon.svg",
+    "icons/favicon.ico": "public/favicon.ico",
+    "icons/apple-touch-icon.png": "public/apple-touch-icon.png"
+  }
+}

@@ -1,4 +1,12 @@
 @import "tailwindcss";
+@import "./kit/tokens.css";
+@import "./kit/site-bar.css";
+
+/* The height of the site bar, measured by the bar itself; this is what it is until then. Pages that fill the screen
+   take it off with calc(100dvh - var(--site-bar-h)). */
+:root {
+  --site-bar-h: 3.7rem;
+}
 
 body {
   margin: 0;

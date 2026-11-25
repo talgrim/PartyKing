@@ -5,12 +5,12 @@ import { BacCalculatorButton } from './BacCalculatorButton';
 describe('BacCalculatorButton', () => {
   beforeEach(() => localStorage.clear());
 
-  it('is an icon named and titled "BAC calculator"', () => {
+  it('is a button named "BAC calculator", the target of the help tour', () => {
     render(<BacCalculatorButton />);
 
     const button = screen.getByRole('button', { name: 'BAC calculator' });
-    expect(button).toHaveAttribute('title', 'BAC calculator');
-    expect(button.querySelector('svg')).toBeInTheDocument();
+    expect(button).toHaveTextContent('BAC calculator');
+    expect(button).toHaveAttribute('data-help', 'bac');
   });
 
   it('opens the calculator and closes it again', async () => {

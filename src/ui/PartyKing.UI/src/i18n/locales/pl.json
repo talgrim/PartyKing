@@ -2,6 +2,12 @@
   "language": {
     "label": "Język"
   },
+  "titles": {
+    "session": "Kolejka muzyczna",
+    "resistance": "Resistance",
+    "ringo": "Ringo",
+    "resistanceIcons": "Przewodnik po ikonach"
+  },
   "common": {
     "somethingWentWrong": "Coś poszło nie tak",
     "noSessionsYet": "Nie ma jeszcze żadnych sesji.",
@@ -33,15 +39,9 @@
     "passwordProtected": "Chroniona hasłem"
   },
   "account": {
-    "sites": {
-      "home": "Strona główna",
-      "party": "PartyKing",
-      "notes": "Notatki"
-    },
-    "here": "jesteś tutaj",
+    "sitesLabel": "Serwisy",
     "settings": "Ustawienia konta",
     "logIn": "Zaloguj się",
-    "signUp": "Zarejestruj się",
     "logOut": "Wyloguj się"
   },
   "admin": {
