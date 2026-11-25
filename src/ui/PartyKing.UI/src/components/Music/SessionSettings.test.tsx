@@ -1,3 +1,4 @@
+import type { MockInstance } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SWRConfig } from 'swr';
@@ -152,7 +153,7 @@ describe('SessionSettings', () => {
   });
 
   describe('deleting the session', () => {
-    let confirm: ReturnType<typeof vi.spyOn>;
+    let confirm: MockInstance<typeof window.confirm>;
 
     beforeEach(() => {
       confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
