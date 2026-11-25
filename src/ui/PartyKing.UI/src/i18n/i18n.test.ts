@@ -1,5 +1,5 @@
 import { i18n, setLanguage } from '@/i18n';
-import { LANGUAGE_STORAGE_KEY, readStoredLanguage } from '@/i18n/languages';
+import { LANGUAGE_COOKIE, LANGUAGE_STORAGE_KEY, readStoredLanguage } from '@/i18n/languages';
 import en from '@/i18n/locales/en.json';
 import pl from '@/i18n/locales/pl.json';
 
@@ -12,7 +12,13 @@ const keysOf = (node: object, prefix = ''): string[] =>
 const PLURAL_SUFFIX = /_(zero|one|two|few|many|other)$/;
 const baseKeysOf = (node: object): string[] => [...new Set(keysOf(node).map((key) => key.replace(PLURAL_SUFFIX, '')))].sort();
 
+const clearLanguageCookie = () => {
+  document.cookie = `${LANGUAGE_COOKIE}=; Path=/; Max-Age=0`;
+};
+
 describe('i18n', () => {
+  beforeEach(clearLanguageCookie);
+
   it('has the same keys in English and Polish', () => {
     expect(baseKeysOf(pl)).toEqual(baseKeysOf(en));
   });
@@ -49,6 +55,21 @@ describe('i18n', () => {
     expect(document.documentElement.lang).toBe('pl');
   });
 
+  it('also saves the choice in the cookie shared with the other sites', async () => {
+    await setLanguage('pl');
+
+    expect(document.cookie).toContain(`${LANGUAGE_COOKIE}=pl`);
+  });
+
+  it('follows a language chosen on another site when the tab is looked at again', async () => {
+    await setLanguage('en');
+    document.cookie = `${LANGUAGE_COOKIE}=pl; Path=/`;
+
+    window.dispatchEvent(new Event('focus'));
+
+    await vi.waitFor(() => expect(i18n.language).toBe('pl'));
+  });
+
   it('follows a change made in another tab', async () => {
     window.dispatchEvent(new StorageEvent('storage', { key: LANGUAGE_STORAGE_KEY, newValue: 'pl' }));
 
@@ -70,6 +91,20 @@ describe('i18n', () => {
 
     it('reads a saved language', () => {
       localStorage.setItem(LANGUAGE_STORAGE_KEY, 'pl');
+      expect(readStoredLanguage()).toBe('pl');
+    });
+
+    it('prefers the cookie shared with the other sites to the language saved here', () => {
+      localStorage.setItem(LANGUAGE_STORAGE_KEY, 'en');
+      document.cookie = `${LANGUAGE_COOKIE}=pl; Path=/`;
+
+      expect(readStoredLanguage()).toBe('pl');
+    });
+
+    it('ignores a cookie that holds an unknown language', () => {
+      localStorage.setItem(LANGUAGE_STORAGE_KEY, 'pl');
+      document.cookie = `${LANGUAGE_COOKIE}=de; Path=/`;
+
       expect(readStoredLanguage()).toBe('pl');
     });
 
