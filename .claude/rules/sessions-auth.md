@@ -3,8 +3,6 @@ paths:
   - "src/api/PartyKing.Domain/Entities/Sessions/**"
   - "src/api/PartyKing.Domain/Entities/Auth/**"
   - "src/api/PartyKing.Application/Sessions/**"
-  - "src/api/PartyKing.Application/Identity/**"
-  - "src/api/PartyKing.Infrastructure/Identity/**"
   - "src/api/PartyKing.Application/Spotify/**"
   - "src/api/PartyKing.API/Cookies/**"
   - "src/api/PartyKing.API/Authentication/**"

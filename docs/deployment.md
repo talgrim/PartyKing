@@ -5,6 +5,7 @@ The upload hardening (file rules, limits, rate limit) is in `features/slideshow.
 ## Image
 
 - `Dockerfile` (repo root) builds one image: nginx (`docker/nginx.conf`) serves the UI build and proxies `/api/*` to Kestrel on `127.0.0.1:5000` (prefix stripped); `docker/entrypoint.sh` runs both. `DOTNET_ThreadPool_MinThreads=32` is set there (see `architecture/persistence-and-concurrency.md`).
+- The image build restores the identity client packages from GitHub Packages, so it needs a token as the build secret `nuget_token` (see "NuGet packages" below).
 - The image ships no photos; `GET /sessions/{id}/photos/current` returns 204 when the session has no photos.
 - The UI's `apiUrl` is `/api` in production builds and `http://127.0.0.1:4200` in dev (`VITE_API_URL` overrides). CORS exists in Development and the e2e environment only (`IsDevelopmentOrE2e`); production is same-origin.
 
@@ -38,6 +39,18 @@ The upload hardening (file rules, limits, rate limit) is in `features/slideshow.
 
 The keys on `/data/keys` are encrypted with an X.509 certificate (`ProtectKeysWithCertificate`, from the `DataProtection__CertificateBase64` PFX plus the optional `DataProtection__CertificatePassword` secret). The API refuses to start when `DataProtection__KeysDirectory` is set without the certificate. Keys written before encryption stay readable.
 
+## NuGet packages
+
+The identity client (`Talgrim.Identity.Contract`, `.Client`, `.Client.AspNetCore`) is built in the `talgrim/auth` repo and published to GitHub Packages (`https://nuget.pkg.github.com/talgrim/index.json`): a preview (`x.y.z-preview.N`) on every merge to its `develop`, the release (`x.y.z`, tagged `vx.y.z`) on a merge to its `master`. `PartyKing.API.csproj` references `Talgrim.Identity.Client.AspNetCore` by version; to update, change that version. `src/api/nuget.config` names the source and maps only `Talgrim.*` to it (nobody can put a package of that name on nuget.org and have it picked up). It has **no credentials on purpose**: a credential in that file would override the one a developer has in their own NuGet config.
+
+GitHub Packages wants a token even to read. Where it comes from:
+
+- **A developer machine**: a classic personal access token with `read:packages` (a fine-grained token cannot read the NuGet registry), put once in the user-level NuGet config: `dotnet nuget add source https://nuget.pkg.github.com/talgrim/index.json --name github-talgrim --username talgrim --password <token> --store-password-in-clear-text`. The name has to be `github-talgrim`, the key `nuget.config` uses. Rider on Windows has its own user config (`%AppData%\NuGet\NuGet.Config`): run it there too (without the flag, Windows encrypts the password), and restart Rider.
+- **CI**: `GITHUB_TOKEN` (the workflows ask for `packages: read`), handed to the `dotnet test` and `npm run e2e` steps as NuGet's own credential variable, `NuGetPackageSourceCredentials_github-talgrim` = `Username=talgrim;Password=<token>`. One-time setup: each of the three packages (the profile's Packages tab, then Package settings, Manage Actions access) has to give this repository Read access.
+- **The image build on Fly**: the build runs on Fly's remote builder, so the token is a BuildKit secret, `flyctl deploy --remote-only --build-secret nuget_token=<token>`, which the Dockerfile reads for the one `dotnet publish` and passes as the same variable; it is never written to a file or a layer. `deploy.yml` passes `GITHUB_TOKEN`; by hand pass your token, for example `--build-secret nuget_token=$GH_PACKAGES_TOKEN`. `fly secrets` are runtime only and do not reach the build. `flyctl deploy --build-only --build-secret ...` tries the build without deploying.
+
+A restore that fails with 401 has no token for the source (the variable, or the user-level source, is missing); 403 means the token cannot read the package (no `read:packages`, or the repository has no access to it).
+
 ## CI and deploy
 
-`ci.yml` runs on PRs (backend tests, lint, frontend tests, build, and the `e2e` job, which also runs the demo suite); `deploy.yml` reuses `ci.yml` and deploys production and the demo (`deploy-demo`) on push to `master`, so a failing job blocks both.
+`ci.yml` runs on PRs (backend tests, lint, frontend tests, build, and the `e2e` job, which also runs the demo suite); `deploy.yml` reuses `ci.yml` and deploys production and the demo (`deploy-demo`) on push to `master`, so a failing job blocks both. The backend and e2e jobs and both deploy jobs read the identity packages with `GITHUB_TOKEN` (see "NuGet packages").
