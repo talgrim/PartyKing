@@ -192,7 +192,7 @@ Strony frontendu (`src/ui/PartyKing.UI/src/pages`):
 | `/s/:sessionId?upload=1` | `PhotoUploadDialog` | Okno wysyłania zdjęć do slideshow sesji z podglądem miniatur i paskiem postępu (wymaga hasła sesji); stary adres `/s/:sessionId/upload` przekierowuje tutaj |
 | `/s/:sessionId` | `MusicQueue` | Strona sesji: co gra, wyszukiwanie / wklejanie linku i lista kolejki (bez logowania); dla gospodarza dodatkowo odtwarzacz (Spotify + YouTube), dla admina przyciski sterowania; gospodarz i admin widzą też slideshow (panel po lewej, ukrywalny, albo widok na cały ekran z tytułem, wykonawcą i kolejką) |
 | `/callback` | `Callback` | Powrót ze Spotify po zalogowaniu gospodarza; potem przekierowanie na stronę sesji |
-| `/admin` | `Admin` | Logowanie admina i panel sesji: tworzenie, zmiana nazwy, hasła, usuwanie, zwolnienie gospodarza, ustawienia slideshow |
+| `/admin` | `Admin` | Panel sesji dla admina (logowanie przez `auth.talgrim.dev`): tworzenie, zmiana nazwy, hasła, usuwanie, zwolnienie gospodarza, ustawienia slideshow |
 | `/` | `Home` | Lista sesji z wyszukiwarką po kodzie |
 
 Strona sesji ma linki do wysyłania zdjęć; na małych ekranach strona się przewija, a widok „Maximize" układa elementy w stos.
@@ -368,7 +368,7 @@ fly launch --no-deploy --copy-config
 fly volumes create partyking_data --size 1
 fly secrets set \
   SpotifySettings__ClientId=... SpotifySettings__ClientSecret=... \
-  AdminSettings__Username=admin AdminSettings__PasswordHash=... \   # hash: dotnet run --project PartyKing.API -- hash-password
+  Identity__WebhookSecret=... \   # ten sam sekret co subskrybent webhooków w serwisie tożsamości (auth.talgrim.dev)
   DataProtection__CertificateBase64="$(base64 -w0 keys.pfx)" DataProtection__CertificatePassword=...
 fly deploy
 fly certs add party.talgrim.dev   # + rekord CNAME party -> <app>.fly.dev
@@ -516,14 +516,16 @@ Nowy czas slajdu zaczyna obowiązywać przy kolejnej zmianie zdjęcia.
 | `GET /sessions/{id}/me` | hasło sesji | `{ isHost, isAdmin }` — czy pokazywać kontrolki |
 | `PATCH /sessions/{id}` | hasło sesji + gospodarz lub admin | Body `{ "name": "..." }` (do 60 znaków); `204`, `403` dla innych |
 | `PUT /sessions/{id}/password` | hasło sesji + gospodarz lub admin | Body `{ "password": "..." }` (4-100 znaków); unieważnia odblokowania innych i tokeny QR, wywołującemu odnawia ciasteczko dostępu |
-| `POST /admin/login`, `POST /admin/logout`, `GET /admin/me` | login: limit 10/min/IP | Sesja admina (ciasteczko `cookie.partyKing.admin`) |
+| `POST /internal/events` | podpisany webhook (`X-Identity-Signature`), limit 30/min/IP | Zdarzenia serwisu tożsamości (`account.deleted` usuwa zapisane playlisty konta); publicznie pod `/api/internal/events` |
 | `POST /admin/sessions` | admin | Tworzy sesję (nazwa, hasło 4-100 znaków) |
 | `DELETE /admin/sessions/{id}` | admin | Usuwa sesję wraz z kolejką, ustawieniami i zdjęciami |
 | `DELETE /admin/sessions/{id}/host` | admin | Zwalnia gospodarza |
 
-Pierwsze konto admina powstaje przy starcie z `AdminSettings:Username` oraz `Password` (jawne, zahashowane przy
-zapisie) lub `PasswordHash` (`dotnet run --project PartyKing.API -- hash-password`, z katalogu `src/api`).
-Najlepiej trzymać je w `appsettings.Local.json`.
+PartyKing nie przechowuje kont ani haseł. Logowanie, rejestracja, konto i lista użytkowników (admin) działają w serwisie
+tożsamości `auth.talgrim.dev`; jego ciasteczko sesji (`Domain=.talgrim.dev`) trafia też do `party.talgrim.dev`, a API pyta
+serwis, kto je wysłał (`GET /api/session`, wynik jest krótko cache'owany; przy awarii serwisu endpointy admina i kont
+zwracają `503`, goście nie są dotknięci). Admin to konto z rolą `Admin` w serwisie tożsamości. Szczegóły:
+`docs/features/sessions-and-auth.md`.
 
 ### Muzyka
 

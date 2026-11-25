@@ -120,7 +120,8 @@ export const Ringo = (): ReactNode => {
 
   return (
     <div className="relative w-full h-screen bg-slate-800 text-slate-400">
-      <nav className="absolute inset-x-0 top-0 h-[10%] pl-[max(10%,5rem)] pr-[10%] flex items-center gap-2">
+      {/* pt-9: the fixed AppHeader (36px tall) sits in the corner, the toolbar is centered below it */}
+      <nav className="absolute inset-x-0 top-0 h-[10%] pt-9 pl-[max(10%,5rem)] pr-[10%] flex items-center gap-2">
         {canManage ? (
           <Link to={sessionGamesPath(sessionId)} className={navClass}>
             {t('ringo.backToGames')}

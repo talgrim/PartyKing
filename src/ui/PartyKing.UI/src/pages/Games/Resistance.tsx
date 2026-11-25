@@ -427,7 +427,8 @@ export const Resistance = (): ReactNode => {
       }
     >
       {tvLayout ? (
-        <nav className="absolute inset-x-0 top-0 h-[10%] pl-[max(10%,5rem)] pr-[10%] flex items-center">
+        // pt-9: the fixed AppHeader (36px tall) sits in the corner, the toolbar is centered below it
+        <nav className="absolute inset-x-0 top-0 h-[10%] pt-9 pl-[max(10%,5rem)] pr-[10%] flex items-center">
           <div className="flex items-center gap-2 w-full">
             <PageNavigation
               links={[

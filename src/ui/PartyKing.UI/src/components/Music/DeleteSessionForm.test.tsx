@@ -1,3 +1,4 @@
+import type { MockInstance } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DeleteSessionForm } from './DeleteSessionForm';
@@ -12,7 +13,7 @@ const renderForm = (onDeleted = vi.fn()) => {
 };
 
 describe('DeleteSessionForm', () => {
-  let confirm: ReturnType<typeof vi.spyOn>;
+  let confirm: MockInstance<typeof window.confirm>;
 
   beforeEach(() => {
     mocks.deleteSession.mockReset().mockResolvedValue(undefined);

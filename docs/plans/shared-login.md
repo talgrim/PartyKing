@@ -1,6 +1,6 @@
 # Shared login: PartyKing becomes a consumer of auth.talgrim.dev
 
-Status: **implemented on `feat/shared-login`**, not yet merged or deployed. Already done on the identity side: the accounts are imported, the admin is
+Status: **done and deployed** (PR #172, released in #173; production release v47 on 2026-11-25, all cutover checks passed). Already done on the identity side: the accounts are imported, the admin is
 seeded and the integration events (a transactional outbox delivered as signed webhooks) are merged into the identity
 service's `develop`. The accounts (users and admins) move out of PartyKing into a separate identity
 service, `auth.talgrim.dev` (repo `talgrim/auth`, its `plan.md` holds the service side and the API contract). PartyKing
