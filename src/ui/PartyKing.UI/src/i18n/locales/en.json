@@ -2,6 +2,12 @@
   "language": {
     "label": "Language"
   },
+  "titles": {
+    "session": "Music queue",
+    "resistance": "Resistance",
+    "ringo": "Ringo",
+    "resistanceIcons": "Icon guide"
+  },
   "common": {
     "somethingWentWrong": "Something went wrong",
     "noSessionsYet": "There are no sessions yet.",
@@ -33,15 +39,9 @@
     "passwordProtected": "Password protected"
   },
   "account": {
-    "sites": {
-      "home": "Home",
-      "party": "PartyKing",
-      "notes": "Notes"
-    },
-    "here": "you are here",
+    "sitesLabel": "Sites",
     "settings": "Account settings",
     "logIn": "Log in",
-    "signUp": "Sign up",
     "logOut": "Log out"
   },
   "admin": {

@@ -133,7 +133,7 @@ export const ResistanceIconGuide = (): ReactNode => {
   ];
 
   return (
-    <div className="flex flex-col gap-4 w-full min-h-screen p-3 pt-10 bg-slate-800 text-slate-400">
+    <div className="flex flex-col gap-4 w-full min-h-[calc(100dvh-var(--site-bar-h))] p-3 bg-slate-800 text-slate-400">
       <PageNavigation links={[{ to: sessionResistancePath(sessionId), label: t('resistance.iconGuide.back') }]} />
       <h1 className="text-xl font-semibold text-slate-100">{t('resistance.iconGuide.title')}</h1>
       <p className="text-sm">{t('resistance.iconGuide.intro')}</p>

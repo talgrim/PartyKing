@@ -56,7 +56,7 @@ const JoinForm = ({ title, isHost, isAdmin, kicked, join, onJoined }: FormProps)
   };
 
   return (
-    <form onSubmit={(event) => void submit(event)} className="flex flex-col gap-3 p-4 pt-10 max-w-sm mx-auto">
+    <form onSubmit={(event) => void submit(event)} className="flex flex-col gap-3 p-4 max-w-sm mx-auto">
       <h1 className="text-xl text-slate-200">{title}</h1>
       {kicked && <p className="text-amber-500">{t('lobby.kicked')}</p>}
       {!isHost && (
@@ -160,7 +160,7 @@ export const GameJoin = ({ sessionId, topics, title, lobby, error, isLoading, jo
 
   if (lobby.isStarted && !wasJoined) {
     return (
-      <div className="p-4 pt-10 max-w-sm mx-auto text-slate-200">
+      <div className="p-4 max-w-sm mx-auto text-slate-200">
         <p>
           {t('lobby.started')}{' '}
           <Link to={sessionPath(sessionId)} className="underline">
@@ -177,7 +177,7 @@ export const GameJoin = ({ sessionId, topics, title, lobby, error, isLoading, jo
 
   if (!lobby.isOpen && !wasJoined) {
     return (
-      <p className="p-4 pt-10 text-slate-200">
+      <p className="p-4 text-slate-200">
         {t('lobby.notOpen')}{' '}
         <Link to={sessionPath(sessionId)} className="underline">
           {t('common.backToSession')}
