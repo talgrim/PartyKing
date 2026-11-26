@@ -62,6 +62,14 @@ export type SlideshowPhotoCountDto = {
   count: number;
 };
 
+// Mirrors PartyKing.Contract.V1.Slideshow.UploadedPhotosDto
+export type UploadedPhotosDto = {
+  /** How many of the files were stored. */
+  stored: number;
+  /** Why each of the others was left out (the text names the file). */
+  rejected: string[];
+};
+
 // Mirrors PartyKing.Contract.V1.Slideshow.SlideshowSettingsDto
 export type SlideshowSettingsDto = {
   /** Start over after the last photo. */

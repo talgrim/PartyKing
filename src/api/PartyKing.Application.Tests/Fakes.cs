@@ -478,7 +478,7 @@ internal class FakeSlideshowService : ISlideshowService
         SlideshowSettingsDto settings,
         CancellationToken cancellationToken) => throw new NotSupportedException();
 
-    public Task UploadImagesAsync(
+    public Task<ErrorOr<UploadedPhotosDto>> UploadImagesAsync(
         Guid sessionId,
         IReadOnlyList<UploadedFile> files,
         bool deleteAfterPresentation,

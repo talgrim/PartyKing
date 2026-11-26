@@ -35,22 +35,27 @@ export const PhotoUploader = ({ sessionId, onBusyChange, onUnauthorized }: Props
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>('waiting');
   const [errorMessage, setErrorMessage] = useState('');
+  // Why some of the files were left out of an upload that stored the others
+  const [skipped, setSkipped] = useState<string[]>([]);
   const [deleteAfterPresentation, setDeleteAfterPresentation] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setUploadStatus('waiting');
     setErrorMessage('');
+    setSkipped([]);
     setFiles([...(e.target.files ?? [])]);
   };
 
   const handleSubmit = async () => {
     setUploadStatus('uploading');
+    setSkipped([]);
     onBusyChange(true);
 
     try {
-      await sessionsApi.uploadPhotos(sessionId, files, deleteAfterPresentation, setUploadProgress);
+      const result = await sessionsApi.uploadPhotos(sessionId, files, deleteAfterPresentation, setUploadProgress);
 
+      setSkipped(result.rejected);
       setUploadStatus('success');
       if (fileInput.current) fileInput.current.value = '';
       setFiles([]);
@@ -76,6 +81,16 @@ export const PhotoUploader = ({ sessionId, onBusyChange, onUnauthorized }: Props
       {uploadStatus === 'success' && (
         <Alert variant="filled" severity="success">
           {t('uploader.done')}
+        </Alert>
+      )}
+      {uploadStatus === 'success' && skipped.length > 0 && (
+        <Alert variant="filled" severity="warning">
+          {t('uploader.skipped')}
+          <ul className="list-disc pl-5">
+            {skipped.map((reason, index) => (
+              <li key={`${index}-${reason}`}>{reason}</li>
+            ))}
+          </ul>
         </Alert>
       )}
       {uploadStatus === 'error' && (

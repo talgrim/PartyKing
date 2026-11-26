@@ -1,6 +1,6 @@
 import envVariables from '@/envVariables';
 import { axios } from '@/service/request';
-import { JoinTokenDto, PlaylistDto, SessionDto, SessionListItemDto, SlideshowPhotoCountDto, SlideshowSettingsDto, UserDto, ViewerRoleDto } from './types';
+import { JoinTokenDto, PlaylistDto, SessionDto, SessionListItemDto, SlideshowPhotoCountDto, SlideshowSettingsDto, UploadedPhotosDto, UserDto, ViewerRoleDto } from './types';
 
 // The axios response interceptor unwraps `response.data`, so these resolve to the payload itself.
 const unwrap = <T>(promise: Promise<unknown>) => promise as Promise<T>;
@@ -100,8 +100,9 @@ export const sessionsApi = {
     unwrap<ViewerRoleDto>(axios.get(`/sessions/${sessionId}/me`, { withCredentials: true })),
 
   /**
-   * Uploads photos to the session's slideshow. Rejects with status 400 (the message says why), 401 (session locked),
-   * 413 (too big) or 429 (too many uploads).
+   * Uploads photos to the session's slideshow. Resolves with what was stored and why each other file was left out: a
+   * file that is not a usable photo does not stop the rest. Rejects with status 400 (nothing was stored; the message says
+   * why), 401 (session locked), 413 (too big) or 429 (too many uploads).
    */
   uploadPhotos: (
     sessionId: string,
@@ -112,7 +113,7 @@ export const sessionsApi = {
     const formData = new FormData();
     files.forEach((file) => formData.append('files', file));
 
-    return unwrap<void>(
+    return unwrap<UploadedPhotosDto>(
       axios.put(`/sessions/${sessionId}/photos/${deleteAfterPresentation}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (event) => {

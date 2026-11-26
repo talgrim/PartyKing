@@ -251,6 +251,7 @@
     "tooMany": "Too many attempts. Try again in a minute.",
     "tooBig": "The files are too big (20 MB per photo, 100 MB at once).",
     "failed": "Could not upload the files. Try again.",
+    "skipped": "Some files were not uploaded:",
     "done": "Photos uploaded",
     "choose": "Choose photos",
     "deleteAfter": "Delete each photo after it has been shown",
