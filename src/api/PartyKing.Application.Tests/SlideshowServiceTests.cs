@@ -622,6 +622,56 @@ public class SlideshowServiceTests
         Assert.Single(_repository.Added);
     }
 
+    [Fact]
+    public async Task Upload_ProcessesAtMostThreePhotosAtOnce_WhateverTheNumberOfRequests()
+    {
+        _stripper.Hold = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var requests = Enumerable.Range(0, 5)
+            .Select(_ => _service.UploadImagesAsync(
+                _sessionId,
+                [File("a.jpg", JpegBytes), File("b.jpg", JpegBytes)],
+                deleteAfterPresentation: false,
+                CancellationToken.None))
+            .ToList();
+
+        await WaitUntilAsync(() => _stripper.Active == 3);
+        await Task.Delay(100);
+
+        Assert.Equal(3, _stripper.Active);
+
+        _stripper.Hold.SetResult();
+        var results = await Task.WhenAll(requests).WaitAsync(TimeSpan.FromSeconds(10));
+
+        Assert.Equal(3, _stripper.Peak);
+        Assert.All(results, x => Assert.Equal(2, x.Value.Stored));
+        Assert.Equal(10, _repository.Added.Count);
+    }
+
+    [Fact]
+    public async Task Upload_GivesTheSlotBack_WhenAFileIsRefused()
+    {
+        var damaged = File("damaged.jpg", [..JpegBytes, FakeMetadataStripper.DamagedMark]);
+
+        for (var i = 0; i < 6; i++)
+        {
+            var result = await _service
+                .UploadImagesAsync(_sessionId, [damaged, damaged], deleteAfterPresentation: false, CancellationToken.None)
+                .WaitAsync(TimeSpan.FromSeconds(10));
+
+            Assert.True(result.IsError);
+        }
+    }
+
+    private static async Task WaitUntilAsync(Func<bool> condition)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (!condition())
+        {
+            Assert.True(DateTime.UtcNow < deadline, "The condition was not met in time");
+            await Task.Delay(10);
+        }
+    }
+
     /// <summary>Answers <see cref="Cleaned"/> for every file, and refuses the files that carry <see cref="DamagedMark"/>.</summary>
     private class FakeMetadataStripper : IImageMetadataStripper
     {
@@ -631,7 +681,48 @@ public class SlideshowServiceTests
         public List<byte[]> Stripped { get; } = [];
         public List<ImageFormat> Formats { get; } = [];
 
+        /// <summary>When set, every strip waits for it, so a test can see how many are in flight at once.</summary>
+        public TaskCompletionSource? Hold { get; set; }
+
+        public int Active => Volatile.Read(ref _active);
+        public int Peak => Volatile.Read(ref _peak);
+
+        private int _active;
+        private int _peak;
+
         public async Task<ErrorOr<Stream>> StripAsync(
+            Stream content,
+            ImageFormat format,
+            string fileName,
+            CancellationToken cancellationToken)
+        {
+            var active = Interlocked.Increment(ref _active);
+            InterlockedMax(ref _peak, active);
+            try
+            {
+                if (Hold is not null)
+                {
+                    await Hold.Task;
+                }
+
+                return await StripCoreAsync(content, format, fileName, cancellationToken);
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _active);
+            }
+        }
+
+        private static void InterlockedMax(ref int target, int value)
+        {
+            int seen;
+            while (value > (seen = Volatile.Read(ref target)))
+            {
+                Interlocked.CompareExchange(ref target, value, seen);
+            }
+        }
+
+        private async Task<ErrorOr<Stream>> StripCoreAsync(
             Stream content,
             ImageFormat format,
             string fileName,

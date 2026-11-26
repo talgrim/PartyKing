@@ -99,7 +99,7 @@ public class ImageMetadataStripperTests
         var output = await StripAsync(ImageFixtures.Jpeg(), Jpeg);
 
         Assert.Equal<byte>(
-            [0xE1, 0xE0, 0xE2, 0xEE, 0xDB, 0xC0, 0xC4, 0xDA],
+            [0xE0, 0xE1, 0xE2, 0xEE, 0xDB, 0xC0, 0xC4, 0xDA],
             JpegSegments(output).Select(x => x.Marker).ToArray());
         Assert.True(ImageFixtures.Contains(output, "ICC_PROFILE"));
         Assert.True(ImageFixtures.Contains(output, "Adobe"));
@@ -128,6 +128,38 @@ public class ImageMetadataStripperTests
         var output = await StripAsync(ImageFixtures.Jpeg(orientation), Jpeg);
 
         Assert.DoesNotContain(JpegSegments(output), x => x.Marker == 0xE1);
+    }
+
+    [Fact]
+    public async Task Jpeg_PutsTheOrientationAfterTheJfifHeader_WhateverOrderTheSourceHad()
+    {
+        var jfifFirst = await StripAsync(ImageFixtures.Jpeg(), Jpeg);
+        var exifFirst = await StripAsync(ImageFixtures.Jpeg(exifBeforeJfif: true), Jpeg);
+
+        Assert.Equal<byte>([0xE0, 0xE1], JpegSegments(jfifFirst).Take(2).Select(x => x.Marker).ToArray());
+        Assert.Equal<byte>([0xE0, 0xE1], JpegSegments(exifFirst).Take(2).Select(x => x.Marker).ToArray());
+        Assert.Equal(6, ExifOrientation(exifFirst));
+    }
+
+    [Fact]
+    public async Task Jpeg_WithoutJfif_StartsWithTheOrientation()
+    {
+        var output = await StripAsync(ImageFixtures.Jpeg(withJfif: false), Jpeg);
+
+        Assert.Equal<byte>([0xE1, 0xE2, 0xEE, 0xDB, 0xC0, 0xC4, 0xDA], JpegSegments(output).Select(x => x.Marker).ToArray());
+        Assert.Equal(6, ExifOrientation(output));
+    }
+
+    [Fact]
+    public async Task Jpeg_LosesTheReservedAndExtensionMarkers_AndKeepsWhatDecodesIt()
+    {
+        var output = await StripAsync(ImageFixtures.Jpeg(withReservedSegments: true), Jpeg);
+
+        Assert.False(ImageFixtures.Contains(output, ImageFixtures.Sentinel));
+        Assert.DoesNotContain(JpegSegments(output), x => x.Marker is 0x60 or 0xF5);
+        Assert.Equal<byte>(
+            [0xE0, 0xE1, 0xE2, 0xEE, 0xDB, 0xC0, 0xC4, 0xDA],
+            JpegSegments(output).Select(x => x.Marker).ToArray());
     }
 
     [Fact]
@@ -316,14 +348,25 @@ public class ImageMetadataStripperTests
     }
 
     [Fact]
-    public async Task Gif_CutAnywhereBeforeItsTrailer_IsRejected()
+    public async Task Gif_CutInsideABlock_OrBeforeItsFirstFrame_IsRejected()
     {
         var gif = ImageFixtures.Gif(withTrailingData: false);
 
-        for (var length = 0; length < gif.Length; length++)
+        for (var length = 0; length < gif.Length - 1; length++)
         {
             await AssertRejectedAsync(gif[..length], Gif);
         }
+    }
+
+    [Fact]
+    public async Task Gif_ThatOnlyLacksItsTrailer_GetsIt()
+    {
+        var gif = ImageFixtures.Gif(withTrailingData: false);
+
+        var output = await StripAsync(gif[..^1], Gif);
+
+        Assert.Equal(await StripAsync(gif, Gif), output);
+        Assert.Equal(0x3B, output[^1]);
     }
 
     // ----- All formats -----

@@ -20,11 +20,40 @@ internal static class ImageFixtures
     /// SOI, JFIF with a thumbnail, Exif (description, orientation, GPS), XMP, IPTC, a comment, ICC, MPF, Adobe, tables,
     /// a frame and a scan, EOI and a video appended after it.
     /// </summary>
-    public static byte[] Jpeg(int orientation = 6, bool littleEndian = true, bool withTrailingData = true)
+    public static byte[] Jpeg(
+        int orientation = 6,
+        bool littleEndian = true,
+        bool withTrailingData = true,
+        bool withJfif = true,
+        bool exifBeforeJfif = false,
+        bool withReservedSegments = false)
     {
+        var jfif = Segment(0xE0, Concat("JFIF\0"u8, [1, 1, 0, 0, 1, 0, 1, 1, 1, 9, 9, 9]));
+        var exif = Segment(0xE1, Concat("Exif\0\0"u8, Tiff(orientation, littleEndian)));
+
         var bytes = new List<byte> { 0xFF, 0xD8 };
-        bytes.AddRange(Segment(0xE0, Concat("JFIF\0"u8, [1, 1, 0, 0, 1, 0, 1, 1, 1, 9, 9, 9])));
-        bytes.AddRange(Segment(0xE1, Concat("Exif\0\0"u8, Tiff(orientation, littleEndian))));
+        if (exifBeforeJfif)
+        {
+            bytes.AddRange(exif);
+        }
+
+        if (withJfif)
+        {
+            bytes.AddRange(jfif);
+        }
+
+        if (!exifBeforeJfif)
+        {
+            bytes.AddRange(exif);
+        }
+
+        if (withReservedSegments)
+        {
+            // A reserved marker and a JPEG extension marker (JPG5) that a decoder does not need
+            bytes.AddRange(Segment(0x60, Ascii($"{Sentinel}-RESERVED")));
+            bytes.AddRange(Segment(0xF5, Ascii($"{Sentinel}-EXTENSION")));
+        }
+
         bytes.AddRange(Segment(0xE1, Ascii($"http://ns.adobe.com/xap/1.0/\0<x:xmpmeta>{Sentinel}-XMP</x:xmpmeta>")));
         bytes.AddRange(Segment(0xED, Ascii($"Photoshop 3.0\0{Sentinel}-IPTC")));
         bytes.AddRange(Segment(0xFE, Ascii($"{Sentinel}-COMMENT")));

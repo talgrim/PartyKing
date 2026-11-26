@@ -56,6 +56,20 @@ describe('PhotoUploadDialog', () => {
     expect(screen.getByText("'b.png' is not a valid image.")).toBeVisible();
   });
 
+  it('lists each left-out file, also when two of them have the same reason', async () => {
+    const reason = "'b.png' is not a valid image.";
+    mocks.upload.mockResolvedValue({ stored: 1, rejected: [reason, reason] });
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { user } = renderDialog();
+
+    await user.upload(screen.getByLabelText('Choose photos'), [photo('a.png'), photo('b.png')]);
+    await user.click(screen.getByRole('button', { name: 'Upload 2 photos' }));
+
+    expect(await screen.findAllByText(reason)).toHaveLength(2);
+    expect(errors).not.toHaveBeenCalled();
+    errors.mockRestore();
+  });
+
   it('shows no warning when every file was stored', async () => {
     const { user } = renderDialog();
 
