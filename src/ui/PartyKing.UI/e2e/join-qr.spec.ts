@@ -1,4 +1,5 @@
 import { expect, test } from './fixtures/test';
+import { dismissPrivacyNotice } from './fixtures/privacyNotice';
 
 test('a guest who opens the QR link gets in without the password', async ({ browser, createSession, openAdmin }) => {
   const session = await createSession();
@@ -12,6 +13,7 @@ test('a guest who opens the QR link gets in without the password', async ({ brow
   expect(token).toBeTruthy();
 
   const context = await browser.newContext();
+  await dismissPrivacyNotice(context);
   const guest = await context.newPage();
   await guest.goto(`/s/${session.id}?join=${encodeURIComponent(token)}`);
   await expect(guest.getByRole('heading', { name: session.name })).toBeVisible();

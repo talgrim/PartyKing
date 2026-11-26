@@ -40,3 +40,30 @@ test('the title names the page, and the language switch changes it as well', asy
 
   await expect(page).toHaveTitle('Administrator · PartyKing · talgrim.dev');
 });
+
+test('the privacy notice shows once, links to the policy and is gone after "Got it"', async ({ browser }) => {
+  // A context of its own: the ones the tests get have the notice dismissed already
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await page.goto('/');
+
+  const notice = page.getByRole('region', { name: 'Privacy' });
+  await expect(notice).toBeVisible();
+  await expect(notice.getByRole('link', { name: 'Privacy policy' })).toHaveAttribute(
+    'href',
+    'https://talgrim.dev/privacy#partyking',
+  );
+
+  await notice.getByRole('button', { name: 'Got it' }).click();
+  await expect(notice).toBeHidden();
+
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Join a party' })).toBeVisible();
+  await expect(notice).toBeHidden();
+  await expect(page.getByRole('contentinfo').getByRole('link', { name: 'Privacy policy' })).toHaveAttribute(
+    'href',
+    'https://talgrim.dev/privacy',
+  );
+
+  await context.close();
+});

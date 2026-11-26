@@ -1,11 +1,12 @@
 import { render, screen } from '@testing-library/react';
 import { YoutubePlayer } from './YoutubePlayer';
 
-type PlayerProps = { volume?: number; onError?: (event: { target: unknown }) => void };
+type PlayerProps = { src?: string; volume?: number; onError?: (event: { target: unknown }) => void };
 
 vi.mock('react-player', () => ({
-  default: ({ volume, onError }: PlayerProps) => (
+  default: ({ src, volume, onError }: PlayerProps) => (
     <>
+      <span>{`src ${src}`}</span>
       <span>{`volume ${volume}`}</span>
       <button onClick={() => onError?.({ target: { error: { code: 150 } } })}>fail</button>
       <button onClick={() => onError?.({ target: {} })}>fail without code</button>
@@ -30,6 +31,12 @@ describe('YoutubePlayer', () => {
     screen.getByText('fail without code').click();
 
     expect(onError).toHaveBeenCalledWith(undefined);
+  });
+
+  it('plays the video from the privacy-enhanced domain', () => {
+    render(<YoutubePlayer songUrl="https://www.youtube.com/watch?v=dQw4w9WgXcQ" mute={false} />);
+
+    expect(screen.getByText('src https://www.youtube-nocookie.com/watch?v=dQw4w9WgXcQ')).toBeInTheDocument();
   });
 
   it('plays at 50% by default', () => {
