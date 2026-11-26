@@ -87,8 +87,8 @@ export const PhotoUploader = ({ sessionId, onBusyChange, onUnauthorized }: Props
         <Alert variant="filled" severity="warning">
           {t('uploader.skipped')}
           <ul className="list-disc pl-5">
-            {skipped.map((reason) => (
-              <li key={reason}>{reason}</li>
+            {skipped.map((reason, index) => (
+              <li key={`${index}-${reason}`}>{reason}</li>
             ))}
           </ul>
         </Alert>
