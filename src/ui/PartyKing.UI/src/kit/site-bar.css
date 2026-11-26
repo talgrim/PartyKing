@@ -86,6 +86,18 @@
   color: var(--text);
 }
 
+/*
+ * Three different things sit in a row: where the visitor is (the title), where else they can go (the switcher) and what
+ * this site offers (its own links). A line sets each apart from the one before it, so `talgrim.dev` is not read as one
+ * phrase with the first link. A line only appears when both neighbours are there (a visitor who is signed out has no
+ * switcher, and a site may have no links of its own).
+ */
+.site-bar__title + :is(.site-bar__sites:not([hidden]), .site-bar__nav),
+.site-bar__sites:not([hidden]) + .site-bar__nav {
+  padding-left: 1rem;
+  border-left: 1px solid var(--muted);
+}
+
 /* An action of the site (such as locking it) sits among its links and reads like one. */
 .site-bar__nav button {
   padding: 0;
@@ -169,5 +181,19 @@
   .site-bar__nav {
     order: 2;
     width: 100%;
+  }
+
+  /* The title has the row to itself and the switcher and the nav have rows of their own, so there is no line to their left. */
+  .site-bar__title + :is(.site-bar__sites:not([hidden]), .site-bar__nav) {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  /* The line between the switcher and the nav goes above the nav instead. */
+  .site-bar__sites:not([hidden]) + .site-bar__nav {
+    padding-top: 0.5rem;
+    padding-left: 0;
+    border-top: 1px solid var(--muted);
+    border-left: 0;
   }
 }
