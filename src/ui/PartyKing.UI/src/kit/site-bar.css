@@ -87,9 +87,12 @@
 }
 
 /*
- * The links to the other sites and the site's own features are different things, so a line sets them apart. It only
- * appears when both are there (a visitor who is signed out has no switcher, and a site may have no links of its own).
+ * Three different things sit in a row: where the visitor is (the title), where else they can go (the switcher) and what
+ * this site offers (its own links). A line sets each apart from the one before it, so `talgrim.dev` is not read as one
+ * phrase with the first link. A line only appears when both neighbours are there (a visitor who is signed out has no
+ * switcher, and a site may have no links of its own).
  */
+.site-bar__title + :is(.site-bar__sites:not([hidden]), .site-bar__nav),
 .site-bar__sites:not([hidden]) + .site-bar__nav {
   padding-left: 1rem;
   border-left: 1px solid var(--muted);
@@ -180,7 +183,13 @@
     width: 100%;
   }
 
-  /* The nav is a row of its own here, so the line goes above it instead of to its left. */
+  /* The title has the row to itself and the switcher and the nav have rows of their own, so there is no line to their left. */
+  .site-bar__title + :is(.site-bar__sites:not([hidden]), .site-bar__nav) {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  /* The line between the switcher and the nav goes above the nav instead. */
   .site-bar__sites:not([hidden]) + .site-bar__nav {
     padding-top: 0.5rem;
     padding-left: 0;
