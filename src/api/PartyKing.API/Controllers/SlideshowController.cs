@@ -42,23 +42,18 @@ public class SlideshowController : CoreController
     [EnableRateLimiting(UploadRateLimitPolicy)]
     [RequestSizeLimit(MaxUploadRequestBytes)]
     [RequestFormLimits(MultipartBodyLengthLimit = MaxUploadRequestBytes)]
+    [ProducesResponseType<UploadedPhotosDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> UploadPhoto(
         Guid sessionId,
         [Required] IFormFile[] files,
         bool deleteAfterPresentation,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var uploads = files.Select(x => new UploadedFile(x.FileName, x.Length, x.OpenReadStream)).ToList();
+        var uploads = files.Select(x => new UploadedFile(x.FileName, x.Length, x.OpenReadStream)).ToList();
 
-            await _slideshowService.UploadImagesAsync(sessionId, uploads, deleteAfterPresentation, cancellationToken);
-            return Ok();
-        }
-        catch (InvalidUploadException e)
-        {
-            return BadRequest(e.Message);
-        }
+        var result = await _slideshowService.UploadImagesAsync(sessionId, uploads, deleteAfterPresentation, cancellationToken);
+
+        return result.Match(Ok, Problem);
     }
 
     /// <summary>The photo the session's slideshow shows now; 204 when nothing was uploaded.</summary>

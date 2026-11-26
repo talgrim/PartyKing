@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using PartyKing.Application.Configuration;
 using PartyKing.Application.Mappings;
 using PartyKing.Application.Realtime;
+using PartyKing.Application.Slideshow.Metadata;
 using PartyKing.Application.Slideshow.Models;
 using PartyKing.Application.Sessions;
 using PartyKing.Application.Sessions.Services;
@@ -31,7 +32,13 @@ public interface ISlideshowService
         SessionCaller caller,
         SlideshowSettingsDto settings,
         CancellationToken cancellationToken);
-    Task UploadImagesAsync(
+
+    /// <summary>
+    /// Stores the photos that pass the checks, without their metadata. A photo that does not pass is left out and named in
+    /// the result with its reason, so it does not stop the others. An error (with a reason per file) when none was stored,
+    /// or when the session may not hold that many photos.
+    /// </summary>
+    Task<ErrorOr<UploadedPhotosDto>> UploadImagesAsync(
         Guid sessionId,
         IReadOnlyList<UploadedFile> files,
         bool deleteAfterPresentation,
@@ -65,11 +72,15 @@ public interface ISlideshowService
 
 internal class SlideshowService : ManagerGuardedService, ISlideshowService
 {
+    /// <summary>A photo is held in memory twice while it is stripped (the upload and the result), so few at a time.</summary>
+    private const int MaxParallelUploads = 2;
+
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ISlideshowImagesRepository _imagesRepository;
     private readonly ISlideshowSettingsRepository _settingsRepository;
     private readonly SlideshowConfiguration _slideshowConfiguration;
     private readonly IPhotoQuotaPolicy _photoQuota;
+    private readonly IImageMetadataStripper _metadataStripper;
     private readonly ISlideshowWatchers _watchers;
     private readonly ISlideshowScheduler _scheduler;
     private readonly ISlideshowNotifier _notifier;
@@ -85,7 +96,8 @@ internal class SlideshowService : ManagerGuardedService, ISlideshowService
         ISlideshowWatchers watchers,
         ISlideshowScheduler scheduler,
         ISlideshowNotifier notifier,
-        IPhotoQuotaPolicy photoQuota)
+        IPhotoQuotaPolicy photoQuota,
+        IImageMetadataStripper metadataStripper)
         : base(sessionAuthorizer)
     {
         _dateTimeProvider = dateTimeProvider;
@@ -93,6 +105,7 @@ internal class SlideshowService : ManagerGuardedService, ISlideshowService
         _settingsRepository = settingsRepository;
         _slideshowConfiguration = slideshowSettingsOptions.Value;
         _photoQuota = photoQuota;
+        _metadataStripper = metadataStripper;
         _watchers = watchers;
         _scheduler = scheduler;
         _notifier = notifier;
@@ -157,40 +170,48 @@ internal class SlideshowService : ManagerGuardedService, ISlideshowService
         return Error.Validation(description: "The slide time must be between 1 second and 1 hour");
     }
 
-    public async Task UploadImagesAsync(
+    public async Task<ErrorOr<UploadedPhotosDto>> UploadImagesAsync(
         Guid sessionId,
         IReadOnlyList<UploadedFile> files,
         bool deleteAfterPresentation,
         CancellationToken cancellationToken)
     {
-        EnsureWithinQuota(sessionId, files);
-
-        // Validate everything first so a bad file doesn't leave the rest of the batch half stored
-        var validated = new List<(UploadedFile File, ImageFormat Image)>();
-        foreach (var file in files)
-        {
-            await using var content = file.OpenRead();
-            var image = await UploadedImageValidator.ValidateAsync(file.FileName, file.Length, content, cancellationToken);
-            validated.Add((file, image));
-        }
-
-        await Parallel.ForEachAsync(
-            validated,
-            cancellationToken,
-            async (item, stoppingToken) =>
-                await UploadImageAsync(sessionId, item.File, item.Image, deleteAfterPresentation, stoppingToken));
-
-        await ShowFirstUploadAsync(sessionId, cancellationToken);
-    }
-
-    /// <summary>The upload endpoint answers a refusal like it answers an invalid file, with a bad request and its text.</summary>
-    private void EnsureWithinQuota(Guid sessionId, IReadOnlyList<UploadedFile> files)
-    {
         var quota = _photoQuota.Check(SessionDirectory(sessionId), files);
         if (quota.IsError)
         {
-            throw new InvalidUploadException(quota.FirstError.Description);
+            return quota.Errors;
         }
+
+        // One slot per file, so the parallel uploads do not share anything and the reasons keep the order of the files
+        var rejections = new Error?[files.Count];
+        var options = new ParallelOptions
+        {
+            MaxDegreeOfParallelism = MaxParallelUploads,
+            CancellationToken = cancellationToken
+        };
+
+        await Parallel.ForEachAsync(
+            files.Index(),
+            options,
+            async (item, stoppingToken) =>
+            {
+                var result = await UploadImageAsync(sessionId, item.Item, deleteAfterPresentation, stoppingToken);
+                rejections[item.Index] = result.IsError ? result.FirstError : null;
+            });
+
+        var rejected = rejections.OfType<Error>().ToList();
+        var stored = files.Count - rejected.Count;
+        if (stored == 0 && rejected.Count > 0)
+        {
+            return rejected;
+        }
+
+        if (stored > 0)
+        {
+            await ShowFirstUploadAsync(sessionId, cancellationToken);
+        }
+
+        return new UploadedPhotosDto(stored, rejected.Select(x => x.Description).ToList());
     }
 
     public async Task<SlideshowImageDto?> GetImageAsync(Guid sessionId, CancellationToken cancellationToken)
@@ -418,25 +439,38 @@ internal class SlideshowService : ManagerGuardedService, ISlideshowService
                ?? SlideshowSettings.Defaults(sessionId, _slideshowConfiguration.SlideTime);
     }
 
-    private async Task UploadImageAsync(
+    /// <summary>Checks the file, strips its metadata and stores the result; what is stored is never the file as it was uploaded.</summary>
+    private async Task<ErrorOr<Success>> UploadImageAsync(
         Guid sessionId,
         UploadedFile file,
-        ImageFormat image,
         bool deleteAfterPresentation,
         CancellationToken cancellationToken)
     {
-        await using var content = file.OpenRead();
+        await using var original = file.OpenRead();
 
+        var image = await UploadedImageValidator.ValidateAsync(file.FileName, file.Length, original, cancellationToken);
+        if (image.IsError)
+        {
+            return image.Errors;
+        }
+
+        var stripped = await _metadataStripper.StripAsync(original, image.Value, file.FileName, cancellationToken);
+        if (stripped.IsError)
+        {
+            return stripped.Errors;
+        }
+
+        await using var content = stripped.Value;
         await _imagesRepository.AddSlideshowImageAsync(CreateModel(), cancellationToken);
 
-        return;
+        return Result.Success;
 
         SlideshowImageWriteModel CreateModel()
         {
             return new SlideshowImageWriteModel(
                 sessionId,
-                image.Extension,
-                image.ContentType,
+                image.Value.Extension,
+                image.Value.ContentType,
                 content,
                 SessionDirectory(sessionId),
                 deleteAfterPresentation);

@@ -261,6 +261,7 @@
     "tooMany": "Zbyt wiele prób. Spróbuj ponownie za minutę.",
     "tooBig": "Pliki są za duże (20 MB na zdjęcie, 100 MB naraz).",
     "failed": "Nie udało się wysłać plików. Spróbuj ponownie.",
+    "skipped": "Niektóre pliki nie zostały wysłane:",
     "done": "Zdjęcia wysłane",
     "choose": "Wybierz zdjęcia",
     "deleteAfter": "Usuń każde zdjęcie po wyświetleniu",

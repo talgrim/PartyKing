@@ -46,7 +46,7 @@ A server that is a demo needs no Spotify: each visitor starts a throw-away sessi
 ## Limits
 
 - `MaxSessions` is checked by counting rows before the session is made, so two simultaneous starts can overshoot it by one.
-- Photos: a photo over `MaxPhotoBytes` or a batch that would take the session over `MaxPhotosPerSession` is refused with a 400 by the demo's `IPhotoQuotaPolicy` (`DemoPhotoQuotaPolicy`, using the file count of the session's folder; uploads racing each other can overshoot by a batch). The ordinary policy (`UnlimitedPhotoQuotaPolicy`) allows everything, and `RegisterDemo` swaps it like the Spotify services. The policy answers with an `ErrorOr`, and `SlideshowService` throws it as an `InvalidUploadException`, so the upload endpoint answers a refusal like an invalid file.
+- Photos: a photo over `MaxPhotoBytes` or a batch that would take the session over `MaxPhotosPerSession` is refused with a 400 by the demo's `IPhotoQuotaPolicy` (`DemoPhotoQuotaPolicy`, using the file count of the session's folder; uploads racing each other can overshoot by a batch). The ordinary policy (`UnlimitedPhotoQuotaPolicy`) allows everything, and `RegisterDemo` swaps it like the Spotify services. The policy answers with an `ErrorOr`, which `SlideshowService.UploadImagesAsync` returns as it is, so the endpoint answers a refusal with a 400 and the reason.
 - Tests: `DemoSessionTests` (Domain), `DemoSessionStartServiceTests`, `DemoSessionServiceTests` (list, resume, get), `DemoModeTests`, `DemoSessionCleanupTests`, `DemoRefusalTests`, `DemoRegistrationTests`, `DemoSessionsRepositoryTests`, `SpotifyProfilesRepositoryTests` (Application), `DemoControllerTests` and `SignedCookiesTests` (the demo sessions cookie) (Api).
 
 ## The UI
