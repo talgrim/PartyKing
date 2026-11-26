@@ -8,6 +8,13 @@
     "ringo": "Ringo",
     "resistanceIcons": "Przewodnik po ikonach"
   },
+  "privacy": {
+    "link": "Polityka prywatności",
+    "notice": "PartyKing nie ma analityki i używa tylko plików cookie potrzebnych do działania. Ze zdjęć, które dodajesz, usuwana jest lokalizacja.",
+    "noticeLabel": "Prywatność",
+    "dismiss": "Rozumiem",
+    "photoNote": "Zdjęcia widzą wszyscy w sesji. Usuwamy z nich lokalizację i pozostałe metadane."
+  },
   "common": {
     "somethingWentWrong": "Coś poszło nie tak",
     "noSessionsYet": "Nie ma jeszcze żadnych sesji.",
@@ -261,6 +268,7 @@
     "tooMany": "Zbyt wiele prób. Spróbuj ponownie za minutę.",
     "tooBig": "Pliki są za duże (20 MB na zdjęcie, 100 MB naraz).",
     "failed": "Nie udało się wysłać plików. Spróbuj ponownie.",
+    "skipped": "Niektóre pliki nie zostały wysłane:",
     "done": "Zdjęcia wysłane",
     "choose": "Wybierz zdjęcia",
     "deleteAfter": "Usuń każde zdjęcie po wyświetleniu",

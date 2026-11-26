@@ -1,5 +1,6 @@
 import { APIRequestContext, BrowserContext, Page, test as base, expect, request } from '@playwright/test';
 import { ADMIN_STATE_FILE, API_URL } from '../constants';
+import { dismissPrivacyNotice } from './privacyNotice';
 
 export type CreatedSession = { id: string; code: string; name: string; password: string };
 
@@ -16,6 +17,11 @@ let counter = 0;
 const unique = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${counter++}`;
 
 export const test = base.extend<Fixtures>({
+  context: async ({ context }, use) => {
+    await dismissPrivacyNotice(context);
+    await use(context);
+  },
+
   createSession: async ({}, use) => {
     const admin: APIRequestContext = await request.newContext({ baseURL: API_URL, storageState: ADMIN_STATE_FILE });
     const created: CreatedSession[] = [];
@@ -39,6 +45,7 @@ export const test = base.extend<Fixtures>({
     const contexts: BrowserContext[] = [];
     await use(async (session) => {
       const context = await browser.newContext();
+      await dismissPrivacyNotice(context);
       contexts.push(context);
       const page = await context.newPage();
       await unlockSession(page, session);
@@ -51,6 +58,7 @@ export const test = base.extend<Fixtures>({
     const contexts: BrowserContext[] = [];
     await use(async (session) => {
       const context = await browser.newContext({ storageState: ADMIN_STATE_FILE });
+      await dismissPrivacyNotice(context);
       contexts.push(context);
       const page = await context.newPage();
       await unlockSession(page, session);

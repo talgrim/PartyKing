@@ -23,6 +23,7 @@ using PartyKing.Application.Realtime;
 using PartyKing.Application.Sessions.Handlers;
 using PartyKing.Application.Sessions.Services;
 using PartyKing.Application.Slideshow.Handlers;
+using PartyKing.Application.Slideshow.Metadata;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Application.Spotify.Services;
 using PartyKing.Application.System;
@@ -76,6 +77,7 @@ public static class DependencyInjection
         services.AddDomainEventHandler<SessionDeleted, SessionDeletedPushHandler>();
         services.AddDomainEventHandler<HostReleased, HostCleanupHandler>();
         services.AddDomainEventHandler<SessionDeleted, HostCleanupHandler>();
+        services.AddDomainEventHandler<SessionDeleted, HostProfileCleanupHandler>();
         services.AddDomainEventHandler<SessionDeleted, SlideshowCleanupHandler>();
         services.AddDomainEventHandler<FallbackPlaylistChanged, FallbackPlaylistHandler>();
         services.AddDomainEventHandler<FallbackPlaylistCleared, FallbackPlaylistHandler>();
@@ -151,6 +153,11 @@ public static class DependencyInjection
         services.AddSingleton<ISlideshowWatchers, SlideshowWatchers>();
         services.AddSingleton<ISlideshowScheduler, SlideshowScheduler>();
         services.AddSingleton<IPhotoQuotaPolicy, UnlimitedPhotoQuotaPolicy>();
+        services.AddSingleton<IImageFormatStripper, JpegMetadataStripper>();
+        services.AddSingleton<IImageFormatStripper, PngMetadataStripper>();
+        services.AddSingleton<IImageFormatStripper, WebpMetadataStripper>();
+        services.AddSingleton<IImageFormatStripper, GifMetadataStripper>();
+        services.AddSingleton<IImageMetadataStripper, ImageMetadataStripper>();
         services.AddSingleton<ISlideshowService, SlideshowService>();
         services.AddScoped<ISlideshowArchiveService, SlideshowArchiveService>();
         services.AddDomainEventHandler<SlideshowSettingsChanged, SlideshowSettingsHandler>();

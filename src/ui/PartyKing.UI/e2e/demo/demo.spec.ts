@@ -1,5 +1,10 @@
 import { expect, Page, test } from '@playwright/test';
 import { DEMO_API_URL } from '../constants';
+import { dismissPrivacyNotice } from '../fixtures/privacyNotice';
+
+test.beforeEach(async ({ context }) => {
+  await dismissPrivacyNotice(context);
+});
 
 // A 1x1 transparent PNG
 const PNG = Buffer.from(
@@ -56,6 +61,7 @@ test('a returning visitor sees the demos they started and hosts an older one aga
 
   // A visitor who never started a demo has no list and cannot resume anyone else's
   const stranger = await page.context().browser()!.newContext();
+  await dismissPrivacyNotice(stranger);
   const strangerPage = await stranger.newPage();
   await strangerPage.goto('/');
   await expect(strangerPage.getByRole('button', { name: 'Start the demo' })).toBeVisible();
@@ -116,6 +122,7 @@ test('a visitor hosts a demo: banner, a sample track, no Spotify, and a guest jo
   await page.getByRole('button', { name: 'Show QR code' }).click();
   const { token: joinToken } = await (await created).json();
   const context = await browser.newContext();
+  await dismissPrivacyNotice(context);
   const guest = await context.newPage();
   await guest.goto(`/s/${sessionId}?join=${encodeURIComponent(joinToken)}`);
   await expect(guest.getByRole('heading', { name: 'Demo party' })).toBeVisible();

@@ -5,6 +5,7 @@ using PartyKing.Application.Demo.Services;
 using PartyKing.Application.Events;
 using PartyKing.Application.Sessions;
 using PartyKing.Application.Sessions.Services;
+using PartyKing.Application.Slideshow.Metadata;
 using PartyKing.Application.Slideshow.Models;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Contract.V1.Slideshow;
@@ -23,6 +24,7 @@ public class SlideshowServiceTests
     private readonly FakeSessionsRepository _sessions = new();
     private readonly FakeSlideshowScheduler _scheduler = new();
     private readonly FakeSlideshowNotifier _notifier = new();
+    private readonly FakeMetadataStripper _stripper = new();
     private readonly SlideshowService _service;
     private readonly Guid _sessionId;
 
@@ -52,7 +54,8 @@ public class SlideshowServiceTests
             _notifier,
             demo.Enabled
                 ? new DemoPhotoQuotaPolicy(Options.Create(demo), _repository)
-                : new UnlimitedPhotoQuotaPolicy());
+                : new UnlimitedPhotoQuotaPolicy(),
+            _stripper);
     }
 
     private static SessionCaller Admin => new(null, true);
@@ -255,15 +258,92 @@ public class SlideshowServiceTests
     }
 
     [Fact]
-    public async Task Upload_WithOneInvalidFile_StoresNothingFromTheBatch()
+    public async Task Upload_WithOneInvalidFile_StoresTheOthers_AndNamesTheRejectedOne()
     {
         var good = File("a.jpg", JpegBytes);
         var bad = File("evil.html", "<script>alert(1)</script>"u8.ToArray());
 
-        await Assert.ThrowsAsync<InvalidUploadException>(
-            () => _service.UploadImagesAsync(_sessionId, [good, bad], deleteAfterPresentation: false, CancellationToken.None));
+        var result = await _service.UploadImagesAsync(_sessionId, [good, bad], deleteAfterPresentation: false, CancellationToken.None);
 
+        Assert.Equal(1, result.Value.Stored);
+        Assert.Equal(["'evil.html' is not supported. Allowed formats: jpg, jpeg, png, gif, webp."], result.Value.Rejected);
+        Assert.Single(_repository.Added);
+    }
+
+    [Fact]
+    public async Task Upload_WithOnlyInvalidFiles_ReturnsAReasonForEachOfThem()
+    {
+        var first = File("a.html", "<a>"u8.ToArray());
+        var second = File("b.png", "not a png"u8.ToArray());
+
+        var result = await _service.UploadImagesAsync(_sessionId, [first, second], deleteAfterPresentation: false, CancellationToken.None);
+
+        Assert.True(result.IsError);
+        Assert.Equal(
+            [
+                "'a.html' is not supported. Allowed formats: jpg, jpeg, png, gif, webp.",
+                "'b.png' is not a valid image."
+            ],
+            result.Errors.Select(x => x.Description));
         Assert.Empty(_repository.Added);
+    }
+
+    [Fact]
+    public async Task Upload_StoresThePhotoWithoutItsMetadata_NeverTheBytesThatWereUploaded()
+    {
+        await _service.UploadImagesAsync(_sessionId, [File("a.jpg", JpegBytes)], deleteAfterPresentation: false, CancellationToken.None);
+
+        Assert.Equal(FakeMetadataStripper.Cleaned, Assert.Single(_repository.AddedContent));
+        Assert.All(_stripper.Stripped, x => Assert.Equal(JpegBytes, x));
+    }
+
+    [Fact]
+    public async Task Upload_StripsEachFileOnce_WithItsOwnDetectedFormat()
+    {
+        await _service.UploadImagesAsync(_sessionId, [File("holiday.JPEG", JpegBytes)], deleteAfterPresentation: false, CancellationToken.None);
+
+        var format = Assert.Single(_stripper.Formats);
+        Assert.Equal(".jpg", format.Extension);
+    }
+
+    [Fact]
+    public async Task Upload_DoesNotStripAFileThatFailedTheChecks()
+    {
+        await _service.UploadImagesAsync(_sessionId, [File("evil.html", "<a>"u8.ToArray())], deleteAfterPresentation: false, CancellationToken.None);
+
+        Assert.Empty(_stripper.Stripped);
+    }
+
+    [Fact]
+    public async Task Upload_WithAFileThatCannotBeStripped_StoresTheOthers_AndReportsTheStrippersReason()
+    {
+        var good = File("a.jpg", JpegBytes);
+        var damaged = File("damaged.jpg", [..JpegBytes, FakeMetadataStripper.DamagedMark]);
+
+        var result = await _service.UploadImagesAsync(_sessionId, [damaged, good], deleteAfterPresentation: false, CancellationToken.None);
+
+        Assert.Equal(1, result.Value.Stored);
+        Assert.Equal(["The stripper refused 'damaged.jpg'"], result.Value.Rejected);
+        Assert.Equal(FakeMetadataStripper.Cleaned, Assert.Single(_repository.AddedContent));
+    }
+
+    [Fact]
+    public async Task Upload_WithOnlyFilesThatCannotBeStripped_ReturnsTheStrippersReasons()
+    {
+        var damaged = File("damaged.jpg", [..JpegBytes, FakeMetadataStripper.DamagedMark]);
+
+        var result = await _service.UploadImagesAsync(_sessionId, [damaged], deleteAfterPresentation: false, CancellationToken.None);
+
+        Assert.Equal("The stripper refused 'damaged.jpg'", Assert.Single(result.Errors).Description);
+        Assert.Empty(_repository.Added);
+    }
+
+    [Fact]
+    public async Task Upload_WithNothingStored_DoesNotChangeTheSlide()
+    {
+        await _service.UploadImagesAsync(_sessionId, [File("evil.html", "<a>"u8.ToArray())], deleteAfterPresentation: false, CancellationToken.None);
+
+        Assert.Empty(_notifier.SlideshowChanges);
     }
 
     [Fact]
@@ -499,10 +579,9 @@ public class SlideshowServiceTests
         var service = CreateService(Demo);
         var big = new UploadedFile("big.jpg", 101, () => new MemoryStream(JpegBytes));
 
-        var failure = await Assert.ThrowsAsync<InvalidUploadException>(
-            () => service.UploadImagesAsync(_sessionId, [big], deleteAfterPresentation: false, CancellationToken.None));
+        var result = await service.UploadImagesAsync(_sessionId, [big], deleteAfterPresentation: false, CancellationToken.None);
 
-        Assert.Equal("In the demo a photo can be at most 0 MB", failure.Message);
+        Assert.Equal("In the demo a photo can be at most 0 MB", Assert.Single(result.Errors).Description);
         Assert.Empty(_repository.Added);
     }
 
@@ -512,14 +591,13 @@ public class SlideshowServiceTests
         _repository.StoredPhotos = 2;
         var service = CreateService(Demo);
 
-        var failure = await Assert.ThrowsAsync<InvalidUploadException>(
-            () => service.UploadImagesAsync(
-                _sessionId,
-                [File("a.jpg", JpegBytes), File("b.jpg", JpegBytes)],
-                deleteAfterPresentation: false,
-                CancellationToken.None));
+        var result = await service.UploadImagesAsync(
+            _sessionId,
+            [File("a.jpg", JpegBytes), File("b.jpg", JpegBytes)],
+            deleteAfterPresentation: false,
+            CancellationToken.None);
 
-        Assert.Equal("In the demo a session can hold at most 3 photos", failure.Message);
+        Assert.Equal("In the demo a session can hold at most 3 photos", Assert.Single(result.Errors).Description);
         Assert.Empty(_repository.Added);
     }
 
@@ -544,6 +622,131 @@ public class SlideshowServiceTests
         Assert.Single(_repository.Added);
     }
 
+    [Fact]
+    public async Task Upload_ProcessesAtMostThreePhotosAtOnce_WhateverTheNumberOfRequests()
+    {
+        _stripper.Hold = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var requests = Enumerable.Range(0, 5)
+            .Select(_ => _service.UploadImagesAsync(
+                _sessionId,
+                [File("a.jpg", JpegBytes), File("b.jpg", JpegBytes)],
+                deleteAfterPresentation: false,
+                CancellationToken.None))
+            .ToList();
+
+        await WaitUntilAsync(() => _stripper.Active == 3);
+        await Task.Delay(100);
+
+        Assert.Equal(3, _stripper.Active);
+
+        _stripper.Hold.SetResult();
+        var results = await Task.WhenAll(requests).WaitAsync(TimeSpan.FromSeconds(10));
+
+        Assert.Equal(3, _stripper.Peak);
+        Assert.All(results, x => Assert.Equal(2, x.Value.Stored));
+        Assert.Equal(10, _repository.Added.Count);
+    }
+
+    [Fact]
+    public async Task Upload_GivesTheSlotBack_WhenAFileIsRefused()
+    {
+        var damaged = File("damaged.jpg", [..JpegBytes, FakeMetadataStripper.DamagedMark]);
+
+        for (var i = 0; i < 6; i++)
+        {
+            var result = await _service
+                .UploadImagesAsync(_sessionId, [damaged, damaged], deleteAfterPresentation: false, CancellationToken.None)
+                .WaitAsync(TimeSpan.FromSeconds(10));
+
+            Assert.True(result.IsError);
+        }
+    }
+
+    private static async Task WaitUntilAsync(Func<bool> condition)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (!condition())
+        {
+            Assert.True(DateTime.UtcNow < deadline, "The condition was not met in time");
+            await Task.Delay(10);
+        }
+    }
+
+    /// <summary>Answers <see cref="Cleaned"/> for every file, and refuses the files that carry <see cref="DamagedMark"/>.</summary>
+    private class FakeMetadataStripper : IImageMetadataStripper
+    {
+        public const byte DamagedMark = 0xDD;
+        public static readonly byte[] Cleaned = [0xC1, 0xEA, 0x4E];
+
+        public List<byte[]> Stripped { get; } = [];
+        public List<ImageFormat> Formats { get; } = [];
+
+        /// <summary>When set, every strip waits for it, so a test can see how many are in flight at once.</summary>
+        public TaskCompletionSource? Hold { get; set; }
+
+        public int Active => Volatile.Read(ref _active);
+        public int Peak => Volatile.Read(ref _peak);
+
+        private int _active;
+        private int _peak;
+
+        public async Task<ErrorOr<Stream>> StripAsync(
+            Stream content,
+            ImageFormat format,
+            string fileName,
+            CancellationToken cancellationToken)
+        {
+            var active = Interlocked.Increment(ref _active);
+            InterlockedMax(ref _peak, active);
+            try
+            {
+                if (Hold is not null)
+                {
+                    await Hold.Task;
+                }
+
+                return await StripCoreAsync(content, format, fileName, cancellationToken);
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _active);
+            }
+        }
+
+        private static void InterlockedMax(ref int target, int value)
+        {
+            int seen;
+            while (value > (seen = Volatile.Read(ref target)))
+            {
+                Interlocked.CompareExchange(ref target, value, seen);
+            }
+        }
+
+        private async Task<ErrorOr<Stream>> StripCoreAsync(
+            Stream content,
+            ImageFormat format,
+            string fileName,
+            CancellationToken cancellationToken)
+        {
+            using var copy = new MemoryStream();
+            await content.CopyToAsync(copy, cancellationToken);
+            var bytes = copy.ToArray();
+
+            lock (Stripped)
+            {
+                Stripped.Add(bytes);
+                Formats.Add(format);
+            }
+
+            if (bytes.Contains(DamagedMark))
+            {
+                return Error.Validation(description: $"The stripper refused '{fileName}'");
+            }
+
+            return new MemoryStream(Cleaned);
+        }
+    }
+
     private class FakeSlideshowImagesRepository : ISlideshowImagesRepository, ISlideshowSettingsRepository
     {
         public Dictionary<Guid, SlideshowImageReadResult> NextImages { get; } = [];
@@ -552,6 +755,9 @@ public class SlideshowServiceTests
         /// <summary>Receives the events a settings change raised; none until the test wires it.</summary>
         public IDomainEventDispatcher? Events { get; set; }
         public List<SlideshowImageWriteModel> Added { get; } = [];
+
+        /// <summary>What each stored photo held when it was stored (the stream is gone after the upload).</summary>
+        public List<byte[]> AddedContent { get; } = [];
         public List<SlideshowImageReadResult> Deleted { get; } = [];
         public List<string> DeletedDirectories { get; } = [];
 
@@ -587,6 +793,9 @@ public class SlideshowServiceTests
         public Task AddSlideshowImageAsync(SlideshowImageWriteModel slideshowImage, CancellationToken cancellationToken)
         {
             Added.Add(slideshowImage);
+            using var copy = new MemoryStream();
+            slideshowImage.Data.CopyTo(copy);
+            AddedContent.Add(copy.ToArray());
             return Task.CompletedTask;
         }
 

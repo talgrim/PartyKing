@@ -21,7 +21,7 @@ Each layer registers its own services through a `DependencyInjection.cs` extensi
 
 ### Ports
 
-Application declares the ports it needs in `Application/Ports` (`ISpotifyProfilesRepository`, `ISlideshowImagesRepository`, the clients `ISpotifyIntegrationClient`, `IYoutubeOEmbedClient`, `ILrclibClient`, and `LlmProviderException` / `SpotifyApiException`); Infrastructure implements them. Application never sees the Spotify SDK.
+Application declares the ports it needs in `Application/Ports` (`ISpotifyProfilesRepository`, `ISlideshowImagesRepository`, the clients `ISpotifyIntegrationClient`, `IYoutubeOEmbedClient`, `ILrclibClient`, and `LlmProviderException` / `SpotifyApiException`); Infrastructure implements them. Application never sees the Spotify SDK. `IImageMetadataStripper` (`Application/Slideshow/Metadata`) is the exception that lives entirely in Application: it is pure byte logic over the image containers with no I/O and no package, so it needs no Infrastructure project (see `../features/slideshow.md`).
 
 ### Never sees HTTP
 

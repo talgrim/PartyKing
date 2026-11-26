@@ -19,7 +19,7 @@ describe('PhotoUploadDialog', () => {
   beforeEach(() => {
     URL.createObjectURL = vi.fn(() => 'blob:preview');
     URL.revokeObjectURL = vi.fn();
-    mocks.upload.mockReset().mockResolvedValue(undefined);
+    mocks.upload.mockReset().mockResolvedValue({ stored: 1, rejected: [] });
   });
 
   it('renders nothing while closed', () => {
@@ -42,6 +42,48 @@ describe('PhotoUploadDialog', () => {
     expect(mocks.upload.mock.calls[0][2]).toBe(true);
     expect(await screen.findByText('Photos uploaded')).toBeVisible();
     expect(screen.queryByRole('button', { name: /^Upload \d/ })).not.toBeInTheDocument();
+  });
+
+  it('lists the files that were left out of an upload that stored the others', async () => {
+    mocks.upload.mockResolvedValue({ stored: 1, rejected: ["'b.png' is not a valid image."] });
+    const { user } = renderDialog();
+
+    await user.upload(screen.getByLabelText('Choose photos'), [photo('a.png'), photo('b.png')]);
+    await user.click(screen.getByRole('button', { name: 'Upload 2 photos' }));
+
+    expect(await screen.findByText('Photos uploaded')).toBeVisible();
+    expect(screen.getByText('Some files were not uploaded:')).toBeVisible();
+    expect(screen.getByText("'b.png' is not a valid image.")).toBeVisible();
+  });
+
+  it('lists each left-out file, also when two of them have the same reason', async () => {
+    const reason = "'b.png' is not a valid image.";
+    mocks.upload.mockResolvedValue({ stored: 1, rejected: [reason, reason] });
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { user } = renderDialog();
+
+    await user.upload(screen.getByLabelText('Choose photos'), [photo('a.png'), photo('b.png')]);
+    await user.click(screen.getByRole('button', { name: 'Upload 2 photos' }));
+
+    expect(await screen.findAllByText(reason)).toHaveLength(2);
+    expect(errors).not.toHaveBeenCalled();
+    errors.mockRestore();
+  });
+
+  it('tells the guest who sees the photos and that their location is removed', () => {
+    renderDialog();
+
+    expect(screen.getByText('Everyone in the session can see the photos. Their location and other metadata are removed.')).toBeVisible();
+  });
+
+  it('shows no warning when every file was stored', async () => {
+    const { user } = renderDialog();
+
+    await user.upload(screen.getByLabelText('Choose photos'), photo());
+    await user.click(screen.getByRole('button', { name: 'Upload 1 photo' }));
+
+    expect(await screen.findByText('Photos uploaded')).toBeVisible();
+    expect(screen.queryByText('Some files were not uploaded:')).not.toBeInTheDocument();
   });
 
   it('shows the reason when the upload is refused', async () => {
