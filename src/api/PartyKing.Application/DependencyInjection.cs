@@ -77,6 +77,7 @@ public static class DependencyInjection
         services.AddDomainEventHandler<SessionDeleted, SessionDeletedPushHandler>();
         services.AddDomainEventHandler<HostReleased, HostCleanupHandler>();
         services.AddDomainEventHandler<SessionDeleted, HostCleanupHandler>();
+        services.AddDomainEventHandler<SessionDeleted, HostProfileCleanupHandler>();
         services.AddDomainEventHandler<SessionDeleted, SlideshowCleanupHandler>();
         services.AddDomainEventHandler<FallbackPlaylistChanged, FallbackPlaylistHandler>();
         services.AddDomainEventHandler<FallbackPlaylistCleared, FallbackPlaylistHandler>();
