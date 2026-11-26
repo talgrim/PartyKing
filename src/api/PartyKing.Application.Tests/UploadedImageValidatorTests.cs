@@ -1,3 +1,4 @@
+using ErrorOr;
 using PartyKing.Application.Slideshow.Services;
 using PartyKing.Domain.Entities.Slideshow;
 
@@ -9,7 +10,7 @@ public class UploadedImageValidatorTests
     private static readonly byte[] JpegBytes = [0xFF, 0xD8, 0xFF, 0xE0, 0, 0x10, 0x4A, 0x46, 0x49, 0x46, 0, 1];
     private static readonly byte[] PngBytes = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0x0D];
 
-    private static Task<ImageFormat> Validate(string fileName, byte[] content, long? length = null)
+    private static Task<ErrorOr<ImageFormat>> Validate(string fileName, byte[] content, long? length = null)
     {
         return UploadedImageValidator.ValidateAsync(
             fileName,
@@ -21,7 +22,7 @@ public class UploadedImageValidatorTests
     [Fact]
     public async Task Jpeg_IsAccepted()
     {
-        Assert.Equal(new ImageFormat(".jpg", "image/jpeg"), await Validate("photo.JPEG", JpegBytes));
+        Assert.Equal(new ImageFormat(".jpg", "image/jpeg"), (await Validate("photo.JPEG", JpegBytes)).Value);
     }
 
     [Fact]
@@ -30,23 +31,23 @@ public class UploadedImageValidatorTests
         // A real PNG that the client named .jpg is stored as .png, so the served content type matches the bytes
         var result = await Validate("holiday.jpg", PngBytes);
 
-        Assert.Equal(".png", result.Extension);
+        Assert.Equal(".png", result.Value.Extension);
     }
 
     [Fact]
     public async Task DisallowedExtension_IsRejectedWithItsMessage()
     {
-        var error = await Assert.ThrowsAsync<InvalidUploadException>(() => Validate("dir/x.html", JpegBytes));
+        var error = await Validate("dir/x.html", JpegBytes);
 
-        Assert.Equal("'x.html' is not supported. Allowed formats: jpg, jpeg, png, gif, webp.", error.Message);
+        Assert.Equal("'x.html' is not supported. Allowed formats: jpg, jpeg, png, gif, webp.", error.FirstError.Description);
     }
 
     [Fact]
     public async Task EmptyFile_IsRejectedWithItsMessage()
     {
-        var error = await Assert.ThrowsAsync<InvalidUploadException>(() => Validate("a.jpg", [], length: 0));
+        var error = await Validate("a.jpg", [], length: 0);
 
-        Assert.Equal("'a.jpg' must be between 1 byte and 20 MB.", error.Message);
+        Assert.Equal("'a.jpg' must be between 1 byte and 20 MB.", error.FirstError.Description);
     }
 
     [Fact]
@@ -54,9 +55,9 @@ public class UploadedImageValidatorTests
     {
         var html = "<html><script>alert(1)</script></html>"u8.ToArray();
 
-        var error = await Assert.ThrowsAsync<InvalidUploadException>(() => Validate("evil.png", html));
+        var error = await Validate("evil.png", html);
 
-        Assert.Equal("'evil.png' is not a valid image.", error.Message);
+        Assert.Equal("'evil.png' is not a valid image.", error.FirstError.Description);
     }
 
     [Fact]
