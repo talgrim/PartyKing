@@ -9,6 +9,9 @@ internal interface IImageFormatStripper
     /// <summary>The extension of the format, as <c>ImageFormat.Extension</c> names it (".jpg").</summary>
     string Extension { get; }
 
-    /// <summary>The image without its metadata; null when the data is not a well-formed image of this format.</summary>
-    byte[]? Strip(ReadOnlySpan<byte> data);
+    /// <summary>
+    /// The image without its metadata, as a stream over the one buffer it was written to (no further copy); null when
+    /// the data is not a well-formed image of this format.
+    /// </summary>
+    MemoryStream? Strip(ReadOnlySpan<byte> data);
 }

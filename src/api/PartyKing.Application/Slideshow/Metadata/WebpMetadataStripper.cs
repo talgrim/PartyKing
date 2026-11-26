@@ -19,7 +19,7 @@ internal sealed class WebpMetadataStripper : IImageFormatStripper
 
     public string Extension => ".webp";
 
-    public byte[]? Strip(ReadOnlySpan<byte> data)
+    public MemoryStream? Strip(ReadOnlySpan<byte> data)
     {
         if (data.Length < RiffHeaderLength || !data[..4].SequenceEqual("RIFF"u8) || !data[8..12].SequenceEqual("WEBP"u8))
         {
@@ -33,7 +33,9 @@ internal sealed class WebpMetadataStripper : IImageFormatStripper
         }
 
         var end = 8 + (int)riffSize;
-        var body = new MemoryStream(end);
+        // The header is written last, when the size of the chunks is known; the chunks follow it in the same buffer
+        var output = new MemoryStream(end);
+        output.Write(stackalloc byte[RiffHeaderLength]);
         var position = RiffHeaderLength;
 
         while (position < end)
@@ -59,26 +61,24 @@ internal sealed class WebpMetadataStripper : IImageFormatStripper
                     return null;
                 }
 
-                WriteChunk(body, type, data[payloadStart..payloadEnd]);
+                WriteChunk(output, type, data[payloadStart..payloadEnd]);
             }
 
             // The pad byte of an odd chunk may be missing at the very end of the file
             position = Math.Min(payloadEnd + (int)(size & 1), end);
         }
 
-        if (body.Length == 0)
+        if (output.Length == RiffHeaderLength)
         {
             return null;
         }
 
-        var output = new MemoryStream((int)body.Length + RiffHeaderLength);
-        output.Write("RIFF"u8);
-        WriteUInt32(output, (uint)body.Length + 4);
-        output.Write("WEBP"u8);
-        body.Position = 0;
-        body.CopyTo(output);
+        var header = output.GetBuffer().AsSpan(0, RiffHeaderLength);
+        "RIFF"u8.CopyTo(header);
+        BinaryPrimitives.WriteUInt32LittleEndian(header[4..], (uint)output.Length - 8);
+        "WEBP"u8.CopyTo(header[8..]);
 
-        return output.ToArray();
+        return StrippedImage.Of(output);
     }
 
     private static void WriteChunk(MemoryStream output, string type, ReadOnlySpan<byte> payload)

@@ -72,8 +72,14 @@ public interface ISlideshowService
 
 internal class SlideshowService : ManagerGuardedService, ISlideshowService
 {
-    /// <summary>A photo is held in memory twice while it is stripped (the upload and the result), so few at a time.</summary>
+    /// <summary>The photos of one request that are processed side by side.</summary>
     private const int MaxParallelUploads = 2;
+
+    /// <summary>
+    /// The photos processed at once by the whole server, whatever the number of requests. One is held in memory twice
+    /// (the upload and the stripped result) from the read until it is stored: 3 x 2 x 20 MB at most, on a machine with 512 MB.
+    /// </summary>
+    private const int MaxConcurrentPhotos = 3;
 
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ISlideshowImagesRepository _imagesRepository;
@@ -86,6 +92,7 @@ internal class SlideshowService : ManagerGuardedService, ISlideshowService
     private readonly ISlideshowNotifier _notifier;
 
     private readonly ConcurrentDictionary<Guid, SessionSlide> _slides = new();
+    private readonly SemaphoreSlim _photoSlots = new(MaxConcurrentPhotos, MaxConcurrentPhotos);
 
     public SlideshowService(
         IDateTimeProvider dateTimeProvider,
@@ -454,18 +461,27 @@ internal class SlideshowService : ManagerGuardedService, ISlideshowService
             return image.Errors;
         }
 
-        var stripped = await _metadataStripper.StripAsync(original, image.Value, file.FileName, cancellationToken);
-        if (stripped.IsError)
+        // The memory of the photo is held from here until it is stored
+        await _photoSlots.WaitAsync(cancellationToken);
+        try
         {
-            return stripped.Errors;
+            var stripped = await _metadataStripper.StripAsync(original, image.Value, file.FileName, cancellationToken);
+            if (stripped.IsError)
+            {
+                return stripped.Errors;
+            }
+
+            await using var content = stripped.Value;
+            await _imagesRepository.AddSlideshowImageAsync(CreateModel(content), cancellationToken);
+
+            return Result.Success;
+        }
+        finally
+        {
+            _photoSlots.Release();
         }
 
-        await using var content = stripped.Value;
-        await _imagesRepository.AddSlideshowImageAsync(CreateModel(), cancellationToken);
-
-        return Result.Success;
-
-        SlideshowImageWriteModel CreateModel()
+        SlideshowImageWriteModel CreateModel(Stream content)
         {
             return new SlideshowImageWriteModel(
                 sessionId,

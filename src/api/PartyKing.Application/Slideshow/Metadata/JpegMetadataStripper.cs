@@ -3,10 +3,11 @@ using System.Buffers.Binary;
 namespace PartyKing.Application.Slideshow.Metadata;
 
 /// <summary>
-/// JPEG: keeps what renders the image (frame, tables, scans, the JFIF header without its thumbnail, the ICC profile,
-/// the Adobe colour transform) and drops every other application segment (Exif with GPS, XMP, IPTC, MPF), comments and
-/// all bytes after the end of the image (motion photos append a video there). The Exif orientation is written back as
-/// a minimal Exif segment holding nothing else.
+/// JPEG: keeps only what decodes the image (frame, tables, scans, the JFIF header without its thumbnail, the ICC
+/// profile, the Adobe colour transform) and drops every other segment: Exif with GPS, XMP, IPTC, MPF, comments, and the
+/// reserved and extension markers, as well as all bytes after the end of the image (motion photos append a video there).
+/// The Exif orientation is written back as a minimal Exif segment holding nothing else, right after the JFIF header.
+/// An image that does not end with its end marker is refused: the bytes after its last scan would be copied as image data.
 /// </summary>
 internal sealed class JpegMetadataStripper : IImageFormatStripper
 {
@@ -17,10 +18,9 @@ internal sealed class JpegMetadataStripper : IImageFormatStripper
     private const byte App1 = 0xE1;
     private const byte App2 = 0xE2;
     private const byte App14 = 0xEE;
-    private const byte App15 = 0xEF;
-    private const byte Comment = 0xFE;
     private const int OrientationTag = 0x0112;
     private const int JfifHeaderLength = 12;
+    private const int OrientationSegmentLength = 36;
 
     private static ReadOnlySpan<byte> ExifSignature => "Exif\0\0"u8;
     private static ReadOnlySpan<byte> JfifSignature => "JFIF\0"u8;
@@ -29,15 +29,20 @@ internal sealed class JpegMetadataStripper : IImageFormatStripper
 
     public string Extension => ".jpg";
 
-    public byte[]? Strip(ReadOnlySpan<byte> data)
+    public MemoryStream? Strip(ReadOnlySpan<byte> data)
     {
         if (data.Length < 4 || data[0] != Prefix || data[1] != 0xD8)
         {
             return null;
         }
 
-        var body = new MemoryStream(data.Length);
+        // Nothing kept is longer than its source, apart from the orientation segment that is added at the end
+        var output = new MemoryStream(data.Length + OrientationSegmentLength);
+        output.WriteByte(Prefix);
+        output.WriteByte(0xD8);
+
         var orientation = 0;
+        var orientationAt = 2;
         var exifSeen = false;
         var scanSeen = false;
         var position = 2;
@@ -90,14 +95,14 @@ internal sealed class JpegMetadataStripper : IImageFormatStripper
                 }
 
                 scanSeen = true;
-                WriteSegment(body, marker, data[position..scanEnd]);
+                WriteSegment(output, marker, data[position..scanEnd]);
                 position = scanEnd;
                 continue;
             }
 
-            if (marker == App1 && payload.StartsWith(ExifSignature))
+            if (marker == App1)
             {
-                if (!exifSeen)
+                if (!exifSeen && payload.StartsWith(ExifSignature))
                 {
                     orientation = ReadOrientation(payload[ExifSignature.Length..]);
                     exifSeen = true;
@@ -107,31 +112,34 @@ internal sealed class JpegMetadataStripper : IImageFormatStripper
             {
                 if (payload.StartsWith(JfifSignature) && payload.Length >= JfifHeaderLength + 2)
                 {
-                    WriteJfif(body, payload[..JfifHeaderLength]);
+                    var first = output.Length == 2;
+                    WriteJfif(output, payload[..JfifHeaderLength]);
+                    if (first)
+                    {
+                        orientationAt = (int)output.Length;
+                    }
                 }
             }
             else if (marker == App2)
             {
                 if (payload.StartsWith(IccSignature))
                 {
-                    WriteSegment(body, marker, segment);
+                    WriteSegment(output, marker, segment);
                 }
             }
             else if (marker == App14)
             {
                 if (payload.StartsWith(AdobeSignature))
                 {
-                    WriteSegment(body, marker, segment);
+                    WriteSegment(output, marker, segment);
                 }
             }
-            else if (marker is >= App1 and <= App15 || marker == Comment)
+            else if (DecodesTheImage(marker))
             {
-                // Dropped: the rest of the application segments and the comments
+                WriteSegment(output, marker, segment);
             }
-            else
-            {
-                WriteSegment(body, marker, segment);
-            }
+
+            // Anything else (the other APPn, comments, reserved and extension markers) is dropped
 
             position = segmentEnd;
         }
@@ -141,20 +149,32 @@ internal sealed class JpegMetadataStripper : IImageFormatStripper
             return null;
         }
 
-        var output = new MemoryStream((int)body.Length + 40);
-        output.WriteByte(Prefix);
-        output.WriteByte(0xD8);
-        if (orientation != 0)
-        {
-            output.Write(BuildOrientationSegment(orientation));
-        }
-
-        body.Position = 0;
-        body.CopyTo(output);
         output.WriteByte(Prefix);
         output.WriteByte(EndOfImage);
 
-        return output.ToArray();
+        if (orientation != 0)
+        {
+            InsertOrientation(output, orientationAt, BuildOrientationSegment(orientation));
+        }
+
+        return StrippedImage.Of(output);
+    }
+
+    /// <summary>The frame headers and tables a decoder needs; the reserved JPG marker (0xC8) is not one of them.</summary>
+    private static bool DecodesTheImage(byte marker)
+    {
+        return marker is >= 0xC0 and <= 0xCF and not 0xC8 or >= 0xDB and <= 0xDF;
+    }
+
+    /// <summary>Opens a gap at <paramref name="offset"/> inside the buffer that holds the image and fills it.</summary>
+    private static void InsertOrientation(MemoryStream output, int offset, byte[] segment)
+    {
+        var length = (int)output.Length;
+        output.SetLength(length + segment.Length);
+
+        var buffer = output.GetBuffer();
+        Array.Copy(buffer, offset, buffer, offset + segment.Length, length - offset);
+        segment.CopyTo(buffer, offset);
     }
 
     /// <summary>

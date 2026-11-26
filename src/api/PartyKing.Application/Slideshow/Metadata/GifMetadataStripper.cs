@@ -3,7 +3,8 @@ namespace PartyKing.Application.Slideshow.Metadata;
 /// <summary>
 /// GIF: keeps the screen, the colour tables, the frames and the extensions that change how they are shown (graphic
 /// control, loop count, colour profile) and drops comments, plain text, every other application extension (XMP) and all
-/// bytes after the trailer.
+/// bytes after the trailer. A file that ends cleanly after a frame, without the trailer, gets it: the whole file has been
+/// read, so nothing is left over that could carry data.
 /// </summary>
 internal sealed class GifMetadataStripper : IImageFormatStripper
 {
@@ -24,7 +25,7 @@ internal sealed class GifMetadataStripper : IImageFormatStripper
 
     public string Extension => ".gif";
 
-    public byte[]? Strip(ReadOnlySpan<byte> data)
+    public MemoryStream? Strip(ReadOnlySpan<byte> data)
     {
         if (data.Length < HeaderLength || !(data.StartsWith("GIF87a"u8) || data.StartsWith("GIF89a"u8)))
         {
@@ -40,13 +41,14 @@ internal sealed class GifMetadataStripper : IImageFormatStripper
         var output = new MemoryStream(data.Length);
         output.Write(data[..position]);
 
+        var frameSeen = false;
         while (position < data.Length)
         {
             var introducer = data[position];
             if (introducer == Trailer)
             {
                 output.WriteByte(Trailer);
-                return output.ToArray();
+                return StrippedImage.Of(output);
             }
 
             if (introducer == ExtensionIntroducer)
@@ -91,6 +93,7 @@ internal sealed class GifMetadataStripper : IImageFormatStripper
                 }
 
                 output.Write(data[position..end]);
+                frameSeen = true;
                 position = end;
             }
             else
@@ -99,7 +102,15 @@ internal sealed class GifMetadataStripper : IImageFormatStripper
             }
         }
 
-        return null;
+        // Every block was read to its end and the file stops there: only the trailer is missing
+        if (!frameSeen)
+        {
+            return null;
+        }
+
+        output.WriteByte(Trailer);
+
+        return StrippedImage.Of(output);
     }
 
     /// <summary>The size of the colour table a packed byte announces; 0 when there is none.</summary>

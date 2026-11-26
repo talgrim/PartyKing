@@ -1,5 +1,6 @@
 using System.Buffers;
 using ErrorOr;
+using PartyKing.Application.Slideshow.Helpers;
 using PartyKing.Domain.Entities.Slideshow;
 
 namespace PartyKing.Application.Slideshow.Metadata;
@@ -43,24 +44,22 @@ internal sealed class ImageMetadataStripper : IImageMetadataStripper
 
         if (!_strippers.TryGetValue(format.Extension, out var stripper))
         {
-            return Error.Validation(code: "Slideshow.InvalidUpload", description: $"'{name}' is not supported.");
+            return SlideshowErrors.NotSupported(name);
         }
 
         await using var data = await ReadAsync(content, cancellationToken);
         if (data is null)
         {
-            return Error.Validation(
-                code: "Slideshow.InvalidUpload",
-                description: $"'{name}' must be between 1 byte and {UploadedImageRules.MaxFileBytes / 1024 / 1024} MB.");
+            return SlideshowErrors.InvalidSize(name);
         }
 
         var stripped = stripper.Strip(data.GetBuffer().AsSpan(0, (int)data.Length));
         if (stripped is null)
         {
-            return Error.Validation(code: "Slideshow.InvalidUpload", description: $"'{name}' is damaged and could not be processed.");
+            return SlideshowErrors.Damaged(name);
         }
 
-        return new MemoryStream(stripped, writable: false);
+        return stripped;
     }
 
     /// <summary>The whole content (at most <see cref="UploadedImageRules.MaxFileBytes"/>); null when it is longer.</summary>

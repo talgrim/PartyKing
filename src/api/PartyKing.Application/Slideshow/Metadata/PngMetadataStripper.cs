@@ -24,7 +24,7 @@ internal sealed class PngMetadataStripper : IImageFormatStripper
 
     public string Extension => ".png";
 
-    public byte[]? Strip(ReadOnlySpan<byte> data)
+    public MemoryStream? Strip(ReadOnlySpan<byte> data)
     {
         if (data.Length < SignatureLength + ChunkOverhead || !data.StartsWith(Signature))
         {
@@ -61,7 +61,7 @@ internal sealed class PngMetadataStripper : IImageFormatStripper
             position = chunkEnd;
             if (type == "IEND")
             {
-                return output.ToArray();
+                return StrippedImage.Of(output);
             }
         }
 

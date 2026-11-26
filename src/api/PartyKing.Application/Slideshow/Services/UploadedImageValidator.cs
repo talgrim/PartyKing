@@ -1,4 +1,5 @@
 using ErrorOr;
+using PartyKing.Application.Slideshow.Helpers;
 using PartyKing.Domain.Entities.Slideshow;
 
 namespace PartyKing.Application.Slideshow.Services;
@@ -34,15 +35,11 @@ internal static class UploadedImageValidator
 
     private static Error Describe(UploadedImageFailure failure, string name)
     {
-        var description = failure switch
+        return failure switch
         {
-            UploadedImageFailure.UnsupportedExtension =>
-                $"'{name}' is not supported. Allowed formats: jpg, jpeg, png, gif, webp.",
-            UploadedImageFailure.InvalidSize =>
-                $"'{name}' must be between 1 byte and {UploadedImageRules.MaxFileBytes / 1024 / 1024} MB.",
-            _ => $"'{name}' is not a valid image."
+            UploadedImageFailure.UnsupportedExtension => SlideshowErrors.UnsupportedExtension(name),
+            UploadedImageFailure.InvalidSize => SlideshowErrors.InvalidSize(name),
+            _ => SlideshowErrors.NotAnImage(name)
         };
-
-        return Error.Validation(code: "Slideshow.InvalidUpload", description: description);
     }
 }
