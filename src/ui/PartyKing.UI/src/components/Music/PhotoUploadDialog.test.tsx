@@ -70,6 +70,12 @@ describe('PhotoUploadDialog', () => {
     errors.mockRestore();
   });
 
+  it('tells the guest who sees the photos and that their location is removed', () => {
+    renderDialog();
+
+    expect(screen.getByText('Everyone in the session can see the photos. Their location and other metadata are removed.')).toBeVisible();
+  });
+
   it('shows no warning when every file was stored', async () => {
     const { user } = renderDialog();
 

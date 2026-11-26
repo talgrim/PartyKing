@@ -8,6 +8,13 @@
     "ringo": "Ringo",
     "resistanceIcons": "Przewodnik po ikonach"
   },
+  "privacy": {
+    "link": "Polityka prywatności",
+    "notice": "PartyKing nie ma analityki i używa tylko plików cookie potrzebnych do działania. Ze zdjęć, które dodajesz, usuwana jest lokalizacja.",
+    "noticeLabel": "Prywatność",
+    "dismiss": "Rozumiem",
+    "photoNote": "Zdjęcia widzą wszyscy w sesji. Usuwamy z nich lokalizację i pozostałe metadane."
+  },
   "common": {
     "somethingWentWrong": "Coś poszło nie tak",
     "noSessionsYet": "Nie ma jeszcze żadnych sesji.",

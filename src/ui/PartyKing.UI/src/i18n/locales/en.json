@@ -8,6 +8,13 @@
     "ringo": "Ringo",
     "resistanceIcons": "Icon guide"
   },
+  "privacy": {
+    "link": "Privacy policy",
+    "notice": "PartyKing has no analytics and sets only the cookies it needs to work. Photos you upload have their location removed.",
+    "noticeLabel": "Privacy",
+    "dismiss": "Got it",
+    "photoNote": "Everyone in the session can see the photos. Their location and other metadata are removed."
+  },
   "common": {
     "somethingWentWrong": "Something went wrong",
     "noSessionsYet": "There are no sessions yet.",

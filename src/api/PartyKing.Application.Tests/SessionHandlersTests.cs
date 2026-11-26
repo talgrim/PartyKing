@@ -41,6 +41,26 @@ public class SessionHandlersTests
     }
 
     [Fact]
+    public async Task SessionDeleted_DeletesTheHostsSpotifyProfile()
+    {
+        var profiles = new FakeSpotifyProfilesRepository();
+
+        await new HostProfileCleanupHandler(profiles).HandleAsync(new SessionDeleted(SessionId, "host-1", null), Ct);
+
+        Assert.Equal(["host-1"], profiles.Deleted);
+    }
+
+    [Fact]
+    public async Task SessionDeletedWithoutAHost_DeletesNoProfile()
+    {
+        var profiles = new FakeSpotifyProfilesRepository();
+
+        await new HostProfileCleanupHandler(profiles).HandleAsync(new SessionDeleted(SessionId, null, null), Ct);
+
+        Assert.Empty(profiles.Deleted);
+    }
+
+    [Fact]
     public async Task SessionDeleted_TellsTheGameAndQueueClientsOfTheSession()
     {
         var ringo = new FakeRingoNotifier();

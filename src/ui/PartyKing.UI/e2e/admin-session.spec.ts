@@ -1,5 +1,6 @@
 import { ADMIN_PASSWORD, ADMIN_USERNAME } from './constants';
 import { expect, test } from './fixtures/test';
+import { dismissPrivacyNotice } from './fixtures/privacyNotice';
 
 test('an admin logs in, creates a session and guests find it by its code', async ({ page, browser }) => {
   const name = `Admin made ${Date.now().toString(36)}`;
@@ -23,6 +24,7 @@ test('an admin logs in, creates a session and guests find it by its code', async
 
   // A guest (no cookies) finds it on the landing page by the code
   const guest = await browser.newContext();
+  await dismissPrivacyNotice(guest);
   const guestPage = await guest.newPage();
   await guestPage.goto('/');
   await guestPage.getByLabel('Search sessions by code').fill(code);

@@ -87,10 +87,12 @@ internal static class TestEvents
         ISlideshowService? slideshow = null,
         IPlaylistTrackCache? trackCache = null,
         IFallbackStatusStore? statusStore = null,
-        IFallbackQueueFiller? filler = null)
+        IFallbackQueueFiller? filler = null,
+        ISpotifyProfilesRepository? profiles = null)
     {
         var services = new ServiceCollection();
         services.AddSingleton(cleanup ?? new FakeHostSessionCleanup());
+        services.AddSingleton(profiles ?? new FakeSpotifyProfilesRepository());
         services.AddSingleton(slideshow ?? new FakeSlideshowService());
         services.AddSingleton(trackCache ?? new PlaylistTrackCache(new FakeClock()));
         services.AddSingleton(
@@ -98,6 +100,7 @@ internal static class TestEvents
         services.AddSingleton(filler ?? new FakeFallbackQueueFiller());
         services.AddScoped<IDomainEventHandler<HostReleased>, HostCleanupHandler>();
         services.AddScoped<IDomainEventHandler<SessionDeleted>, HostCleanupHandler>();
+        services.AddScoped<IDomainEventHandler<SessionDeleted>, HostProfileCleanupHandler>();
         services.AddScoped<IDomainEventHandler<SessionDeleted>, SlideshowCleanupHandler>();
         services.AddScoped<IDomainEventHandler<FallbackPlaylistChanged>, FallbackPlaylistHandler>();
         services.AddScoped<IDomainEventHandler<FallbackPlaylistCleared>, FallbackPlaylistHandler>();
