@@ -86,6 +86,15 @@
   color: var(--text);
 }
 
+/*
+ * The links to the other sites and the site's own features are different things, so a line sets them apart. It only
+ * appears when both are there (a visitor who is signed out has no switcher, and a site may have no links of its own).
+ */
+.site-bar__sites:not([hidden]) + .site-bar__nav {
+  padding-left: 1rem;
+  border-left: 1px solid var(--muted);
+}
+
 /* An action of the site (such as locking it) sits among its links and reads like one. */
 .site-bar__nav button {
   padding: 0;
@@ -169,5 +178,13 @@
   .site-bar__nav {
     order: 2;
     width: 100%;
+  }
+
+  /* The nav is a row of its own here, so the line goes above it instead of to its left. */
+  .site-bar__sites:not([hidden]) + .site-bar__nav {
+    padding-top: 0.5rem;
+    padding-left: 0;
+    border-top: 1px solid var(--muted);
+    border-left: 0;
   }
 }
