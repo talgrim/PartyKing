@@ -32,6 +32,13 @@ export const currentSiteName = (code: string | undefined): string => find(CURREN
 
 export const homeUrl = (code: string | undefined): string => siteUrl(find('home'), toLanguage(code));
 
+/**
+ * The privacy policy of the sites, on the home site (`/privacy`, `/pl/privacy`), in the visitor's language. `section` is
+ * an anchor of the page ("partyking" is what this app stores).
+ */
+export const privacyUrl = (code: string | undefined, section?: string): string =>
+  `${homeUrl(code)}privacy${section ? `#${section}` : ''}`;
+
 /** The sites listed in the switcher, in the order of the kit's list. */
 export const switcherSites = (
   code: string | undefined,

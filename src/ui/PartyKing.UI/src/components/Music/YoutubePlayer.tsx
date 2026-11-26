@@ -1,5 +1,6 @@
 import { Ref, useImperativeHandle, useRef } from "react";
 import ReactPlayer from 'react-player';
+import { toNoCookieYoutubeUrl } from './youtubeUrl';
 
 export type YoutubePlayerHandle = {
     /** Where in the video the player is now. */
@@ -32,7 +33,7 @@ export const YoutubePlayer = ({songUrl, mute, volume = 0.5, paused = false, onPa
     return (
         <ReactPlayer
             ref={player}
-            src={songUrl}
+            src={toNoCookieYoutubeUrl(songUrl)}
             className="w-full h-full max-h-screen aspect-video"
             playing={!paused}
             volume={volume}

@@ -134,6 +134,8 @@ export const PhotoUploader = ({ sessionId, onBusyChange, onUnauthorized }: Props
         {t('uploader.deleteAfter')}
       </label>
 
+      <p className="text-xs text-slate-400">{t('privacy.photoNote')}</p>
+
       {uploading && <LinearProgress variant="determinate" value={uploadProgress} aria-label={t('uploader.progress')} />}
 
       {files.length > 0 && (
